@@ -1,0 +1,260 @@
+# SDLPainter — Örnekler Rehberi
+
+Her demo bir öncekinin üzerine inşa edilir; geliştirme fazıyla birebir
+örtüşür. Bu belge her örneğin **neyi doğruladığını**, **hangi API
+yeteneklerini kullandığını** ve **mühendislik açısından neden önemli
+olduğunu** açıklar.
+
+---
+
+## phase0_demo — Altyapı Doğrulaması
+
+**Amaç:** Derleme, SDL3 başlatma ve spdlog entegrasyonunun çalıştığını
+doğrular. Herhangi bir çizim yapmaz.
+
+### Kullanılan yetenekler
+
+| Yetenek | Detay |
+|---------|-------|
+| SDL3 başlatma | `SDL_Init(SDL_INIT_VIDEO)` |
+| OpenGL context | 3.3 Core Profile nitelik ayarları |
+| spdlog | ANSI renkli çıktı, `[SS:DD:SS][Seviye]` formatı |
+| Event loop | `SDL_PollEvent` + ESC / `SDL_EVENT_QUIT` |
+| Windows uyumluluğu | `ENABLE_VIRTUAL_TERMINAL_PROCESSING` ile ANSI escape etkinleştirme |
+
+### Mühendislik notu
+
+Phase 0 demosunun çizim yapmaması bilinçlidir: altyapı (CMake, Conan,
+CI/CD pipeline, `IRenderer` arayüzü) çalışmadan üst fazlara geçmek
+anlam taşımaz. Demo bu altyapının entegrasyon testi işlevi görür.
+
+---
+
+## phase1_demo — Temel Primitifler
+
+**Amaç:** OpenGL backend'in tüm temel çizim primitiflerini doğrular.
+Tek bir pencerede stroke/fill çiftleri, kalın çizgiler, polyline ve
+konkav poligon bir arada gösterilir.
+
+### Kullanılan yetenekler
+
+| Yetenek | Gösterim |
+|---------|---------|
+| `FillRect` / `DrawRect` | Dolu ve çerçeve dikdörtgenler |
+| `FillCircle` / `DrawCircle` | Farklı renk ve kalınlıkta |
+| `FillEllipse` / `DrawEllipse` | rx ≠ ry ile asimetrik elips |
+| `DrawLine` | İki kesişen kalın çizgi (5px) |
+| `DrawPolyline` | 5 noktalı kırık çizgi |
+| `FillPolygon` | L şeklinde konkav poligon — ear clipping |
+| `DrawPolygon` | Aynı poligonun çerçevesi |
+| `Save` / `Rotate` / `Scale` / `Restore` | Döndürülmüş ve ölçeklenmiş dikdörtgen/daire |
+| Düzenli çokgen üretimi | Döngüyle hesaplanan pentagon köşeleri |
+| MSAA | `SDL_GL_MULTISAMPLESAMPLES = 4` |
+
+### Mühendislik notu
+
+L şeklindeki konkav poligon, ear clipping algoritmasının
+doğrudan testidir; triangle fan bu geometriyi yanlış render
+ederdi. Pentagon köşeleri trigonometrik hesapla üretilir — sabit
+koordinat listesi değil. Demo her frame'de tamamen yeniden çizilir;
+stateful render state birikimi olmaz.
+
+---
+
+## phase2_demo — Transform Stack
+
+**Amaç:** Transform stack'in tüm operasyonlarını animasyonlu olarak
+doğrular. Yedi bağımsız bölüm her operasyonu izole eder.
+
+### Kullanılan yetenekler
+
+| Bölüm | Test edilen yetenek |
+|-------|---------------------|
+| 1 | Zincirleme `Translate` — iç içe kaydırma |
+| 2 | `Rotate` animasyonu — dönen dikdörtgen |
+| 3 | `Scale` animasyonu — `sin` ile nefes efekti |
+| 4 | 3 katlı iç içe `Save` / `Restore` — bağımsız hız ve yön |
+| 5 | `SetClipRect` / `ClearClip` — scissor içine kırpılan daire ve dönen dikdörtgen |
+| 6 | `ResetTransform` — kasıtlı yanlış transform sonrası sıfırlama |
+| 7 | Bağımsız X/Y `Scale` animasyonu — elips üzerinde |
+
+### Mühendislik notu
+
+Bölüm 6'da `Translate(9999, 9999)` ile ekran dışına çıkıldıktan sonra
+`ResetTransform()` çağrılır ve daire ekranın beklenen konumunda görünür.
+Bu, matrisin sıfırlanmasının üst stack katmanlarını bozmadığını doğrulayan
+regresyon testidir. Bölüm 4'teki 3 katlı iç içe stack, push/pop sırasının
+doğruluğunu gösterir: en içteki `Rotate` dışarıdakilerden bağımsız hareket
+eder.
+
+---
+
+## phase2b_demo — Merkez Rotasyon Doğrulaması
+
+**Amaç:** `Translate → Rotate` sırasının doğru uygulandığını izole
+biçimde doğrular. Pencere yeniden boyutlandırılsa bile dikdörtgen daima
+ekranın tam ortasında kendi merkezi etrafında döner.
+
+### Kullanılan yetenekler
+
+| Yetenek | Detay |
+|---------|-------|
+| Dinamik pencere boyutu | `SDL_GetWindowSize` her frame'de çağrılır |
+| `Translate` + `Rotate` | `(-w/2, -h/2)` ofseti ile merkez döndürme |
+| Referans arti işareti | İnce çizgilerle ekran merkezi işaretlenir |
+
+### Mühendislik notu
+
+Bu örnek, phase2_demo içinde gösterilip geçilebilecek bir senaryonun
+**ayrı bir demo olarak çıkarılmasının** neden gerekli olduğunu gösterir:
+döndürme pivotunun doğru noktada olması, transform matrisinin sıralamasına
+son derece duyarlıdır. `Rotate → Translate` yerine `Translate → Rotate`
+yazıldığında pivot kayar ve daire merkezinin köşeyi işaret etmesi bu hatayı
+anında ortaya çıkarır. Demo, regresyon kapsamının neden geniş tutulması
+gerektiğinin somut örneğidir.
+
+---
+
+## phase3_demo — Image / Texture
+
+**Amaç:** Image yükleme, ölçekleme, atlas dilimleme ve alpha blending
+pipeline'ını doğrular. Harici dosyaya bağımlı olmamak için tüm dokular
+prosedürel olarak üretilir.
+
+### Prosedürel doku üreticileri
+
+| Fonksiyon | Boyut | Kanal | İçerik |
+|-----------|-------|-------|--------|
+| `MakeCheckerboard` | 128×128 | RGBA | Damalı desen |
+| `MakeGradient` | 256×64 | RGB | Yatay renk geçişi |
+| `MakeAlphaCircle` | 128×128 | RGBA | Merkeze doğru yükselen alfa |
+| `MakeColorAtlas` | 256×256 | RGBA | 2×2 renk atlası |
+
+### Kullanılan yetenekler
+
+| Bölüm | Test edilen yetenek |
+|-------|---------------------|
+| 1 | `DrawImage(image, x, y)` — orijinal piksel boyutu |
+| 2 | `DrawImage(image, dest_rect)` — ölçeklendirilmiş çizim |
+| 3 | `DrawImage(image, src_rect, dest_rect)` — src crop + dst scale |
+| 4 | Texture atlas dilimleme — 4 karenin ayrı `src_rect` ile çizimi |
+| 5 | Alpha blending — üst üste bindirilen yarı saydam dokular |
+| 6 | `Transform + DrawImage` — dönen texture animasyonu |
+| 7 | `Scale` animasyonu — texture'ın kendi merkezinden büyüyüp küçülmesi |
+
+### Mühendislik notu
+
+`Image::CreateFromData` API'si, test senaryolarını harici dosyadan
+bağımsız kılar — CI ortamında asset yokken bile doku pipeline'ı test
+edilebilir. Atlas dilimleme (Bölüm 4) sprite sheet kullanım
+senaryosunu simüle eder. Alpha circle dokusu (Bölüm 5) GPU tarafındaki
+blending sırasını doğrular: arkaplan dikdörtgen önce, saydam doku
+sonra çizilir.
+
+---
+
+## phase4_demo — Metin Çizimi
+
+**Amaç:** SDL_ttf üzerinden font yükleme, ölçüm, hizalama ve transform
+entegrasyonunu doğrular.
+
+### Kullanılan yetenekler
+
+| Bölüm | Test edilen yetenek |
+|-------|---------------------|
+| 1 | `DrawText(rect, text, kCenter)` — 56pt başlık, ortada |
+| 2 | `DrawText(rect, text, kRight)` — sağa hizalı alt başlık |
+| 3 | Üç hizalama yan yana — kLeft / kCenter / kRight karşılaştırması |
+| 4 | 4 farklı punto boyutu — 14 / 22 / 36pt |
+| 5 | Pen rengi ile metin rengi — 5 farklı renk |
+| 6 | `SetOpacity` — 4 farklı saydamlık seviyesi (100% → 15%) |
+| 7 | `Transform + DrawText` — `MeasureText` ile pivot hesabı, dönen metin |
+| 8 | `DrawText(x, y, text)` — konum bazlı çizim |
+
+### Platform bağımsız font keşfi
+
+```
+Windows: arial.ttf → calibri.ttf → segoeui.ttf → tahoma.ttf
+Linux  : DejaVuSans.ttf → LiberationSans → FreeSans
+```
+
+`FindSystemFont` fonksiyonu olası yolları sırayla dener; hiçbiri
+bulunamazsa demo hata vererek çıkar. Bu, harici asset bağımlılığını
+açık biçimde yönetmenin örneğidir.
+
+### CMakeLists.txt notu
+
+`phase4_demo`, SDL_ttf'in static veya shared linklenmiş olmasına göre
+iki farklı `target_link_libraries` dalından birini seçer. Opsiyonel
+bağımlılıkların build sistemi seviyesinde ele alınması burada görülür.
+
+### Mühendislik notu
+
+Bölüm 7'deki dönen metin, `MeasureText` sonucunun yarısı kadar negatif
+ofset uygulanarak pivot'u metin merkezine taşır. Bu, transform stack'in
+sadece geometriyle değil, text rendering pipeline'ıyla da doğru
+çalıştığını doğrular.
+
+---
+
+## phase5a–5e — Vulkan Backend
+
+Bu beş demo, Vulkan backend'in OpenGL ile aynı davranışı sergilediğini
+kademeli olarak doğrular. Hepsi `SDLPAINTER_WITH_VULKAN=ON` ile
+derlenir.
+
+| Demo | Doğrulanan yetenek |
+|------|--------------------|
+| `phase5a_vulkan_clear` | Vulkan context başlatma, swapchain, `Clear` |
+| `phase5b_vulkan_triangles` | Untextured primitifler (tüm şekil tipleri) |
+| `phase5c_vulkan_textured` | `DrawImage` — texture upload, sampling |
+| `phase5d_vulkan_demo` | Swapchain recreate (pencere yeniden boyutlandırma), tüm primitifler, opacity, validation layer çıktısı |
+| `phase5e_vulkan_text` | SDL_ttf + Vulkan backend entegrasyonu |
+
+### Mühendislik notu
+
+`phase5d_vulkan_demo` özellikle **swapchain recreate** senaryosunu test
+eder: pencere boyutu değiştiğinde Vulkan swapchain yeniden oluşturulmalı,
+bu süreçte çizim bozulmamalıdır. `IRenderer` arayüzünün bu senaryoyu
+soyutlaması, `Painter` katmanında hiçbir ek kod gerektirmez.
+
+`'R'` tuşu projeksiyon güncellemesini manuel olarak tetikler — bu, headless
+ortamda `SDL_WINDOWEVENT_RESIZED` olmadan aynı kod yolunun test edilmesini
+sağlar.
+
+---
+
+## Örneklerin Genel Mühendislik Deseni
+
+Tüm demolar aynı yapıyı izler:
+
+```
+1. InitLogger()          → renkli spdlog başlat
+2. SDL_Init              → hata varsa erken çık
+3. GL/Vulkan nitelikleri → context türünü belirle
+4. SDL_CreateWindow      → hata varsa erken çık
+5. { Painter scope }     → RAII: Painter pencereden önce yok edilir
+6. Event loop            → SDL_PollEvent, ESC / QUIT
+7. painter.Begin() ... painter.End()
+8. } ← Painter yok edilir; GL kaynakları context geçerliyken silinir
+9. SDL_DestroyWindow / SDL_Quit
+```
+
+**Painter scope'u ayrı tutmanın nedeni:** OpenGL nesneleri (`glDeleteBuffers`,
+`glDeleteTextures` vb.) context geçerliyken silinmelidir. `SDL_DestroyWindow`
+context'i yok eder; Painter bu noktadan önce yok edilmezse `glDelete*` çağrıları
+`GL_INVALID_OPERATION` (1282) hatası üretir. Açık scope bu sıralamayı garanti eder.
+
+---
+
+## Demo → Faz Eşleştirmesi
+
+| Demo | Faz | Ön koşul |
+|------|-----|----------|
+| `phase0_demo` | Phase 0 | Yok |
+| `phase1_demo` | Phase 1 | Phase 0 |
+| `phase2_demo` | Phase 2 | Phase 1 |
+| `phase2b_demo` | Phase 2 | Phase 1 |
+| `phase3_demo` | Phase 3 | Phase 2 |
+| `phase4_demo` | Phase 4 | Phase 3 + `SDLPAINTER_WITH_TEXT=ON` |
+| `phase5a–5e` | Phase 5 | Phase 3/4 + `SDLPAINTER_WITH_VULKAN=ON` |

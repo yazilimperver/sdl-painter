@@ -1,0 +1,141 @@
+{
+  "version": 4,
+  "cmakeMinimumRequired": { "major": 3, "minor": 20, "patch": 0 },
+
+  "configurePresets": [
+    {
+      "name": "base",
+      "hidden": true,
+      "cacheVariables": {
+        "CMAKE_EXPORT_COMPILE_COMMANDS": "ON"
+      }
+    },
+
+    {
+      "name": "windows-debug",
+      "displayName": "Windows Debug (MSVC)",
+      "description": "Windows debug build. Requires: conan install --output-folder=build/windows-debug/generators -s build_type=Debug",
+      "inherits": "base",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build/windows-debug",
+      "toolchainFile": "${sourceDir}/build/windows-debug/generators/build/generators/conan_toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+
+    {
+      "name": "windows-release",
+      "displayName": "Windows Release (MSVC)",
+      "description": "Windows release build. Requires: conan install --output-folder=build/windows-release/generators -s build_type=Release",
+      "inherits": "base",
+      "generator": "Visual Studio 17 2022",
+      "binaryDir": "${sourceDir}/build/windows-release",
+      "toolchainFile": "${sourceDir}/build/windows-release/generators/build/generators/conan_toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+
+    {
+      "name": "linux-debug",
+      "displayName": "Linux Debug (Ninja + GCC)",
+      "description": "GitLab CI debug build. Requires: conan install --output-folder=build/linux-debug/generators -s build_type=Debug",
+      "inherits": "base",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/linux-debug",
+      "toolchainFile": "${sourceDir}/build/linux-debug/generators/build/Debug/generators/conan_toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+
+    {
+      "name": "linux-release",
+      "displayName": "Linux Release (Ninja + GCC)",
+      "description": "GitLab CI release build. Requires: conan install --output-folder=build/linux-release/generators -s build_type=Release",
+      "inherits": "base",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/linux-release",
+      "toolchainFile": "${sourceDir}/build/linux-release/generators/build/Release/generators/conan_toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+
+    {
+      "name": "linux-debug-asan",
+      "displayName": "Linux Debug + ASan/UBSan",
+      "description": "Debug build with AddressSanitizer and UBSan enabled.",
+      "inherits": "linux-debug",
+      "binaryDir": "${sourceDir}/build/linux-debug-asan",
+      "toolchainFile": "${sourceDir}/build/linux-debug-asan/generators/build/Debug/generators/conan_toolchain.cmake",
+      "cacheVariables": {
+        "ENABLE_SANITIZERS": "ON"
+      }
+    }
+  ],
+
+  "buildPresets": [
+    {
+      "name": "windows-debug",
+      "displayName": "Build Windows Debug",
+      "configurePreset": "windows-debug",
+      "configuration": "Debug"
+    },
+    {
+      "name": "windows-release",
+      "displayName": "Build Windows Release",
+      "configurePreset": "windows-release",
+      "configuration": "Release"
+    },
+    {
+      "name": "linux-debug",
+      "displayName": "Build Linux Debug",
+      "configurePreset": "linux-debug"
+    },
+    {
+      "name": "linux-release",
+      "displayName": "Build Linux Release",
+      "configurePreset": "linux-release"
+    },
+    {
+      "name": "linux-debug-asan",
+      "displayName": "Build Linux Debug + ASan",
+      "configurePreset": "linux-debug-asan"
+    }
+  ],
+
+  "testPresets": [
+    {
+      "name": "windows-debug",
+      "displayName": "Test Windows Debug",
+      "configurePreset": "windows-debug",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "windows-release",
+      "displayName": "Test Windows Release",
+      "configurePreset": "windows-release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "linux-debug",
+      "displayName": "Test Linux Debug",
+      "configurePreset": "linux-debug",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "linux-release",
+      "displayName": "Test Linux Release",
+      "configurePreset": "linux-release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "linux-debug-asan",
+      "displayName": "Test Linux Debug + ASan",
+      "configurePreset": "linux-debug-asan",
+      "output": { "outputOnFailure": true }
+    }
+  ]
+}

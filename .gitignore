@@ -1,0 +1,55 @@
+blog-posts/
+reports/
+plan/
+
+# Build
+build/
+cmake-build-*/
+*.o
+*.a
+*.so
+*.dll
+*.lib
+*.exp
+
+# Conan
+.conan2/
+
+# IDE
+.vscode/
+.idea/
+*.user
+
+# Claude
+.claude/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Compiled binaries
+*.exe
+*.out
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+install_manifest.txt
+install/
+CMakeUserPresets.json
+
+# Yedek dosyalar
+*.bak
+
+# Coverage
+*.gcda
+*.gcno
+*.gcov
+coverage/
+lcov.info
+
+# Test raporları
+TestResult.xml
+LastTest.log

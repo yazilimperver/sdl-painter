@@ -1,0 +1,79 @@
+# cmake/Doxyfile.in — CMake configure_file şablonu.
+# Bu dosyayı doğrudan düzenleme; cmake/Docs.cmake üzerinden configure edilir.
+
+# --- Proje ---
+PROJECT_NAME            = "@PROJECT_NAME@"
+PROJECT_NUMBER          = "@PROJECT_VERSION@"
+PROJECT_BRIEF           = "QPainter benzeri SDL3 + OpenGL/Vulkan 2D çizim kütüphanesi"
+PROJECT_LOGO            =
+
+# --- Girdi ---
+INPUT                   = "@CMAKE_SOURCE_DIR@/include/sdl_painter" \
+                          "@CMAKE_SOURCE_DIR@/doc"
+FILE_PATTERNS           = *.h *.md
+RECURSIVE               = YES
+USE_MDFILE_AS_MAINPAGE  = "@CMAKE_SOURCE_DIR@/doc/README.md"
+
+# Sadece public API; src/ gizli tutulur.
+EXCLUDE_PATTERNS        = */src/* \
+                          */tests/* \
+                          */examples/* \
+                          */third_party/*
+
+# --- Çıktı ---
+OUTPUT_DIRECTORY        = "@DOXYGEN_OUTPUT_DIR@"
+GENERATE_HTML           = YES
+GENERATE_LATEX          = NO
+GENERATE_XML            = NO
+
+# GitLab/GitHub Pages: public/ altına gönder.
+HTML_OUTPUT             = .
+
+# --- Görsel tema ---
+HTML_EXTRA_STYLESHEET   = "@DOXYGEN_AWESOME_CSS@"
+HTML_COLORSTYLE         = LIGHT
+HTML_TIMESTAMP          = NO
+
+# --- Çıkarım ---
+EXTRACT_ALL             = NO
+EXTRACT_PRIVATE         = NO
+EXTRACT_STATIC          = YES
+EXTRACT_ANON_NSPACES    = NO
+HIDE_UNDOC_MEMBERS      = YES
+HIDE_UNDOC_CLASSES      = YES
+
+# --- Uyarılar (belgelenmemişler için uyar) ---
+QUIET                   = YES
+WARNINGS                = YES
+WARN_IF_UNDOCUMENTED    = YES
+WARN_NO_PARAMDOC        = YES
+
+# --- Dil ---
+OUTPUT_LANGUAGE         = Turkish
+
+# --- Grafik (graphviz) ---
+HAVE_DOT                = @DOXYGEN_HAVE_DOT@
+DOT_IMAGE_FORMAT        = svg
+INTERACTIVE_SVG         = YES
+CLASS_GRAPH             = YES
+COLLABORATION_GRAPH     = NO
+INCLUDE_GRAPH           = NO
+INCLUDED_BY_GRAPH       = NO
+CALL_GRAPH              = NO
+CALLER_GRAPH            = NO
+DOT_MULTI_TARGETS       = YES
+
+# --- Sıralama ---
+SORT_MEMBER_DOCS        = NO
+SORT_BRIEF_DOCS         = NO
+SHOW_USED_FILES         = NO
+SHOW_FILES              = YES
+SHOW_NAMESPACES         = YES
+
+# --- Kaynak görüntüleme ---
+SOURCE_BROWSER          = NO
+INLINE_SOURCES          = NO
+
+# --- Arama ---
+SEARCHENGINE            = YES
+SERVER_BASED_SEARCH     = NO
