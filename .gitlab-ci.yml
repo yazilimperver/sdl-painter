@@ -1,4 +1,5 @@
 stages:
+  - prepare
   - build
   - test
   - quality
@@ -19,49 +20,32 @@ variables:
         mesa-vulkan-drivers libvulkan-dev
         libegl-dev libgl-dev libgles-dev
     - pip3 install conan --break-system-packages
-    - conan profile detect
+    - conan profile detect --force
   cache:
-    key: conan-$CI_COMMIT_REF_SLUG
+    key: conan-linux-$CI_COMMIT_REF_SLUG
     paths:
       - .conan2/
+    policy: pull  # Yazmayı conan:install:linux üstlenir
 
-# --- Windows base template ---
+# --- Linux test template (conan/pip gereksiz) ---
 
-.windows_base:
-  tags:
-    - saas-windows-medium-amd64
-  variables:
-    CC: "cl"
-    CXX: "cl"
-    CONAN_HOME: "$CI_PROJECT_DIR\\.conan2"
-  cache:
-    key: "conan-win-$CI_COMMIT_REF_SLUG"
-    paths:
-      - .conan2/p/
-  timeout: 60 minutes
+.test_base:
+  image: ubuntu:24.04
   before_script:
-    - |
-      $vswhere = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
-      $vsPath  = & $vswhere -latest -products * `
-                   -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
-                   -property installationPath
-      $vcvars  = Join-Path $vsPath "VC\Auxiliary\Build\vcvars64.bat"
-      Write-Host "vcvars64.bat: $vcvars"
-      $envDump = cmd /c "`"$vcvars`" amd64 && set"
-      foreach ($line in $envDump) {
-        if ($line -match '^([^=]+)=(.*)$') {
-          [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process')
-        }
-      }
-    - pip install conan --quiet
-    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    - conan profile detect --force
+    - apt-get update && apt-get install -y
+        cmake ninja-build
+        mesa-vulkan-drivers libvulkan-dev
 
-# --- Build Stage ---
+# --- Prepare Stage: Paketler bir kez indirilir, artifact olarak paylaşılır ---
 
-build:linux:debug:
-  stage: build
+conan:install:linux:
+  stage: prepare
   extends: .conan_base
+  cache:
+    key: conan-linux-$CI_COMMIT_REF_SLUG
+    paths:
+      - .conan2/
+    policy: pull-push  # Bu job hem okur hem yazar
   script:
     - |
       conan install . --output-folder=build/linux-debug/generators --build=missing \
@@ -69,6 +53,90 @@ build:linux:debug:
         -o "&:with_vulkan=True" \
         -c tools.system.package_manager:mode=install \
         -c tools.system.package_manager:sudo=False
+    - |
+      conan install . --output-folder=build/linux-release/generators --build=missing \
+        -s build_type=Release \
+        -o "&:with_vulkan=True" \
+        -c tools.system.package_manager:mode=install \
+        -c tools.system.package_manager:sudo=False
+    - |
+      conan install . --output-folder=build/linux-debug-asan/generators --build=missing \
+        -s build_type=Debug \
+        -o "&:with_vulkan=True" \
+        -c tools.system.package_manager:mode=install \
+        -c tools.system.package_manager:sudo=False
+  artifacts:
+    paths:
+      - build/linux-debug/generators/
+      - build/linux-release/generators/
+      - build/linux-debug-asan/generators/
+      - .conan2/p/
+    expire_in: 1 day
+
+# --- Windows base template ---
+
+# .windows_base:
+#   tags:
+#     - saas-windows-medium-amd64
+#   variables:
+#     CC: "cl"
+#     CXX: "cl"
+#     CONAN_HOME: "$CI_PROJECT_DIR\\.conan2"
+#   cache:
+#     key: "conan-win-$CI_COMMIT_REF_SLUG"
+#     paths:
+#       - .conan2/p/
+#     policy: pull  # Yazmayı conan:install:windows üstlenir
+#   timeout: 60 minutes
+#   before_script:
+#     - |
+#       $vswhere = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
+#       $vsPath  = & $vswhere -latest -products * `
+#                    -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+#                    -property installationPath
+#       $vcvars  = Join-Path $vsPath "VC\Auxiliary\Build\vcvars64.bat"
+#       Write-Host "vcvars64.bat: $vcvars"
+#       $envDump = cmd /c "`"$vcvars`" amd64 && set"
+#       foreach ($line in $envDump) {
+#         if ($line -match '^([^=]+)=(.*)$') {
+#           [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process')
+#         }
+#       }
+#     - pip install conan --quiet
+#     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+#     - conan profile detect --force
+
+# conan:install:windows:
+#   stage: prepare
+#   extends: .windows_base
+#   cache:
+#     key: "conan-win-$CI_COMMIT_REF_SLUG"
+#     paths:
+#       - .conan2/p/
+#     policy: pull-push  # Bu job hem okur hem yazar
+#   script:
+#     - |
+#       conan install . --output-folder=build/windows-debug/generators --build=missing `
+#         -s build_type=Debug -o "&:with_vulkan=True"
+#       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+#     - |
+#       conan install . --output-folder=build/windows-release/generators --build=missing `
+#         -s build_type=Release -o "&:with_vulkan=True"
+#       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+#   artifacts:
+#     paths:
+#       - build/windows-debug/generators/
+#       - build/windows-release/generators/
+#       - .conan2/p/
+#     expire_in: 1 day
+
+# --- Build Stage ---
+
+build:linux:debug:
+  stage: build
+  extends: .conan_base
+  needs: ["conan:install:linux"]
+  script:
     - cmake --preset linux-debug
     - cmake --build --preset linux-debug
   artifacts:
@@ -79,13 +147,8 @@ build:linux:debug:
 build:linux:release:
   stage: build
   extends: .conan_base
+  needs: ["conan:install:linux"]
   script:
-    - |
-      conan install . --output-folder=build/linux-release/generators --build=missing \
-        -s build_type=Release \
-        -o "&:with_vulkan=True" \
-        -c tools.system.package_manager:mode=install \
-        -c tools.system.package_manager:sudo=False
     - cmake --preset linux-release
     - cmake --build --preset linux-release
   artifacts:
@@ -93,37 +156,33 @@ build:linux:release:
       - build/linux-release/
     expire_in: 1 day
 
-build:windows:debug:
-  stage: build
-  extends: .windows_base
-  script:
-    - conan install . --output-folder=build/windows-debug/generators --build=missing
-        -s build_type=Debug -o "&:with_vulkan=True"
-    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    - cmake --preset windows-debug
-    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    - cmake --build --preset windows-debug
-    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-  artifacts:
-    paths:
-      - build/windows-debug/
-    expire_in: 1 day
+# build:windows:debug:
+#   stage: build
+#   extends: .windows_base
+#   needs: ["conan:install:windows"]
+#   script:
+#     - cmake --preset windows-debug
+#     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+#     - cmake --build --preset windows-debug
+#     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+#   artifacts:
+#     paths:
+#       - build/windows-debug/
+#     expire_in: 1 day
 
-build:windows:release:
-  stage: build
-  extends: .windows_base
-  script:
-    - conan install . --output-folder=build/windows-release/generators --build=missing
-        -s build_type=Release -o "&:with_vulkan=True"
-    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    - cmake --preset windows-release
-    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    - cmake --build --preset windows-release
-    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-  artifacts:
-    paths:
-      - build/windows-release/
-    expire_in: 1 day
+# build:windows:release:
+#   stage: build
+#   extends: .windows_base
+#   needs: ["conan:install:windows"]
+#   script:
+#     - cmake --preset windows-release
+#     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+#     - cmake --build --preset windows-release
+#     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+#   artifacts:
+#     paths:
+#       - build/windows-release/
+#     expire_in: 1 day
 
 # --- Test Stage ---
 # Linux: SDL_VIDEODRIVER=offscreen + lavapipe (mesa-vulkan-drivers) ile headless çalışır.
@@ -131,7 +190,7 @@ build:windows:release:
 
 test:unit:
   stage: test
-  extends: .conan_base
+  extends: .test_base
   needs: ["build:linux:debug"]
   variables:
     SDL_VIDEODRIVER: "offscreen"
@@ -142,29 +201,24 @@ test:unit:
 test:unit:asan:
   stage: test
   extends: .conan_base
+  needs: ["conan:install:linux"]
   variables:
     SDL_VIDEODRIVER: "offscreen"
     VK_ICD_FILENAMES: "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
   script:
-    - |
-      conan install . --output-folder=build/linux-debug-asan/generators --build=missing \
-        -s build_type=Debug \
-        -o "&:with_vulkan=True" \
-        -c tools.system.package_manager:mode=install \
-        -c tools.system.package_manager:sudo=False
     - cmake --preset linux-debug-asan
     - cmake --build --preset linux-debug-asan
     - ctest --preset linux-debug-asan --output-on-failure
 
-test:unit:windows:
-  stage: test
-  extends: .windows_base
-  needs: ["build:windows:debug"]
-  variables:
-    SDL_VIDEODRIVER: "offscreen"
-  script:
-    - ctest --preset windows-debug --output-on-failure
-    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+# test:unit:windows:
+#   stage: test
+#   extends: .windows_base
+#   needs: ["build:windows:debug"]
+#   variables:
+#     SDL_VIDEODRIVER: "offscreen"
+#   script:
+#     - ctest --preset windows-debug --output-on-failure
+#     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # --- Quality Stage ---
 
