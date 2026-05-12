@@ -162,7 +162,7 @@ conan:install:linux:asan:
 build:linux:debug:
   stage: build
   extends: .conan_base
-  needs: ["conan:install:linux"]
+  needs: ["conan:install:linux:debug"]
   script:
     - cmake --preset linux-debug
     - cmake --build --preset linux-debug
@@ -174,7 +174,7 @@ build:linux:debug:
 build:linux:release:
   stage: build
   extends: .conan_base
-  needs: ["conan:install:linux"]
+  needs: ["conan:install:linux:release"]
   script:
     - cmake --preset linux-release
     - cmake --build --preset linux-release
@@ -228,7 +228,7 @@ test:unit:
 test:unit:asan:
   stage: test
   extends: .conan_base
-  needs: ["conan:install:linux"]
+  needs: ["conan:install:linux:asan"]
   variables:
     SDL_VIDEODRIVER: "offscreen"
     VK_ICD_FILENAMES: "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
