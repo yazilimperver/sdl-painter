@@ -136,7 +136,7 @@ Tüm özelliklerle (Vulkan + metin) derleme:
 
 ```bash
 conan install . --output-folder=build/linux-debug/generators --build=missing \
-    -s build_type=Debug -o "&:with_vulkan=True" -o "&:with_text=True"
+    -s build_type=Debug -o "&:with_vulkan=True"
 cmake --preset linux-debug
 cmake --build --preset linux-debug
 ```

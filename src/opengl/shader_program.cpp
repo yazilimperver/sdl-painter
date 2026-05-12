@@ -4,7 +4,6 @@
 #include <spdlog/spdlog.h>
 
 #include <fstream>
-#include <iostream>
 #include <sstream>
 #include <vector>
 
@@ -18,7 +17,8 @@ ShaderProgram::~ShaderProgram() {
 }
 
 ShaderProgram::ShaderProgram(ShaderProgram&& other) noexcept
-    : mProgramId(other.mProgramId) {
+    : mProgramId(other.mProgramId),
+      mUniformCache(std::move(other.mUniformCache)) {
   other.mProgramId = 0;
 }
 
@@ -26,6 +26,7 @@ ShaderProgram& ShaderProgram::operator=(ShaderProgram&& other) noexcept {
   if (this != &other) {
     if (mProgramId != 0) glDeleteProgram(mProgramId);
     mProgramId = other.mProgramId;
+    mUniformCache = std::move(other.mUniformCache);
     other.mProgramId = 0;
   }
   return *this;
@@ -42,8 +43,13 @@ uint32_t ShaderProgram::CompileShader(uint32_t type, const std::string& src) {
   if (!success) {
     int32_t log_len = 0;
     glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &log_len);
-    std::vector<char> log(static_cast<std::size_t>(log_len));
-    glGetShaderInfoLog(shader, log_len, nullptr, log.data());
+    // log_len bazı sürücülerde 0 dönebilir; en az 1 byte boş string için tahsis et.
+    std::vector<char> log(static_cast<std::size_t>(log_len > 0 ? log_len : 1));
+    if (log_len > 0) {
+      glGetShaderInfoLog(shader, log_len, nullptr, log.data());
+    } else {
+      log[0] = '\0';
+    }
     spdlog::error("[ShaderProgram] Compile error:\n{}", log.data());
     glDeleteShader(shader);
     return 0;
@@ -74,8 +80,12 @@ bool ShaderProgram::Build(const std::string& vert_src,
   if (!success) {
     int32_t log_len = 0;
     glGetProgramiv(mProgramId, GL_INFO_LOG_LENGTH, &log_len);
-    std::vector<char> log(static_cast<std::size_t>(log_len));
-    glGetProgramInfoLog(mProgramId, log_len, nullptr, log.data());
+    std::vector<char> log(static_cast<std::size_t>(log_len > 0 ? log_len : 1));
+    if (log_len > 0) {
+      glGetProgramInfoLog(mProgramId, log_len, nullptr, log.data());
+    } else {
+      log[0] = '\0';
+    }
     spdlog::error("[ShaderProgram] Link error:\n{}", log.data());
     glDeleteProgram(mProgramId);
     mProgramId = 0;
@@ -107,13 +117,25 @@ bool ShaderProgram::BuildFromFile(const std::string& vert_path,
 
 void ShaderProgram::Use() const { glUseProgram(mProgramId); }
 
+int32_t ShaderProgram::GetUniformLocation(const std::string& name) const {
+  auto it = mUniformCache.find(name);
+  if (it != mUniformCache.end()) {
+    return it->second;
+  }
+  const int32_t loc = glGetUniformLocation(mProgramId, name.c_str());
+  // Bulunamayan uniformlar da -1 ile önbelleğe alınır; tekrar sorgu yapılmaz,
+  // uyarı yalnızca bir kez loglanır (hot-path log'unu önler).
+  mUniformCache.emplace(name, loc);
+  if (loc == -1) {
+    spdlog::warn("[ShaderProgram] Uniform '{}' bulunamadı (warn-once).", name);
+  }
+  return loc;
+}
+
 void ShaderProgram::SetUniformMat3(const std::string& name,
                                    const float* mat3) const {
-  const int32_t loc = glGetUniformLocation(mProgramId, name.c_str());
-  if (loc == -1) {
-    spdlog::warn("[ShaderProgram] Uniform '{}' bulunamadı.", name);
-    return;
-  }
+  const int32_t loc = GetUniformLocation(name);
+  if (loc == -1) return;
   // Transform sınıfı satır-büyük (row-major) düzende veri tutar; OpenGL
   // varsayılan olarak sütun-büyük bekler, bu nedenle transpose=GL_TRUE.
   glUniformMatrix3fv(loc, 1, GL_TRUE, mat3);
@@ -121,41 +143,29 @@ void ShaderProgram::SetUniformMat3(const std::string& name,
 
 void ShaderProgram::SetUniformMat4(const std::string& name,
                                    const float* mat4) const {
-  const int32_t loc = glGetUniformLocation(mProgramId, name.c_str());
-  if (loc == -1) {
-    spdlog::warn("[ShaderProgram] Uniform '{}' bulunamadı.", name);
-    return;
-  }
+  const int32_t loc = GetUniformLocation(name);
+  if (loc == -1) return;
   glUniformMatrix4fv(loc, 1, GL_FALSE, mat4);
 }
 
 void ShaderProgram::SetUniformVec4(const std::string& name,
                                    float r, float g, float b, float a) const {
-  const int32_t loc = glGetUniformLocation(mProgramId, name.c_str());
-  if (loc == -1) {
-    spdlog::warn("[ShaderProgram] Uniform '{}' bulunamadı.", name);
-    return;
-  }
+  const int32_t loc = GetUniformLocation(name);
+  if (loc == -1) return;
   glUniform4f(loc, r, g, b, a);
 }
 
 void ShaderProgram::SetUniformFloat(const std::string& name,
                                     float value) const {
-  const int32_t loc = glGetUniformLocation(mProgramId, name.c_str());
-  if (loc == -1) {
-    spdlog::warn("[ShaderProgram] Uniform '{}' bulunamadı.", name);
-    return;
-  }
+  const int32_t loc = GetUniformLocation(name);
+  if (loc == -1) return;
   glUniform1f(loc, value);
 }
 
 void ShaderProgram::SetUniformInt(const std::string& name,
                                   int32_t value) const {
-  const int32_t loc = glGetUniformLocation(mProgramId, name.c_str());
-  if (loc == -1) {
-    spdlog::warn("[ShaderProgram] Uniform '{}' bulunamadı.", name);
-    return;
-  }
+  const int32_t loc = GetUniformLocation(name);
+  if (loc == -1) return;
   glUniform1i(loc, value);
 }
 

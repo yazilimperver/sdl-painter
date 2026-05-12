@@ -65,7 +65,7 @@ build:linux:debug:
     - |
       conan install . --output-folder=build/linux-debug/generators --build=missing \
         -s build_type=Debug \
-        -o "&:with_vulkan=True" -o "&:with_text=True" \
+        -o "&:with_vulkan=True" \
         -c tools.system.package_manager:mode=install \
         -c tools.system.package_manager:sudo=True
     - cmake --preset linux-debug
@@ -82,7 +82,7 @@ build:linux:release:
     - |
       conan install . --output-folder=build/linux-release/generators --build=missing \
         -s build_type=Release \
-        -o "&:with_vulkan=True" -o "&:with_text=True" \
+        -o "&:with_vulkan=True" \
         -c tools.system.package_manager:mode=install \
         -c tools.system.package_manager:sudo=True
     - cmake --preset linux-release
@@ -97,7 +97,7 @@ build:windows:debug:
   extends: .windows_base
   script:
     - conan install . --output-folder=build/windows-debug/generators --build=missing
-        -s build_type=Debug -o "&:with_vulkan=True" -o "&:with_text=True"
+        -s build_type=Debug -o "&:with_vulkan=True"
     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     - cmake --preset windows-debug
     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -113,7 +113,7 @@ build:windows:release:
   extends: .windows_base
   script:
     - conan install . --output-folder=build/windows-release/generators --build=missing
-        -s build_type=Release -o "&:with_vulkan=True" -o "&:with_text=True"
+        -s build_type=Release -o "&:with_vulkan=True"
     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     - cmake --preset windows-release
     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -148,7 +148,7 @@ test:unit:asan:
     - |
       conan install . --output-folder=build/linux-debug-asan/generators --build=missing \
         -s build_type=Debug \
-        -o "&:with_vulkan=True" -o "&:with_text=True" \
+        -o "&:with_vulkan=True" \
         -c tools.system.package_manager:mode=install \
         -c tools.system.package_manager:sudo=True
     - cmake --preset linux-debug-asan

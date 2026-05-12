@@ -2,6 +2,7 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
+#include <spdlog/spdlog.h>
 
 #include "render_batcher.h"
 #include "sdl_painter/image.h"
@@ -9,6 +10,13 @@
 #include "sdl_painter/texture.h"
 #include "sdl_painter/vertex.h"
 #include "tessellator.h"
+
+// spdlog (Windows'ta) Windows.h çeker ve `DrawText → DrawTextA` makrosunu
+// geri tanımlar. Painter::DrawText üye tanımı doğru çözünsün diye burada
+// da bir kez daha kaldır.
+#ifdef DrawText
+#  undef DrawText
+#endif
 
 namespace sdl_painter {
 
@@ -89,17 +97,28 @@ char32_t DecodeUTF8(const char* str, std::size_t remaining,
 }  // namespace
 
 Painter::Painter(SDL_Window* window, RendererBackend backend)
-    : mRenderer(CreateRenderer(backend)), mWindow(*window) {
-  if (mRenderer && mRenderer->Initialize(window)) {
-    mBatcher = std::make_unique<RenderBatcher>(*mRenderer);
-    int w = 0, h = 0;
-    SDL_GetWindowSize(window, &w, &h);
-    mViewportWidth  = w;
-    mViewportHeight = h;
-    UpdateProjection();
-  } else {
+    : mWindow(window), mRenderer(CreateRenderer(backend)) {
+  if (!window) {
+    spdlog::error("Painter: window pointer null, Painter geçersiz durumda.");
     mRenderer.reset();
+    return;
   }
+  if (!mRenderer) {
+    spdlog::error(
+        "Painter: renderer oluşturulamadı (Vulkan derlenmemiş olabilir?).");
+    return;
+  }
+  if (!mRenderer->Initialize(window)) {
+    spdlog::error("Painter: renderer initialize başarısız.");
+    mRenderer.reset();
+    return;
+  }
+  mBatcher = std::make_unique<RenderBatcher>(*mRenderer);
+  int w = 0, h = 0;
+  SDL_GetWindowSize(window, &w, &h);
+  mViewportWidth  = w;
+  mViewportHeight = h;
+  UpdateProjection();
 }
 
 Painter::~Painter() {
@@ -114,7 +133,9 @@ Painter::Painter(Painter&& other) noexcept
       mCurrentState(std::move(other.mCurrentState)),
       mCurrentFont(std::move(other.mCurrentFont)),
       mViewportWidth(other.mViewportWidth),
-      mViewportHeight(other.mViewportHeight) {}
+      mViewportHeight(other.mViewportHeight) {
+  other.mWindow = nullptr;
+}
 
 Painter& Painter::operator=(Painter&& other) noexcept {
   if (this != &other) {
@@ -127,15 +148,16 @@ Painter& Painter::operator=(Painter&& other) noexcept {
     mCurrentFont    = std::move(other.mCurrentFont);
     mViewportWidth  = other.mViewportWidth;
     mViewportHeight = other.mViewportHeight;
+    other.mWindow   = nullptr;
   }
   return *this;
 }
 
 void Painter::Begin() {
-  if (!mRenderer) return;
+  if (!mRenderer || !mWindow) return;
   // Pencere yeniden boyutlandirildiysa viewport ve projeksiyon matrisini guncelle.
   int w = 0, h = 0;
-  SDL_GetWindowSize(&mWindow.get(), &w, &h);
+  SDL_GetWindowSize(mWindow, &w, &h);
   if (w != mViewportWidth || h != mViewportHeight) {
     mViewportWidth  = w;
     mViewportHeight = h;
@@ -370,21 +392,25 @@ void Painter::Save() {
 }
 
 void Painter::Restore() {
-  if (!mStateStack.empty()) {
-    if (mBatcher) mBatcher->Flush();
-    mCurrentState = mStateStack.back();
-    mStateStack.pop_back();
-    FlushTransform();
+  if (mStateStack.empty()) {
+    // Save() çağrılmadan Restore() çağrıldı — debugging için uyarı.
+    spdlog::warn("Painter::Restore() çağrıldı ancak state stack boş "
+                 "(unbalanced Save/Restore).");
+    return;
+  }
+  if (mBatcher) mBatcher->Flush();
+  mCurrentState = mStateStack.back();
+  mStateStack.pop_back();
+  FlushTransform();
 
-    // Opaklik durumunu renderer'a yeniden uygula.
-    if (mRenderer) mRenderer->SetOpacity(mCurrentState.opacity);
+  // Opaklik durumunu renderer'a yeniden uygula.
+  if (mRenderer) mRenderer->SetOpacity(mCurrentState.opacity);
 
-    // Kaydedilen clip durumunu renderer'a yeniden uygula.
-    if (mCurrentState.has_clip) {
-      ApplyScissor(mCurrentState.clip_rect);
-    } else {
-      if (mRenderer) mRenderer->ClearScissor();
-    }
+  // Kaydedilen clip durumunu renderer'a yeniden uygula.
+  if (mCurrentState.has_clip) {
+    ApplyScissor(mCurrentState.clip_rect);
+  } else {
+    if (mRenderer) mRenderer->ClearScissor();
   }
 }
 

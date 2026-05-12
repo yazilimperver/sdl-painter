@@ -256,5 +256,5 @@ context'i yok eder; Painter bu noktadan önce yok edilmezse `glDelete*` çağrı
 | `phase2_demo` | Phase 2 | Phase 1 |
 | `phase2b_demo` | Phase 2 | Phase 1 |
 | `phase3_demo` | Phase 3 | Phase 2 |
-| `phase4_demo` | Phase 4 | Phase 3 + `SDLPAINTER_WITH_TEXT=ON` |
+| `phase4_demo` | Phase 4 | Phase 3|
 | `phase5a–5e` | Phase 5 | Phase 3/4 + `SDLPAINTER_WITH_VULKAN=ON` |

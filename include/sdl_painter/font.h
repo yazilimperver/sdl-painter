@@ -31,6 +31,15 @@ enum class Alignment {
 /// @brief Font sarmalayıcı — SDL_ttf üzerinden (Phase 4).
 ///
 /// Phase 4'e kadar bu sınıf yalnızca bir stub'dır.
+///
+/// @warning **Yaşam döngüsü sözleşmesi:** Font, glyph önbelleğindeki
+/// texture'ları yükleyen Painter (ve dolayısıyla IRenderer) yaşıyorken
+/// yıkılmalıdır. Painter yok olduktan sonra Font yıkılırsa, glyph
+/// önbelleğindeki her `Texture` raw IRenderer pointer'ı dangling olur ve
+/// davranış tanımsızdır. Painter `std::shared_ptr<Font>` ile tuttuğu için
+/// genelde sözleşme kendiliğinden sağlanır; ancak kullanıcı font'u
+/// Painter'dan bağımsız olarak `static` veya global tutarsa bu garanti
+/// kaybolur. v0.2.0'da bu daha sağlam bir mekanizmayla zorunlu kılınacaktır.
 class Font {
  public:
   Font() = default;
@@ -49,16 +58,16 @@ class Font {
   Font& operator=(Font&&) noexcept;
 
   /// @brief Font başarıyla yüklendi mi?
-  bool IsValid() const { return mHandle != nullptr; }
+  [[nodiscard]] bool IsValid() const noexcept { return mHandle != nullptr; }
 
   /// @brief Punto boyutunu döndür.
-  int32_t PointSize() const { return mPointSize; }
+  [[nodiscard]] int32_t PointSize() const noexcept { return mPointSize; }
 
   /// @brief Font ascent (baseline'dan yukariya olan maksimum piksel) degerini dondur.
-  int32_t Ascent() const;
+  [[nodiscard]] int32_t Ascent() const;
 
   /// @brief SDL_ttf font handle'ı döndür (opak pointer).
-  void* Handle() const { return mHandle; }
+  [[nodiscard]] void* Handle() const noexcept { return mHandle; }
 
   /// @brief Verilen metnin piksel boyutunu ölç.
   /// @param text Ölçülecek metin.

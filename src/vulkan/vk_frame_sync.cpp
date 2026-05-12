@@ -29,6 +29,11 @@ void VkFrameSync::Shutdown() {
     return;
   }
 
+  // Defansif önlem — fence/semaphore'ları yıkmadan önce GPU'nun tüm işlerini
+  // bitirmesini bekle. VulkanRenderer::Shutdown zaten vkDeviceWaitIdle çağırır
+  // ama VkFrameSync tek başına da güvenli olmalı.
+  vkDeviceWaitIdle(device);
+
   for (auto f : mInFlight) {
     if (f != VK_NULL_HANDLE) vkDestroyFence(device, f, nullptr);
   }

@@ -14,6 +14,14 @@ class IRenderer;
 /// @brief Yüklenmiş görüntü — texture sarmalayıcı.
 ///
 /// stb_image üzerinden dosya yükler. Texture, renderer üzerinden oluşturulur.
+///
+/// @warning **Yaşam döngüsü sözleşmesi:** Bir Image, ona ait texture'ı yükleyen
+/// Painter (ve dolayısıyla IRenderer) yaşıyorken yıkılmalıdır. Painter yok
+/// olduktan sonra Image yıkılırsa, sahip pointer (raw IRenderer*) dangling
+/// olur ve `~Image()` davranışı tanımsızdır. Pratikte: Image'ı Painter
+/// scope'una göre dar tutun, asla `static` veya `Painter`'dan daha uzun
+/// yaşayan bir konuma koymayın. v0.2.0'da `weak_ptr<IRenderer>` veya
+/// `Painter::EvictImage` ile bu sözleşme zorunlu kılınacaktır.
 class Image {
  public:
   Image() = default;
@@ -30,31 +38,35 @@ class Image {
   Image& operator=(Image&&) noexcept;
 
   /// @brief Görüntü başarıyla yüklendi mi?
-  bool IsValid() const { return mRawData != nullptr; }
+  [[nodiscard]] bool IsValid() const noexcept { return mRawData != nullptr; }
 
   /// @brief Görüntü genişliği (piksel).
-  int32_t Width() const { return mWidth; }
+  [[nodiscard]] int32_t Width() const noexcept { return mWidth; }
 
   /// @brief Görüntü yüksekliği (piksel).
-  int32_t Height() const { return mHeight; }
+  [[nodiscard]] int32_t Height() const noexcept { return mHeight; }
 
   /// @brief Kanal sayısı (3 = RGB, 4 = RGBA).
-  int32_t Channels() const { return mChannels; }
+  [[nodiscard]] int32_t Channels() const noexcept { return mChannels; }
 
   /// @brief Ham piksel verisi (stb_image tarafından yüklendi).
-  const uint8_t* RawData() const { return mRawData.get(); }
+  [[nodiscard]] const uint8_t* RawData() const noexcept {
+    return mRawData.get();
+  }
 
   /// @brief Ham piksel verisinden görüntü oluştur (veriler kopyalanır).
   ///
   /// Prosedürel dokular ve bellekten yükleme için kullanılır.
-  static Image CreateFromData(const uint8_t* data,
-                              int32_t width, int32_t height, int32_t channels);
+  [[nodiscard]] static Image CreateFromData(const uint8_t* data, int32_t width,
+                                             int32_t height, int32_t channels);
 
   /// @brief Texture'ı renderer'a yükle; ikinci çağrıda önbelleği döner.
   TextureHandle Upload(IRenderer& renderer) const;
 
   /// @brief Önceden yüklenmiş texture tanımlayıcısını döner (kInvalidTexture → henüz yüklenmedi).
-  TextureHandle GetHandle() const { return mHandle.Handle(); }
+  [[nodiscard]] TextureHandle GetHandle() const noexcept {
+    return mHandle.Handle();
+  }
 
  private:
   struct StbDeleter {

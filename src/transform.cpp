@@ -22,8 +22,11 @@ void Transform::SetIdentity() {
 }
 
 bool Transform::IsIdentity() const {
-  static const Transform kIdentity{};
-  return *this == kIdentity;
+  // Doğrudan element kontrol — magic-statics ve karşılaştırma maliyetini
+  // ortadan kaldırır.
+  return mData[0][0] == 1.0f && mData[0][1] == 0.0f && mData[0][2] == 0.0f &&
+         mData[1][0] == 0.0f && mData[1][1] == 1.0f && mData[1][2] == 0.0f &&
+         mData[2][0] == 0.0f && mData[2][1] == 0.0f && mData[2][2] == 1.0f;
 }
 
 Transform Transform::operator*(const Transform& other) const {
@@ -91,6 +94,11 @@ Transform Transform::MakeScale(float sx, float sy) {
 }
 
 bool Transform::operator==(const Transform& other) const {
+  // memcmp bit-bit karşılaştırma yapar. Bu, IEEE 754'te NaN != NaN
+  // semantiğinden sapmadır: iki NaN matris bit-bit eşitse true döner.
+  // Pratikte transform matrisleri NaN içermez; bu kabul edilen bir
+  // sapmadır ve transform stack içindeki "değişti mi" testleri için
+  // yeterlidir.
   return std::memcmp(mData, other.mData, sizeof(mData)) == 0;
 }
 

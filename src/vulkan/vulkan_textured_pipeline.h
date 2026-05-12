@@ -25,7 +25,8 @@ constexpr uint32_t kMaxTextureDescriptors = 256;
 class VulkanTexturedPipeline {
  public:
   VulkanTexturedPipeline() = default;
-  ~VulkanTexturedPipeline() = default;
+  /// @brief RAII destructor — Init başarılı olduysa kaynakları otomatik yıkar.
+  ~VulkanTexturedPipeline();
 
   VulkanTexturedPipeline(const VulkanTexturedPipeline&) = delete;
   VulkanTexturedPipeline& operator=(const VulkanTexturedPipeline&) = delete;
@@ -38,7 +39,7 @@ class VulkanTexturedPipeline {
   bool Init(VkDevice device, VkRenderPass render_pass,
             const std::string& shader_dir);
 
-  /// @brief Tüm kaynakları serbest bırak.
+  /// @brief Tüm kaynakları serbest bırak. Idempotent; destructor da çağırır.
   void Destroy(VkDevice device);
 
   /// @brief Descriptor pool'dan yeni bir set tahsis et.
@@ -57,6 +58,7 @@ class VulkanTexturedPipeline {
  private:
   static VkShaderModule LoadSpv(VkDevice device, const std::string& path);
 
+  VkDevice mDevice{VK_NULL_HANDLE};  // RAII için Init'te saklanır
   VkPipeline mPipeline{VK_NULL_HANDLE};
   VkPipelineLayout mLayout{VK_NULL_HANDLE};
   VkDescriptorSetLayout mDescriptorSetLayout{VK_NULL_HANDLE};

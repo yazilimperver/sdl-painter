@@ -18,7 +18,10 @@ class VkContext;
 class VulkanTexture {
  public:
   VulkanTexture() = default;
-  ~VulkanTexture() = default;
+  /// @brief RAII destructor — Upload başarılı olduysa kaynakları otomatik
+  /// yıkar. Not: VkDescriptorSet sahibi VulkanTexturedPipeline'dır, burada
+  /// free edilmez (yalnızca null'lanır).
+  ~VulkanTexture();
 
   VulkanTexture(const VulkanTexture&) = delete;
   VulkanTexture& operator=(const VulkanTexture&) = delete;
@@ -39,7 +42,7 @@ class VulkanTexture {
               int32_t channels, VkDescriptorSet descriptor_set,
               VkDescriptorSetLayout descriptor_set_layout);
 
-  /// @brief Tüm Vulkan kaynaklarını serbest bırak.
+  /// @brief Tüm Vulkan kaynaklarını serbest bırak. Idempotent; destructor da çağırır.
   void Destroy(VkDevice device);
 
   VkImageView GetImageView() const { return mImageView; }
@@ -76,6 +79,7 @@ class VulkanTexture {
   void UpdateDescriptorSet(VkDevice device,
                            VkDescriptorSetLayout layout);
 
+  VkDevice mDevice{VK_NULL_HANDLE};  // RAII için Upload'da saklanır
   VkImage mImage{VK_NULL_HANDLE};
   VkDeviceMemory mImageMemory{VK_NULL_HANDLE};
   VkImageView mImageView{VK_NULL_HANDLE};

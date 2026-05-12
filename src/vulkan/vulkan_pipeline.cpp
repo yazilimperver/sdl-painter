@@ -10,6 +10,12 @@
 
 namespace sdl_painter {
 
+VulkanPipeline::~VulkanPipeline() {
+  if (mDevice != VK_NULL_HANDLE) {
+    Destroy(mDevice);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Yardımcı: .spv dosyasını yükle
 // ---------------------------------------------------------------------------
@@ -32,7 +38,7 @@ VkShaderModule VulkanPipeline::LoadSpv(VkDevice device,
   ci.pCode = reinterpret_cast<const uint32_t*>(code.data());  // NOLINT
 
   VkShaderModule mod = VK_NULL_HANDLE;
-  VK_CHECK(vkCreateShaderModule(device, &ci, nullptr, &mod));
+  VK_CHECK_HANDLE(vkCreateShaderModule(device, &ci, nullptr, &mod));
   return mod;
 }
 
@@ -161,7 +167,14 @@ bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass,
   layout_ci.pushConstantRangeCount = 1;
   layout_ci.pPushConstantRanges = &push_range;
 
-  VK_CHECK(vkCreatePipelineLayout(device, &layout_ci, nullptr, &mLayout));
+  if (vkCreatePipelineLayout(device, &layout_ci, nullptr, &mLayout) !=
+      VK_SUCCESS) {
+    spdlog::error("VulkanPipeline: vkCreatePipelineLayout başarısız.");
+    // Shader modülleri henüz silinmedi — leak'i önle.
+    vkDestroyShaderModule(device, vert_mod, nullptr);
+    vkDestroyShaderModule(device, frag_mod, nullptr);
+    return false;
+  }
 
   // --- Graphics pipeline ---
   VkGraphicsPipelineCreateInfo pipeline_ci{};
@@ -190,22 +203,30 @@ bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass,
   if (res != VK_SUCCESS) {
     spdlog::error("vkCreateGraphicsPipelines failed: {}",
                   vk_detail::VkResultToString(res));
+    // Pipeline layout artık sahipsiz — temizle.
+    vkDestroyPipelineLayout(device, mLayout, nullptr);
+    mLayout = VK_NULL_HANDLE;
     return false;
   }
 
   spdlog::info("VulkanPipeline initialized (untextured).");
+  // RAII için device'i sakla.
+  mDevice = device;
   return true;
 }
 
 void VulkanPipeline::Destroy(VkDevice device) {
+  VkDevice d = (mDevice != VK_NULL_HANDLE) ? mDevice : device;
+  if (d == VK_NULL_HANDLE) return;
   if (mPipeline != VK_NULL_HANDLE) {
-    vkDestroyPipeline(device, mPipeline, nullptr);
+    vkDestroyPipeline(d, mPipeline, nullptr);
     mPipeline = VK_NULL_HANDLE;
   }
   if (mLayout != VK_NULL_HANDLE) {
-    vkDestroyPipelineLayout(device, mLayout, nullptr);
+    vkDestroyPipelineLayout(d, mLayout, nullptr);
     mLayout = VK_NULL_HANDLE;
   }
+  mDevice = VK_NULL_HANDLE;
 }
 
 }  // namespace sdl_painter

@@ -17,27 +17,33 @@ class Pen {
       : mColor(color), mWidth(width) {}
 
   /// @brief Çizgi rengini döndür.
-  const Color& GetColor() const { return mColor; }
+  [[nodiscard]] const Color& GetColor() const noexcept { return mColor; }
 
   /// @brief Çizgi kalınlığını döndür.
-  float GetWidth() const { return mWidth; }
+  [[nodiscard]] float GetWidth() const noexcept { return mWidth; }
 
   /// @brief Çizgi rengini ayarla.
-  void SetColor(const Color& color) { mColor = color; }
+  void SetColor(const Color& color) noexcept { mColor = color; }
 
   /// @brief Çizgi kalınlığını ayarla.
-  void SetWidth(float width) { mWidth = width; }
+  void SetWidth(float width) noexcept { mWidth = width; }
 
   /// @brief Kalem görünür mü? (alpha > 0 ve width > 0)
-  bool IsVisible() const { return mColor.a > 0 && mWidth > 0.0f; }
+  [[nodiscard]] bool IsVisible() const noexcept {
+    return mColor.a > 0 && mWidth > 0.0f;
+  }
 
-  bool operator==(const Pen& other) const {
+  [[nodiscard]] bool operator==(const Pen& other) const noexcept {
     return mColor == other.mColor && mWidth == other.mWidth;
   }
-  bool operator!=(const Pen& other) const { return !(*this == other); }
+  [[nodiscard]] bool operator!=(const Pen& other) const noexcept {
+    return !(*this == other);
+  }
 
   /// @brief Şeffaf (çizim yapmayan) kalem.
-  static Pen NoPen() { return Pen(Color::Transparent(), 0.0f); }
+  [[nodiscard]] static Pen NoPen() noexcept {
+    return Pen(Color::Transparent(), 0.0f);
+  }
 
  private:
   Color mColor{Color::Black()};

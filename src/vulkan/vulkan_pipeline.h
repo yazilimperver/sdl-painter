@@ -28,7 +28,8 @@ struct alignas(4) PushConstants {
 class VulkanPipeline {
  public:
   VulkanPipeline() = default;
-  ~VulkanPipeline() = default;
+  /// @brief RAII destructor — Init başarılı olduysa kaynakları otomatik yıkar.
+  ~VulkanPipeline();
 
   VulkanPipeline(const VulkanPipeline&) = delete;
   VulkanPipeline& operator=(const VulkanPipeline&) = delete;
@@ -41,7 +42,7 @@ class VulkanPipeline {
   bool Init(VkDevice device, VkRenderPass render_pass,
             const std::string& shader_dir);
 
-  /// @brief Pipeline kaynaklarını serbest bırak.
+  /// @brief Pipeline kaynaklarını serbest bırak. Idempotent; destructor da çağırır.
   void Destroy(VkDevice device);
 
   VkPipeline GetPipeline() const { return mPipeline; }
@@ -51,6 +52,7 @@ class VulkanPipeline {
   /// @brief .spv dosyasını yükle ve VkShaderModule oluştur.
   static VkShaderModule LoadSpv(VkDevice device, const std::string& path);
 
+  VkDevice mDevice{VK_NULL_HANDLE};  // RAII için Init'te saklanır
   VkPipeline mPipeline{VK_NULL_HANDLE};
   VkPipelineLayout mLayout{VK_NULL_HANDLE};
 };

@@ -19,23 +19,25 @@ struct Color {
       : r(r), g(g), b(b), a(a) {}
 
   /// @brief Rengi [0.0, 1.0] aralığında normalize edilmiş float olarak döndür.
-  float RedF() const { return r / 255.0f; }
-  float GreenF() const { return g / 255.0f; }
-  float BlueF() const { return b / 255.0f; }
-  float AlphaF() const { return a / 255.0f; }
+  [[nodiscard]] float RedF() const noexcept { return r / 255.0f; }
+  [[nodiscard]] float GreenF() const noexcept { return g / 255.0f; }
+  [[nodiscard]] float BlueF() const noexcept { return b / 255.0f; }
+  [[nodiscard]] float AlphaF() const noexcept { return a / 255.0f; }
 
-  bool operator==(const Color& other) const {
+  [[nodiscard]] bool operator==(const Color& other) const noexcept {
     return r == other.r && g == other.g && b == other.b && a == other.a;
   }
-  bool operator!=(const Color& other) const { return !(*this == other); }
+  [[nodiscard]] bool operator!=(const Color& other) const noexcept {
+    return !(*this == other);
+  }
 
   // Yaygın renkler
-  static constexpr Color Black() { return {0, 0, 0}; }
-  static constexpr Color White() { return {255, 255, 255}; }
-  static constexpr Color Red() { return {255, 0, 0}; }
-  static constexpr Color Green() { return {0, 255, 0}; }
-  static constexpr Color Blue() { return {0, 0, 255}; }
-  static constexpr Color Transparent() { return {0, 0, 0, 0}; }
+  [[nodiscard]] static constexpr Color Black() noexcept { return {0, 0, 0}; }
+  [[nodiscard]] static constexpr Color White() noexcept { return {255, 255, 255}; }
+  [[nodiscard]] static constexpr Color Red() noexcept { return {255, 0, 0}; }
+  [[nodiscard]] static constexpr Color Green() noexcept { return {0, 255, 0}; }
+  [[nodiscard]] static constexpr Color Blue() noexcept { return {0, 0, 255}; }
+  [[nodiscard]] static constexpr Color Transparent() noexcept { return {0, 0, 0, 0}; }
 };
 
 }  // namespace sdl_painter

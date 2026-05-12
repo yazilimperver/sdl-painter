@@ -10,6 +10,12 @@
 
 namespace sdl_painter {
 
+VulkanTexturedPipeline::~VulkanTexturedPipeline() {
+  if (mDevice != VK_NULL_HANDLE) {
+    Destroy(mDevice);
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Yardımcı: .spv yükle
 // ---------------------------------------------------------------------------
@@ -31,7 +37,7 @@ VkShaderModule VulkanTexturedPipeline::LoadSpv(VkDevice device,
   ci.pCode = reinterpret_cast<const uint32_t*>(code.data());  // NOLINT
 
   VkShaderModule mod = VK_NULL_HANDLE;
-  VK_CHECK(vkCreateShaderModule(device, &ci, nullptr, &mod));
+  VK_CHECK_HANDLE(vkCreateShaderModule(device, &ci, nullptr, &mod));
   return mod;
 }
 
@@ -52,9 +58,11 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
   layout_ci.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
   layout_ci.bindingCount = 1;
   layout_ci.pBindings = &sampler_binding;
-  VK_CHECK(
-      vkCreateDescriptorSetLayout(device, &layout_ci, nullptr,
-                                   &mDescriptorSetLayout));
+  if (vkCreateDescriptorSetLayout(device, &layout_ci, nullptr,
+                                  &mDescriptorSetLayout) != VK_SUCCESS) {
+    spdlog::error("VulkanTexturedPipeline: vkCreateDescriptorSetLayout başarısız.");
+    return false;
+  }
 
   // --- Descriptor pool ---
   VkDescriptorPoolSize pool_size{};
@@ -67,7 +75,13 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
   pool_ci.maxSets = kMaxTextureDescriptors;
   pool_ci.poolSizeCount = 1;
   pool_ci.pPoolSizes = &pool_size;
-  VK_CHECK(vkCreateDescriptorPool(device, &pool_ci, nullptr, &mDescriptorPool));
+  if (vkCreateDescriptorPool(device, &pool_ci, nullptr, &mDescriptorPool) !=
+      VK_SUCCESS) {
+    spdlog::error("VulkanTexturedPipeline: vkCreateDescriptorPool başarısız.");
+    vkDestroyDescriptorSetLayout(device, mDescriptorSetLayout, nullptr);
+    mDescriptorSetLayout = VK_NULL_HANDLE;
+    return false;
+  }
 
   // --- Shader modülleri ---
   const std::string vert_path = shader_dir + "/textured.vert.spv";
@@ -81,6 +95,11 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
       vkDestroyShaderModule(device, vert_mod, nullptr);
     if (frag_mod != VK_NULL_HANDLE)
       vkDestroyShaderModule(device, frag_mod, nullptr);
+    // Önceki kaynaklar (descriptor set layout + pool) için cleanup.
+    vkDestroyDescriptorPool(device, mDescriptorPool, nullptr);
+    vkDestroyDescriptorSetLayout(device, mDescriptorSetLayout, nullptr);
+    mDescriptorPool = VK_NULL_HANDLE;
+    mDescriptorSetLayout = VK_NULL_HANDLE;
     return false;
   }
 
@@ -198,7 +217,16 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
   pl_ci.pSetLayouts = &mDescriptorSetLayout;
   pl_ci.pushConstantRangeCount = 1;
   pl_ci.pPushConstantRanges = &push_range;
-  VK_CHECK(vkCreatePipelineLayout(device, &pl_ci, nullptr, &mLayout));
+  if (vkCreatePipelineLayout(device, &pl_ci, nullptr, &mLayout) != VK_SUCCESS) {
+    spdlog::error("VulkanTexturedPipeline: vkCreatePipelineLayout başarısız.");
+    vkDestroyShaderModule(device, vert_mod, nullptr);
+    vkDestroyShaderModule(device, frag_mod, nullptr);
+    vkDestroyDescriptorPool(device, mDescriptorPool, nullptr);
+    vkDestroyDescriptorSetLayout(device, mDescriptorSetLayout, nullptr);
+    mDescriptorPool = VK_NULL_HANDLE;
+    mDescriptorSetLayout = VK_NULL_HANDLE;
+    return false;
+  }
 
   // --- Graphics pipeline ---
   VkGraphicsPipelineCreateInfo pipeline_ci{};
@@ -226,10 +254,19 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
   if (res != VK_SUCCESS) {
     spdlog::error("VulkanTexturedPipeline: vkCreateGraphicsPipelines hatası: {}",
                   vk_detail::VkResultToString(res));
+    // Tüm önceki kaynakları temizle.
+    vkDestroyPipelineLayout(device, mLayout, nullptr);
+    vkDestroyDescriptorPool(device, mDescriptorPool, nullptr);
+    vkDestroyDescriptorSetLayout(device, mDescriptorSetLayout, nullptr);
+    mLayout = VK_NULL_HANDLE;
+    mDescriptorPool = VK_NULL_HANDLE;
+    mDescriptorSetLayout = VK_NULL_HANDLE;
     return false;
   }
 
   spdlog::info("VulkanTexturedPipeline initialized.");
+  // RAII için device'i sakla.
+  mDevice = device;
   return true;
 }
 
@@ -263,22 +300,25 @@ void VulkanTexturedPipeline::FreeDescriptorSet(VkDevice device,
 // Destroy
 // ---------------------------------------------------------------------------
 void VulkanTexturedPipeline::Destroy(VkDevice device) {
+  VkDevice d = (mDevice != VK_NULL_HANDLE) ? mDevice : device;
+  if (d == VK_NULL_HANDLE) return;
   if (mPipeline != VK_NULL_HANDLE) {
-    vkDestroyPipeline(device, mPipeline, nullptr);
+    vkDestroyPipeline(d, mPipeline, nullptr);
     mPipeline = VK_NULL_HANDLE;
   }
   if (mLayout != VK_NULL_HANDLE) {
-    vkDestroyPipelineLayout(device, mLayout, nullptr);
+    vkDestroyPipelineLayout(d, mLayout, nullptr);
     mLayout = VK_NULL_HANDLE;
   }
   if (mDescriptorPool != VK_NULL_HANDLE) {
-    vkDestroyDescriptorPool(device, mDescriptorPool, nullptr);
+    vkDestroyDescriptorPool(d, mDescriptorPool, nullptr);
     mDescriptorPool = VK_NULL_HANDLE;
   }
   if (mDescriptorSetLayout != VK_NULL_HANDLE) {
-    vkDestroyDescriptorSetLayout(device, mDescriptorSetLayout, nullptr);
+    vkDestroyDescriptorSetLayout(d, mDescriptorSetLayout, nullptr);
     mDescriptorSetLayout = VK_NULL_HANDLE;
   }
+  mDevice = VK_NULL_HANDLE;
 }
 
 }  // namespace sdl_painter

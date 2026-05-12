@@ -11,6 +11,11 @@
 
 namespace sdl_painter {
 
+VulkanTexture::~VulkanTexture() {
+  if (mDevice != VK_NULL_HANDLE) {
+    Destroy(mDevice);
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Upload — ana giriş noktası
@@ -78,6 +83,8 @@ bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
   UpdateDescriptorSet(device, descriptor_set_layout);
 
   spdlog::debug("VulkanTexture: {}x{} yuklendi.", width, height);
+  // RAII için device'i sakla.
+  mDevice = device;
   return true;
 }
 
@@ -94,7 +101,11 @@ bool VulkanTexture::CreateStagingBuffer(VkDevice device,
   buf_ci.size = size;
   buf_ci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   buf_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-  VK_CHECK(vkCreateBuffer(device, &buf_ci, nullptr, &out_buf));
+  if (vkCreateBuffer(device, &buf_ci, nullptr, &out_buf) != VK_SUCCESS) {
+    spdlog::error("VulkanTexture: staging vkCreateBuffer başarısız.");
+    out_buf = VK_NULL_HANDLE;
+    return false;
+  }
 
   VkMemoryRequirements mem_req{};
   vkGetBufferMemoryRequirements(device, out_buf, &mem_req);
@@ -106,14 +117,35 @@ bool VulkanTexture::CreateStagingBuffer(VkDevice device,
       phys_device, mem_req.memoryTypeBits,
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
   if (alloc_info.memoryTypeIndex == UINT32_MAX) {
+    spdlog::error("VulkanTexture: staging için uygun bellek tipi bulunamadı.");
     vkDestroyBuffer(device, out_buf, nullptr);
+    out_buf = VK_NULL_HANDLE;
     return false;
   }
-  VK_CHECK(vkAllocateMemory(device, &alloc_info, nullptr, &out_mem));
-  VK_CHECK(vkBindBufferMemory(device, out_buf, out_mem, 0));
+  if (vkAllocateMemory(device, &alloc_info, nullptr, &out_mem) != VK_SUCCESS) {
+    spdlog::error("VulkanTexture: staging vkAllocateMemory başarısız.");
+    vkDestroyBuffer(device, out_buf, nullptr);
+    out_buf = VK_NULL_HANDLE;
+    return false;
+  }
+  if (vkBindBufferMemory(device, out_buf, out_mem, 0) != VK_SUCCESS) {
+    spdlog::error("VulkanTexture: staging vkBindBufferMemory başarısız.");
+    vkFreeMemory(device, out_mem, nullptr);
+    vkDestroyBuffer(device, out_buf, nullptr);
+    out_mem = VK_NULL_HANDLE;
+    out_buf = VK_NULL_HANDLE;
+    return false;
+  }
 
   void* mapped = nullptr;
-  VK_CHECK(vkMapMemory(device, out_mem, 0, size, 0, &mapped));
+  if (vkMapMemory(device, out_mem, 0, size, 0, &mapped) != VK_SUCCESS) {
+    spdlog::error("VulkanTexture: staging vkMapMemory başarısız.");
+    vkFreeMemory(device, out_mem, nullptr);
+    vkDestroyBuffer(device, out_buf, nullptr);
+    out_mem = VK_NULL_HANDLE;
+    out_buf = VK_NULL_HANDLE;
+    return false;
+  }
   std::memcpy(mapped, rgba_data, static_cast<size_t>(size));
   vkUnmapMemory(device, out_mem);
   return true;
@@ -136,7 +168,11 @@ bool VulkanTexture::CreateImage(VkDevice device, VkPhysicalDevice phys_device,
   img_ci.usage =
       VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
   img_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-  VK_CHECK(vkCreateImage(device, &img_ci, nullptr, &mImage));
+  if (vkCreateImage(device, &img_ci, nullptr, &mImage) != VK_SUCCESS) {
+    spdlog::error("VulkanTexture: vkCreateImage başarısız.");
+    mImage = VK_NULL_HANDLE;
+    return false;
+  }
 
   VkMemoryRequirements mem_req{};
   vkGetImageMemoryRequirements(device, mImage, &mem_req);
@@ -147,9 +183,27 @@ bool VulkanTexture::CreateImage(VkDevice device, VkPhysicalDevice phys_device,
   alloc_info.memoryTypeIndex = vk_detail::FindMemoryType(
       phys_device, mem_req.memoryTypeBits,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-  if (alloc_info.memoryTypeIndex == UINT32_MAX) return false;
-  VK_CHECK(vkAllocateMemory(device, &alloc_info, nullptr, &mImageMemory));
-  VK_CHECK(vkBindImageMemory(device, mImage, mImageMemory, 0));
+  if (alloc_info.memoryTypeIndex == UINT32_MAX) {
+    spdlog::error("VulkanTexture: image için uygun bellek tipi bulunamadı.");
+    vkDestroyImage(device, mImage, nullptr);
+    mImage = VK_NULL_HANDLE;
+    return false;
+  }
+  if (vkAllocateMemory(device, &alloc_info, nullptr, &mImageMemory) !=
+      VK_SUCCESS) {
+    spdlog::error("VulkanTexture: image vkAllocateMemory başarısız.");
+    vkDestroyImage(device, mImage, nullptr);
+    mImage = VK_NULL_HANDLE;
+    return false;
+  }
+  if (vkBindImageMemory(device, mImage, mImageMemory, 0) != VK_SUCCESS) {
+    spdlog::error("VulkanTexture: vkBindImageMemory başarısız.");
+    vkFreeMemory(device, mImageMemory, nullptr);
+    vkDestroyImage(device, mImage, nullptr);
+    mImageMemory = VK_NULL_HANDLE;
+    mImage = VK_NULL_HANDLE;
+    return false;
+  }
 
   VkImageViewCreateInfo view_ci{};
   view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
@@ -161,7 +215,14 @@ bool VulkanTexture::CreateImage(VkDevice device, VkPhysicalDevice phys_device,
   view_ci.subresourceRange.levelCount = 1;
   view_ci.subresourceRange.baseArrayLayer = 0;
   view_ci.subresourceRange.layerCount = 1;
-  VK_CHECK(vkCreateImageView(device, &view_ci, nullptr, &mImageView));
+  if (vkCreateImageView(device, &view_ci, nullptr, &mImageView) != VK_SUCCESS) {
+    spdlog::error("VulkanTexture: vkCreateImageView başarısız.");
+    vkFreeMemory(device, mImageMemory, nullptr);
+    vkDestroyImage(device, mImage, nullptr);
+    mImageMemory = VK_NULL_HANDLE;
+    mImage = VK_NULL_HANDLE;
+    return false;
+  }
   return true;
 }
 
@@ -309,23 +370,26 @@ void VulkanTexture::UpdateDescriptorSet(VkDevice device,
 // Destroy
 // ---------------------------------------------------------------------------
 void VulkanTexture::Destroy(VkDevice device) {
+  VkDevice d = (mDevice != VK_NULL_HANDLE) ? mDevice : device;
+  if (d == VK_NULL_HANDLE) return;
   if (mSampler != VK_NULL_HANDLE) {
-    vkDestroySampler(device, mSampler, nullptr);
+    vkDestroySampler(d, mSampler, nullptr);
     mSampler = VK_NULL_HANDLE;
   }
   if (mImageView != VK_NULL_HANDLE) {
-    vkDestroyImageView(device, mImageView, nullptr);
+    vkDestroyImageView(d, mImageView, nullptr);
     mImageView = VK_NULL_HANDLE;
   }
   if (mImage != VK_NULL_HANDLE) {
-    vkDestroyImage(device, mImage, nullptr);
+    vkDestroyImage(d, mImage, nullptr);
     mImage = VK_NULL_HANDLE;
   }
   if (mImageMemory != VK_NULL_HANDLE) {
-    vkFreeMemory(device, mImageMemory, nullptr);
+    vkFreeMemory(d, mImageMemory, nullptr);
     mImageMemory = VK_NULL_HANDLE;
   }
   mDescriptorSet = VK_NULL_HANDLE;
+  mDevice = VK_NULL_HANDLE;
 }
 
 }  // namespace sdl_painter

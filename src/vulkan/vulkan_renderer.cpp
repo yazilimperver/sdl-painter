@@ -36,11 +36,14 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
   mViewportW = static_cast<int32_t>(width);
   mViewportH = static_cast<int32_t>(height);
 
-  // Phase 5b: vertex ring buffer
-  constexpr VkDeviceSize kRingSize = 4 * 1024 * 1024;  // 4 MB
+  // Phase 5b: vertex ring buffer — per-slot 4 MB, frames-in-flight kadar slot
+  // (CPU/GPU paralelliği için RAW hazard'ı önler; bkz. K1).
+  constexpr VkDeviceSize kPerSlotSize = 4 * 1024 * 1024;  // 4 MB / slot
+  constexpr VkDeviceSize kRingSize = kPerSlotSize * VkFrameSync::kMaxFramesInFlight;
   mVertexRing = std::make_unique<VulkanBuffer>();
   if (!mVertexRing->Init(mContext->GetDevice(), mContext->GetPhysicalDevice(),
-                         kRingSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)) {
+                         kRingSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                         VkFrameSync::kMaxFramesInFlight)) {
     spdlog::error("VulkanRenderer: VulkanBuffer init failed.");
     return false;
   }
@@ -56,12 +59,13 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
     mPipeline.reset();
   }
 
-  // Phase 5c: textured vertex ring buffer
+  // Phase 5c: textured vertex ring buffer — aynı slot mantığı.
   mTexturedVertexRing = std::make_unique<VulkanBuffer>();
   if (!mTexturedVertexRing->Init(mContext->GetDevice(),
                                   mContext->GetPhysicalDevice(),
                                   kRingSize,
-                                  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT)) {
+                                  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                                  VkFrameSync::kMaxFramesInFlight)) {
     spdlog::error("VulkanRenderer: textured VulkanBuffer init failed.");
     return false;
   }
@@ -177,9 +181,9 @@ void VulkanRenderer::BeginFrame() {
   VkCommandBuffer cmd = mFrameSync->GetCommandBuffer(mCurrentFrame);
   vkResetCommandBuffer(cmd, 0);
 
-  // Her frame başında ring buffer'ları sıfırla.
-  if (mVertexRing) mVertexRing->ResetRing();
-  if (mTexturedVertexRing) mTexturedVertexRing->ResetRing();
+  // Sadece bu frame'in slot'unu sıfırla — diğer slot hâlâ GPU'da kullanılabilir.
+  if (mVertexRing) mVertexRing->ResetRing(mCurrentFrame);
+  if (mTexturedVertexRing) mTexturedVertexRing->ResetRing(mCurrentFrame);
 
   VkCommandBufferBeginInfo bi{};
   bi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -360,7 +364,8 @@ void VulkanRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
   constexpr VkDeviceSize kAlignment = 4;
   VkDeviceSize offset_bytes = 0;
 
-  if (!mVertexRing->Write(vertices.data(), byte_size, kAlignment, offset_bytes))
+  if (!mVertexRing->Write(vertices.data(), byte_size, kAlignment, mCurrentFrame,
+                          offset_bytes))
     return;
 
   // Renk vertex'te taşındığı için tint her zaman 1.0.
@@ -436,7 +441,7 @@ void VulkanRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
   VkDeviceSize offset_bytes = 0;
 
   if (!mTexturedVertexRing->Write(vertices.data(), byte_size, kAlignment,
-                                   offset_bytes)) {
+                                   mCurrentFrame, offset_bytes)) {
     return;
   }
 

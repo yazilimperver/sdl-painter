@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <unordered_map>
 
 namespace sdl_painter {
 
@@ -30,7 +31,7 @@ class ShaderProgram {
   void Use() const;
 
   /// @brief Program geçerli mi?
-  bool IsValid() const { return mProgramId != 0; }
+  [[nodiscard]] bool IsValid() const noexcept { return mProgramId != 0; }
 
   /// @brief Uniform'ları ayarla
   void SetUniformMat3(const std::string& name, const float* mat3) const;
@@ -44,7 +45,17 @@ class ShaderProgram {
   /// @brief Tek bir shader'ı derle.
   static uint32_t CompileShader(uint32_t type, const std::string& src);
 
+  /// @brief Uniform location'ı önbellekten al; yoksa sorgula ve önbelleğe ekle.
+  ///
+  /// Driver `glGetUniformLocation` her çağrıda lineer arama yapar; sıcak yolda
+  /// (per-draw uniform set) bu O(N) maliyeti önbellekleme ile O(1)'e iner.
+  /// Bulunamayan uniformlar `-1` ile önbelleğe alınır ve yalnızca **bir kez**
+  /// uyarı loglanır (warn-once politikası).
+  int32_t GetUniformLocation(const std::string& name) const;
+
   uint32_t mProgramId{0};
+  /// @brief İsim → location önbelleği (mutable: const set fonksiyonlarından erişim).
+  mutable std::unordered_map<std::string, int32_t> mUniformCache;
 };
 
 }  // namespace sdl_painter

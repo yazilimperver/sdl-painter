@@ -120,6 +120,12 @@ target_link_libraries(sdl_painter
     PRIVATE spdlog::spdlog_header_only
 )
 
+# OpenGL shader kaynak dizinini makro olarak ver (Vulkan ile tutarlı pattern).
+# Development build'inde shader'ları doğrudan source ağacından okumayı sağlar;
+# install build'inde fallback olarak SDL_GetBasePath() + "shaders/" devreye girer.
+target_compile_definitions(sdl_painter PRIVATE
+    SDLPAINTER_OPENGL_SHADER_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/opengl/shaders")
+
 if(SDLPAINTER_WITH_VULKAN)
     target_compile_definitions(sdl_painter PUBLIC SDLPAINTER_HAS_VULKAN)
     target_link_libraries(sdl_painter

@@ -14,19 +14,25 @@ class Brush {
   explicit Brush(const Color& color) : mColor(color) {}
 
   /// @brief Dolgu rengini döndür.
-  const Color& GetColor() const { return mColor; }
+  [[nodiscard]] const Color& GetColor() const noexcept { return mColor; }
 
   /// @brief Dolgu rengini ayarla.
-  void SetColor(const Color& color) { mColor = color; }
+  void SetColor(const Color& color) noexcept { mColor = color; }
 
   /// @brief Fırça görünür mü? (alpha > 0)
-  bool IsVisible() const { return mColor.a > 0; }
+  [[nodiscard]] bool IsVisible() const noexcept { return mColor.a > 0; }
 
-  bool operator==(const Brush& other) const { return mColor == other.mColor; }
-  bool operator!=(const Brush& other) const { return !(*this == other); }
+  [[nodiscard]] bool operator==(const Brush& other) const noexcept {
+    return mColor == other.mColor;
+  }
+  [[nodiscard]] bool operator!=(const Brush& other) const noexcept {
+    return !(*this == other);
+  }
 
   /// @brief Şeffaf (dolgu yapmayan) fırça.
-  static Brush NoBrush() { return Brush(Color::Transparent()); }
+  [[nodiscard]] static Brush NoBrush() noexcept {
+    return Brush(Color::Transparent());
+  }
 
  private:
   Color mColor{Color::Black()};

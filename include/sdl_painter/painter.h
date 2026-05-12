@@ -1,7 +1,6 @@
 #pragma once
 
 #include <cstdint>
-#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -42,6 +41,13 @@ struct RenderState {
 ///
 /// Painter, SDL penceresi üzerinde 2D çizim yapar. Backend (OpenGL/Vulkan)
 /// IRenderer arayüzü üzerinden soyutlanır.
+///
+/// @warning **Yaşam döngüsü sözleşmesi:** Painter'a texture yükleyen tüm
+/// @ref Image ve @ref Font nesneleri, Painter yıkılmadan **önce**
+/// yıkılmalıdır. Image veya Font'u global / `static` ya da daha uzun
+/// yaşayan bir konuma yerleştirmek tanımsız davranışa yol açar — yıkım
+/// sırasında dangling IRenderer pointer kullanılır. v0.2.0'da bu sözleşme
+/// `weak_ptr<IRenderer>` veya benzeri bir mekanizma ile zorunlu kılınacaktır.
 class Painter {
  public:
   /// @brief Belirtilen pencere ve backend ile Painter oluştur.
@@ -55,7 +61,7 @@ class Painter {
   Painter& operator=(Painter&&) noexcept;
 
   /// @brief Renderer başarıyla başlatıldı mı?
-  bool IsValid() const { return mRenderer != nullptr; }
+  [[nodiscard]] bool IsValid() const noexcept { return mRenderer != nullptr; }
 
   // --- Yaşam döngüsü ---
 
@@ -177,10 +183,14 @@ class Painter {
   /// OpenGL scissor Y=0 altta; Painter Y=0 ustte. Bu fonksiyon flip'i uygular.
   void ApplyScissor(const Rect& rect);
 
-  bool CanDrawPen()   const { return mRenderer && mBatcher && mCurrentState.pen.IsVisible(); }
-  bool CanDrawBrush() const { return mRenderer && mBatcher && mCurrentState.brush.IsVisible(); }
+  [[nodiscard]] bool CanDrawPen() const noexcept {
+    return mRenderer && mBatcher && mCurrentState.pen.IsVisible();
+  }
+  [[nodiscard]] bool CanDrawBrush() const noexcept {
+    return mRenderer && mBatcher && mCurrentState.brush.IsVisible();
+  }
 
-  std::reference_wrapper<SDL_Window> mWindow;
+  SDL_Window* mWindow{nullptr};
 
   std::unique_ptr<IRenderer> mRenderer;
   std::unique_ptr<RenderBatcher> mBatcher;

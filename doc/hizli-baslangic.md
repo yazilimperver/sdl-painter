@@ -163,7 +163,7 @@ if (img.IsValid()) {
 
 İlk çizimde GPU'ya yüklenir, sonraki çizimlerde cache kullanılır.
 
-### 4.5 Metin (Phase 4 — `with_text=True` gerekir)
+### 4.5 Metin (Phase 4)
 
 ```cpp
 auto font = std::make_shared<sdl_painter::Font>("assets/font.ttf", 24);

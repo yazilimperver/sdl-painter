@@ -40,7 +40,7 @@ benimser. Katkı yaparken bu kurallara uyman beklenir.
 ```bash
 # Bağımlılıkları yükle (tüm özellikler aktif)
 conan install . --output-folder=build/linux-debug/generators --build=missing \
-    -s build_type=Debug -o "&:with_vulkan=True" -o "&:with_text=True"
+    -s build_type=Debug -o "&:with_vulkan=True"
 
 # Derle
 cmake --preset linux-debug

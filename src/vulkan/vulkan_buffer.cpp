@@ -9,10 +9,20 @@
 
 namespace sdl_painter {
 
+VulkanBuffer::~VulkanBuffer() {
+  if (mDevice != VK_NULL_HANDLE) {
+    Destroy(mDevice);
+  }
+}
+
 bool VulkanBuffer::Init(VkDevice device, VkPhysicalDevice phys_device,
-                        VkDeviceSize capacity, VkBufferUsageFlags usage) {
+                        VkDeviceSize capacity, VkBufferUsageFlags usage,
+                        uint32_t frame_slot_count) {
+  if (frame_slot_count == 0) frame_slot_count = 1;
   mCapacity = capacity;
-  mHead = 0;
+  mFrameSlotCount = frame_slot_count;
+  mSlotCapacity = capacity / frame_slot_count;
+  mHeads.assign(frame_slot_count, 0);
 
   // Buffer oluştur.
   VkBufferCreateInfo buf_info{};
@@ -21,7 +31,10 @@ bool VulkanBuffer::Init(VkDevice device, VkPhysicalDevice phys_device,
   buf_info.usage = usage;
   buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-  VK_CHECK(vkCreateBuffer(device, &buf_info, nullptr, &mBuffer));
+  if (vkCreateBuffer(device, &buf_info, nullptr, &mBuffer) != VK_SUCCESS) {
+    spdlog::error("VulkanBuffer: vkCreateBuffer başarısız.");
+    return false;
+  }
 
   // Bellek gereksinimleri sorgula.
   VkMemoryRequirements mem_req{};
@@ -33,6 +46,7 @@ bool VulkanBuffer::Init(VkDevice device, VkPhysicalDevice phys_device,
   uint32_t mem_type =
       vk_detail::FindMemoryType(phys_device, mem_req.memoryTypeBits, mem_props);
   if (mem_type == UINT32_MAX) {
+    spdlog::error("VulkanBuffer: uygun bellek tipi bulunamadı.");
     vkDestroyBuffer(device, mBuffer, nullptr);
     mBuffer = VK_NULL_HANDLE;
     return false;
@@ -43,54 +57,99 @@ bool VulkanBuffer::Init(VkDevice device, VkPhysicalDevice phys_device,
   alloc_info.allocationSize = mem_req.size;
   alloc_info.memoryTypeIndex = mem_type;
 
-  VK_CHECK(vkAllocateMemory(device, &alloc_info, nullptr, &mMemory));
-  VK_CHECK(vkBindBufferMemory(device, mBuffer, mMemory, 0));
+  if (vkAllocateMemory(device, &alloc_info, nullptr, &mMemory) != VK_SUCCESS) {
+    spdlog::error("VulkanBuffer: vkAllocateMemory başarısız.");
+    vkDestroyBuffer(device, mBuffer, nullptr);
+    mBuffer = VK_NULL_HANDLE;
+    return false;
+  }
+
+  if (vkBindBufferMemory(device, mBuffer, mMemory, 0) != VK_SUCCESS) {
+    spdlog::error("VulkanBuffer: vkBindBufferMemory başarısız.");
+    vkFreeMemory(device, mMemory, nullptr);
+    vkDestroyBuffer(device, mBuffer, nullptr);
+    mMemory = VK_NULL_HANDLE;
+    mBuffer = VK_NULL_HANDLE;
+    return false;
+  }
 
   // Kalıcı map — HOST_COHERENT olduğundan flush gerekmez.
-  VK_CHECK(vkMapMemory(device, mMemory, 0, capacity, 0, &mMapped));
+  if (vkMapMemory(device, mMemory, 0, capacity, 0, &mMapped) != VK_SUCCESS) {
+    spdlog::error("VulkanBuffer: vkMapMemory başarısız.");
+    vkFreeMemory(device, mMemory, nullptr);
+    vkDestroyBuffer(device, mBuffer, nullptr);
+    mMemory = VK_NULL_HANDLE;
+    mBuffer = VK_NULL_HANDLE;
+    return false;
+  }
 
   spdlog::debug("VulkanBuffer initialized: {} bytes", capacity);
+  // RAII için device'i sakla (destructor başarılı bir Init sonrası yıkar).
+  mDevice = device;
   return true;
 }
 
 void VulkanBuffer::Destroy(VkDevice device) {
+  // Idempotent — birden fazla Destroy ya da Destroy + destructor güvenli.
+  // mDevice geçerliyse onu kullan; aksi halde parametre device'ı kullan.
+  VkDevice d = (mDevice != VK_NULL_HANDLE) ? mDevice : device;
+  if (d == VK_NULL_HANDLE) return;
+
   if (mMapped) {
-    vkUnmapMemory(device, mMemory);
+    vkUnmapMemory(d, mMemory);
     mMapped = nullptr;
   }
   if (mBuffer != VK_NULL_HANDLE) {
-    vkDestroyBuffer(device, mBuffer, nullptr);
+    vkDestroyBuffer(d, mBuffer, nullptr);
     mBuffer = VK_NULL_HANDLE;
   }
   if (mMemory != VK_NULL_HANDLE) {
-    vkFreeMemory(device, mMemory, nullptr);
+    vkFreeMemory(d, mMemory, nullptr);
     mMemory = VK_NULL_HANDLE;
   }
   mCapacity = 0;
-  mHead = 0;
+  mSlotCapacity = 0;
+  mFrameSlotCount = 1;
+  mHeads.clear();
+  mDevice = VK_NULL_HANDLE;  // tekrar yıkımı önle
 }
 
 bool VulkanBuffer::Write(const void* data, VkDeviceSize byte_size,
-                         VkDeviceSize alignment,
+                         VkDeviceSize alignment, uint32_t frame_slot,
                          VkDeviceSize& out_offset_bytes) {
-  // Hizala: mHead'i alignment'ın katına yuvarlat.
-  VkDeviceSize aligned_head = (mHead + alignment - 1) & ~(alignment - 1);
+  if (frame_slot >= mFrameSlotCount) {
+    spdlog::warn("VulkanBuffer::Write: geçersiz frame_slot {} (max {}).",
+                 frame_slot, mFrameSlotCount);
+    return false;
+  }
 
-  if (aligned_head + byte_size > mCapacity) {
+  // Slot'un mutlak başlangıç ve bitiş offset'leri.
+  const VkDeviceSize slot_start = frame_slot * mSlotCapacity;
+  const VkDeviceSize slot_end = slot_start + mSlotCapacity;
+  // Slot içinde geçerli mutlak head.
+  const VkDeviceSize abs_head = slot_start + mHeads[frame_slot];
+  // Hizala.
+  const VkDeviceSize aligned_head = (abs_head + alignment - 1) & ~(alignment - 1);
+
+  if (aligned_head + byte_size > slot_end) {
     spdlog::warn(
-        "VulkanBuffer ring overflow: requested {} bytes, available {} bytes. "
+        "VulkanBuffer slot {} overflow: requested {} bytes, available {} bytes. "
         "Draw call skipped.",
-        byte_size, mCapacity - aligned_head);
+        frame_slot, byte_size, slot_end - aligned_head);
     return false;
   }
 
   std::memcpy(static_cast<char*>(mMapped) + aligned_head, data,
               static_cast<std::size_t>(byte_size));
   out_offset_bytes = aligned_head;
-  mHead = aligned_head + byte_size;
+  mHeads[frame_slot] = (aligned_head + byte_size) - slot_start;
   return true;
 }
 
-void VulkanBuffer::ResetRing() { mHead = 0; }
+void VulkanBuffer::ResetRing(uint32_t frame_slot) {
+  if (frame_slot < mFrameSlotCount) {
+    mHeads[frame_slot] = 0;
+  }
+}
 
 }  // namespace sdl_painter

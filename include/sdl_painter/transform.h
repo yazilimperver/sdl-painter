@@ -24,10 +24,10 @@ class Transform {
   void SetIdentity();
 
   /// @brief Bu matrisin birim matris olup olmadığını döndür.
-  bool IsIdentity() const;
+  [[nodiscard]] bool IsIdentity() const;
 
   /// @brief İki matrisi çarp: result = this * other
-  Transform operator*(const Transform& other) const;
+  [[nodiscard]] Transform operator*(const Transform& other) const;
 
   /// @brief Mevcut matrise sağdan çarp: this = this * other
   Transform& operator*=(const Transform& other);
@@ -45,19 +45,21 @@ class Transform {
   void Map(float x, float y, float* out_x, float* out_y) const;
 
   /// @brief Shader'a göndermek için 3x3 matrisin float dizisini döndür (satır-major).
-  const float* Data() const { return &mData[0][0]; }
+  [[nodiscard]] const float* Data() const noexcept { return &mData[0][0]; }
 
   /// @brief Öteleme dönüşümü matrisini üret.
-  static Transform MakeTranslate(float dx, float dy);
+  [[nodiscard]] static Transform MakeTranslate(float dx, float dy);
 
   /// @brief Döndürme dönüşümü matrisini üret.
-  static Transform MakeRotate(float angle_degrees);
+  [[nodiscard]] static Transform MakeRotate(float angle_degrees);
 
   /// @brief Ölçekleme dönüşümü matrisini üret.
-  static Transform MakeScale(float sx, float sy);
+  [[nodiscard]] static Transform MakeScale(float sx, float sy);
 
-  bool operator==(const Transform& other) const;
-  bool operator!=(const Transform& other) const { return !(*this == other); }
+  [[nodiscard]] bool operator==(const Transform& other) const;
+  [[nodiscard]] bool operator!=(const Transform& other) const {
+    return !(*this == other);
+  }
 
  private:
   // mData[satır][sütun]

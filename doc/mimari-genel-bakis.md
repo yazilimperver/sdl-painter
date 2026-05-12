@@ -247,7 +247,7 @@ graph TB
     end
 
     subgraph ops["Opsiyonel — option ile etkinleştirilir"]
-        TTF["SDL_ttf (with_text)"]
+        TTF["SDL_ttf"]
         VK["Vulkan loader/headers (with_vulkan)"]
         GTEST["GTest (build_tests)"]
     end
