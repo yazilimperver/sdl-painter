@@ -38,7 +38,28 @@ variables:
 
 # --- Prepare Stage: Paketler bir kez indirilir, artifact olarak paylaşılır ---
 
-conan:install:linux:
+conan:install:linux:release:
+  stage: prepare
+  extends: .conan_base
+  cache:
+    key: conan-linux-$CI_COMMIT_REF_SLUG
+    paths:
+      - .conan2/
+    policy: pull-push  # Bu job hem okur hem yazar
+  script:
+    - |
+      conan install . --output-folder=build/linux-release/generators --build=missing \
+        -s build_type=Release \
+        -o "&:with_vulkan=True" \
+        -c tools.system.package_manager:mode=install \
+        -c tools.system.package_manager:sudo=False
+  artifacts:
+    paths:
+      - build/linux-release/generators/
+      - .conan2/p/
+    expire_in: 1 day
+
+conan:install:linux:debug:
   stage: prepare
   extends: .conan_base
   cache:
@@ -53,12 +74,21 @@ conan:install:linux:
         -o "&:with_vulkan=True" \
         -c tools.system.package_manager:mode=install \
         -c tools.system.package_manager:sudo=False
-    - |
-      conan install . --output-folder=build/linux-release/generators --build=missing \
-        -s build_type=Release \
-        -o "&:with_vulkan=True" \
-        -c tools.system.package_manager:mode=install \
-        -c tools.system.package_manager:sudo=False
+  artifacts:
+    paths:
+      - build/linux-debug/generators/
+      - .conan2/p/
+    expire_in: 1 day
+
+conan:install:linux:asan:
+  stage: prepare
+  extends: .conan_base
+  cache:
+    key: conan-linux-$CI_COMMIT_REF_SLUG
+    paths:
+      - .conan2/
+    policy: pull-push  # Bu job hem okur hem yazar
+  script:
     - |
       conan install . --output-folder=build/linux-debug-asan/generators --build=missing \
         -s build_type=Debug \
@@ -67,12 +97,9 @@ conan:install:linux:
         -c tools.system.package_manager:sudo=False
   artifacts:
     paths:
-      - build/linux-debug/generators/
-      - build/linux-release/generators/
       - build/linux-debug-asan/generators/
       - .conan2/p/
     expire_in: 1 day
-
 # --- Windows base template ---
 
 # .windows_base:
