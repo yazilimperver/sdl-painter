@@ -17,6 +17,7 @@ variables:
     - apt-get update && apt-get install -y
         cmake ninja-build g++ python3-pip pkg-config
         mesa-vulkan-drivers libvulkan-dev
+        libegl-dev libgl-dev libgles-dev
     - pip3 install conan --break-system-packages
     - conan profile detect
   cache:
@@ -67,7 +68,7 @@ build:linux:debug:
         -s build_type=Debug \
         -o "&:with_vulkan=True" \
         -c tools.system.package_manager:mode=install \
-        -c tools.system.package_manager:sudo=True
+        -c tools.system.package_manager:sudo=False
     - cmake --preset linux-debug
     - cmake --build --preset linux-debug
   artifacts:
@@ -84,7 +85,7 @@ build:linux:release:
         -s build_type=Release \
         -o "&:with_vulkan=True" \
         -c tools.system.package_manager:mode=install \
-        -c tools.system.package_manager:sudo=True
+        -c tools.system.package_manager:sudo=False
     - cmake --preset linux-release
     - cmake --build --preset linux-release
   artifacts:
@@ -150,7 +151,7 @@ test:unit:asan:
         -s build_type=Debug \
         -o "&:with_vulkan=True" \
         -c tools.system.package_manager:mode=install \
-        -c tools.system.package_manager:sudo=True
+        -c tools.system.package_manager:sudo=False
     - cmake --preset linux-debug-asan
     - cmake --build --preset linux-debug-asan
     - ctest --preset linux-debug-asan --output-on-failure
