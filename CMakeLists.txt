@@ -9,6 +9,30 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# MinGW cross-compile: libgcc_s_seh-1.dll ve libstdc++-6.dll çalışma zamanı
+# bağımlılıklarını exe'ye gömerek dağıtımı tek-dosyaya indir.
+if(MINGW)
+    add_link_options(-static-libgcc -static-libstdc++)
+endif()
+
+# MinGW cross-compile'da Conan'dan gelen shared DLL'ler libgcc_s_seh-1.dll'e
+# dinamik bağımlı kalabiliyor.
+set(SDLPAINTER_MINGW_RUNTIME_DLLS "" CACHE INTERNAL "MinGW runtime DLLs to ship")
+if(MINGW AND CMAKE_CROSSCOMPILING)
+    execute_process(
+        COMMAND ${CMAKE_CXX_COMPILER} -print-file-name=libgcc_s_seh-1.dll
+        OUTPUT_VARIABLE _libgcc_s_path
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(_libgcc_s_path AND EXISTS "${_libgcc_s_path}")
+        list(APPEND SDLPAINTER_MINGW_RUNTIME_DLLS "${_libgcc_s_path}")
+        message(STATUS "MinGW runtime DLL: ${_libgcc_s_path}")
+    else()
+        message(WARNING "libgcc_s_seh-1.dll not found via -print-file-name "
+                        "(got: '${_libgcc_s_path}'). Runtime may fail.")
+    endif()
+endif()
+
 # Options (Conan tarafından da set edilebilir)
 option(SDLPAINTER_WITH_VULKAN "Enable Vulkan backend" OFF)
 option(SDLPAINTER_BUILD_EXAMPLES "Build examples" ON)
@@ -123,8 +147,15 @@ target_link_libraries(sdl_painter
 # OpenGL shader kaynak dizinini makro olarak ver (Vulkan ile tutarlı pattern).
 # Development build'inde shader'ları doğrudan source ağacından okumayı sağlar;
 # install build'inde fallback olarak SDL_GetBasePath() + "shaders/" devreye girer.
-target_compile_definitions(sdl_painter PRIVATE
-    SDLPAINTER_OPENGL_SHADER_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/opengl/shaders")
+#
+# Windows hedeflerinde tanımlanmıyor: cross-compile'da Linux source path'i
+# (örn. /workspace/src/opengl/shaders) Windows exe'sine gömülüp runtime'da
+# çözülemiyor. SDL_GetBasePath() fallback'i devreye girsin —
+# sdlpainter_copy_shaders() exe yanına shaders/ dizinini zaten kopyalıyor.
+if(NOT WIN32)
+    target_compile_definitions(sdl_painter PRIVATE
+        SDLPAINTER_OPENGL_SHADER_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/opengl/shaders")
+endif()
 
 if(SDLPAINTER_WITH_VULKAN)
     target_compile_definitions(sdl_painter PUBLIC SDLPAINTER_HAS_VULKAN)
@@ -133,7 +164,9 @@ if(SDLPAINTER_WITH_VULKAN)
         PRIVATE vulkan-headers::vulkan-headers
     )
     # Shader binary dizinini kütüphaneye makro olarak ver (add_library'den sonra).
-    if(DEFINED VULKAN_SHADER_BINARY_DIR)
+    # Windows'ta tanımlama: OpenGL ile aynı cross-compile path-gömme tuzağı.
+    # SDL_GetBasePath() + "vulkan_shaders" fallback'i devreye girsin.
+    if(DEFINED VULKAN_SHADER_BINARY_DIR AND NOT WIN32)
         target_compile_definitions(sdl_painter PRIVATE
             SDLPAINTER_VULKAN_SHADER_DIR="${VULKAN_SHADER_BINARY_DIR}")
     endif()
@@ -204,6 +237,67 @@ function(sdlpainter_copy_shaders target)
         # Ninja/Make: configure zamanında kopyala — WSL /mnt/ mount sorununu önler
         set(SHADER_SRC_DIR "${CMAKE_SOURCE_DIR}/src/opengl/shaders")
         file(COPY "${SHADER_SRC_DIR}" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
+    endif()
+endfunction()
+
+# Helper: Windows hedeflerinde Conan'dan gelen shared DLL'leri (SDL3, SDL3_ttf,
+# harfbuzz, freetype, plutosvg, plutovg, zlib, ...) executable'ın yanına
+# kopyalar. İki adımda çalışır:
+#   1) $<TARGET_RUNTIME_DLLS> (CMake 3.21+): IMPORTED_LOCATION'ı düzgün set
+#      edilmiş imported target'ları (örn. SDL3) otomatik yakalar.
+#   2) Fallback: bazı Conan recipe'ları (harfbuzz, freetype, plutosvg, plutovg)
+#      MinGW'de imported target'a sadece .dll.a (IMPORTED_IMPLIB) atıyor,
+#      .dll yolunu (IMPORTED_LOCATION) atlıyorlar → TARGET_RUNTIME_DLLS bunları
+#      göremiyor. CMAKE_PREFIX_PATH'taki tüm Conan paket bin/ dizinlerini
+#      tarayıp eksik DLL'leri tamamlıyoruz.
+#
+# copy_if_different idempotent olduğu için iki adım çakışmaz.
+function(sdlpainter_copy_runtime_dlls target)
+    if(NOT WIN32)
+        return()
+    endif()
+
+    if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.21)
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_RUNTIME_DLLS:${target}>
+                $<TARGET_FILE_DIR:${target}>
+            COMMAND_EXPAND_LISTS
+            COMMENT "Copying detected runtime DLLs for ${target}"
+        )
+    endif()
+
+    set(_extra_dlls "")
+    foreach(prefix IN LISTS CMAKE_PREFIX_PATH)
+        # Conan generators klasörü: conanfile.py generate() bağımlılıkların
+        # *.dll'lerini buraya stage'liyor (Windows hedefinde).
+        # bin/, lib/: bazı toolchain'lerde paket root'u prefix path'e
+        # eklendiğinde geçerli olabiliyor — düşmesi için tutuyoruz.
+        file(GLOB _pkg_dlls
+            "${prefix}/*.dll"
+            "${prefix}/bin/*.dll"
+            "${prefix}/lib/*.dll"
+        )
+        if(_pkg_dlls)
+            list(APPEND _extra_dlls ${_pkg_dlls})
+        endif()
+    endforeach()
+
+    # MinGW cross-compile: exe'ler -static-libgcc ile derleniyor, ama
+    # Conan'dan gelen shared DLL'ler (SDL3.dll vb.) hâlâ libgcc_s_seh-1.dll'e
+    # dinamik bağımlı. Üst kısımda configure-time tespit edilen DLL'i ekle.
+    if(SDLPAINTER_MINGW_RUNTIME_DLLS)
+        list(APPEND _extra_dlls ${SDLPAINTER_MINGW_RUNTIME_DLLS})
+    endif()
+    list(REMOVE_DUPLICATES _extra_dlls)
+    list(LENGTH _extra_dlls _extra_dlls_count)
+    message(STATUS "sdlpainter_copy_runtime_dlls(${target}): ${_extra_dlls_count} DLL found in CMAKE_PREFIX_PATH")
+    if(_extra_dlls)
+        add_custom_command(TARGET ${target} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                ${_extra_dlls} $<TARGET_FILE_DIR:${target}>
+            COMMENT "Copying ${_extra_dlls_count} Conan dependency DLLs for ${target}"
+        )
     endif()
 endfunction()
 

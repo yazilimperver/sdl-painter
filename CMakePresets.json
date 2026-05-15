@@ -73,6 +73,32 @@
       "cacheVariables": {
         "ENABLE_SANITIZERS": "ON"
       }
+    },
+
+    {
+      "name": "windows-mingw-debug",
+      "displayName": "Windows MinGW Cross-compile Debug",
+      "description": "Linux host'tan MinGW-w64 ile Windows debug build. Requires: conan install --output-folder=build/windows-mingw-debug/generators --profile:host=windows-mingw -s build_type=Debug",
+      "inherits": "base",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/windows-mingw-debug",
+      "toolchainFile": "${sourceDir}/build/windows-mingw-debug/generators/build/Debug/generators/conan_toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    },
+
+    {
+      "name": "windows-mingw-release",
+      "displayName": "Windows MinGW Cross-compile Release",
+      "description": "Linux host'tan MinGW-w64 ile Windows release build. Requires: conan install --output-folder=build/windows-mingw-release/generators --profile:host=windows-mingw -s build_type=Release",
+      "inherits": "base",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/windows-mingw-release",
+      "toolchainFile": "${sourceDir}/build/windows-mingw-release/generators/build/Release/generators/conan_toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release"
+      }
     }
   ],
 
@@ -103,6 +129,16 @@
       "name": "linux-debug-asan",
       "displayName": "Build Linux Debug + ASan",
       "configurePreset": "linux-debug-asan"
+    },
+    {
+      "name": "windows-mingw-debug",
+      "displayName": "Build Windows MinGW Debug",
+      "configurePreset": "windows-mingw-debug"
+    },
+    {
+      "name": "windows-mingw-release",
+      "displayName": "Build Windows MinGW Release",
+      "configurePreset": "windows-mingw-release"
     }
   ],
 

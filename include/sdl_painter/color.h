@@ -15,8 +15,8 @@ struct Color {
   constexpr Color() = default;
 
   /// @brief RGBA değerleriyle renk oluştur.
-  constexpr Color(uint8_t r, uint8_t g, uint8_t b, uint8_t a = 255)
-      : r(r), g(g), b(b), a(a) {}
+  constexpr Color(uint8_t r_, uint8_t g_, uint8_t b_, uint8_t a_ = 255)
+      : r(r_), g(g_), b(b_), a(a_) {}
 
   /// @brief Rengi [0.0, 1.0] aralığında normalize edilmiş float olarak döndür.
   [[nodiscard]] float RedF() const noexcept { return r / 255.0f; }

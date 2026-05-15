@@ -29,7 +29,7 @@ std::vector<Vertex> Tessellator::TessellateFilledCircle(
     float cx, float cy, float radius) {
   int32_t segments = AdaptiveSegments(radius);
   std::vector<Vertex> result;
-  result.reserve(segments * 3);
+  result.reserve(static_cast<std::size_t>(segments) * 3);
 
   for (int32_t i = 0; i < segments; ++i) {
     float a0 = kTwoPi * static_cast<float>(i)     / static_cast<float>(segments);
@@ -45,7 +45,7 @@ std::vector<Vertex> Tessellator::TessellateFilledEllipse(
     float cx, float cy, float rx, float ry) {
   int32_t segments = AdaptiveSegments(std::max(rx, ry));
   std::vector<Vertex> result;
-  result.reserve(segments * 3);
+  result.reserve(static_cast<std::size_t>(segments) * 3);
 
   for (int32_t i = 0; i < segments; ++i) {
     float a0 = kTwoPi * static_cast<float>(i)     / static_cast<float>(segments);
@@ -75,7 +75,7 @@ std::vector<Vertex> Tessellator::TessellateStrokedCircle(
     float cx, float cy, float radius, float line_width) {
   int32_t segments = AdaptiveSegments(radius);
   std::vector<Point> pts;
-  pts.reserve(segments);
+  pts.reserve(static_cast<std::size_t>(segments));
 
   for (int32_t i = 0; i < segments; ++i) {
     float a = kTwoPi * static_cast<float>(i) / static_cast<float>(segments);
@@ -88,7 +88,7 @@ std::vector<Vertex> Tessellator::TessellateStrokedEllipse(
     float cx, float cy, float rx, float ry, float line_width) {
   int32_t segments = AdaptiveSegments(std::max(rx, ry));
   std::vector<Point> pts;
-  pts.reserve(segments);
+  pts.reserve(static_cast<std::size_t>(segments));
 
   for (int32_t i = 0; i < segments; ++i) {
     float a = kTwoPi * static_cast<float>(i) / static_cast<float>(segments);
@@ -196,7 +196,7 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& pts) {
   // area > 0 → CCW; area < 0 → CW
 
   // CW ise indeks sırasını ters çevir → her zaman CCW olarak işle
-  std::vector<int32_t> indices(static_cast<int32_t>(pts.size()));
+  std::vector<int32_t> indices(pts.size());
   std::iota(indices.begin(), indices.end(), 0);
   if (area < 0.0f) {
     std::reverse(indices.begin(), indices.end());

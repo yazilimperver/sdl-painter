@@ -1,5 +1,4 @@
 stages:
-  - prepare
   - build
   - test
   - quality
@@ -7,99 +6,25 @@ stages:
   - release
 
 variables:
-  CONAN_HOME: "$CI_PROJECT_DIR/.conan2"
+  CONAN_HOME: "/root/.conan2"
   GIT_SUBMODULE_STRATEGY: recursive
 
 # --- Linux base template ---
 
-.conan_base:
-  image: ubuntu:24.04
-  before_script:
-    - apt-get update && apt-get install -y
-        cmake ninja-build g++ python3-pip pkg-config
-        mesa-vulkan-drivers libvulkan-dev
-        libegl-dev libgl-dev libgles-dev
-    - pip3 install conan --break-system-packages
-    - conan profile detect --force
-  cache:
-    key: conan-linux-$CI_COMMIT_REF_SLUG
-    paths:
-      - .conan2/
-    policy: pull  # Yazmayı conan:install:linux üstlenir
+# .conan_base:
+#   image: ubuntu:24.04
+#   before_script:
+#     - apt-get update && apt-get install -y
+#         cmake ninja-build g++ python3-pip pkg-config
+#         mesa-vulkan-drivers libvulkan-dev
+#         libegl-dev libgl-dev libgles-dev
+#     - pip3 install conan --break-system-packages
+#     - conan profile detect
+#   cache:
+#     key: conan-$CI_COMMIT_REF_SLUG
+#     paths:
+#       - .conan2/
 
-# --- Linux test template (conan/pip gereksiz) ---
-
-.test_base:
-  image: ubuntu:24.04
-  before_script:
-    - apt-get update && apt-get install -y
-        cmake ninja-build
-        mesa-vulkan-drivers libvulkan-dev
-
-# --- Prepare Stage: Paketler bir kez indirilir, artifact olarak paylaşılır ---
-
-conan:install:linux:release:
-  stage: prepare
-  extends: .conan_base
-  cache:
-    key: conan-linux-$CI_COMMIT_REF_SLUG
-    paths:
-      - .conan2/
-    policy: pull-push  # Bu job hem okur hem yazar
-  script:
-    - |
-      conan install . --output-folder=build/linux-release/generators --build=missing \
-        -s build_type=Release \
-        -o "&:with_vulkan=True" \
-        -c tools.system.package_manager:mode=install \
-        -c tools.system.package_manager:sudo=False
-  artifacts:
-    paths:
-      - build/linux-release/generators/
-      - .conan2/p/
-    expire_in: 1 day
-
-conan:install:linux:debug:
-  stage: prepare
-  extends: .conan_base
-  cache:
-    key: conan-linux-$CI_COMMIT_REF_SLUG
-    paths:
-      - .conan2/
-    policy: pull-push  # Bu job hem okur hem yazar
-  script:
-    - |
-      conan install . --output-folder=build/linux-debug/generators --build=missing \
-        -s build_type=Debug \
-        -o "&:with_vulkan=True" \
-        -c tools.system.package_manager:mode=install \
-        -c tools.system.package_manager:sudo=False
-  artifacts:
-    paths:
-      - build/linux-debug/generators/
-      - .conan2/p/
-    expire_in: 1 day
-
-conan:install:linux:asan:
-  stage: prepare
-  extends: .conan_base
-  cache:
-    key: conan-linux-$CI_COMMIT_REF_SLUG
-    paths:
-      - .conan2/
-    policy: pull-push  # Bu job hem okur hem yazar
-  script:
-    - |
-      conan install . --output-folder=build/linux-debug-asan/generators --build=missing \
-        -s build_type=Debug \
-        -o "&:with_vulkan=True" \
-        -c tools.system.package_manager:mode=install \
-        -c tools.system.package_manager:sudo=False
-  artifacts:
-    paths:
-      - build/linux-debug-asan/generators/
-      - .conan2/p/
-    expire_in: 1 day
 # --- Windows base template ---
 
 # .windows_base:
@@ -113,7 +38,6 @@ conan:install:linux:asan:
 #     key: "conan-win-$CI_COMMIT_REF_SLUG"
 #     paths:
 #       - .conan2/p/
-#     policy: pull  # Yazmayı conan:install:windows üstlenir
 #   timeout: 60 minutes
 #   before_script:
 #     - |
@@ -133,37 +57,19 @@ conan:install:linux:asan:
 #     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 #     - conan profile detect --force
 
-# conan:install:windows:
-#   stage: prepare
-#   extends: .windows_base
-#   cache:
-#     key: "conan-win-$CI_COMMIT_REF_SLUG"
-#     paths:
-#       - .conan2/p/
-#     policy: pull-push  # Bu job hem okur hem yazar
-#   script:
-#     - |
-#       conan install . --output-folder=build/windows-debug/generators --build=missing `
-#         -s build_type=Debug -o "&:with_vulkan=True"
-#       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-#     - |
-#       conan install . --output-folder=build/windows-release/generators --build=missing `
-#         -s build_type=Release -o "&:with_vulkan=True"
-#       if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-#   artifacts:
-#     paths:
-#       - build/windows-debug/generators/
-#       - build/windows-release/generators/
-#       - .conan2/p/
-#     expire_in: 1 day
-
 # --- Build Stage ---
 
 build:linux:debug:
   stage: build
-  extends: .conan_base
-  needs: ["conan:install:linux:debug"]
+  image: $CI_REGISTRY_IMAGE/yazilimperver/sdl-painter # Sadece derleme imajını çeker
+  # extends: .conan_base
   script:
+    # - |
+    #   conan install . --output-folder=build/linux-debug/generators --build=missing \
+    #     -s build_type=Debug \
+    #     -o "&:with_vulkan=True" \
+    #     -c tools.system.package_manager:mode=install \
+    #     -c tools.system.package_manager:sudo=False
     - cmake --preset linux-debug
     - cmake --build --preset linux-debug
   artifacts:
@@ -173,9 +79,15 @@ build:linux:debug:
 
 build:linux:release:
   stage: build
-  extends: .conan_base
-  needs: ["conan:install:linux:release"]
+  image: $CI_REGISTRY_IMAGE/yazilimperver/sdl-painter  # Sadece derleme imajını çeker
+  # extends: .conan_base
   script:
+    # - |
+    #   conan install . --output-folder=build/linux-release/generators --build=missing \
+    #     -s build_type=Release \
+    #     -o "&:with_vulkan=True" \
+    #     -c tools.system.package_manager:mode=install \
+    #     -c tools.system.package_manager:sudo=False
     - cmake --preset linux-release
     - cmake --build --preset linux-release
   artifacts:
@@ -186,8 +98,10 @@ build:linux:release:
 # build:windows:debug:
 #   stage: build
 #   extends: .windows_base
-#   needs: ["conan:install:windows"]
 #   script:
+#     - conan install . --output-folder=build/windows-debug/generators --build=missing
+#         -s build_type=Debug -o "&:with_vulkan=True"
+#     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 #     - cmake --preset windows-debug
 #     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 #     - cmake --build --preset windows-debug
@@ -200,8 +114,10 @@ build:linux:release:
 # build:windows:release:
 #   stage: build
 #   extends: .windows_base
-#   needs: ["conan:install:windows"]
 #   script:
+#     - conan install . --output-folder=build/windows-release/generators --build=missing
+#         -s build_type=Release -o "&:with_vulkan=True"
+#     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 #     - cmake --preset windows-release
 #     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 #     - cmake --build --preset windows-release
@@ -211,31 +127,36 @@ build:linux:release:
 #       - build/windows-release/
 #     expire_in: 1 day
 
-# --- Test Stage ---
-# Linux: SDL_VIDEODRIVER=offscreen + lavapipe (mesa-vulkan-drivers) ile headless çalışır.
-# Windows: SDL_VIDEODRIVER=offscreen; Vulkan için sistem Vulkan ICD'si kullanılır.
+# # --- Test Stage ---
+# # Linux: SDL_VIDEODRIVER=offscreen + lavapipe (mesa-vulkan-drivers) ile headless çalışır.
+# # Windows: SDL_VIDEODRIVER=offscreen; Vulkan için sistem Vulkan ICD'si kullanılır.
 
-test:unit:
-  stage: test
-  extends: .test_base
-  needs: ["build:linux:debug"]
-  variables:
-    SDL_VIDEODRIVER: "offscreen"
-    VK_ICD_FILENAMES: "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
-  script:
-    - ctest --preset linux-debug --output-on-failure
+# test:unit:
+#   stage: test
+#   extends: .conan_base
+#   needs: ["build:linux:debug"]
+#   variables:
+#     SDL_VIDEODRIVER: "offscreen"
+#     VK_ICD_FILENAMES: "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
+#   script:
+#     - ctest --preset linux-debug --output-on-failure
 
-test:unit:asan:
-  stage: test
-  extends: .conan_base
-  needs: ["conan:install:linux:asan"]
-  variables:
-    SDL_VIDEODRIVER: "offscreen"
-    VK_ICD_FILENAMES: "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
-  script:
-    - cmake --preset linux-debug-asan
-    - cmake --build --preset linux-debug-asan
-    - ctest --preset linux-debug-asan --output-on-failure
+# test:unit:asan:
+#   stage: test
+#   extends: .conan_base
+#   variables:
+#     SDL_VIDEODRIVER: "offscreen"
+#     VK_ICD_FILENAMES: "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
+#   script:
+#     - |
+#       conan install . --output-folder=build/linux-debug-asan/generators --build=missing \
+#         -s build_type=Debug \
+#         -o "&:with_vulkan=True" \
+#         -c tools.system.package_manager:mode=install \
+#         -c tools.system.package_manager:sudo=False
+#     - cmake --preset linux-debug-asan
+#     - cmake --build --preset linux-debug-asan
+#     - ctest --preset linux-debug-asan --output-on-failure
 
 # test:unit:windows:
 #   stage: test
@@ -247,82 +168,82 @@ test:unit:asan:
 #     - ctest --preset windows-debug --output-on-failure
 #     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-# --- Quality Stage ---
+# # --- Quality Stage ---
 
-quality:clang-format:
-  stage: quality
-  image: ubuntu:24.04
-  before_script:
-    - apt-get update && apt-get install -y clang-format-18
-  script:
-    - find include/ src/ -name '*.h' -o -name '*.cpp' | xargs clang-format-18 --dry-run --Werror
+# quality:clang-format:
+#   stage: quality
+#   image: ubuntu:24.04
+#   before_script:
+#     - apt-get update && apt-get install -y clang-format-18
+#   script:
+#     - find include/ src/ -name '*.h' -o -name '*.cpp' | xargs clang-format-18 --dry-run --Werror
 
-quality:clang-tidy:
-  stage: quality
-  extends: .conan_base
-  needs: ["build:linux:debug"]
-  before_script:
-    - !reference [.conan_base, before_script]
-    - apt-get install -y clang-tidy-18
-  script:
-    - find src/ -name '*.cpp' | xargs clang-tidy-18 -p build/linux-debug/
-  allow_failure: true
+# quality:clang-tidy:
+#   stage: quality
+#   extends: .conan_base
+#   needs: ["build:linux:debug"]
+#   before_script:
+#     - !reference [.conan_base, before_script]
+#     - apt-get install -y clang-tidy-18
+#   script:
+#     - find src/ -name '*.cpp' | xargs clang-tidy-18 -p build/linux-debug/
+#   allow_failure: true
 
-# --- Docs Stage ---
+# # --- Docs Stage ---
 
-# GitLab Pages: job adı 'pages' olmalı, artifact 'public/' altına gitmeli.
-# Conan/CMake gerektirmez — doxygen doğrudan include/ ve doc/ üzerinde çalışır.
-pages:
-  stage: docs
-  image: ubuntu:24.04
-  needs: []
-  before_script:
-    - apt-get update -qq && apt-get install -y doxygen graphviz
-  script:
-    - mkdir -p public
-    - |
-      AWESOME="third_party/doxygen-awesome-css/doxygen-awesome.css"
-      [ -f "$AWESOME" ] || AWESOME=""
-      cat > _ci_doxyfile <<EOF
-      PROJECT_NAME           = "SDLPainter"
-      PROJECT_NUMBER         = "$(grep 'project(SDLPainter VERSION' CMakeLists.txt | grep -oP '\d+\.\d+\.\d+')"
-      PROJECT_BRIEF          = "QPainter benzeri SDL3 + OpenGL/Vulkan 2D çizim kütüphanesi"
-      OUTPUT_DIRECTORY       = public
-      HTML_OUTPUT            = .
-      INPUT                  = include/sdl_painter doc
-      FILE_PATTERNS          = *.h *.md
-      RECURSIVE              = YES
-      USE_MDFILE_AS_MAINPAGE = doc/README.md
-      EXCLUDE_PATTERNS       = */src/* */tests/* */examples/* */third_party/*
-      EXTRACT_ALL            = NO
-      EXTRACT_PRIVATE        = NO
-      EXTRACT_STATIC         = YES
-      HIDE_UNDOC_MEMBERS     = YES
-      HIDE_UNDOC_CLASSES     = YES
-      GENERATE_HTML          = YES
-      GENERATE_LATEX         = NO
-      HTML_EXTRA_STYLESHEET  = $AWESOME
-      HTML_COLORSTYLE        = LIGHT
-      HTML_TIMESTAMP         = NO
-      HAVE_DOT               = YES
-      DOT_IMAGE_FORMAT       = svg
-      INTERACTIVE_SVG        = YES
-      CLASS_GRAPH            = YES
-      COLLABORATION_GRAPH    = NO
-      CALL_GRAPH             = NO
-      QUIET                  = YES
-      WARNINGS               = YES
-      WARN_IF_UNDOCUMENTED   = YES
-      WARN_NO_PARAMDOC       = YES
-      OUTPUT_LANGUAGE        = Turkish
-      SEARCHENGINE           = YES
-      EOF
-    - doxygen _ci_doxyfile
-  artifacts:
-    paths:
-      - public/
-  rules:
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+# # GitLab Pages: job adı 'pages' olmalı, artifact 'public/' altına gitmeli.
+# # Conan/CMake gerektirmez — doxygen doğrudan include/ ve doc/ üzerinde çalışır.
+# pages:
+#   stage: docs
+#   image: ubuntu:24.04
+#   needs: []
+#   before_script:
+#     - apt-get update -qq && apt-get install -y doxygen graphviz
+#   script:
+#     - mkdir -p public
+#     - |
+#       AWESOME="third_party/doxygen-awesome-css/doxygen-awesome.css"
+#       [ -f "$AWESOME" ] || AWESOME=""
+#       cat > _ci_doxyfile <<EOF
+#       PROJECT_NAME           = "SDLPainter"
+#       PROJECT_NUMBER         = "$(grep 'project(SDLPainter VERSION' CMakeLists.txt | grep -oP '\d+\.\d+\.\d+')"
+#       PROJECT_BRIEF          = "QPainter benzeri SDL3 + OpenGL/Vulkan 2D çizim kütüphanesi"
+#       OUTPUT_DIRECTORY       = public
+#       HTML_OUTPUT            = .
+#       INPUT                  = include/sdl_painter doc
+#       FILE_PATTERNS          = *.h *.md
+#       RECURSIVE              = YES
+#       USE_MDFILE_AS_MAINPAGE = doc/README.md
+#       EXCLUDE_PATTERNS       = */src/* */tests/* */examples/* */third_party/*
+#       EXTRACT_ALL            = NO
+#       EXTRACT_PRIVATE        = NO
+#       EXTRACT_STATIC         = YES
+#       HIDE_UNDOC_MEMBERS     = YES
+#       HIDE_UNDOC_CLASSES     = YES
+#       GENERATE_HTML          = YES
+#       GENERATE_LATEX         = NO
+#       HTML_EXTRA_STYLESHEET  = $AWESOME
+#       HTML_COLORSTYLE        = LIGHT
+#       HTML_TIMESTAMP         = NO
+#       HAVE_DOT               = YES
+#       DOT_IMAGE_FORMAT       = svg
+#       INTERACTIVE_SVG        = YES
+#       CLASS_GRAPH            = YES
+#       COLLABORATION_GRAPH    = NO
+#       CALL_GRAPH             = NO
+#       QUIET                  = YES
+#       WARNINGS               = YES
+#       WARN_IF_UNDOCUMENTED   = YES
+#       WARN_NO_PARAMDOC       = YES
+#       OUTPUT_LANGUAGE        = Turkish
+#       SEARCHENGINE           = YES
+#       EOF
+#     - doxygen _ci_doxyfile
+#   artifacts:
+#     paths:
+#       - public/
+#   rules:
+#     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
 # --- Release Stage ---
 

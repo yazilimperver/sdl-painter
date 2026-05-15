@@ -2,7 +2,7 @@
 
 #include <cmath>
 #include <cstring>
-
+#include <cstdint>
 namespace sdl_painter {
 
 Transform::Transform() { SetIdentity(); }

@@ -10,7 +10,7 @@ struct Point {
   float y{0.0f};
 
   constexpr Point() = default;
-  constexpr Point(float x, float y) : x(x), y(y) {}
+  constexpr Point(float x_, float y_) : x(x_), y(y_) {}
 
   [[nodiscard]] Point operator+(const Point& other) const noexcept {
     return {x + other.x, y + other.y};
@@ -38,7 +38,7 @@ struct Rect {
   float h{0.0f};
 
   constexpr Rect() = default;
-  constexpr Rect(float x, float y, float w, float h) : x(x), y(y), w(w), h(h) {}
+  constexpr Rect(float x_, float y_, float w_, float h_) : x(x_), y(y_), w(w_), h(h_) {}
 
   /// @brief Dikdörtgenin sağ kenarının x koordinatı.
   [[nodiscard]] float Right() const noexcept { return x + w; }
@@ -70,7 +70,7 @@ struct Size {
   float h{0.0f};
 
   constexpr Size() = default;
-  constexpr Size(float w, float h) : w(w), h(h) {}
+  constexpr Size(float w_, float h_) : w(w_), h(h_) {}
 
   [[nodiscard]] bool operator==(const Size& other) const noexcept {
     return w == other.w && h == other.h;

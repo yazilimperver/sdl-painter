@@ -11,9 +11,9 @@ struct Vertex {
   uint8_t r{255}, g{255}, b{255}, a{255};
 
   constexpr Vertex() = default;
-  constexpr Vertex(float x, float y) : x(x), y(y) {}
-  constexpr Vertex(float x, float y, uint8_t r, uint8_t g, uint8_t b, uint8_t a)
-      : x(x), y(y), r(r), g(g), b(b), a(a) {}
+  constexpr Vertex(float x_, float y_) : x(x_), y(y_) {}
+  constexpr Vertex(float x_, float y_, uint8_t r_, uint8_t g_, uint8_t b_, uint8_t a_)
+      : x(x_), y(y_), r(r_), g(g_), b(b_), a(a_) {}
 };
 
 /// @brief Doku koordinatlı vertex — pozisyon + UV + renk (tint).
@@ -25,11 +25,11 @@ struct TexturedVertex {
   uint8_t r{255}, g{255}, b{255}, a{255};
 
   constexpr TexturedVertex() = default;
-  constexpr TexturedVertex(float x, float y, float u, float v)
-      : x(x), y(y), u(u), v(v) {}
-  constexpr TexturedVertex(float x, float y, float u, float v,
-                           uint8_t r, uint8_t g, uint8_t b, uint8_t a)
-      : x(x), y(y), u(u), v(v), r(r), g(g), b(b), a(a) {}
+  constexpr TexturedVertex(float x_, float y_, float u_, float v_)
+      : x(x_), y(y_), u(u_), v(v_) {}
+  constexpr TexturedVertex(float x_, float y_, float u_, float v_,
+                           uint8_t r_, uint8_t g_, uint8_t b_, uint8_t a_)
+      : x(x_), y(y_), u(u_), v(v_), r(r_), g(g_), b(b_), a(a_) {}
 };
 
 }  // namespace sdl_painter

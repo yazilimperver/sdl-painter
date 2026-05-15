@@ -21,5 +21,7 @@ target_link_libraries(sdl_painter_tests
     PRIVATE GTest::gtest_main
 )
 
+sdlpainter_copy_runtime_dlls(sdl_painter_tests)
+
 include(GoogleTest)
 gtest_add_tests(TARGET sdl_painter_tests)

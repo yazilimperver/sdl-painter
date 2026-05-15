@@ -16,6 +16,7 @@ function(set_target_warnings target)
         target_compile_options(${target} PRIVATE
             -Wall
             -Wextra
+            -Werror
             -Wshadow
             -Wnon-virtual-dtor
             -Wpedantic

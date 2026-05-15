@@ -1,10 +1,13 @@
-# ─── Builder stage ───────────────────────────────────────────────────────────
-FROM ubuntu:24.04 AS builder
+# ─── Builder Stage ────────────────────────────────────────────────────────────
+# Tüm araçları, SDL3 bağımlılıklarını ve Conan cache'i hazırlar.
+# cmake configure/build çalışma zamanında yapılır.
+FROM debian:13-slim AS builder
 
 ENV DEBIAN_FRONTEND=noninteractive \
     CONAN_HOME=/root/.conan2
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
     build-essential \
     gcc-13 g++-13 \
     clang-18 clang-format-18 clang-tidy-18 \
@@ -18,7 +21,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxss-dev libxkbcommon-dev \
     libasound2-dev libpulse-dev \
     libwayland-dev \
-    libgl1-mesa-dev libegl1-mesa-dev \
+    libgl-dev libegl-dev \
     # Headless test için
     xvfb \
     && rm -rf /var/lib/apt/lists/*
@@ -35,72 +38,167 @@ RUN conan profile detect
 
 WORKDIR /workspace
 
-# ─── CI stage ────────────────────────────────────────────────────────────────
-# Builder üzerine ekstra CI araçları (lcov, gcovr) ekler.
+# ─── Conan Cache Ön Isıtma ───────────────────────────────────────────────────
+# conanfile.py kopyalanır ve bağımlılıklar Conan cache'e indirilir.
+# Proje build'i (cmake configure/build) çalışma zamanında yapılır.
+
+COPY conanfile.py /workspace/
+
+RUN conan install . \
+    --output-folder=build/linux-debug/generators \
+    --build=missing \
+    -s build_type=Debug \
+    -s compiler=gcc \
+    -s compiler.version=13 \
+    -s compiler.libcxx=libstdc++11 \
+    -c tools.system.package_manager:mode=install \
+    -c tools.system.package_manager:sudo=False
+
+RUN conan install . \
+    --output-folder=build/linux-release/generators \
+    --build=missing \
+    -s build_type=Release \
+    -s compiler=gcc \
+    -s compiler.version=13 \
+    -s compiler.libcxx=libstdc++11 \
+    -c tools.system.package_manager:mode=install \
+    -c tools.system.package_manager:sudo=False
+
+# Vulkan variantı için Conan cache pre-warm (with_vulkan=True).
+# vulkan-loader, vulkan-headers, shaderc + transitive deps (glslang, spirv-tools)
+# burada derlenip ~/.conan2 cache'ine alınır. Output-folder /tmp altında ve
+# son adımda silinir — sadece cache (~/.conan2/p) kalır, image gereksiz şişmez.
+# Shaderc'in tool_requires olduğunu unutma: build profile (Linux) için derlenir.
+RUN conan install . \
+    --output-folder=/tmp/vk-precache \
+    --build=missing \
+    -s build_type=Debug \
+    -s compiler=gcc \
+    -s compiler.version=13 \
+    -s compiler.libcxx=libstdc++11 \
+    -o "&:with_vulkan=True" \
+    -c tools.system.package_manager:mode=install \
+    -c tools.system.package_manager:sudo=False \
+    && rm -rf /tmp/vk-precache
+
+RUN conan install . \
+    --output-folder=/tmp/vk-precache \
+    --build=missing \
+    -s build_type=Release \
+    -s compiler=gcc \
+    -s compiler.version=13 \
+    -s compiler.libcxx=libstdc++11 \
+    -o "&:with_vulkan=True" \
+    -c tools.system.package_manager:mode=install \
+    -c tools.system.package_manager:sudo=False \
+    && rm -rf /tmp/vk-precache
+
+# ─── CI Stage ────────────────────────────────────────────────────────────────
+# Builder üzerine coverage araçları + Vulkan runtime (lavapipe) ekler, headless
+# ortam değişkenlerini ayarlar.
 FROM builder AS ci
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     lcov \
     gcovr \
+    # Vulkan ICD: Mesa lavapipe (CPU software renderer, headless test için).
+    # Fiziksel GPU olmadan Vulkan API'sini sunar — CI runner'larında zorunlu.
+    mesa-vulkan-drivers \
+    libvulkan1 \
+    vulkan-tools \
     && rm -rf /var/lib/apt/lists/*
 
-# Headless OpenGL için offscreen driver
 ENV SDL_VIDEODRIVER=offscreen \
-    SDL_AUDIODRIVER=dummy
+    SDL_AUDIODRIVER=dummy \
+    # Vulkan ICD'sini lavapipe'a sabitle — birden fazla ICD varsa
+    # (örn. NVIDIA driver geçişi) belirsizliği önler.
+    VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+    # Mesa software renderer override (OpenGL kod yolları için).
+    MESA_LOADER_DRIVER_OVERRIDE=llvmpipe
 
-# ─── Windows cross-compile stage ─────────────────────────────────────────────
+# ─── Windows Cross-Compile Stage ─────────────────────────────────────────────
 # Linux container içinde MinGW-w64 ile Windows .exe / .dll üretir.
-# Üretilen binary'ler Windows'ta çalışır; container Windows host gerektirmez.
 FROM builder AS windows-cross
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     mingw-w64 \
     wine64 \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && printf '#!/bin/sh\nexec /usr/bin/x86_64-w64-mingw32-gcc -E -xc-header -DRC_INVOKED "$@"\n' \
+    > /usr/local/bin/mingw-rc-cpp \
+    && chmod +x /usr/local/bin/mingw-rc-cpp \
+    && printf '#!/bin/sh\nexec /usr/bin/x86_64-w64-mingw32-windres --preprocessor=/usr/local/bin/mingw-rc-cpp "$@"\n' \
+    > /usr/local/bin/windres \
+    && chmod +x /usr/local/bin/windres
 
-# Conan'a MinGW Windows cross-compile profili ekle
-RUN conan profile detect && \
+RUN MINGW_VER=$(x86_64-w64-mingw32-gcc -dumpfullversion | sed 's/^\([0-9][0-9]*\).*/\1/') && \
     cp ~/.conan2/profiles/default ~/.conan2/profiles/windows-mingw && \
-    sed -i 's/^os=.*/os=Windows/'          ~/.conan2/profiles/windows-mingw && \
-    sed -i 's/^arch=.*/arch=x86_64/'       ~/.conan2/profiles/windows-mingw && \
-    sed -i 's/^compiler=.*/compiler=gcc/'  ~/.conan2/profiles/windows-mingw && \
-    sed -i 's/^compiler.version=.*/compiler.version=13/' \
-    ~/.conan2/profiles/windows-mingw && \
-    sed -i 's/^compiler.libcxx=.*/compiler.libcxx=libstdc++11/' \
-    ~/.conan2/profiles/windows-mingw
+    sed -i 's/^os=.*/os=Windows/'                                    ~/.conan2/profiles/windows-mingw && \
+    sed -i 's/^arch=.*/arch=x86_64/'                                 ~/.conan2/profiles/windows-mingw && \
+    sed -i 's/^compiler=.*/compiler=gcc/'                            ~/.conan2/profiles/windows-mingw && \
+    sed -i "s/^compiler.version=.*/compiler.version=$MINGW_VER/"    ~/.conan2/profiles/windows-mingw && \
+    sed -i 's/^compiler.libcxx=.*/compiler.libcxx=libstdc++11/'     ~/.conan2/profiles/windows-mingw && \
+    printf '\n[buildenv]\nCC=x86_64-w64-mingw32-gcc\nCXX=x86_64-w64-mingw32-g++\nAR=x86_64-w64-mingw32-ar\nRC=x86_64-w64-mingw32-windres\nSTRIP=x86_64-w64-mingw32-strip\n' \
+    >> ~/.conan2/profiles/windows-mingw && \
+    printf '\n[conf]\ntools.build:compiler_executables={"c": "x86_64-w64-mingw32-gcc", "cpp": "x86_64-w64-mingw32-g++", "windres": "x86_64-w64-mingw32-windres", "ar": "x86_64-w64-mingw32-ar", "strip": "x86_64-w64-mingw32-strip"}\n' \
+    >> ~/.conan2/profiles/windows-mingw
 
-# CMake toolchain dosyası repo'dan kopyalanır (cmake/MinGwToolchain.cmake)
-COPY cmake/MinGwToolchain.cmake /usr/local/share/MinGwToolchain.cmake
+# Windows bağımlılıklarını Conan cache'e önceden indir (Debug + Release).
+# Output folder'lar windows-mingw-{debug,release} preset'leriyle uyumludur.
+# Not: Conan profile'ında os=Windows + [conf] compiler_executables=mingw set edildiği
+# için üretilen conan_toolchain.cmake CMAKE_SYSTEM_NAME=Windows ve MinGW derleyicilerini
+# otomatik ayarlar — ayrıca bir CMake toolchain dosyasına ihtiyaç yoktur.
+RUN conan install . \
+    --output-folder=build/windows-mingw-debug/generators \
+    --build=missing \
+    -s build_type=Debug \
+    --profile:build=default \
+    --profile:host=windows-mingw \
+    -c tools.system.package_manager:mode=install \
+    -c tools.system.package_manager:sudo=False
 
-WORKDIR /workspace
+RUN conan install . \
+    --output-folder=build/windows-mingw-release/generators \
+    --build=missing \
+    -s build_type=Release \
+    --profile:build=default \
+    --profile:host=windows-mingw \
+    -c tools.system.package_manager:mode=install \
+    -c tools.system.package_manager:sudo=False
+
+# NOT: Windows MinGW cross-compile'da Vulkan DESTEKLENMİYOR. vulkan-loader
+# Conan recipe'ı Windows'ta USE_MASM=True'yu hardcoded set ediyor ve MinGW
+# gcc bunu derleyemiyor (asm_offset.c'ye MSVC /Fa /FA /Od flag'leri geçiyor).
+# conanfile.py configure() bu hedefte with_vulkan'ı otomatik False'a çeker.
+# Windows'ta Vulkan gerekiyorsa native MSVC build (windows-release preset)
+# kullanın. Bu yüzden burada Vulkan pre-cache adımı YOK.
 
 # ─── Kullanım ─────────────────────────────────────────────────────────────────
-# Linux builder image:
+# Builder (geliştirme ortamı):
 #   docker build --target builder -t sdl-painter:dev .
+#   docker run --rm -it -v ${PWD}:/workspace sdl-painter:dev bash
 #
-# CI (headless test):
+# CI (headless test + coverage):
 #   docker build --target ci -t sdl-painter:ci .
-#
-# Windows cross-compile image:
+#   docker run --rm -v "${PWD}:/workspace" sdl-painter:ci bash -c "conan install . --output-folder=build/linux-release/generators --build=missing -s build_type=Release -s compiler=gcc -s  compiler.version=13 -s compiler.libcxx=libstdc++11 && cmake --preset linux-release && cmake --build --preset linux-release && ctest --preset linux-release --output-on-failure"
+#   docker run --rm -v "${PWD}:/workspace" sdl-painter:ci bash -c "conan install . --output-folder=build/linux-debug/generators --build=missing -s build_type=Debug -s compiler=gcc -s  compiler.version=13 -s compiler.libcxx=libstdc++11 && cmake --preset linux-debug && cmake --build --preset linux-debug && ctest --preset linux-debug --output-on-failure"          
+# 
+# Windows cross-compile (Linux host'ta Windows .exe / .dll üretir):
 #   docker build --target windows-cross -t sdl-painter:windows-cross .
 #
-# Geliştirme shell'i (Linux):
-#   docker run --rm -it -v $(pwd):/workspace sdl-painter:dev bash
+# Debug build:
+#   docker run --rm -v "${PWD}:/workspace" sdl-painter:windows-cross bash -c "conan install . --output-folder=build/windows-mingw-debug/generators --build=missing -s build_type=Debug --profile:build=default --profile:host=windows-mingw && cmake --preset windows-mingw-debug && cmake --build --preset windows-mingw-debug"
 #
-# Linux testleri headless çalıştır:
-#   docker run --rm -v $(pwd):/workspace sdl-painter:ci bash -c \
-#     "conan install . --output-folder=build/linux-debug/generators \
-#        --build=missing -s build_type=Debug && \
-#      cmake --preset linux-debug && \
-#      cmake --build --preset linux-debug && \
-#      ctest --preset linux-debug --output-on-failure"
+# Release build:
+#   docker run --rm -v "${PWD}:/workspace" sdl-painter:windows-cross bash -c "conan install . --output-folder=build/windows-mingw-release/generators --build=missing -s build_type=Release --profile:build=default --profile:host=windows-mingw && cmake --preset windows-mingw-release && cmake --build --preset windows-mingw-release"
 #
-# Windows cross-compile (Linux host'ta Windows .exe üretir):
-#   docker run --rm -v $(pwd):/workspace sdl-painter:windows-cross bash -c \
-#     "conan install . --output-folder=build/linux-debug/generators \
-#        --build=missing -s build_type=Debug \
-#        --profile:build=default \
-#        --profile:host=windows-mingw && \
-#      cmake --preset linux-debug \
-#        -DCMAKE_TOOLCHAIN_FILE=/usr/local/share/MinGwToolchain.cmake && \
-#      cmake --build --preset linux-debug"
+# Çıktılar: build/windows-mingw-{debug,release}/ altında .exe ve .dll dosyaları
+# docker run --rm -v "${PWD}:/workspace" sdl-painter:windows-cross x86_64-w64-mingw32-objdump -p build/windows-mingw-release/examples/phase0_demo.exe | grep "DLL Name"
+#
+# Vulkan destekli build — yalnızca Linux (Windows MinGW cross-compile'da
+# vulkan-loader recipe'ı USE_MASM nedeniyle derlenemiyor; configure() bu
+# hedefte with_vulkan'ı otomatik kapatır):
+#   docker run --rm -v "${PWD}:/workspace" sdl-painter:ci bash -c "conan install . --output-folder=build/linux-release/generators --build=missing -s build_type=Release -s compiler=gcc -s compiler.version=13 -s compiler.libcxx=libstdc++11 -o '&:with_vulkan=True' && cmake --preset linux-release && cmake --build --preset linux-release && ctest --preset linux-release --output-on-failure"
+#
+# Windows'ta Vulkan gerekiyorsa native MSVC (Windows host'ta, cross-compile
+# değil): conan install ... && cmake --preset windows-release -o "&:with_vulkan=True"
