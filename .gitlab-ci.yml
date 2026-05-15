@@ -64,12 +64,12 @@ build:linux:debug:
   image: $CI_REGISTRY_IMAGE # Sadece derleme imajını çeker
   # extends: .conan_base
   script:
-    # - |
-    #   conan install . --output-folder=build/linux-debug/generators --build=missing \
-    #     -s build_type=Debug \
-    #     -o "&:with_vulkan=True" \
-    #     -c tools.system.package_manager:mode=install \
-    #     -c tools.system.package_manager:sudo=False
+    - |
+      conan install . --output-folder=build/linux-debug/generators --build=missing \
+        -s build_type=Debug \
+        -o "&:with_vulkan=True" \
+        -c tools.system.package_manager:mode=install \
+        -c tools.system.package_manager:sudo=False
     - cmake --preset linux-debug
     - cmake --build --preset linux-debug
   artifacts:
@@ -82,12 +82,12 @@ build:linux:release:
   image: $CI_REGISTRY_IMAGE  # Sadece derleme imajını çeker
   # extends: .conan_base
   script:
-    # - |
-    #   conan install . --output-folder=build/linux-release/generators --build=missing \
-    #     -s build_type=Release \
-    #     -o "&:with_vulkan=True" \
-    #     -c tools.system.package_manager:mode=install \
-    #     -c tools.system.package_manager:sudo=False
+    - |
+      conan install . --output-folder=build/linux-release/generators --build=missing \
+        -s build_type=Release \
+        -o "&:with_vulkan=True" \
+        -c tools.system.package_manager:mode=install \
+        -c tools.system.package_manager:sudo=False
     - cmake --preset linux-release
     - cmake --build --preset linux-release
   artifacts:
