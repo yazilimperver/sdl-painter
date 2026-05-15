@@ -61,7 +61,7 @@ variables:
 
 build:linux:debug:
   stage: build
-  image: $CI_REGISTRY_IMAGE/yazilimperver/sdl-painter # Sadece derleme imajını çeker
+  image: $CI_REGISTRY_IMAGE # Sadece derleme imajını çeker
   # extends: .conan_base
   script:
     # - |
@@ -79,7 +79,7 @@ build:linux:debug:
 
 build:linux:release:
   stage: build
-  image: $CI_REGISTRY_IMAGE/yazilimperver/sdl-painter  # Sadece derleme imajını çeker
+  image: $CI_REGISTRY_IMAGE  # Sadece derleme imajını çeker
   # extends: .conan_base
   script:
     # - |
