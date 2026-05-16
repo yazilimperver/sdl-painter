@@ -104,12 +104,11 @@ test:unit:asan:
 
 test:unit:windows:
   stage: test
-  extends: .windows_base
   needs: ["build:windows:debug"]
   variables:
     SDL_VIDEODRIVER: "offscreen"
   script:
-    - ctest --preset windows-debug --output-on-failure
+    - ctest --preset windows-mingw-debug --output-on-failure
     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # --- Quality Stage ---
