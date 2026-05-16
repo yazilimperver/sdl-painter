@@ -46,6 +46,7 @@ build:linux:release:
 
 build:windows:debug:
   stage: build
+  image: $CI_REGISTRY_IMAGE/sdl-painter-win
   script:
     - conan install . --output-folder=build/windows-mingw-debug/generators  --build=missing -s build_type=Debug --profile:build=default --profile:host=windows-mingw
     - cmake --preset windows-mingw-debug
@@ -57,6 +58,7 @@ build:windows:debug:
 
 build:windows:release:
   stage: build
+  image: $CI_REGISTRY_IMAGE/sdl-painter-win
   script:
     - conan install . --output-folder=build/windows-mingw-release/generators  --build=missing -s build_type=Release --profile:build=default --profile:host=windows-mingw
     - cmake --preset windows-mingw-release
