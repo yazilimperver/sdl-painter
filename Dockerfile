@@ -182,6 +182,7 @@ RUN conan install . \
 #   docker build --target ci -t sdl-painter:ci .
 #   docker run --rm -v "${PWD}:/workspace" sdl-painter:ci bash -c "conan install . --output-folder=build/linux-release/generators --build=missing -s build_type=Release -s compiler=gcc -s  compiler.version=13 -s compiler.libcxx=libstdc++11 && cmake --preset linux-release && cmake --build --preset linux-release && ctest --preset linux-release --output-on-failure"
 #   docker run --rm -v "${PWD}:/workspace" sdl-painter:ci bash -c "conan install . --output-folder=build/linux-debug/generators --build=missing -s build_type=Debug -s compiler=gcc -s  compiler.version=13 -s compiler.libcxx=libstdc++11 && cmake --preset linux-debug && cmake --build --preset linux-debug && ctest --preset linux-debug --output-on-failure"          
+#   docker run --rm -v "${PWD}:/workspace" sdl-painter:ci bash -c "conan install . --output-folder=build/linux-debug-asan/generators --build=missing -s build_type=Debug -c tools.system.package_manager:mode=install && cmake --preset linux-debug-asan && cmake --build --preset linux-debug-asan && ctest --preset linux-debug-asan --output-on-failure"
 # 
 # Windows cross-compile (Linux host'ta Windows .exe / .dll üretir):
 #   docker build --target windows-cross -t sdl-painter:windows-cross .

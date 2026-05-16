@@ -91,7 +91,6 @@ test:unit:asan:
     - |
       conan install . --output-folder=build/linux-debug-asan/generators --build=missing \
         -s build_type=Debug \
-        -o "&:with_vulkan=True" \
         -c tools.system.package_manager:mode=install \
         -c tools.system.package_manager:sudo=False
     - cmake --preset linux-debug-asan
@@ -101,6 +100,7 @@ test:unit:asan:
 test:unit:windows:
   stage: test
   needs: ["build:windows:debug"]
+  image: $CI_REGISTRY_IMAGE/sdl-painter-win
   variables:
     SDL_VIDEODRIVER: "offscreen"
   script:

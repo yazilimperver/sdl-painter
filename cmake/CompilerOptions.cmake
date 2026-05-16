@@ -16,12 +16,15 @@ function(set_target_sanitizers target)
         return()
     endif()
 
-    target_compile_options(${target} PRIVATE
+    # PUBLIC: bayraklar tüketicilere (tests/examples) de yayılmalı.
+    # ${target} static lib; PRIVATE kalırsa enstrümante objeler enstrümante
+    # olmayan exe'lere linklenir → "undefined reference to __ubsan_*/__asan_*".
+    target_compile_options(${target} PUBLIC
         -fsanitize=address
         -fsanitize=undefined
         -fno-omit-frame-pointer
     )
-    target_link_options(${target} PRIVATE
+    target_link_options(${target} PUBLIC
         -fsanitize=address
         -fsanitize=undefined
     )
