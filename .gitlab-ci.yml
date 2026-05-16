@@ -9,30 +9,6 @@ variables:
   CONAN_HOME: "/root/.conan2"
   GIT_SUBMODULE_STRATEGY: recursive
 
-# --- Windows base template ---
-
-.windows_base:
-  image: $CI_REGISTRY_IMAGE/sdl-painter-win 
-  variables:
-    CC: "cl"
-    CXX: "cl"
-  timeout: 60 minutes
-  before_script:
-    - |
-      $vswhere = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
-      $vsPath  = & $vswhere -latest -products * `
-                   -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
-                   -property installationPath
-      $vcvars  = Join-Path $vsPath "VC\Auxiliary\Build\vcvars64.bat"
-      Write-Host "vcvars64.bat: $vcvars"
-      $envDump = cmd /c "`"$vcvars`" amd64 && set"
-      foreach ($line in $envDump) {
-        if ($line -match '^([^=]+)=(.*)$') {
-          [System.Environment]::SetEnvironmentVariable($matches[1], $matches[2], 'Process')
-        }
-      }
-    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
 # --- Build Stage ---
 build:linux:debug:
   stage: build
@@ -70,34 +46,30 @@ build:linux:release:
 
 build:windows:debug:
   stage: build
-  extends: .windows_base
   script:
-    - conan install . --output-folder=build/windows-debug/generators --build=missing
-        -s build_type=Debug -o "&:with_vulkan=True"
+    - conan install . --output-folder=build/windows-mingw-debug/generators  --build=missing -s build_type=Debug --profile:build=default --profile:host=windows-mingw
+      - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    - cmake --preset windows-mingw-debug
     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    - cmake --preset windows-debug
-    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    - cmake --build --preset windows-debug
+    - cmake --build --preset windows-mingw-debug
     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   artifacts:
     paths:
-      - build/windows-debug/
+      - build/windows-mingw-debug/
     expire_in: 1 day
 
 build:windows:release:
   stage: build
-  extends: .windows_base
   script:
-    - conan install . --output-folder=build/windows-release/generators --build=missing
-        -s build_type=Release -o "&:with_vulkan=True"
+    - conan install . --output-folder=build/windows-mingw-release/generators  --build=missing -s build_type=Release --profile:build=default --profile:host=windows-mingw
+      - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+    - cmake --preset windows-mingw-release
     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    - cmake --preset windows-release
-    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-    - cmake --build --preset windows-release
+    - cmake --build --preset windows-mingw-release
     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   artifacts:
     paths:
-      - build/windows-release/
+      - build/windows-mingw-release/
     expire_in: 1 day
 
 # # --- Test Stage ---
