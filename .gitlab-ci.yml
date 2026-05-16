@@ -48,11 +48,8 @@ build:windows:debug:
   stage: build
   script:
     - conan install . --output-folder=build/windows-mingw-debug/generators  --build=missing -s build_type=Debug --profile:build=default --profile:host=windows-mingw
-      - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     - cmake --preset windows-mingw-debug
-    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     - cmake --build --preset windows-mingw-debug
-    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   artifacts:
     paths:
       - build/windows-mingw-debug/
@@ -62,11 +59,8 @@ build:windows:release:
   stage: build
   script:
     - conan install . --output-folder=build/windows-mingw-release/generators  --build=missing -s build_type=Release --profile:build=default --profile:host=windows-mingw
-      - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     - cmake --preset windows-mingw-release
-    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
     - cmake --build --preset windows-mingw-release
-    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
   artifacts:
     paths:
       - build/windows-mingw-release/
