@@ -155,7 +155,6 @@ quality:clang-tidy:
   image: $CI_REGISTRY_IMAGE
   needs: ["build:linux:debug"]
   before_script:
-    - !reference [.conan_base, before_script]
     - apt-get install -y clang-tidy-18
   script:
     - find src/ -name '*.cpp' | xargs clang-tidy-18 -p build/linux-debug/
