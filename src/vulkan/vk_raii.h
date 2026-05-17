@@ -1,8 +1,7 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-
 #include <utility>
+#include <vulkan/vulkan.h>
 
 namespace sdl_painter {
 
@@ -28,9 +27,7 @@ class VkScoped {
   VkScoped& operator=(const VkScoped&) = delete;
 
   VkScoped(VkScoped&& other) noexcept
-      : mOwner(other.mOwner),
-        mHandle(other.mHandle),
-        mDeleter(other.mDeleter) {
+      : mOwner(other.mOwner), mHandle(other.mHandle), mDeleter(other.mDeleter) {
     other.mHandle = VK_NULL_HANDLE;
   }
 

@@ -12,9 +12,10 @@ constexpr float kTwoPi = 2.0f * 3.14159265358979323846f;
 
 // --- Dolu şekiller ---
 
-std::vector<Vertex> Tessellator::TessellateFilledRect(
-    float x, float y, float w, float h) {
+std::vector<Vertex> Tessellator::TessellateFilledRect(float x, float y, float w,
+                                                      float h) {
   // İki üçgen, 6 vertex
+  // clang-format off
   return {
       {x,     y    },
       {x + w, y    },
@@ -23,17 +24,19 @@ std::vector<Vertex> Tessellator::TessellateFilledRect(
       {x + w, y + h},
       {x,     y + h},
   };
+  // clang-format on
 }
 
-std::vector<Vertex> Tessellator::TessellateFilledCircle(
-    float cx, float cy, float radius) {
+std::vector<Vertex> Tessellator::TessellateFilledCircle(float cx, float cy,
+                                                        float radius) {
   int32_t segments = AdaptiveSegments(radius);
   std::vector<Vertex> result;
   result.reserve(static_cast<std::size_t>(segments) * 3);
 
   for (int32_t i = 0; i < segments; ++i) {
-    float a0 = kTwoPi * static_cast<float>(i)     / static_cast<float>(segments);
-    float a1 = kTwoPi * static_cast<float>(i + 1) / static_cast<float>(segments);
+    float a0 = kTwoPi * static_cast<float>(i) / static_cast<float>(segments);
+    float a1 =
+        kTwoPi * static_cast<float>(i + 1) / static_cast<float>(segments);
     result.push_back({cx, cy});
     result.push_back({cx + std::cos(a0) * radius, cy + std::sin(a0) * radius});
     result.push_back({cx + std::cos(a1) * radius, cy + std::sin(a1) * radius});
@@ -41,15 +44,16 @@ std::vector<Vertex> Tessellator::TessellateFilledCircle(
   return result;
 }
 
-std::vector<Vertex> Tessellator::TessellateFilledEllipse(
-    float cx, float cy, float rx, float ry) {
+std::vector<Vertex> Tessellator::TessellateFilledEllipse(float cx, float cy,
+                                                         float rx, float ry) {
   int32_t segments = AdaptiveSegments(std::max(rx, ry));
   std::vector<Vertex> result;
   result.reserve(static_cast<std::size_t>(segments) * 3);
 
   for (int32_t i = 0; i < segments; ++i) {
-    float a0 = kTwoPi * static_cast<float>(i)     / static_cast<float>(segments);
-    float a1 = kTwoPi * static_cast<float>(i + 1) / static_cast<float>(segments);
+    float a0 = kTwoPi * static_cast<float>(i) / static_cast<float>(segments);
+    float a1 =
+        kTwoPi * static_cast<float>(i + 1) / static_cast<float>(segments);
     result.push_back({cx, cy});
     result.push_back({cx + std::cos(a0) * rx, cy + std::sin(a0) * ry});
     result.push_back({cx + std::cos(a1) * rx, cy + std::sin(a1) * ry});
@@ -59,20 +63,23 @@ std::vector<Vertex> Tessellator::TessellateFilledEllipse(
 
 std::vector<Vertex> Tessellator::TessellateFilledPolygon(
     const std::vector<Point>& points) {
-  if (points.size() < 3) return {};
+  if (points.size() < 3)
+    return {};
   return EarClipping(points);
 }
 
 // --- Çerçeve şekiller ---
 
-std::vector<Vertex> Tessellator::TessellateStrokedRect(
-    float x, float y, float w, float h, float line_width) {
+std::vector<Vertex> Tessellator::TessellateStrokedRect(float x, float y,
+                                                       float w, float h,
+                                                       float line_width) {
   return TessellateStrokedPolygon(
       {{x, y}, {x + w, y}, {x + w, y + h}, {x, y + h}}, line_width);
 }
 
-std::vector<Vertex> Tessellator::TessellateStrokedCircle(
-    float cx, float cy, float radius, float line_width) {
+std::vector<Vertex> Tessellator::TessellateStrokedCircle(float cx, float cy,
+                                                         float radius,
+                                                         float line_width) {
   int32_t segments = AdaptiveSegments(radius);
   std::vector<Point> pts;
   pts.reserve(static_cast<std::size_t>(segments));
@@ -84,8 +91,9 @@ std::vector<Vertex> Tessellator::TessellateStrokedCircle(
   return TessellateStrokedPolygon(pts, line_width);
 }
 
-std::vector<Vertex> Tessellator::TessellateStrokedEllipse(
-    float cx, float cy, float rx, float ry, float line_width) {
+std::vector<Vertex> Tessellator::TessellateStrokedEllipse(float cx, float cy,
+                                                          float rx, float ry,
+                                                          float line_width) {
   int32_t segments = AdaptiveSegments(std::max(rx, ry));
   std::vector<Point> pts;
   pts.reserve(static_cast<std::size_t>(segments));
@@ -97,19 +105,22 @@ std::vector<Vertex> Tessellator::TessellateStrokedEllipse(
   return TessellateStrokedPolygon(pts, line_width);
 }
 
-std::vector<Vertex> Tessellator::TessellateThickLine(
-    float x1, float y1, float x2, float y2, float line_width) {
+std::vector<Vertex> Tessellator::TessellateThickLine(float x1, float y1,
+                                                     float x2, float y2,
+                                                     float line_width) {
   float dx = x2 - x1;
   float dy = y2 - y1;
   float len = std::sqrt(dx * dx + dy * dy);
-  if (len < 1e-6f) return {};
+  if (len < 1e-6f)
+    return {};
 
   // Dike normal vektör (normalize edilmiş)
   float nx = -dy / len;
-  float ny =  dx / len;
+  float ny = dx / len;
   float hw = line_width * 0.5f;
 
   // Quad'ın 4 köşesi
+  // clang-format off
   float p0x = x1 + hw * nx,  p0y = y1 + hw * ny;  // A üst
   float p1x = x1 - hw * nx,  p1y = y1 - hw * ny;  // A alt
   float p2x = x2 + hw * nx,  p2y = y2 + hw * ny;  // B üst
@@ -119,17 +130,18 @@ std::vector<Vertex> Tessellator::TessellateThickLine(
       {p0x, p0y}, {p1x, p1y}, {p2x, p2y},
       {p1x, p1y}, {p3x, p3y}, {p2x, p2y},
   };
+  // clang-format on
 }
 
 std::vector<Vertex> Tessellator::TessellateThickPolyline(
     const std::vector<Point>& points, float line_width) {
   std::vector<Vertex> result;
-  if (points.size() < 2) return result;
+  if (points.size() < 2)
+    return result;
 
   for (std::size_t i = 0; i + 1 < points.size(); ++i) {
-    auto seg = TessellateThickLine(points[i].x, points[i].y,
-                                   points[i + 1].x, points[i + 1].y,
-                                   line_width);
+    auto seg = TessellateThickLine(points[i].x, points[i].y, points[i + 1].x,
+                                   points[i + 1].y, line_width);
     result.insert(result.end(), seg.begin(), seg.end());
   }
   return result;
@@ -137,7 +149,8 @@ std::vector<Vertex> Tessellator::TessellateThickPolyline(
 
 std::vector<Vertex> Tessellator::TessellateStrokedPolygon(
     const std::vector<Point>& points, float line_width) {
-  if (points.size() < 2) return {};
+  if (points.size() < 2)
+    return {};
 
   // Kapalı polyline — son noktayı başa bağla
   std::vector<Point> closed = points;
@@ -146,8 +159,9 @@ std::vector<Vertex> Tessellator::TessellateStrokedPolygon(
 }
 
 std::vector<TexturedVertex> Tessellator::TessellateTexturedRect(
-    float x, float y, float w, float h,
-    float u0, float v0, float u1, float v1) {
+    float x, float y, float w, float h, float u0, float v0, float u1,
+    float v1) {
+  // clang-format off
   return {
       {x,     y,     u0, v0},
       {x + w, y,     u1, v0},
@@ -156,6 +170,7 @@ std::vector<TexturedVertex> Tessellator::TessellateTexturedRect(
       {x + w, y,     u1, v0},
       {x + w, y + h, u1, v1},
   };
+  // clang-format on
 }
 
 // --- Yardımcı iç fonksiyonlar ---
@@ -165,9 +180,8 @@ bool Tessellator::IsClockwise(const Point& a, const Point& b, const Point& c) {
   return cross < 0.0f;
 }
 
-bool Tessellator::PointInTriangle(const Point& p,
-                                   const Point& a, const Point& b,
-                                   const Point& c) {
+bool Tessellator::PointInTriangle(const Point& p, const Point& a,
+                                  const Point& b, const Point& c) {
   auto Sign = [](const Point& p1, const Point& p2, const Point& p3) {
     return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
   };
@@ -180,7 +194,8 @@ bool Tessellator::PointInTriangle(const Point& p,
 }
 
 std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& pts) {
-  if (pts.size() < 3) return {};
+  if (pts.size() < 3)
+    return {};
 
   // Basit üçgen durumu
   if (pts.size() == 3) {
@@ -220,14 +235,16 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& pts) {
 
       // CCW poligonda dışbükey köşe: cross(a→b, b→c) > 0
       float cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-      if (cross <= 0.0f) continue;  // içbükey (reflex) köşe, kulak değil
+      if (cross <= 0.0f)
+        continue;  // içbükey (reflex) köşe, kulak değil
 
       // Diğer hiçbir nokta bu üçgenin içinde olmamalı
       bool is_ear = true;
       for (std::size_t j = 0; j < n; ++j) {
-        if (j == iprev || j == i || j == inext) continue;
-        if (PointInTriangle(pts[static_cast<std::size_t>(indices[j])],
-                            a, b, c)) {
+        if (j == iprev || j == i || j == inext)
+          continue;
+        if (PointInTriangle(pts[static_cast<std::size_t>(indices[j])], a, b,
+                            c)) {
           is_ear = false;
           break;
         }
@@ -244,7 +261,8 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& pts) {
     }
 
     // Dejenere poligon koruması
-    if (!found_ear) break;
+    if (!found_ear)
+      break;
   }
 
   // Son üçgeni ekle

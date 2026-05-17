@@ -17,7 +17,7 @@ void RenderBatcher::PushTriangles(const std::vector<Vertex>& vertices,
     Flush();
   }
 
-  mCurrentMode    = DrawMode::kBasic;
+  mCurrentMode = DrawMode::kBasic;
   mCurrentOpacity = opacity;
 
   for (auto v : vertices) {
@@ -38,7 +38,7 @@ void RenderBatcher::PushTexturedTriangles(
     Flush();
   }
 
-  mCurrentMode    = DrawMode::kTextured;
+  mCurrentMode = DrawMode::kTextured;
   mCurrentTexture = texture;
   mCurrentOpacity = opacity;
 
@@ -63,7 +63,7 @@ void RenderBatcher::Flush() {
   }
 
   // mCurrentOpacity korunuyor — aynı opacity ile gelen sonraki batch için flush tetiklenmez.
-  mCurrentMode    = DrawMode::kNone;
+  mCurrentMode = DrawMode::kNone;
   mCurrentTexture = kInvalidTexture;
 }
 

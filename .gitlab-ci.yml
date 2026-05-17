@@ -46,7 +46,7 @@ build:linux:release:
 
 build:windows:debug:
   stage: build
-  image: $CI_REGISTRY_IMAGE/sdl-painter-win
+  image: $CI_REGISTRY_IMAGE/sdl-painter-win-cross
   script:
     - conan install . --output-folder=build/windows-mingw-debug/generators  --build=missing -s build_type=Debug --profile:build=default --profile:host=windows-mingw
     - cmake --preset windows-mingw-debug
@@ -130,8 +130,14 @@ quality:clang-tidy:
   needs: ["build:linux:debug"]
   # clang-tidy-18 base imajda zaten kurulu; eski `apt-get install` adımı hem
   # gereksizdi hem de apt-get update + list olmadığı için job'u düşürüyordu.
+  #
+  # --extra-arg=-Wno-unknown-warning-option: compile_commands.json GCC ile
+  # üretildiği için GCC-özel flag'ler (-Wduplicated-cond vb.) içeriyor.
+  # clang-tidy clang frontend kullandığından bunları tanımaz; bu sürücü
+  # seviyesi diagnostic .clang-tidy Checks filtresiyle bastırılamıyor,
+  # yalnız -Wno-... ile susturulabiliyor.
   script:
-    - find src/ -name '*.cpp' | xargs clang-tidy-18 -p build/linux-debug/
+    - find src/ -name '*.cpp' | xargs clang-tidy-18 -p build/linux-debug/ --extra-arg=-Wno-unknown-warning-option
   allow_failure: true
 
 # --- Docs Stage ---

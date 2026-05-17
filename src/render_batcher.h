@@ -1,11 +1,11 @@
 #pragma once
 
-#include <cstdint>
-#include <vector>
-
 #include "sdl_painter/color.h"
 #include "sdl_painter/renderer.h"
 #include "sdl_painter/vertex.h"
+
+#include <cstdint>
+#include <vector>
 
 namespace sdl_painter {
 
@@ -14,11 +14,7 @@ class IRenderer;
 /// @brief Çizim komutlarını biriktirip topluca renderer'a gönderen sınıf.
 class RenderBatcher {
  public:
-  enum class DrawMode {
-    kNone,
-    kBasic,
-    kTextured
-  };
+  enum class DrawMode { kNone, kBasic, kTextured };
 
   explicit RenderBatcher(IRenderer& renderer);
 

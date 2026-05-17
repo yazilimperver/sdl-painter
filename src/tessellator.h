@@ -1,9 +1,9 @@
 #pragma once
 
-#include <vector>
-
 #include "sdl_painter/geometry.h"
 #include "sdl_painter/vertex.h"
+
+#include <vector>
 
 namespace sdl_painter {
 
@@ -16,8 +16,8 @@ class Tessellator {
   // --- Dolu şekiller (üçgen listeleri) ---
 
   /// @brief Dolu dikdörtgen için vertex üret (2 üçgen, 6 vertex).
-  static std::vector<Vertex> TessellateFilledRect(float x, float y,
-                                                  float w, float h);
+  static std::vector<Vertex> TessellateFilledRect(float x, float y, float w,
+                                                  float h);
 
   /// @brief Dolu daire için vertex üret (triangle fan).
   /// Segment sayısı yarıçapa göre adaptif: max(16, radius * 0.5)
@@ -36,9 +36,8 @@ class Tessellator {
   // --- Çerçeve şekiller (quad tabanlı kalın çizgi) ---
 
   /// @brief Dikdörtgen çerçevesi için vertex üret (4 kenar quad).
-  static std::vector<Vertex> TessellateStrokedRect(float x, float y,
-                                                   float w, float h,
-                                                   float line_width);
+  static std::vector<Vertex> TessellateStrokedRect(float x, float y, float w,
+                                                   float h, float line_width);
 
   /// @brief Daire çerçevesi için vertex üret (çevre boyunca quad'lar).
   static std::vector<Vertex> TessellateStrokedCircle(float cx, float cy,
@@ -51,9 +50,8 @@ class Tessellator {
                                                       float line_width);
 
   /// @brief Çizgi segmenti için kalın quad vertex üret.
-  static std::vector<Vertex> TessellateThickLine(float x1, float y1,
-                                                 float x2, float y2,
-                                                 float line_width);
+  static std::vector<Vertex> TessellateThickLine(float x1, float y1, float x2,
+                                                 float y2, float line_width);
 
   /// @brief Çok noktalı polyline için kalın quad vertex üret.
   static std::vector<Vertex> TessellateThickPolyline(
@@ -66,9 +64,10 @@ class Tessellator {
   // --- Texture koordinatlı vertex'ler ---
 
   /// @brief Texture'lı dikdörtgen için TexturedVertex üret.
-  static std::vector<TexturedVertex> TessellateTexturedRect(
-      float x, float y, float w, float h,
-      float u0, float v0, float u1, float v1);
+  static std::vector<TexturedVertex> TessellateTexturedRect(float x, float y,
+                                                            float w, float h,
+                                                            float u0, float v0,
+                                                            float u1, float v1);
 
  private:
   /// @brief Adaptif segment sayısı hesapla.
@@ -84,8 +83,8 @@ class Tessellator {
   static bool IsClockwise(const Point& a, const Point& b, const Point& c);
 
   /// @brief Nokta üçgenin içinde mi?
-  static bool PointInTriangle(const Point& p,
-                               const Point& a, const Point& b, const Point& c);
+  static bool PointInTriangle(const Point& p, const Point& a, const Point& b,
+                              const Point& c);
 };
 
 }  // namespace sdl_painter

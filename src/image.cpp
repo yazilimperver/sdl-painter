@@ -1,14 +1,12 @@
 #include "sdl_painter/image.h"
 
 #define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
-#include <spdlog/spdlog.h>
+#include "sdl_painter/renderer.h"
 
 #include <cstdlib>
 #include <cstring>
-
-#include "sdl_painter/renderer.h"
+#include <spdlog/spdlog.h>
+#include <stb_image.h>
 
 namespace sdl_painter {
 
@@ -38,14 +36,16 @@ Image::Image(Image&&) noexcept = default;
 Image& Image::operator=(Image&&) noexcept = default;
 
 // static
-Image Image::CreateFromData(const uint8_t* data,
-                            int32_t width, int32_t height, int32_t channels) {
+Image Image::CreateFromData(const uint8_t* data, int32_t width, int32_t height,
+                            int32_t channels) {
   Image img;
-  if (!data || width <= 0 || height <= 0 || channels <= 0) return img;
+  if (!data || width <= 0 || height <= 0 || channels <= 0)
+    return img;
 
   constexpr int32_t kMaxDimension = 32767;
   if (width > kMaxDimension || height > kMaxDimension) {
-    spdlog::warn("Image::CreateFromData: çok büyük boyut ({}x{})", width, height);
+    spdlog::warn("Image::CreateFromData: çok büyük boyut ({}x{})", width,
+                 height);
     return img;
   }
   const std::size_t size = static_cast<std::size_t>(width) *
@@ -53,18 +53,20 @@ Image Image::CreateFromData(const uint8_t* data,
                            static_cast<std::size_t>(channels);
   // malloc kullaniyoruz — StbDeleter, stbi_image_free -> free() cagirir.
   auto* buf = static_cast<uint8_t*>(std::malloc(size));
-  if (!buf) return img;
+  if (!buf)
+    return img;
 
   std::memcpy(buf, data, size);
   img.mRawData.reset(buf);
-  img.mWidth    = width;
-  img.mHeight   = height;
+  img.mWidth = width;
+  img.mHeight = height;
   img.mChannels = channels;
   return img;
 }
 
 TextureHandle Image::Upload(IRenderer& renderer) const {
-  if (!IsValid()) return kInvalidTexture;
+  if (!IsValid())
+    return kInvalidTexture;
 
   // Farklı renderer ile çağrıldıysa (örn. renderer yeniden oluşturuldu)
   // eski handle'ı serbest bırak ve yeniden yükle.
@@ -73,9 +75,8 @@ TextureHandle Image::Upload(IRenderer& renderer) const {
   }
 
   if (!mHandle.IsValid()) {
-    mHandle = Texture(&renderer,
-                      renderer.CreateTexture(mRawData.get(), mWidth, mHeight,
-                                             mChannels));
+    mHandle = Texture(&renderer, renderer.CreateTexture(mRawData.get(), mWidth,
+                                                        mHeight, mChannels));
   }
 
   return mHandle.Handle();

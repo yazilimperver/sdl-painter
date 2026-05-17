@@ -1,10 +1,5 @@
 #pragma once
 
-#include <cstdint>
-#include <memory>
-#include <string>
-#include <vector>
-
 #include "sdl_painter/brush.h"
 #include "sdl_painter/color.h"
 #include "sdl_painter/font.h"
@@ -13,12 +8,17 @@
 #include "sdl_painter/renderer.h"
 #include "sdl_painter/transform.h"
 
+#include <cstdint>
+#include <memory>
+#include <string>
+#include <vector>
+
 // SDL forward declaration
 struct SDL_Window;
 
 // Windows.h DrawText makrosu (DrawTextA/DrawTextW) ile ad çakışmasını önle.
 #ifdef DrawText
-#  undef DrawText
+#undef DrawText
 #endif
 
 namespace sdl_painter {

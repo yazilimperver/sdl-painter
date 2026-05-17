@@ -16,8 +16,7 @@ class Transform {
   Transform();
 
   /// @brief Ham 3x3 matris değerleriyle oluştur (satır-sütun düzeni).
-  Transform(float m00, float m01, float m02,
-            float m10, float m11, float m12,
+  Transform(float m00, float m01, float m02, float m10, float m11, float m12,
             float m20, float m21, float m22);
 
   /// @brief Birim matrise sıfırla.

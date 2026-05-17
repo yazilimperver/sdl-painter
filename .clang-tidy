@@ -28,6 +28,13 @@ CheckOptions:
     value: CamelCase
   - key: readability-identifier-naming.ConstantPrefix
     value: k
+  # Lokal const değişkenler Google Style'da lower_case'tir; kPascalCase
+  # yalnız namespace/static sabitler içindir. LocalConstant ayarlanmazsa
+  # Constant kuralına düşüp sahte uyarı üretiyor.
+  - key: readability-identifier-naming.LocalConstantCase
+    value: lower_case
+  - key: readability-identifier-naming.LocalConstantPrefix
+    value: ''
   - key: readability-identifier-naming.EnumConstantCase
     value: CamelCase
   - key: readability-identifier-naming.EnumConstantPrefix

@@ -1,32 +1,39 @@
 #include "sdl_painter/transform.h"
 
 #include <cmath>
-#include <cstring>
 #include <cstdint>
+#include <cstring>
 namespace sdl_painter {
 
-Transform::Transform() { SetIdentity(); }
+Transform::Transform() {
+  SetIdentity();
+}
 
-Transform::Transform(float m00, float m01, float m02,
-                     float m10, float m11, float m12,
-                     float m20, float m21, float m22) {
+Transform::Transform(float m00, float m01, float m02, float m10, float m11,
+                     float m12, float m20, float m21, float m22) {
+  // clang-format off
   mData[0][0] = m00; mData[0][1] = m01; mData[0][2] = m02;
   mData[1][0] = m10; mData[1][1] = m11; mData[1][2] = m12;
   mData[2][0] = m20; mData[2][1] = m21; mData[2][2] = m22;
+  // clang-format on
 }
 
 void Transform::SetIdentity() {
+  // clang-format off
   mData[0][0] = 1.0f; mData[0][1] = 0.0f; mData[0][2] = 0.0f;
   mData[1][0] = 0.0f; mData[1][1] = 1.0f; mData[1][2] = 0.0f;
   mData[2][0] = 0.0f; mData[2][1] = 0.0f; mData[2][2] = 1.0f;
+  // clang-format on
 }
 
 bool Transform::IsIdentity() const {
   // Doğrudan element kontrol — magic-statics ve karşılaştırma maliyetini
   // ortadan kaldırır.
+  // clang-format off
   return mData[0][0] == 1.0f && mData[0][1] == 0.0f && mData[0][2] == 0.0f &&
          mData[1][0] == 0.0f && mData[1][1] == 1.0f && mData[1][2] == 0.0f &&
          mData[2][0] == 0.0f && mData[2][1] == 0.0f && mData[2][2] == 1.0f;
+  // clang-format on
 }
 
 Transform Transform::operator*(const Transform& other) const {
@@ -72,9 +79,11 @@ void Transform::Map(float x, float y, float* out_x, float* out_y) const {
 }
 
 Transform Transform::MakeTranslate(float dx, float dy) {
+  // clang-format off
   return Transform(1.0f, 0.0f, dx,
                    0.0f, 1.0f, dy,
                    0.0f, 0.0f, 1.0f);
+  // clang-format on
 }
 
 Transform Transform::MakeRotate(float angle_degrees) {
@@ -82,15 +91,19 @@ Transform Transform::MakeRotate(float angle_degrees) {
   float rad = angle_degrees * kPi / 180.0f;
   float c = std::cos(rad);
   float s = std::sin(rad);
+  // clang-format off
   return Transform(c,    -s,   0.0f,
                    s,     c,   0.0f,
                    0.0f,  0.0f, 1.0f);
+  // clang-format on
 }
 
 Transform Transform::MakeScale(float sx, float sy) {
+  // clang-format off
   return Transform(sx,   0.0f, 0.0f,
                    0.0f, sy,   0.0f,
                    0.0f, 0.0f, 1.0f);
+  // clang-format on
 }
 
 bool Transform::operator==(const Transform& other) const {

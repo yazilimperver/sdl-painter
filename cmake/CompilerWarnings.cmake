@@ -27,12 +27,19 @@ function(set_target_warnings target)
             -Wconversion
             -Wsign-conversion
             -Wmisleading-indentation
-            -Wduplicated-cond
-            -Wduplicated-branches
-            -Wlogical-op
             -Wnull-dereference
             -Wdouble-promotion
             -Wformat=2
         )
+        # GCC-özel flag'ler. Clang (ve clang-tidy CI job'ı) bunları tanımıyor;
+        # koşulsuz verilince her dosyada clang-diagnostic-unknown-warning-option
+        # üretiyor. Yalnız GNU derleyicide ekle.
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            target_compile_options(${target} PRIVATE
+                -Wduplicated-cond
+                -Wduplicated-branches
+                -Wlogical-op
+            )
+        endif()
     endif()
 endfunction()

@@ -1,31 +1,36 @@
 #include "vulkan_renderer.h"
 
-#include <SDL3/SDL.h>
-#include <SDL3/SDL_vulkan.h>
-#include <spdlog/spdlog.h>
-
-#include <cstring>
-
 #include "sdl_painter/color.h"
 #include "sdl_painter/vertex.h"
+
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_vulkan.h>
+
+#include <cstring>
+#include <spdlog/spdlog.h>
+
 #include "vk_check.h"
 
 namespace sdl_painter {
 
-VulkanRenderer::~VulkanRenderer() { Shutdown(); }
+VulkanRenderer::~VulkanRenderer() {
+  Shutdown();
+}
 
 bool VulkanRenderer::Initialize(SDL_Window* window) {
   mWindow = window;
 
   mContext = std::make_unique<VkContext>();
-  if (!mContext->Initialize(window)) return false;
+  if (!mContext->Initialize(window))
+    return false;
 
   uint32_t width = 0;
   uint32_t height = 0;
   QueryWindowDrawableSize(width, height);
 
   mSwapchain = std::make_unique<VkSwapchain>();
-  if (!mSwapchain->Initialize(mContext.get(), width, height)) return false;
+  if (!mSwapchain->Initialize(mContext.get(), width, height))
+    return false;
 
   mFrameSync = std::make_unique<VkFrameSync>();
   if (!mFrameSync->Initialize(mContext.get(), mSwapchain->GetImageCount()))
@@ -39,7 +44,8 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
   // Phase 5b: vertex ring buffer — per-slot 4 MB, frames-in-flight kadar slot
   // (CPU/GPU paralelliği için RAW hazard'ı önler; bkz. K1).
   constexpr VkDeviceSize kPerSlotSize = 4 * 1024 * 1024;  // 4 MB / slot
-  constexpr VkDeviceSize kRingSize = kPerSlotSize * VkFrameSync::kMaxFramesInFlight;
+  constexpr VkDeviceSize kRingSize =
+      kPerSlotSize * VkFrameSync::kMaxFramesInFlight;
   mVertexRing = std::make_unique<VulkanBuffer>();
   if (!mVertexRing->Init(mContext->GetDevice(), mContext->GetPhysicalDevice(),
                          kRingSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
@@ -61,11 +67,9 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
 
   // Phase 5c: textured vertex ring buffer — aynı slot mantığı.
   mTexturedVertexRing = std::make_unique<VulkanBuffer>();
-  if (!mTexturedVertexRing->Init(mContext->GetDevice(),
-                                  mContext->GetPhysicalDevice(),
-                                  kRingSize,
-                                  VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                                  VkFrameSync::kMaxFramesInFlight)) {
+  if (!mTexturedVertexRing->Init(
+          mContext->GetDevice(), mContext->GetPhysicalDevice(), kRingSize,
+          VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VkFrameSync::kMaxFramesInFlight)) {
     spdlog::error("VulkanRenderer: textured VulkanBuffer init failed.");
     return false;
   }
@@ -73,7 +77,7 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
   // Phase 5c: textured pipeline
   mTexturedPipeline = std::make_unique<VulkanTexturedPipeline>();
   if (!mTexturedPipeline->Init(mContext->GetDevice(),
-                                mSwapchain->GetRenderPass(), mShaderDir)) {
+                               mSwapchain->GetRenderPass(), mShaderDir)) {
     spdlog::warn(
         "VulkanRenderer: textured pipeline init failed (shader files "
         "missing?). DrawTextured will be a no-op.");
@@ -148,9 +152,9 @@ bool VulkanRenderer::AcquireNextImage() {
   VkSemaphore acquire_sem =
       mFrameSync->GetImageAvailableSemaphore(mAcquireSlot);
 
-  VkResult res = vkAcquireNextImageKHR(device, mSwapchain->GetSwapchain(),
-                                       UINT64_MAX, acquire_sem, VK_NULL_HANDLE,
-                                       &mCurrentImageIndex);
+  VkResult res =
+      vkAcquireNextImageKHR(device, mSwapchain->GetSwapchain(), UINT64_MAX,
+                            acquire_sem, VK_NULL_HANDLE, &mCurrentImageIndex);
   if (res == VK_ERROR_OUT_OF_DATE_KHR) {
     uint32_t w = 0;
     uint32_t h = 0;
@@ -182,8 +186,10 @@ void VulkanRenderer::BeginFrame() {
   vkResetCommandBuffer(cmd, 0);
 
   // Sadece bu frame'in slot'unu sıfırla — diğer slot hâlâ GPU'da kullanılabilir.
-  if (mVertexRing) mVertexRing->ResetRing(mCurrentFrame);
-  if (mTexturedVertexRing) mTexturedVertexRing->ResetRing(mCurrentFrame);
+  if (mVertexRing)
+    mVertexRing->ResetRing(mCurrentFrame);
+  if (mTexturedVertexRing)
+    mTexturedVertexRing->ResetRing(mCurrentFrame);
 
   VkCommandBufferBeginInfo bi{};
   bi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -205,7 +211,8 @@ void VulkanRenderer::BeginFrame() {
 }
 
 void VulkanRenderer::EndFrame() {
-  if (!mFrameActive) return;
+  if (!mFrameActive)
+    return;
 
   VkCommandBuffer cmd = mFrameSync->GetCommandBuffer(mCurrentFrame);
   vkCmdEndRenderPass(cmd);
@@ -288,9 +295,9 @@ void VulkanRenderer::ApplyDynamicViewportScissor(VkCommandBuffer cmd) const {
   vp.x = static_cast<float>(mViewportX);
   vp.y = static_cast<float>(mViewportY);
   vp.width = mViewportW > 0 ? static_cast<float>(mViewportW)
-                             : static_cast<float>(extent.width);
+                            : static_cast<float>(extent.width);
   vp.height = mViewportH > 0 ? static_cast<float>(mViewportH)
-                              : static_cast<float>(extent.height);
+                             : static_cast<float>(extent.height);
   vp.minDepth = 0.0f;
   vp.maxDepth = 1.0f;
   vkCmdSetViewport(cmd, 0, 1, &vp);
@@ -324,7 +331,9 @@ void VulkanRenderer::SetScissor(int32_t x, int32_t y, int32_t width,
   mScissorH = height;
 }
 
-void VulkanRenderer::ClearScissor() { mScissorEnabled = false; }
+void VulkanRenderer::ClearScissor() {
+  mScissorEnabled = false;
+}
 
 void VulkanRenderer::Clear(const Color& color) {
   // BeginFrame'deki render pass load_op=CLEAR olduğundan ilk temizleme orada
@@ -335,7 +344,8 @@ void VulkanRenderer::Clear(const Color& color) {
   mClearValue.color.float32[2] = color.BlueF();
   mClearValue.color.float32[3] = color.AlphaF();
 
-  if (!mFrameActive) return;
+  if (!mFrameActive)
+    return;
 
   VkCommandBuffer cmd = mFrameSync->GetCommandBuffer(mCurrentFrame);
   VkClearAttachment clear{};
@@ -353,11 +363,15 @@ void VulkanRenderer::Clear(const Color& color) {
   vkCmdClearAttachments(cmd, 1, &clear, 1, &rect);
 }
 
-void VulkanRenderer::SetOpacity(float alpha) { mOpacity = alpha; }
+void VulkanRenderer::SetOpacity(float alpha) {
+  mOpacity = alpha;
+}
 
 void VulkanRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
-  if (!mFrameActive || vertices.empty()) return;
-  if (!mPipeline || !mVertexRing) return;
+  if (!mFrameActive || vertices.empty())
+    return;
+  if (!mPipeline || !mVertexRing)
+    return;
 
   const VkDeviceSize byte_size =
       static_cast<VkDeviceSize>(vertices.size() * sizeof(Vertex));
@@ -383,23 +397,23 @@ void VulkanRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
   VkBuffer buf = mVertexRing->GetBuffer();
   vkCmdBindVertexBuffers(cmd, 0, 1, &buf, &offset_bytes);
 
-  vkCmdPushConstants(cmd, mPipeline->GetLayout(), VK_SHADER_STAGE_VERTEX_BIT,
-                     0, static_cast<uint32_t>(sizeof(PushConstants)),
+  vkCmdPushConstants(cmd, mPipeline->GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0,
+                     static_cast<uint32_t>(sizeof(PushConstants)),
                      &mPushConstants);
 
   vkCmdDraw(cmd, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 }
 
-TextureHandle VulkanRenderer::CreateTexture(const uint8_t* data,
-                                            int32_t width, int32_t height,
-                                            int32_t channels) {
+TextureHandle VulkanRenderer::CreateTexture(const uint8_t* data, int32_t width,
+                                            int32_t height, int32_t channels) {
   if (!mTexturedPipeline || !data || width <= 0 || height <= 0) {
     return kInvalidTexture;
   }
 
   VkDescriptorSet desc_set =
       mTexturedPipeline->AllocateDescriptorSet(mContext->GetDevice());
-  if (desc_set == VK_NULL_HANDLE) return kInvalidTexture;
+  if (desc_set == VK_NULL_HANDLE)
+    return kInvalidTexture;
 
   auto tex = std::make_unique<VulkanTexture>();
   if (!tex->Upload(mContext.get(), mFrameSync->GetCommandPool(), data, width,
@@ -416,24 +430,28 @@ TextureHandle VulkanRenderer::CreateTexture(const uint8_t* data,
 
 void VulkanRenderer::DestroyTexture(TextureHandle handle) {
   auto it = mTextures.find(handle);
-  if (it == mTextures.end()) return;
+  if (it == mTextures.end())
+    return;
 
   vkDeviceWaitIdle(mContext->GetDevice());
   if (mTexturedPipeline) {
     mTexturedPipeline->FreeDescriptorSet(mContext->GetDevice(),
-                                          it->second->GetDescriptorSet());
+                                         it->second->GetDescriptorSet());
   }
   it->second->Destroy(mContext->GetDevice());
   mTextures.erase(it);
 }
 
 void VulkanRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
-                                   TextureHandle texture) {
-  if (!mFrameActive || vertices.empty()) return;
-  if (!mTexturedPipeline || !mTexturedVertexRing) return;
+                                  TextureHandle texture) {
+  if (!mFrameActive || vertices.empty())
+    return;
+  if (!mTexturedPipeline || !mTexturedVertexRing)
+    return;
 
   auto it = mTextures.find(texture);
-  if (it == mTextures.end()) return;
+  if (it == mTextures.end())
+    return;
 
   const VkDeviceSize byte_size =
       static_cast<VkDeviceSize>(vertices.size() * sizeof(TexturedVertex));
@@ -441,7 +459,7 @@ void VulkanRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
   VkDeviceSize offset_bytes = 0;
 
   if (!mTexturedVertexRing->Write(vertices.data(), byte_size, kAlignment,
-                                   mCurrentFrame, offset_bytes)) {
+                                  mCurrentFrame, offset_bytes)) {
     return;
   }
 
@@ -460,8 +478,8 @@ void VulkanRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
 
   VkDescriptorSet desc_set = it->second->GetDescriptorSet();
   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                           mTexturedPipeline->GetLayout(), 0, 1, &desc_set,
-                           0, nullptr);
+                          mTexturedPipeline->GetLayout(), 0, 1, &desc_set, 0,
+                          nullptr);
 
   VkBuffer buf = mTexturedVertexRing->GetBuffer();
   vkCmdBindVertexBuffers(cmd, 0, 1, &buf, &offset_bytes);

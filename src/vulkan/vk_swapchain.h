@@ -1,9 +1,8 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-
 #include <cstdint>
 #include <vector>
+#include <vulkan/vulkan.h>
 
 namespace sdl_painter {
 
@@ -45,7 +44,7 @@ class VkSwapchain {
  private:
   bool CreateSwapchain(uint32_t width, uint32_t height);
   bool CreateSwapchainWithOld(uint32_t width, uint32_t height,
-                               VkSwapchainKHR old_swapchain);
+                              VkSwapchainKHR old_swapchain);
   bool CreateImageViews();
   bool CreateRenderPass();
   bool CreateFramebuffers();

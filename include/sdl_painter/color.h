@@ -33,11 +33,15 @@ struct Color {
 
   // Yaygın renkler
   [[nodiscard]] static constexpr Color Black() noexcept { return {0, 0, 0}; }
-  [[nodiscard]] static constexpr Color White() noexcept { return {255, 255, 255}; }
+  [[nodiscard]] static constexpr Color White() noexcept {
+    return {255, 255, 255};
+  }
   [[nodiscard]] static constexpr Color Red() noexcept { return {255, 0, 0}; }
   [[nodiscard]] static constexpr Color Green() noexcept { return {0, 255, 0}; }
   [[nodiscard]] static constexpr Color Blue() noexcept { return {0, 0, 255}; }
-  [[nodiscard]] static constexpr Color Transparent() noexcept { return {0, 0, 0, 0}; }
+  [[nodiscard]] static constexpr Color Transparent() noexcept {
+    return {0, 0, 0, 0};
+  }
 };
 
 }  // namespace sdl_painter

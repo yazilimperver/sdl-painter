@@ -28,16 +28,16 @@ class Texture {
   Texture(Texture&& other) noexcept
       : mRenderer(other.mRenderer), mHandle(other.mHandle) {
     other.mRenderer = nullptr;
-    other.mHandle   = kInvalidTexture;
+    other.mHandle = kInvalidTexture;
   }
 
   Texture& operator=(Texture&& other) noexcept {
     if (this != &other) {
       Reset();
-      mRenderer       = other.mRenderer;
-      mHandle         = other.mHandle;
+      mRenderer = other.mRenderer;
+      mHandle = other.mHandle;
       other.mRenderer = nullptr;
-      other.mHandle   = kInvalidTexture;
+      other.mHandle = kInvalidTexture;
     }
     return *this;
   }
@@ -47,7 +47,7 @@ class Texture {
     if (mRenderer && mHandle != kInvalidTexture) {
       mRenderer->DestroyTexture(mHandle);
     }
-    mHandle   = kInvalidTexture;
+    mHandle = kInvalidTexture;
     mRenderer = nullptr;
   }
 

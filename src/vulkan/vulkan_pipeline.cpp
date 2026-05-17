@@ -1,9 +1,8 @@
 #include "vulkan_pipeline.h"
 
-#include <spdlog/spdlog.h>
-
 #include <cstddef>
 #include <fstream>
+#include <spdlog/spdlog.h>
 #include <stdexcept>
 
 #include "vk_check.h"
@@ -55,8 +54,10 @@ bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass,
   VkShaderModule frag_mod = LoadSpv(device, frag_path);
 
   if (vert_mod == VK_NULL_HANDLE || frag_mod == VK_NULL_HANDLE) {
-    if (vert_mod != VK_NULL_HANDLE) vkDestroyShaderModule(device, vert_mod, nullptr);
-    if (frag_mod != VK_NULL_HANDLE) vkDestroyShaderModule(device, frag_mod, nullptr);
+    if (vert_mod != VK_NULL_HANDLE)
+      vkDestroyShaderModule(device, vert_mod, nullptr);
+    if (frag_mod != VK_NULL_HANDLE)
+      vkDestroyShaderModule(device, frag_mod, nullptr);
     return false;
   }
 
@@ -90,7 +91,8 @@ bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass,
   attrs[1].offset = static_cast<uint32_t>(offsetof(Vertex, r));
 
   VkPipelineVertexInputStateCreateInfo vertex_input{};
-  vertex_input.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+  vertex_input.sType =
+      VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
   vertex_input.vertexBindingDescriptionCount = 1;
   vertex_input.pVertexBindingDescriptions = &binding;
   vertex_input.vertexAttributeDescriptionCount = 2;
@@ -105,7 +107,7 @@ bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass,
 
   // --- Dynamic viewport + scissor ---
   VkDynamicState dyn_states[] = {VK_DYNAMIC_STATE_VIEWPORT,
-                                  VK_DYNAMIC_STATE_SCISSOR};
+                                 VK_DYNAMIC_STATE_SCISSOR};
   VkPipelineDynamicStateCreateInfo dynamic_state{};
   dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
   dynamic_state.dynamicStateCount = 2;
@@ -150,8 +152,7 @@ bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass,
       VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
   VkPipelineColorBlendStateCreateInfo color_blend{};
-  color_blend.sType =
-      VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+  color_blend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
   color_blend.logicOpEnable = VK_FALSE;
   color_blend.attachmentCount = 1;
   color_blend.pAttachments = &blend_attachment;
@@ -194,7 +195,7 @@ bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass,
   pipeline_ci.subpass = 0;
 
   VkResult res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1,
-                                            &pipeline_ci, nullptr, &mPipeline);
+                                           &pipeline_ci, nullptr, &mPipeline);
 
   // Shader modülleri artık gerekmez — pipeline oluşturulduktan hemen sonra sil.
   vkDestroyShaderModule(device, vert_mod, nullptr);
@@ -217,7 +218,8 @@ bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass,
 
 void VulkanPipeline::Destroy(VkDevice device) {
   VkDevice d = (mDevice != VK_NULL_HANDLE) ? mDevice : device;
-  if (d == VK_NULL_HANDLE) return;
+  if (d == VK_NULL_HANDLE)
+    return;
   if (mPipeline != VK_NULL_HANDLE) {
     vkDestroyPipeline(d, mPipeline, nullptr);
     mPipeline = VK_NULL_HANDLE;

@@ -1,11 +1,11 @@
 #pragma once
 
+#include "sdl_painter/texture.h"
+
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
-
-#include "sdl_painter/texture.h"
 
 namespace sdl_painter {
 
@@ -74,8 +74,8 @@ class Font {
   /// @param out_width Çıkış: genişlik (piksel).
   /// @param out_height Çıkış: yükseklik (piksel).
   /// @return Ölçüm başarılıysa true.
-  bool MeasureText(const std::string& text,
-                   int32_t& out_width, int32_t& out_height) const;
+  bool MeasureText(const std::string& text, int32_t& out_width,
+                   int32_t& out_height) const;
 
   /// @brief Karakter için Glyph al; yoksa oluşturur.
   const Glyph* GetGlyph(IRenderer& renderer, char32_t codepoint) const;

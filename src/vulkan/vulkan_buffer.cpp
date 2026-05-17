@@ -1,8 +1,7 @@
 #include "vulkan_buffer.h"
 
-#include <spdlog/spdlog.h>
-
 #include <cstring>
+#include <spdlog/spdlog.h>
 
 #include "vk_check.h"
 #include "vk_memory.h"
@@ -18,7 +17,8 @@ VulkanBuffer::~VulkanBuffer() {
 bool VulkanBuffer::Init(VkDevice device, VkPhysicalDevice phys_device,
                         VkDeviceSize capacity, VkBufferUsageFlags usage,
                         uint32_t frame_slot_count) {
-  if (frame_slot_count == 0) frame_slot_count = 1;
+  if (frame_slot_count == 0)
+    frame_slot_count = 1;
   mCapacity = capacity;
   mFrameSlotCount = frame_slot_count;
   mSlotCapacity = capacity / frame_slot_count;
@@ -41,8 +41,8 @@ bool VulkanBuffer::Init(VkDevice device, VkPhysicalDevice phys_device,
   vkGetBufferMemoryRequirements(device, mBuffer, &mem_req);
 
   // Host-visible + coherent bellek seç (staging gerekmez).
-  const VkMemoryPropertyFlags mem_props =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+  const VkMemoryPropertyFlags mem_props = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                          VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   uint32_t mem_type =
       vk_detail::FindMemoryType(phys_device, mem_req.memoryTypeBits, mem_props);
   if (mem_type == UINT32_MAX) {
@@ -93,7 +93,8 @@ void VulkanBuffer::Destroy(VkDevice device) {
   // Idempotent — birden fazla Destroy ya da Destroy + destructor güvenli.
   // mDevice geçerliyse onu kullan; aksi halde parametre device'ı kullan.
   VkDevice d = (mDevice != VK_NULL_HANDLE) ? mDevice : device;
-  if (d == VK_NULL_HANDLE) return;
+  if (d == VK_NULL_HANDLE)
+    return;
 
   if (mMapped) {
     vkUnmapMemory(d, mMemory);
@@ -129,11 +130,13 @@ bool VulkanBuffer::Write(const void* data, VkDeviceSize byte_size,
   // Slot içinde geçerli mutlak head.
   const VkDeviceSize abs_head = slot_start + mHeads[frame_slot];
   // Hizala.
-  const VkDeviceSize aligned_head = (abs_head + alignment - 1) & ~(alignment - 1);
+  const VkDeviceSize aligned_head =
+      (abs_head + alignment - 1) & ~(alignment - 1);
 
   if (aligned_head + byte_size > slot_end) {
     spdlog::warn(
-        "VulkanBuffer slot {} overflow: requested {} bytes, available {} bytes. "
+        "VulkanBuffer slot {} overflow: requested {} bytes, available {} "
+        "bytes. "
         "Draw call skipped.",
         frame_slot, byte_size, slot_end - aligned_head);
     return false;

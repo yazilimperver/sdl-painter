@@ -1,9 +1,8 @@
 #include "vk_swapchain.h"
 
-#include <spdlog/spdlog.h>
-
 #include <algorithm>
 #include <array>
+#include <spdlog/spdlog.h>
 #include <vector>
 
 #include "vk_check.h"
@@ -39,14 +38,16 @@ VkPresentModeKHR PickPresentMode(VkPhysicalDevice device,
   vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &count,
                                             modes.data());
   for (auto m : modes) {
-    if (m == VK_PRESENT_MODE_MAILBOX_KHR) return m;
+    if (m == VK_PRESENT_MODE_MAILBOX_KHR)
+      return m;
   }
   return VK_PRESENT_MODE_FIFO_KHR;  // her zaman desteklenir
 }
 
 VkExtent2D PickExtent(const VkSurfaceCapabilitiesKHR& caps, uint32_t width,
                       uint32_t height) {
-  if (caps.currentExtent.width != UINT32_MAX) return caps.currentExtent;
+  if (caps.currentExtent.width != UINT32_MAX)
+    return caps.currentExtent;
   VkExtent2D actual{width, height};
   actual.width = std::clamp(actual.width, caps.minImageExtent.width,
                             caps.maxImageExtent.width);
@@ -57,22 +58,29 @@ VkExtent2D PickExtent(const VkSurfaceCapabilitiesKHR& caps, uint32_t width,
 
 }  // namespace
 
-VkSwapchain::~VkSwapchain() { Shutdown(); }
+VkSwapchain::~VkSwapchain() {
+  Shutdown();
+}
 
 bool VkSwapchain::Initialize(VkContext* context, uint32_t width,
                              uint32_t height) {
   mContext = context;
-  if (!CreateSwapchain(width, height)) return false;
-  if (!CreateImageViews()) return false;
-  if (!CreateRenderPass()) return false;
-  if (!CreateFramebuffers()) return false;
+  if (!CreateSwapchain(width, height))
+    return false;
+  if (!CreateImageViews())
+    return false;
+  if (!CreateRenderPass())
+    return false;
+  if (!CreateFramebuffers())
+    return false;
   spdlog::info("Swapchain initialized ({}x{}, {} images).", mExtent.width,
                mExtent.height, mImages.size());
   return true;
 }
 
 void VkSwapchain::Shutdown() {
-  if (!mContext) return;
+  if (!mContext)
+    return;
   VkDevice device = mContext->GetDevice();
   if (device != VK_NULL_HANDLE) {
     DestroySwapchainResources();
@@ -95,25 +103,31 @@ bool VkSwapchain::Recreate(uint32_t width, uint32_t height) {
 
   // Framebuffer + image view'ları yok et (swapchain henüz canlı).
   for (auto fb : mFramebuffers) {
-    if (fb != VK_NULL_HANDLE) vkDestroyFramebuffer(device, fb, nullptr);
+    if (fb != VK_NULL_HANDLE)
+      vkDestroyFramebuffer(device, fb, nullptr);
   }
   mFramebuffers.clear();
   for (auto view : mImageViews) {
-    if (view != VK_NULL_HANDLE) vkDestroyImageView(device, view, nullptr);
+    if (view != VK_NULL_HANDLE)
+      vkDestroyImageView(device, view, nullptr);
   }
   mImageViews.clear();
   mImages.clear();
 
   // Yeni swapchain'i eski referansıyla oluştur.
   if (!CreateSwapchainWithOld(width, height, old)) {
-    if (old != VK_NULL_HANDLE) vkDestroySwapchainKHR(device, old, nullptr);
+    if (old != VK_NULL_HANDLE)
+      vkDestroySwapchainKHR(device, old, nullptr);
     return false;
   }
   // Eski swapchain artık kullanılmıyor — yok et.
-  if (old != VK_NULL_HANDLE) vkDestroySwapchainKHR(device, old, nullptr);
+  if (old != VK_NULL_HANDLE)
+    vkDestroySwapchainKHR(device, old, nullptr);
 
-  if (!CreateImageViews()) return false;
-  if (!CreateFramebuffers()) return false;
+  if (!CreateImageViews())
+    return false;
+  if (!CreateFramebuffers())
+    return false;
 
   spdlog::info("Swapchain recreated ({}x{}).", mExtent.width, mExtent.height);
   return true;
@@ -122,11 +136,13 @@ bool VkSwapchain::Recreate(uint32_t width, uint32_t height) {
 void VkSwapchain::DestroySwapchainResources() {
   VkDevice device = mContext->GetDevice();
   for (auto fb : mFramebuffers) {
-    if (fb != VK_NULL_HANDLE) vkDestroyFramebuffer(device, fb, nullptr);
+    if (fb != VK_NULL_HANDLE)
+      vkDestroyFramebuffer(device, fb, nullptr);
   }
   mFramebuffers.clear();
   for (auto view : mImageViews) {
-    if (view != VK_NULL_HANDLE) vkDestroyImageView(device, view, nullptr);
+    if (view != VK_NULL_HANDLE)
+      vkDestroyImageView(device, view, nullptr);
   }
   mImageViews.clear();
   mImages.clear();
@@ -141,7 +157,7 @@ bool VkSwapchain::CreateSwapchain(uint32_t width, uint32_t height) {
 }
 
 bool VkSwapchain::CreateSwapchainWithOld(uint32_t width, uint32_t height,
-                                          VkSwapchainKHR old_swapchain) {
+                                         VkSwapchainKHR old_swapchain) {
   VkPhysicalDevice phys = mContext->GetPhysicalDevice();
   VkSurfaceKHR surface = mContext->GetSurface();
   VkDevice device = mContext->GetDevice();

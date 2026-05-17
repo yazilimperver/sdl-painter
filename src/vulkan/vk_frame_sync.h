@@ -1,9 +1,8 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-
 #include <cstdint>
 #include <vector>
+#include <vulkan/vulkan.h>
 
 namespace sdl_painter {
 
@@ -62,9 +61,11 @@ class VkFrameSync {
   uint32_t mSwapchainImageCount{0};
   VkCommandPool mCommandPool{VK_NULL_HANDLE};
   std::vector<VkCommandBuffer> mCommandBuffers;
-  std::vector<VkSemaphore> mImageAvailable;  ///< acquire slot ile indekslenir (swapchain image count kadar)
-  std::vector<VkSemaphore> mRenderFinished;  ///< image_index ile indekslenir (swapchain image count kadar)
-  std::vector<VkFence> mInFlight;            ///< frame_index ile indekslenir
+  std::vector<VkSemaphore>
+      mImageAvailable;  ///< acquire slot ile indekslenir (swapchain image count kadar)
+  std::vector<VkSemaphore>
+      mRenderFinished;  ///< image_index ile indekslenir (swapchain image count kadar)
+  std::vector<VkFence> mInFlight;  ///< frame_index ile indekslenir
 };
 
 }  // namespace sdl_painter

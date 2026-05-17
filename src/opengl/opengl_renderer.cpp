@@ -1,13 +1,13 @@
 #include "opengl_renderer.h"
 
-#include <cstring>
-
-#include <SDL3/SDL.h>
-#include <glad/glad.h>
-#include <spdlog/spdlog.h>
-
 #include "sdl_painter/color.h"
 #include "sdl_painter/vertex.h"
+
+#include <SDL3/SDL.h>
+
+#include <cstring>
+#include <glad/glad.h>
+#include <spdlog/spdlog.h>
 
 // Phase 1'de tam implementasyon yapılacak.
 // Şimdilik OpenGL context kurulumu ve temel altyapı hazır.
@@ -16,7 +16,9 @@ namespace sdl_painter {
 
 // --- OpenGLRenderer implementasyonu ---
 
-OpenGLRenderer::~OpenGLRenderer() { Shutdown(); }
+OpenGLRenderer::~OpenGLRenderer() {
+  Shutdown();
+}
 
 bool OpenGLRenderer::Initialize(SDL_Window* window) {
   mWindow = window;
@@ -27,11 +29,13 @@ bool OpenGLRenderer::Initialize(SDL_Window* window) {
 
   mGLContext = SDL_GL_CreateContext(window);
   if (!mGLContext) {
-    spdlog::error("[OpenGLRenderer] Failed to create GL context: {}", SDL_GetError());
+    spdlog::error("[OpenGLRenderer] Failed to create GL context: {}",
+                  SDL_GetError());
     return false;
   }
 
-  if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+  if (!gladLoadGLLoader(
+          reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
     spdlog::error("[OpenGLRenderer] Failed to load GLAD");
     return false;
   }
@@ -55,13 +59,13 @@ bool OpenGLRenderer::Initialize(SDL_Window* window) {
 #endif
 
   if (!mBasicShader.BuildFromFile(shader_dir + "basic.vert",
-                                   shader_dir + "basic.frag")) {
+                                  shader_dir + "basic.frag")) {
     spdlog::error("[OpenGLRenderer] Failed to build basic shader");
     return false;
   }
 
   if (!mTexturedShader.BuildFromFile(shader_dir + "textured.vert",
-                                      shader_dir + "textured.frag")) {
+                                     shader_dir + "textured.frag")) {
     spdlog::error("[OpenGLRenderer] Failed to build textured shader");
     return false;
   }
@@ -76,7 +80,7 @@ void OpenGLRenderer::SetupBuffers() {
   glGenBuffers(1, &mVbo);
   glBindVertexArray(mVao);
   glBindBuffer(GL_ARRAY_BUFFER, mVbo);
-  
+
   // Position (Location 0)
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
@@ -85,7 +89,7 @@ void OpenGLRenderer::SetupBuffers() {
   glEnableVertexAttribArray(1);
   glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex),
                         reinterpret_cast<void*>(2 * sizeof(float)));
-  
+
   glBindVertexArray(0);
 
   // Textured VAO/VBO
@@ -93,7 +97,7 @@ void OpenGLRenderer::SetupBuffers() {
   glGenBuffers(1, &mTexturedVbo);
   glBindVertexArray(mTexturedVao);
   glBindBuffer(GL_ARRAY_BUFFER, mTexturedVbo);
-  
+
   // Position (Location 0)
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(TexturedVertex),
@@ -106,12 +110,13 @@ void OpenGLRenderer::SetupBuffers() {
   glEnableVertexAttribArray(2);
   glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(TexturedVertex),
                         reinterpret_cast<void*>(4 * sizeof(float)));
-                        
+
   glBindVertexArray(0);
 }
 
 void OpenGLRenderer::Shutdown() {
-  if (!mGLContext) return;
+  if (!mGLContext)
+    return;
 
   // GL kaynakları silinmeden önce context'i aktif et.
   SDL_GL_MakeCurrent(mWindow, static_cast<SDL_GLContext>(mGLContext));
@@ -121,10 +126,22 @@ void OpenGLRenderer::Shutdown() {
   mBasicShader = ShaderProgram{};
   mTexturedShader = ShaderProgram{};
 
-  if (mVao) { glDeleteVertexArrays(1, &mVao); mVao = 0; }
-  if (mVbo) { glDeleteBuffers(1, &mVbo); mVbo = 0; }
-  if (mTexturedVao) { glDeleteVertexArrays(1, &mTexturedVao); mTexturedVao = 0; }
-  if (mTexturedVbo) { glDeleteBuffers(1, &mTexturedVbo); mTexturedVbo = 0; }
+  if (mVao) {
+    glDeleteVertexArrays(1, &mVao);
+    mVao = 0;
+  }
+  if (mVbo) {
+    glDeleteBuffers(1, &mVbo);
+    mVbo = 0;
+  }
+  if (mTexturedVao) {
+    glDeleteVertexArrays(1, &mTexturedVao);
+    mTexturedVao = 0;
+  }
+  if (mTexturedVbo) {
+    glDeleteBuffers(1, &mTexturedVbo);
+    mTexturedVbo = 0;
+  }
 
   SDL_GL_DestroyContext(static_cast<SDL_GLContext>(mGLContext));
   mGLContext = nullptr;
@@ -136,28 +153,33 @@ void OpenGLRenderer::EndFrame() {
   SDL_GL_SwapWindow(mWindow);
 }
 
-void OpenGLRenderer::SetViewport(int32_t x, int32_t y,
-                                  int32_t width, int32_t height) {
+void OpenGLRenderer::SetViewport(int32_t x, int32_t y, int32_t width,
+                                 int32_t height) {
   glViewport(x, y, width, height);
 }
 
-void OpenGLRenderer::SetScissor(int32_t x, int32_t y,
-                                 int32_t width, int32_t height) {
+void OpenGLRenderer::SetScissor(int32_t x, int32_t y, int32_t width,
+                                int32_t height) {
   glEnable(GL_SCISSOR_TEST);
   glScissor(x, y, width, height);
 }
 
-void OpenGLRenderer::ClearScissor() { glDisable(GL_SCISSOR_TEST); }
+void OpenGLRenderer::ClearScissor() {
+  glDisable(GL_SCISSOR_TEST);
+}
 
 void OpenGLRenderer::Clear(const Color& color) {
   glClearColor(color.RedF(), color.GreenF(), color.BlueF(), color.AlphaF());
   glClear(GL_COLOR_BUFFER_BIT);
 }
 
-void OpenGLRenderer::SetOpacity(float alpha) { mOpacity = alpha; }
+void OpenGLRenderer::SetOpacity(float alpha) {
+  mOpacity = alpha;
+}
 
 void OpenGLRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
-  if (vertices.empty()) return;
+  if (vertices.empty())
+    return;
 
   mBasicShader.Use();
   mBasicShader.SetUniformMat4("u_projection", mProjection);
@@ -173,10 +195,10 @@ void OpenGLRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
   glBindVertexArray(0);
 }
 
-TextureHandle OpenGLRenderer::CreateTexture(const uint8_t* data,
-                                             int32_t width, int32_t height,
-                                             int32_t channels) {
-  if (!data) return kInvalidTexture;
+TextureHandle OpenGLRenderer::CreateTexture(const uint8_t* data, int32_t width,
+                                            int32_t height, int32_t channels) {
+  if (!data)
+    return kInvalidTexture;
 
   GLenum format = (channels == 4) ? GL_RGBA : GL_RGB;
   uint32_t tex_id = 0;
@@ -186,8 +208,8 @@ TextureHandle OpenGLRenderer::CreateTexture(const uint8_t* data,
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(format),
-               width, height, 0, format, GL_UNSIGNED_BYTE, data);
+  glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(format), width, height, 0,
+               format, GL_UNSIGNED_BYTE, data);
   glBindTexture(GL_TEXTURE_2D, 0);
   return static_cast<TextureHandle>(tex_id);
 }
@@ -195,14 +217,16 @@ TextureHandle OpenGLRenderer::CreateTexture(const uint8_t* data,
 void OpenGLRenderer::DestroyTexture(TextureHandle handle) {
   // GL context yok olmuşsa (Shutdown sonrası) çağrıya gerek yok:
   // context yıkımı zaten tüm GL kaynaklarını serbest bırakır.
-  if (handle == kInvalidTexture || !mGLContext) return;
+  if (handle == kInvalidTexture || !mGLContext)
+    return;
   uint32_t tex_id = static_cast<uint32_t>(handle);
   glDeleteTextures(1, &tex_id);
 }
 
 void OpenGLRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
-                                   TextureHandle texture) {
-  if (vertices.empty() || texture == kInvalidTexture) return;
+                                  TextureHandle texture) {
+  if (vertices.empty() || texture == kInvalidTexture)
+    return;
 
   mTexturedShader.Use();
   mTexturedShader.SetUniformMat4("u_projection", mProjection);
@@ -215,9 +239,10 @@ void OpenGLRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
 
   glBindVertexArray(mTexturedVao);
   glBindBuffer(GL_ARRAY_BUFFER, mTexturedVbo);
-  glBufferData(GL_ARRAY_BUFFER,
-               static_cast<GLsizeiptr>(vertices.size() * sizeof(TexturedVertex)),
-               vertices.data(), GL_STREAM_DRAW);
+  glBufferData(
+      GL_ARRAY_BUFFER,
+      static_cast<GLsizeiptr>(vertices.size() * sizeof(TexturedVertex)),
+      vertices.data(), GL_STREAM_DRAW);
   glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertices.size()));
   glBindVertexArray(0);
   glBindTexture(GL_TEXTURE_2D, 0);

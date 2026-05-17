@@ -1,9 +1,8 @@
 #include "shader_program.h"
 
+#include <fstream>
 #include <glad/glad.h>
 #include <spdlog/spdlog.h>
-
-#include <fstream>
 #include <sstream>
 #include <vector>
 
@@ -24,7 +23,8 @@ ShaderProgram::ShaderProgram(ShaderProgram&& other) noexcept
 
 ShaderProgram& ShaderProgram::operator=(ShaderProgram&& other) noexcept {
   if (this != &other) {
-    if (mProgramId != 0) glDeleteProgram(mProgramId);
+    if (mProgramId != 0)
+      glDeleteProgram(mProgramId);
     mProgramId = other.mProgramId;
     mUniformCache = std::move(other.mUniformCache);
     other.mProgramId = 0;
@@ -60,7 +60,8 @@ uint32_t ShaderProgram::CompileShader(uint32_t type, const std::string& src) {
 bool ShaderProgram::Build(const std::string& vert_src,
                           const std::string& frag_src) {
   uint32_t vert = CompileShader(GL_VERTEX_SHADER, vert_src);
-  if (vert == 0) return false;
+  if (vert == 0)
+    return false;
 
   uint32_t frag = CompileShader(GL_FRAGMENT_SHADER, frag_src);
   if (frag == 0) {
@@ -110,12 +111,15 @@ bool ShaderProgram::BuildFromFile(const std::string& vert_path,
   std::string vert_src = read_file(vert_path);
   std::string frag_src = read_file(frag_path);
 
-  if (vert_src.empty() || frag_src.empty()) return false;
+  if (vert_src.empty() || frag_src.empty())
+    return false;
 
   return Build(vert_src, frag_src);
 }
 
-void ShaderProgram::Use() const { glUseProgram(mProgramId); }
+void ShaderProgram::Use() const {
+  glUseProgram(mProgramId);
+}
 
 int32_t ShaderProgram::GetUniformLocation(const std::string& name) const {
   auto it = mUniformCache.find(name);
@@ -135,7 +139,8 @@ int32_t ShaderProgram::GetUniformLocation(const std::string& name) const {
 void ShaderProgram::SetUniformMat3(const std::string& name,
                                    const float* mat3) const {
   const int32_t loc = GetUniformLocation(name);
-  if (loc == -1) return;
+  if (loc == -1)
+    return;
   // Transform sınıfı satır-büyük (row-major) düzende veri tutar; OpenGL
   // varsayılan olarak sütun-büyük bekler, bu nedenle transpose=GL_TRUE.
   glUniformMatrix3fv(loc, 1, GL_TRUE, mat3);
@@ -144,28 +149,32 @@ void ShaderProgram::SetUniformMat3(const std::string& name,
 void ShaderProgram::SetUniformMat4(const std::string& name,
                                    const float* mat4) const {
   const int32_t loc = GetUniformLocation(name);
-  if (loc == -1) return;
+  if (loc == -1)
+    return;
   glUniformMatrix4fv(loc, 1, GL_FALSE, mat4);
 }
 
-void ShaderProgram::SetUniformVec4(const std::string& name,
-                                   float r, float g, float b, float a) const {
+void ShaderProgram::SetUniformVec4(const std::string& name, float r, float g,
+                                   float b, float a) const {
   const int32_t loc = GetUniformLocation(name);
-  if (loc == -1) return;
+  if (loc == -1)
+    return;
   glUniform4f(loc, r, g, b, a);
 }
 
 void ShaderProgram::SetUniformFloat(const std::string& name,
                                     float value) const {
   const int32_t loc = GetUniformLocation(name);
-  if (loc == -1) return;
+  if (loc == -1)
+    return;
   glUniform1f(loc, value);
 }
 
 void ShaderProgram::SetUniformInt(const std::string& name,
                                   int32_t value) const {
   const int32_t loc = GetUniformLocation(name);
-  if (loc == -1) return;
+  if (loc == -1)
+    return;
   glUniform1i(loc, value);
 }
 

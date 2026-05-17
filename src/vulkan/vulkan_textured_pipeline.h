@@ -1,12 +1,12 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
+#include "sdl_painter/vertex.h"
 
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <vulkan/vulkan.h>
 
-#include "sdl_painter/vertex.h"
 #include "vulkan_pipeline.h"  // PushConstants
 
 namespace sdl_painter {

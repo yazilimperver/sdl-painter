@@ -2,12 +2,12 @@
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
-#include <spdlog/spdlog.h>
 
 #include <algorithm>
 #include <cstring>
 #include <optional>
 #include <set>
+#include <spdlog/spdlog.h>
 #include <vector>
 
 #include "vk_check.h"
@@ -24,12 +24,12 @@ constexpr bool kEnableValidationDefault = false;
 constexpr bool kEnableValidationDefault = true;
 #endif
 
-VKAPI_ATTR VkBool32 VKAPI_CALL
-DebugMessengerCallback(VkDebugUtilsMessageSeverityFlagBitsEXT severity,
-                       VkDebugUtilsMessageTypeFlagsEXT /*type*/,
-                       const VkDebugUtilsMessengerCallbackDataEXT* data,
-                       void* /*user_data*/) {
-  if (!data || !data->pMessage) return VK_FALSE;
+VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(
+    VkDebugUtilsMessageSeverityFlagBitsEXT severity,
+    VkDebugUtilsMessageTypeFlagsEXT /*type*/,
+    const VkDebugUtilsMessengerCallbackDataEXT* data, void* /*user_data*/) {
+  if (!data || !data->pMessage)
+    return VK_FALSE;
   if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
     spdlog::error("[Vulkan] {}", data->pMessage);
   } else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
@@ -48,7 +48,8 @@ bool CheckValidationLayerSupport() {
   std::vector<VkLayerProperties> available(count);
   vkEnumerateInstanceLayerProperties(&count, available.data());
   for (const auto& layer : available) {
-    if (std::strcmp(layer.layerName, kValidationLayer) == 0) return true;
+    if (std::strcmp(layer.layerName, kValidationLayer) == 0)
+      return true;
   }
   return false;
 }
@@ -56,9 +57,8 @@ bool CheckValidationLayerSupport() {
 VkDebugUtilsMessengerCreateInfoEXT MakeDebugMessengerCreateInfo() {
   VkDebugUtilsMessengerCreateInfoEXT info{};
   info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-  info.messageSeverity =
-      VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-      VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+  info.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+                         VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
   info.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
                      VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                      VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
@@ -68,22 +68,30 @@ VkDebugUtilsMessengerCreateInfoEXT MakeDebugMessengerCreateInfo() {
 
 }  // namespace
 
-VkContext::~VkContext() { Shutdown(); }
+VkContext::~VkContext() {
+  Shutdown();
+}
 
 bool VkContext::Initialize(SDL_Window* window) {
   mWindow = window;
-  mValidationEnabled = kEnableValidationDefault && CheckValidationLayerSupport();
+  mValidationEnabled =
+      kEnableValidationDefault && CheckValidationLayerSupport();
   if constexpr (kEnableValidationDefault) {
     if (!mValidationEnabled) {
       spdlog::warn("Vulkan validation layers requested but not available.");
     }
   }
 
-  if (!CreateInstance()) return false;
-  if (mValidationEnabled && !CreateDebugMessenger()) return false;
-  if (!CreateSurface(window)) return false;
-  if (!PickPhysicalDevice()) return false;
-  if (!CreateLogicalDevice()) return false;
+  if (!CreateInstance())
+    return false;
+  if (mValidationEnabled && !CreateDebugMessenger())
+    return false;
+  if (!CreateSurface(window))
+    return false;
+  if (!PickPhysicalDevice())
+    return false;
+  if (!CreateLogicalDevice())
+    return false;
 
   spdlog::info("VkContext initialized (validation={}).", mValidationEnabled);
   return true;
@@ -100,10 +108,10 @@ void VkContext::Shutdown() {
     mSurface = VK_NULL_HANDLE;
   }
   if (mDebugMessenger != VK_NULL_HANDLE && mInstance != VK_NULL_HANDLE) {
-    auto destroyFn =
-        reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
-            vkGetInstanceProcAddr(mInstance, "vkDestroyDebugUtilsMessengerEXT"));
-    if (destroyFn) destroyFn(mInstance, mDebugMessenger, nullptr);
+    auto destroyFn = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
+        vkGetInstanceProcAddr(mInstance, "vkDestroyDebugUtilsMessengerEXT"));
+    if (destroyFn)
+      destroyFn(mInstance, mDebugMessenger, nullptr);
     mDebugMessenger = VK_NULL_HANDLE;
   }
   if (mInstance != VK_NULL_HANDLE) {
@@ -217,7 +225,8 @@ QueueFamilies FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface) {
     if (present_support) {
       result.present = i;
     }
-    if (result.IsComplete()) break;
+    if (result.IsComplete())
+      break;
   }
   return result;
 }
@@ -237,14 +246,18 @@ bool DeviceSupportsSwapchain(VkPhysicalDevice device) {
 
 int ScoreDevice(VkPhysicalDevice device, VkSurfaceKHR surface) {
   auto q = FindQueueFamilies(device, surface);
-  if (!q.IsComplete()) return -1;
-  if (!DeviceSupportsSwapchain(device)) return -1;
+  if (!q.IsComplete())
+    return -1;
+  if (!DeviceSupportsSwapchain(device))
+    return -1;
 
   VkPhysicalDeviceProperties props{};
   vkGetPhysicalDeviceProperties(device, &props);
   int score = 0;
-  if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) score += 1000;
-  if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) score += 100;
+  if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
+    score += 1000;
+  if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
+    score += 100;
   return score;
 }
 
@@ -289,8 +302,7 @@ bool VkContext::PickPhysicalDevice() {
 }
 
 bool VkContext::CreateLogicalDevice() {
-  std::set<uint32_t> unique_families{mGraphicsQueueFamily,
-                                     mPresentQueueFamily};
+  std::set<uint32_t> unique_families{mGraphicsQueueFamily, mPresentQueueFamily};
   std::vector<VkDeviceQueueCreateInfo> queue_cis;
   float priority = 1.0f;
   for (uint32_t family : unique_families) {

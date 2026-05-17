@@ -1,12 +1,11 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
+#include "sdl_painter/vertex.h"
 
 #include <cstdint>
 #include <string>
 #include <vector>
-
-#include "sdl_painter/vertex.h"
+#include <vulkan/vulkan.h>
 
 namespace sdl_painter {
 
@@ -16,9 +15,10 @@ namespace sdl_painter {
 /// Toplam boyut: 64 + 64 + 16 + 4 = 148 byte (Vulkan garantili 256 byte limiti içinde).
 struct alignas(4) PushConstants {
   float projection[16]{};  ///< mat4 ortografik projeksiyon (column-major)
-  float model[16]{};       ///< mat4 2D affine transform (3x3 → 4x4 padded, column-major)
-  float tint_color[4]{};   ///< vec4 tint rengi [0,1]
-  float opacity{1.0f};     ///< Global opaklık [0,1]
+  float model
+      [16]{};  ///< mat4 2D affine transform (3x3 → 4x4 padded, column-major)
+  float tint_color[4]{};  ///< vec4 tint rengi [0,1]
+  float opacity{1.0f};    ///< Global opaklık [0,1]
 };
 
 /// @brief Untextured (düz renk) çizim için Vulkan graphics pipeline yönetimi.

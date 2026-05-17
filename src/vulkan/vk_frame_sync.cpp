@@ -7,14 +7,20 @@
 
 namespace sdl_painter {
 
-VkFrameSync::~VkFrameSync() { Shutdown(); }
+VkFrameSync::~VkFrameSync() {
+  Shutdown();
+}
 
-bool VkFrameSync::Initialize(VkContext* context, uint32_t swapchain_image_count) {
+bool VkFrameSync::Initialize(VkContext* context,
+                             uint32_t swapchain_image_count) {
   mContext = context;
   mSwapchainImageCount = swapchain_image_count;
-  if (!CreateCommandPool()) return false;
-  if (!AllocateCommandBuffers()) return false;
-  if (!CreateSyncObjects()) return false;
+  if (!CreateCommandPool())
+    return false;
+  if (!AllocateCommandBuffers())
+    return false;
+  if (!CreateSyncObjects())
+    return false;
   spdlog::info(
       "Frame sync initialized ({} frames in flight, {} image semaphores).",
       kMaxFramesInFlight, mSwapchainImageCount);
@@ -22,7 +28,8 @@ bool VkFrameSync::Initialize(VkContext* context, uint32_t swapchain_image_count)
 }
 
 void VkFrameSync::Shutdown() {
-  if (!mContext) return;
+  if (!mContext)
+    return;
   VkDevice device = mContext->GetDevice();
   if (device == VK_NULL_HANDLE) {
     mContext = nullptr;
@@ -35,17 +42,20 @@ void VkFrameSync::Shutdown() {
   vkDeviceWaitIdle(device);
 
   for (auto f : mInFlight) {
-    if (f != VK_NULL_HANDLE) vkDestroyFence(device, f, nullptr);
+    if (f != VK_NULL_HANDLE)
+      vkDestroyFence(device, f, nullptr);
   }
   mInFlight.clear();
 
   for (auto s : mRenderFinished) {
-    if (s != VK_NULL_HANDLE) vkDestroySemaphore(device, s, nullptr);
+    if (s != VK_NULL_HANDLE)
+      vkDestroySemaphore(device, s, nullptr);
   }
   mRenderFinished.clear();
 
   for (auto s : mImageAvailable) {
-    if (s != VK_NULL_HANDLE) vkDestroySemaphore(device, s, nullptr);
+    if (s != VK_NULL_HANDLE)
+      vkDestroySemaphore(device, s, nullptr);
   }
   mImageAvailable.clear();
 

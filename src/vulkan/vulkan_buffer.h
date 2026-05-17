@@ -1,9 +1,8 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-
 #include <cstdint>
 #include <vector>
+#include <vulkan/vulkan.h>
 
 namespace sdl_painter {
 
@@ -38,8 +37,9 @@ class VulkanBuffer {
   /// @param frame_slot_count Buffer'ın bölüneceği eş zamanlı slot sayısı
   ///        (genellikle frames-in-flight kadar; default 1 = klasik tek slot).
   /// @return Başarı durumunda true.
-  bool Init(VkDevice device, VkPhysicalDevice phys_device, VkDeviceSize capacity,
-            VkBufferUsageFlags usage, uint32_t frame_slot_count = 1);
+  bool Init(VkDevice device, VkPhysicalDevice phys_device,
+            VkDeviceSize capacity, VkBufferUsageFlags usage,
+            uint32_t frame_slot_count = 1);
 
   /// @brief Buffer ve belleği serbest bırak. Idempotent; destructor da çağırır.
   /// @param device Önceki Init'te verilen device ile aynı olmalı (ileri uyum
@@ -72,9 +72,9 @@ class VulkanBuffer {
   VkBuffer mBuffer{VK_NULL_HANDLE};
   VkDeviceMemory mMemory{VK_NULL_HANDLE};
   void* mMapped{nullptr};
-  VkDeviceSize mCapacity{0};         // Toplam buffer kapasitesi (byte)
-  VkDeviceSize mSlotCapacity{0};     // Slot başına kapasite (byte)
-  uint32_t mFrameSlotCount{1};       // Eş zamanlı slot sayısı
+  VkDeviceSize mCapacity{0};      // Toplam buffer kapasitesi (byte)
+  VkDeviceSize mSlotCapacity{0};  // Slot başına kapasite (byte)
+  uint32_t mFrameSlotCount{1};    // Eş zamanlı slot sayısı
   std::vector<VkDeviceSize> mHeads;  // Slot başına bağımsız head (byte offset)
 };
 

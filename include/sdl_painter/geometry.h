@@ -38,7 +38,8 @@ struct Rect {
   float h{0.0f};
 
   constexpr Rect() = default;
-  constexpr Rect(float x_, float y_, float w_, float h_) : x(x_), y(y_), w(w_), h(h_) {}
+  constexpr Rect(float x_, float y_, float w_, float h_)
+      : x(x_), y(y_), w(w_), h(h_) {}
 
   /// @brief Dikdörtgenin sağ kenarının x koordinatı.
   [[nodiscard]] float Right() const noexcept { return x + w; }

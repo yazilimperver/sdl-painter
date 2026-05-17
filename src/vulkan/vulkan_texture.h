@@ -1,8 +1,7 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
-
 #include <cstdint>
+#include <vulkan/vulkan.h>
 
 namespace sdl_painter {
 
@@ -37,9 +36,9 @@ class VulkanTexture {
   /// @param descriptor_set Texture'a bağlanacak hazır descriptor set.
   /// @param descriptor_set_layout Descriptor set'in layout'u (image sampler update için).
   /// @return Başarı durumunda true.
-  bool Upload(VkContext* context, VkCommandPool cmd_pool,
-              const uint8_t* data, int32_t width, int32_t height,
-              int32_t channels, VkDescriptorSet descriptor_set,
+  bool Upload(VkContext* context, VkCommandPool cmd_pool, const uint8_t* data,
+              int32_t width, int32_t height, int32_t channels,
+              VkDescriptorSet descriptor_set,
               VkDescriptorSetLayout descriptor_set_layout);
 
   /// @brief Tüm Vulkan kaynaklarını serbest bırak. Idempotent; destructor da çağırır.
@@ -67,8 +66,7 @@ class VulkanTexture {
 
   /// @brief Tek seferlik command buffer gönder (layout geçişi + copy).
   bool RecordAndSubmitUpload(VkDevice device, VkQueue queue,
-                             VkCommandPool cmd_pool,
-                             VkBuffer staging_buf);
+                             VkCommandPool cmd_pool, VkBuffer staging_buf);
 
   /// @brief Image layout geçişi (barrier).
   static void TransitionImageLayout(VkCommandBuffer cmd, VkImage image,
@@ -76,8 +74,7 @@ class VulkanTexture {
                                     VkImageLayout new_layout);
 
   /// @brief Descriptor set'e image + sampler bağla.
-  void UpdateDescriptorSet(VkDevice device,
-                           VkDescriptorSetLayout layout);
+  void UpdateDescriptorSet(VkDevice device, VkDescriptorSetLayout layout);
 
   VkDevice mDevice{VK_NULL_HANDLE};  // RAII için Upload'da saklanır
   VkImage mImage{VK_NULL_HANDLE};

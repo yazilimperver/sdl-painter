@@ -1,9 +1,10 @@
 #include "sdl_painter/font.h"
 
-#include <SDL3_ttf/SDL_ttf.h>
-#include <spdlog/spdlog.h>
-
 #include "sdl_painter/renderer.h"
+
+#include <SDL3_ttf/SDL_ttf.h>
+
+#include <spdlog/spdlog.h>
 
 namespace sdl_painter {
 
@@ -23,7 +24,8 @@ static bool EnsureTTFInit() {
 }
 
 static void ReleaseTTF() {
-  if (gTTFRefCount <= 0) return;
+  if (gTTFRefCount <= 0)
+    return;
   --gTTFRefCount;
   if (gTTFRefCount == 0) {
     TTF_Quit();
@@ -33,7 +35,8 @@ static void ReleaseTTF() {
 
 Font::Font(const std::string& file_path, int32_t point_size)
     : mHandle(nullptr), mPointSize(point_size) {
-  if (!EnsureTTFInit()) return;
+  if (!EnsureTTFInit())
+    return;
   mHandle = TTF_OpenFont(file_path.c_str(), static_cast<float>(point_size));
   if (!mHandle) {
     spdlog::error("Font yuklenemedi: {} ({})", file_path, SDL_GetError());
@@ -51,7 +54,7 @@ Font::~Font() {
 
 Font::Font(Font&& other) noexcept
     : mHandle(other.mHandle), mPointSize(other.mPointSize) {
-  other.mHandle    = nullptr;
+  other.mHandle = nullptr;
   other.mPointSize = 0;
 }
 
@@ -61,38 +64,41 @@ Font& Font::operator=(Font&& other) noexcept {
       TTF_CloseFont(static_cast<TTF_Font*>(mHandle));
       ReleaseTTF();
     }
-    mHandle    = other.mHandle;
+    mHandle = other.mHandle;
     mPointSize = other.mPointSize;
-    other.mHandle    = nullptr;
+    other.mHandle = nullptr;
     other.mPointSize = 0;
   }
   return *this;
 }
 
 int32_t Font::Ascent() const {
-  if (!mHandle) return 0;
+  if (!mHandle)
+    return 0;
   return TTF_GetFontAscent(static_cast<TTF_Font*>(mHandle));
 }
 
-bool Font::MeasureText(const std::string& text,
-                       int32_t& out_width, int32_t& out_height) const {
+bool Font::MeasureText(const std::string& text, int32_t& out_width,
+                       int32_t& out_height) const {
   if (!mHandle || text.empty()) {
     out_width = out_height = 0;
     return false;
   }
   int w = 0, h = 0;
-  bool ok = TTF_GetStringSize(static_cast<TTF_Font*>(mHandle),
-                              text.c_str(), text.size(), &w, &h);
-  out_width  = w;
+  bool ok = TTF_GetStringSize(static_cast<TTF_Font*>(mHandle), text.c_str(),
+                              text.size(), &w, &h);
+  out_width = w;
   out_height = h;
   return ok;
 }
 
 const Glyph* Font::GetGlyph(IRenderer& renderer, char32_t codepoint) const {
   auto it = mGlyphCache.find(codepoint);
-  if (it != mGlyphCache.end()) return &it->second;
+  if (it != mGlyphCache.end())
+    return &it->second;
 
-  if (!mHandle) return nullptr;
+  if (!mHandle)
+    return nullptr;
 
   auto* font = static_cast<TTF_Font*>(mHandle);
 
@@ -101,31 +107,35 @@ const Glyph* Font::GetGlyph(IRenderer& renderer, char32_t codepoint) const {
   // TTF_RenderGlyph_Blended, karakterin sıkıca kırpılmış (tightly cropped)
   // bir yüzeyini verir.
   SDL_Surface* surface = TTF_RenderGlyph_Blended(font, codepoint, white);
-  if (!surface) return nullptr;
+  if (!surface)
+    return nullptr;
 
   // RGBA32 formatina donustur
-  SDL_Surface* rgba_surface = SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
+  SDL_Surface* rgba_surface =
+      SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
   SDL_DestroySurface(surface);
-  if (!rgba_surface) return nullptr;
+  if (!rgba_surface)
+    return nullptr;
 
   // Texture olustur
-  TextureHandle handle = renderer.CreateTexture(
-      static_cast<const uint8_t*>(rgba_surface->pixels),
-      rgba_surface->w, rgba_surface->h, 4);
+  TextureHandle handle =
+      renderer.CreateTexture(static_cast<const uint8_t*>(rgba_surface->pixels),
+                             rgba_surface->w, rgba_surface->h, 4);
 
   // Metrikleri al
   int minx, maxx, miny, maxy, advance;
-  if (!TTF_GetGlyphMetrics(font, codepoint, &minx, &maxx, &miny, &maxy, &advance)) {
+  if (!TTF_GetGlyphMetrics(font, codepoint, &minx, &maxx, &miny, &maxy,
+                           &advance)) {
     SDL_DestroySurface(rgba_surface);
     return nullptr;
   }
 
   // Önbelleğe ekle
   Glyph glyph;
-  glyph.texture   = Texture(&renderer, handle);
-  glyph.width     = rgba_surface->w;
-  glyph.height    = rgba_surface->h;
-  glyph.advance   = advance;
+  glyph.texture = Texture(&renderer, handle);
+  glyph.width = rgba_surface->w;
+  glyph.height = rgba_surface->h;
+  glyph.advance = advance;
   glyph.bearing_x = minx;
   // SDL_ttf 3.x'te TTF_RenderGlyph_Blended, `TTF_RenderText_Blended` ile
   // ayni yolu izler: tek glyph yuzeyinde baseline `font->ascent` satirindadir

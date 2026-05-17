@@ -1,11 +1,11 @@
 #pragma once
 
+#include "sdl_painter/renderer.h"
+#include "sdl_painter/texture.h"
+
 #include <cstdint>
 #include <memory>
 #include <string>
-
-#include "sdl_painter/renderer.h"
-#include "sdl_painter/texture.h"
 
 namespace sdl_painter {
 
@@ -58,7 +58,7 @@ class Image {
   ///
   /// Prosedürel dokular ve bellekten yükleme için kullanılır.
   [[nodiscard]] static Image CreateFromData(const uint8_t* data, int32_t width,
-                                             int32_t height, int32_t channels);
+                                            int32_t height, int32_t channels);
 
   /// @brief Texture'ı renderer'a yükle; ikinci çağrıda önbelleği döner.
   TextureHandle Upload(IRenderer& renderer) const;
@@ -77,7 +77,8 @@ class Image {
   int32_t mWidth{0};
   int32_t mHeight{0};
   int32_t mChannels{0};
-  mutable Texture mHandle;  ///< Önbelleklenmiş RAII texture; sahip renderer mHandle.Owner()'da
+  mutable Texture
+      mHandle;  ///< Önbelleklenmiş RAII texture; sahip renderer mHandle.Owner()'da
 };
 
 }  // namespace sdl_painter

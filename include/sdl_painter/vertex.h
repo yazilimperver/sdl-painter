@@ -12,7 +12,8 @@ struct Vertex {
 
   constexpr Vertex() = default;
   constexpr Vertex(float x_, float y_) : x(x_), y(y_) {}
-  constexpr Vertex(float x_, float y_, uint8_t r_, uint8_t g_, uint8_t b_, uint8_t a_)
+  constexpr Vertex(float x_, float y_, uint8_t r_, uint8_t g_, uint8_t b_,
+                   uint8_t a_)
       : x(x_), y(y_), r(r_), g(g_), b(b_), a(a_) {}
 };
 
@@ -27,8 +28,8 @@ struct TexturedVertex {
   constexpr TexturedVertex() = default;
   constexpr TexturedVertex(float x_, float y_, float u_, float v_)
       : x(x_), y(y_), u(u_), v(v_) {}
-  constexpr TexturedVertex(float x_, float y_, float u_, float v_,
-                           uint8_t r_, uint8_t g_, uint8_t b_, uint8_t a_)
+  constexpr TexturedVertex(float x_, float y_, float u_, float v_, uint8_t r_,
+                           uint8_t g_, uint8_t b_, uint8_t a_)
       : x(x_), y(y_), u(u_), v(v_), r(r_), g(g_), b(b_), a(a_) {}
 };
 

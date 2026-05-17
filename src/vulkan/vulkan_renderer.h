@@ -1,21 +1,21 @@
 #pragma once
 
-#include <vulkan/vulkan.h>
+#include "sdl_painter/renderer.h"
 
 #include <cstdint>
 #include <memory>
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <vulkan/vulkan.h>
 
-#include "sdl_painter/renderer.h"
 #include "vk_context.h"
 #include "vk_frame_sync.h"
 #include "vk_swapchain.h"
 #include "vulkan_buffer.h"
 #include "vulkan_pipeline.h"
-#include "vulkan_textured_pipeline.h"
 #include "vulkan_texture.h"
+#include "vulkan_textured_pipeline.h"
 
 namespace sdl_painter {
 
@@ -41,8 +41,7 @@ class VulkanRenderer final : public IRenderer {
 
   void SetViewport(int32_t x, int32_t y, int32_t width,
                    int32_t height) override;
-  void SetScissor(int32_t x, int32_t y, int32_t width,
-                  int32_t height) override;
+  void SetScissor(int32_t x, int32_t y, int32_t width, int32_t height) override;
   void ClearScissor() override;
   void Clear(const Color& color) override;
   void SetOpacity(float alpha) override;
@@ -55,7 +54,9 @@ class VulkanRenderer final : public IRenderer {
   void DrawTextured(const std::vector<TexturedVertex>& vertices,
                     TextureHandle texture) override;
 
-  RendererBackend GetBackend() const override { return RendererBackend::kVulkan; }
+  RendererBackend GetBackend() const override {
+    return RendererBackend::kVulkan;
+  }
   void SetProjectionMatrix(const float* mat4) override;
   void SetModelMatrix(const float* mat3) override;
 
@@ -75,8 +76,8 @@ class VulkanRenderer final : public IRenderer {
   std::unique_ptr<VkSwapchain> mSwapchain;
   std::unique_ptr<VkFrameSync> mFrameSync;
 
-  uint32_t mCurrentFrame{0};       // 0..kMaxFramesInFlight-1
-  uint32_t mCurrentImageIndex{0};  // vkAcquireNextImageKHR'dan dönen index
+  uint32_t mCurrentFrame{0};          // 0..kMaxFramesInFlight-1
+  uint32_t mCurrentImageIndex{0};     // vkAcquireNextImageKHR'dan dönen index
   uint32_t mAcquireSlot{UINT32_MAX};  // İlk frame'de 0'a wrap-around yapar
   bool mFrameActive{false};
   bool mSwapchainOutOfDate{false};

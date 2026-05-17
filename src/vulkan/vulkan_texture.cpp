@@ -1,8 +1,7 @@
 #include "vulkan_texture.h"
 
-#include <spdlog/spdlog.h>
-
 #include <cstring>
+#include <spdlog/spdlog.h>
 #include <vector>
 
 #include "vk_check.h"
@@ -77,7 +76,8 @@ bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
   vkFreeMemory(device, staging_mem, nullptr);
 
   // 4. Sampler
-  if (!CreateSampler(device)) return false;
+  if (!CreateSampler(device))
+    return false;
 
   // 5. Descriptor set güncelle
   UpdateDescriptorSet(device, descriptor_set_layout);
@@ -113,9 +113,10 @@ bool VulkanTexture::CreateStagingBuffer(VkDevice device,
   VkMemoryAllocateInfo alloc_info{};
   alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
   alloc_info.allocationSize = mem_req.size;
-  alloc_info.memoryTypeIndex = vk_detail::FindMemoryType(
-      phys_device, mem_req.memoryTypeBits,
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+  alloc_info.memoryTypeIndex =
+      vk_detail::FindMemoryType(phys_device, mem_req.memoryTypeBits,
+                                VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
   if (alloc_info.memoryTypeIndex == UINT32_MAX) {
     spdlog::error("VulkanTexture: staging için uygun bellek tipi bulunamadı.");
     vkDestroyBuffer(device, out_buf, nullptr);
@@ -165,8 +166,7 @@ bool VulkanTexture::CreateImage(VkDevice device, VkPhysicalDevice phys_device,
   img_ci.arrayLayers = 1;
   img_ci.samples = VK_SAMPLE_COUNT_1_BIT;
   img_ci.tiling = VK_IMAGE_TILING_OPTIMAL;
-  img_ci.usage =
-      VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
+  img_ci.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
   img_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   if (vkCreateImage(device, &img_ci, nullptr, &mImage) != VK_SUCCESS) {
     spdlog::error("VulkanTexture: vkCreateImage başarısız.");
@@ -181,8 +181,7 @@ bool VulkanTexture::CreateImage(VkDevice device, VkPhysicalDevice phys_device,
   alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
   alloc_info.allocationSize = mem_req.size;
   alloc_info.memoryTypeIndex = vk_detail::FindMemoryType(
-      phys_device, mem_req.memoryTypeBits,
-      VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+      phys_device, mem_req.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
   if (alloc_info.memoryTypeIndex == UINT32_MAX) {
     spdlog::error("VulkanTexture: image için uygun bellek tipi bulunamadı.");
     vkDestroyImage(device, mImage, nullptr);
@@ -371,7 +370,8 @@ void VulkanTexture::UpdateDescriptorSet(VkDevice device,
 // ---------------------------------------------------------------------------
 void VulkanTexture::Destroy(VkDevice device) {
   VkDevice d = (mDevice != VK_NULL_HANDLE) ? mDevice : device;
-  if (d == VK_NULL_HANDLE) return;
+  if (d == VK_NULL_HANDLE)
+    return;
   if (mSampler != VK_NULL_HANDLE) {
     vkDestroySampler(d, mSampler, nullptr);
     mSampler = VK_NULL_HANDLE;

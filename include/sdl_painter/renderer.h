@@ -31,7 +31,15 @@ enum class RendererBackend {
 /// Painter, IRenderer üzerinden çalışır — backend detaylarını bilmez.
 class IRenderer {
  public:
+  IRenderer() = default;
   virtual ~IRenderer() = default;
+
+  // Soyut arayüz: kopyalama/taşıma kapalı (object slicing önlenir).
+  // Sahiplik daima std::unique_ptr<IRenderer> üzerinden taşınır.
+  IRenderer(const IRenderer&) = delete;
+  IRenderer& operator=(const IRenderer&) = delete;
+  IRenderer(IRenderer&&) = delete;
+  IRenderer& operator=(IRenderer&&) = delete;
 
   // --- Yaşam döngüsü ---
 
@@ -50,12 +58,12 @@ class IRenderer {
   // --- Durum ---
 
   /// @brief Viewport'u ayarla (piksel koordinatları).
-  virtual void SetViewport(int32_t x, int32_t y,
-                           int32_t width, int32_t height) = 0;
+  virtual void SetViewport(int32_t x, int32_t y, int32_t width,
+                           int32_t height) = 0;
 
   /// @brief Scissor (kırpma) dikdörtgeni ayarla.
-  virtual void SetScissor(int32_t x, int32_t y,
-                          int32_t width, int32_t height) = 0;
+  virtual void SetScissor(int32_t x, int32_t y, int32_t width,
+                          int32_t height) = 0;
 
   /// @brief Scissor kırpmasını kaldır.
   virtual void ClearScissor() = 0;
@@ -74,9 +82,8 @@ class IRenderer {
   // --- Texture işlemleri ---
 
   /// @brief Ham piksel verisinden texture oluştur. Başarısızlıkta kInvalidTexture döner.
-  virtual TextureHandle CreateTexture(const uint8_t* data,
-                                      int32_t width, int32_t height,
-                                      int32_t channels) = 0;
+  virtual TextureHandle CreateTexture(const uint8_t* data, int32_t width,
+                                      int32_t height, int32_t channels) = 0;
 
   /// @brief Texture'ı sil.
   virtual void DestroyTexture(TextureHandle handle) = 0;

@@ -25,7 +25,8 @@ class ShaderProgram {
   bool Build(const std::string& vert_src, const std::string& frag_src);
 
   /// @brief Shader dosyalarından program oluştur.
-  bool BuildFromFile(const std::string& vert_path, const std::string& frag_path);
+  bool BuildFromFile(const std::string& vert_path,
+                     const std::string& frag_path);
 
   /// @brief Programı aktif et.
   void Use() const;
@@ -36,8 +37,8 @@ class ShaderProgram {
   /// @brief Uniform'ları ayarla
   void SetUniformMat3(const std::string& name, const float* mat3) const;
   void SetUniformMat4(const std::string& name, const float* mat4) const;
-  void SetUniformVec4(const std::string& name, float r, float g,
-                      float b, float a) const;
+  void SetUniformVec4(const std::string& name, float r, float g, float b,
+                      float a) const;
   void SetUniformFloat(const std::string& name, float value) const;
   void SetUniformInt(const std::string& name, int32_t value) const;
 

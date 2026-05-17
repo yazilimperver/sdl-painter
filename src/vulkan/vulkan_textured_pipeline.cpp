@@ -1,9 +1,8 @@
 #include "vulkan_textured_pipeline.h"
 
-#include <spdlog/spdlog.h>
-
 #include <cstddef>
 #include <fstream>
+#include <spdlog/spdlog.h>
 #include <vector>
 
 #include "vk_check.h"
@@ -20,7 +19,7 @@ VulkanTexturedPipeline::~VulkanTexturedPipeline() {
 // Yardımcı: .spv yükle
 // ---------------------------------------------------------------------------
 VkShaderModule VulkanTexturedPipeline::LoadSpv(VkDevice device,
-                                                const std::string& path) {
+                                               const std::string& path) {
   std::ifstream file(path, std::ios::ate | std::ios::binary);
   if (!file.is_open()) {
     spdlog::error("VulkanTexturedPipeline: shader açılamadı: {}", path);
@@ -45,7 +44,7 @@ VkShaderModule VulkanTexturedPipeline::LoadSpv(VkDevice device,
 // Init
 // ---------------------------------------------------------------------------
 bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
-                                   const std::string& shader_dir) {
+                                  const std::string& shader_dir) {
   // --- Descriptor set layout: set=0, binding=0 → combined image sampler ---
   VkDescriptorSetLayoutBinding sampler_binding{};
   sampler_binding.binding = 0;
@@ -60,7 +59,8 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
   layout_ci.pBindings = &sampler_binding;
   if (vkCreateDescriptorSetLayout(device, &layout_ci, nullptr,
                                   &mDescriptorSetLayout) != VK_SUCCESS) {
-    spdlog::error("VulkanTexturedPipeline: vkCreateDescriptorSetLayout başarısız.");
+    spdlog::error(
+        "VulkanTexturedPipeline: vkCreateDescriptorSetLayout başarısız.");
     return false;
   }
 
@@ -154,15 +154,14 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
 
   // --- Dynamic viewport + scissor ---
   VkDynamicState dyn_states[] = {VK_DYNAMIC_STATE_VIEWPORT,
-                                  VK_DYNAMIC_STATE_SCISSOR};
+                                 VK_DYNAMIC_STATE_SCISSOR};
   VkPipelineDynamicStateCreateInfo dynamic_state{};
   dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
   dynamic_state.dynamicStateCount = 2;
   dynamic_state.pDynamicStates = dyn_states;
 
   VkPipelineViewportStateCreateInfo viewport_state{};
-  viewport_state.sType =
-      VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+  viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
   viewport_state.viewportCount = 1;
   viewport_state.scissorCount = 1;
 
@@ -199,8 +198,7 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
       VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
   VkPipelineColorBlendStateCreateInfo color_blend{};
-  color_blend.sType =
-      VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+  color_blend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
   color_blend.logicOpEnable = VK_FALSE;
   color_blend.attachmentCount = 1;
   color_blend.pAttachments = &blend_attachment;
@@ -246,14 +244,15 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
   pipeline_ci.subpass = 0;
 
   VkResult res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1,
-                                            &pipeline_ci, nullptr, &mPipeline);
+                                           &pipeline_ci, nullptr, &mPipeline);
 
   vkDestroyShaderModule(device, vert_mod, nullptr);
   vkDestroyShaderModule(device, frag_mod, nullptr);
 
   if (res != VK_SUCCESS) {
-    spdlog::error("VulkanTexturedPipeline: vkCreateGraphicsPipelines hatası: {}",
-                  vk_detail::VkResultToString(res));
+    spdlog::error(
+        "VulkanTexturedPipeline: vkCreateGraphicsPipelines hatası: {}",
+        vk_detail::VkResultToString(res));
     // Tüm önceki kaynakları temizle.
     vkDestroyPipelineLayout(device, mLayout, nullptr);
     vkDestroyDescriptorPool(device, mDescriptorPool, nullptr);
@@ -273,8 +272,7 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
 // ---------------------------------------------------------------------------
 // Descriptor set tahsis/iade
 // ---------------------------------------------------------------------------
-VkDescriptorSet VulkanTexturedPipeline::AllocateDescriptorSet(
-    VkDevice device) {
+VkDescriptorSet VulkanTexturedPipeline::AllocateDescriptorSet(VkDevice device) {
   VkDescriptorSetAllocateInfo alloc_info{};
   alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
   alloc_info.descriptorPool = mDescriptorPool;
@@ -290,7 +288,7 @@ VkDescriptorSet VulkanTexturedPipeline::AllocateDescriptorSet(
 }
 
 void VulkanTexturedPipeline::FreeDescriptorSet(VkDevice device,
-                                                VkDescriptorSet set) {
+                                               VkDescriptorSet set) {
   if (set != VK_NULL_HANDLE && mDescriptorPool != VK_NULL_HANDLE) {
     vkFreeDescriptorSets(device, mDescriptorPool, 1, &set);
   }
@@ -301,7 +299,8 @@ void VulkanTexturedPipeline::FreeDescriptorSet(VkDevice device,
 // ---------------------------------------------------------------------------
 void VulkanTexturedPipeline::Destroy(VkDevice device) {
   VkDevice d = (mDevice != VK_NULL_HANDLE) ? mDevice : device;
-  if (d == VK_NULL_HANDLE) return;
+  if (d == VK_NULL_HANDLE)
+    return;
   if (mPipeline != VK_NULL_HANDLE) {
     vkDestroyPipeline(d, mPipeline, nullptr);
     mPipeline = VK_NULL_HANDLE;
