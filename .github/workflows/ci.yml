@@ -18,7 +18,7 @@ jobs:
     name: build:linux:debug
     runs-on: ubuntu-latest
     container:
-      image: yazilimperver/sdl-painter:ci
+      image: yazilimperver/sdl-painter:ci-v1.0
     env:
       CONAN_HOME: /root/.conan2
     steps:
@@ -50,7 +50,7 @@ jobs:
     name: build:linux:release
     runs-on: ubuntu-latest
     container:
-      image: yazilimperver/sdl-painter:ci
+      image: yazilimperver/sdl-painter:ci-v1.0
     env:
       CONAN_HOME: /root/.conan2
     steps:
@@ -114,7 +114,7 @@ jobs:
     name: test:unit
     runs-on: ubuntu-latest
     container:
-      image: yazilimperver/sdl-painter:ci
+      image: yazilimperver/sdl-painter:ci-v1.0
     env:
       CONAN_HOME: /root/.conan2
       SDL_VIDEODRIVER: offscreen
@@ -140,7 +140,7 @@ jobs:
     name: test:unit:asan
     runs-on: ubuntu-latest
     container:
-      image: yazilimperver/sdl-painter:ci
+      image: yazilimperver/sdl-painter:ci-v1.0
     env:
       CONAN_HOME: /root/.conan2
       SDL_VIDEODRIVER: offscreen
@@ -165,7 +165,7 @@ jobs:
     name: quality:clang-format
     runs-on: ubuntu-latest
     container:
-      image: yazilimperver/sdl-painter:ci
+      image: yazilimperver/sdl-painter:ci-v1.0
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -176,7 +176,7 @@ jobs:
     name: quality:clang-tidy
     runs-on: ubuntu-latest
     container:
-      image: yazilimperver/sdl-painter:ci
+      image: yazilimperver/sdl-painter:ci-v1.0
     env:
       CONAN_HOME: /root/.conan2
     continue-on-error: true
