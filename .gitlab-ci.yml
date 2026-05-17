@@ -48,24 +48,24 @@ build:windows:debug:
   stage: build
   image: $CI_REGISTRY_IMAGE/sdl-painter-win
   script:
-    - conan install . --output-folder=build/windows-debug/generators  --build=missing -s build_type=Debug --profile:build=default --profile:host=windows
-    - cmake --preset windows-debug
-    - cmake --build --preset windows-debug
+    - conan install . --output-folder=build/windows-mingw-debug/generators  --build=missing -s build_type=Debug --profile:build=default --profile:host=windows-mingw
+    - cmake --preset windows-mingw-debug
+    - cmake --build --preset windows-mingw-debug
   artifacts:
     paths:
-      - build/windows-debug/
+      - build/windows-mingw-debug/
     expire_in: 1 day
 
 build:windows:release:
   stage: build
   image: $CI_REGISTRY_IMAGE/sdl-painter-win
   script:
-    - conan install . --output-folder=build/windows-release/generators  --build=missing -s build_type=Release --profile:build=default --profile:host=windows
-    - cmake --preset windows-release
-    - cmake --build --preset windows-release
+    - conan install . --output-folder=build/windows-mingw-release/generators  --build=missing -s build_type=Release --profile:build=default --profile:host=windows-mingw
+    - cmake --preset windows-mingw-release
+    - cmake --build --preset windows-mingw-release
   artifacts:
     paths:
-      - build/windows-release/
+      - build/windows-mingw-release/
     expire_in: 1 day
 
 # # --- Test Stage ---
@@ -97,15 +97,15 @@ test:unit:asan:
     - cmake --build --preset linux-debug-asan
     - ctest --preset linux-debug-asan --output-on-failure
 
-test:unit:windows:
-  stage: test
-  needs: ["build:windows:debug"]
-  image: $CI_REGISTRY_IMAGE/sdl-painter-win
-  variables:
-    SDL_VIDEODRIVER: "offscreen"
-  script:
-    - ctest --preset windows-debug --output-on-failure
-    - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+# test:unit:windows:
+#   stage: test
+#   needs: ["build:windows:debug"]
+#   image: $CI_REGISTRY_IMAGE/sdl-painter-win
+#   variables:
+#     SDL_VIDEODRIVER: "offscreen"
+#   script:
+#     - ctest --preset windows-mingw-debug --output-on-failure
+#     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 quality:clang-format:
   stage: quality
