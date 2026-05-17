@@ -84,6 +84,10 @@ test:unit:
 test:unit:asan:
   stage: test
   image: $CI_REGISTRY_IMAGE
+  # Kendi conan+cmake build'ini yapar, build-stage artifact'ı tüketmez.
+  # needs: [] → pipeline başında bağımsız çalışsın; alakasız bir build
+  # job'ının (örn. windows MinGW) fail'i bunu SKIP ettirmesin.
+  needs: []
   variables:
     SDL_VIDEODRIVER: "offscreen"
     VK_ICD_FILENAMES: "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
@@ -110,8 +114,12 @@ test:unit:asan:
 quality:clang-format:
   stage: quality
   image: $CI_REGISTRY_IMAGE
-  before_script:
-    - apt-get update && apt-get install -y clang-format-18
+  # Hiçbir build çıktısına ihtiyacı yok (yalnız kaynak lint). needs: [] →
+  # pipeline başında hemen çalışsın; alakasız bir build/test fail'i bunu
+  # SKIP ettirmesin (allow_failure gate'lenince işe yaramaz).
+  needs: []
+  # clang-format-18 base imajda zaten kurulu (bkz. Dockerfile builder stage);
+  # apt ile yeniden kurmaya gerek yok (imajda apt list'leri silinmiş durumda).
   script:
     - find include/ src/ -name '*.h' -o -name '*.cpp' | xargs clang-format-18 --dry-run --Werror
   allow_failure: true
@@ -120,8 +128,8 @@ quality:clang-tidy:
   stage: quality
   image: $CI_REGISTRY_IMAGE
   needs: ["build:linux:debug"]
-  before_script:
-    - apt-get install -y clang-tidy-18
+  # clang-tidy-18 base imajda zaten kurulu; eski `apt-get install` adımı hem
+  # gereksizdi hem de apt-get update + list olmadığı için job'u düşürüyordu.
   script:
     - find src/ -name '*.cpp' | xargs clang-tidy-18 -p build/linux-debug/
   allow_failure: true
