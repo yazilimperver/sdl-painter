@@ -1,7 +1,7 @@
 # SDLPainter — Örnekler Rehberi
 
-Her demo bir öncekinin üzerine inşa edilir; geliştirme fazıyla birebir
-örtüşür. Bu belge her örneğin **neyi doğruladığını**, **hangi API
+Her demo bir öncekinin üzerine inşa edilir. Örnekler fazlandırma usulü geliştirildi.
+Her biri, bir diğerinin üzerine bir ekleme yaparak gider. Bu belge her örneğin **neyi doğruladığını**, **hangi API
 yeteneklerini kullandığını** ve **mühendislik açısından neden önemli
 olduğunu** açıklar.
 
@@ -244,17 +244,3 @@ Tüm demolar aynı yapıyı izler:
 `glDeleteTextures` vb.) context geçerliyken silinmelidir. `SDL_DestroyWindow`
 context'i yok eder; Painter bu noktadan önce yok edilmezse `glDelete*` çağrıları
 `GL_INVALID_OPERATION` (1282) hatası üretir. Açık scope bu sıralamayı garanti eder.
-
----
-
-## Demo → Faz Eşleştirmesi
-
-| Demo | Faz | Ön koşul |
-|------|-----|----------|
-| `phase0_demo` | Phase 0 | Yok |
-| `phase1_demo` | Phase 1 | Phase 0 |
-| `phase2_demo` | Phase 2 | Phase 1 |
-| `phase2b_demo` | Phase 2 | Phase 1 |
-| `phase3_demo` | Phase 3 | Phase 2 |
-| `phase4_demo` | Phase 4 | Phase 3|
-| `phase5a–5e` | Phase 5 | Phase 3/4 + `SDLPAINTER_WITH_VULKAN=ON` |

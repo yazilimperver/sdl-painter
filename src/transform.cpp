@@ -20,9 +20,9 @@ Transform::Transform(float m00, float m01, float m02, float m10, float m11,
 
 void Transform::SetIdentity() {
   // clang-format off
-  mData[0][0] = 1.0f; mData[0][1] = 0.0f; mData[0][2] = 0.0f;
-  mData[1][0] = 0.0f; mData[1][1] = 1.0f; mData[1][2] = 0.0f;
-  mData[2][0] = 0.0f; mData[2][1] = 0.0f; mData[2][2] = 1.0f;
+  mData[0][0] = 1.0F; mData[0][1] = 0.0F; mData[0][2] = 0.0F;
+  mData[1][0] = 0.0F; mData[1][1] = 1.0F; mData[1][2] = 0.0F;
+  mData[2][0] = 0.0F; mData[2][1] = 0.0F; mData[2][2] = 1.0F;
   // clang-format on
 }
 
@@ -30,9 +30,9 @@ bool Transform::IsIdentity() const {
   // Doğrudan element kontrol — magic-statics ve karşılaştırma maliyetini
   // ortadan kaldırır.
   // clang-format off
-  return mData[0][0] == 1.0f && mData[0][1] == 0.0f && mData[0][2] == 0.0f &&
-         mData[1][0] == 0.0f && mData[1][1] == 1.0f && mData[1][2] == 0.0f &&
-         mData[2][0] == 0.0f && mData[2][1] == 0.0f && mData[2][2] == 1.0f;
+  return mData[0][0] == 1.0F && mData[0][1] == 0.0F && mData[0][2] == 0.0F &&
+         mData[1][0] == 0.0F && mData[1][1] == 1.0F && mData[1][2] == 0.0F &&
+         mData[2][0] == 0.0F && mData[2][1] == 0.0F && mData[2][2] == 1.0F;
   // clang-format on
 }
 
@@ -40,7 +40,7 @@ Transform Transform::operator*(const Transform& other) const {
   Transform result;
   for (int32_t r = 0; r < 3; ++r) {
     for (int32_t c = 0; c < 3; ++c) {
-      result.mData[r][c] = 0.0f;
+      result.mData[r][c] = 0.0F;
       for (int32_t k = 0; k < 3; ++k) {
         result.mData[r][c] += mData[r][k] * other.mData[k][c];
       }
@@ -80,29 +80,29 @@ void Transform::Map(float x, float y, float* out_x, float* out_y) const {
 
 Transform Transform::MakeTranslate(float dx, float dy) {
   // clang-format off
-  return Transform(1.0f, 0.0f, dx,
-                   0.0f, 1.0f, dy,
-                   0.0f, 0.0f, 1.0f);
+  return Transform(1.0F, 0.0F, dx,
+                   0.0F, 1.0F, dy,
+                   0.0F, 0.0F, 1.0F);
   // clang-format on
 }
 
 Transform Transform::MakeRotate(float angle_degrees) {
-  constexpr float kPi = 3.14159265358979323846f;
-  float rad = angle_degrees * kPi / 180.0f;
+  constexpr float kPi = 3.14159265358979323846F;
+  float rad = angle_degrees * kPi / 180.0F;
   float c = std::cos(rad);
   float s = std::sin(rad);
   // clang-format off
-  return Transform(c,    -s,   0.0f,
-                   s,     c,   0.0f,
-                   0.0f,  0.0f, 1.0f);
+  return Transform(c,    -s,   0.0F,
+                   s,     c,   0.0F,
+                   0.0F,  0.0F, 1.0F);
   // clang-format on
 }
 
 Transform Transform::MakeScale(float sx, float sy) {
   // clang-format off
-  return Transform(sx,   0.0f, 0.0f,
-                   0.0f, sy,   0.0f,
-                   0.0f, 0.0f, 1.0f);
+  return Transform(sx,   0.0F, 0.0F,
+                   0.0F, sy,   0.0F,
+                   0.0F, 0.0F, 1.0F);
   // clang-format on
 }
 

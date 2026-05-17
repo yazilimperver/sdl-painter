@@ -13,7 +13,7 @@ class Pen {
   /// @brief Renk ve kalınlıkla kalem oluştur.
   /// @param color Çizgi rengi.
   /// @param width Çizgi kalınlığı (piksel, >= 0.0).
-  explicit Pen(const Color& color, float width = 1.0f)
+  explicit Pen(const Color& color, float width = 1.0F)
       : mColor(color), mWidth(width) {}
 
   /// @brief Çizgi rengini döndür.
@@ -30,7 +30,7 @@ class Pen {
 
   /// @brief Kalem görünür mü? (alpha > 0 ve width > 0)
   [[nodiscard]] bool IsVisible() const noexcept {
-    return mColor.a > 0 && mWidth > 0.0f;
+    return mColor.a > 0 && mWidth > 0.0F;
   }
 
   [[nodiscard]] bool operator==(const Pen& other) const noexcept {
@@ -42,12 +42,12 @@ class Pen {
 
   /// @brief Şeffaf (çizim yapmayan) kalem.
   [[nodiscard]] static Pen NoPen() noexcept {
-    return Pen(Color::Transparent(), 0.0f);
+    return Pen(Color::Transparent(), 0.0F);
   }
 
  private:
   Color mColor{Color::Black()};
-  float mWidth{1.0f};
+  float mWidth{1.0F};
 };
 
 }  // namespace sdl_painter

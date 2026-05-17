@@ -21,6 +21,9 @@ flowchart LR
     Backend(["⚙️ Backend implementasyonu"]) --> BImpl["backend-ic-yapisi.md"]
     BImpl --> ADR["../adr/"]
 
+    Docker(["🐳 Docker / CI imajları"]) --> Doc["docker.md"]
+    Doc --> Dep["docker-hub-deployment.md"]
+
     Contrib(["🛠️ Katkı yapmak istiyorum"]) --> Class
     Contrib --> Flow
     Contrib --> SE
@@ -29,6 +32,7 @@ flowchart LR
     style Start fill:#1f6feb,color:#fff
     style Arch fill:#2da44e,color:#fff
     style Backend fill:#cf222e,color:#fff
+    style Docker fill:#0db7ed,color:#fff
     style Contrib fill:#bf8700,color:#fff
 ```
 
@@ -58,6 +62,13 @@ flowchart LR
 | Doküman | İçerik |
 |---------|--------|
 | ⚙️ [Backend İç Yapısı](backend-ic-yapisi.md) | OpenGL 3.3 ve Vulkan 1.1 implementasyonu, karşılaştırma, yeni backend ekleme |
+
+### Docker ve Dağıtım
+
+| Doküman | İçerik |
+|---------|--------|
+| 🐳 [Docker Kullanım Kılavuzu](docker.md) | İmaj hiyerarşisi, builder/ci/windows-cross aşamaları, GitLab CI entegrasyonu, Dockerfile.windows |
+| 📦 [Docker Hub'a Dağıtım](docker-hub-deployment.md) | İmaj build, etiketleme, Hub/GitLab Registry'ye push, otomatik CI/CD akışı |
 
 ### Katkı ve Dokümantasyon
 

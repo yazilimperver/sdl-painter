@@ -302,7 +302,7 @@ void Painter::DrawPolyline(const std::vector<Point>& points) {
 
 void Painter::DrawImage(const Image& image, float x, float y) {
   DrawImage(image,
-            Rect{0.0f, 0.0f, static_cast<float>(image.Width()),
+            Rect{0.0F, 0.0F, static_cast<float>(image.Width()),
                  static_cast<float>(image.Height())},
             Rect{x, y, static_cast<float>(image.Width()),
                  static_cast<float>(image.Height())});
@@ -310,7 +310,7 @@ void Painter::DrawImage(const Image& image, float x, float y) {
 
 void Painter::DrawImage(const Image& image, const Rect& dest_rect) {
   DrawImage(image,
-            Rect{0.0f, 0.0f, static_cast<float>(image.Width()),
+            Rect{0.0F, 0.0F, static_cast<float>(image.Width()),
                  static_cast<float>(image.Height())},
             dest_rect);
 }
@@ -384,8 +384,8 @@ void Painter::DrawText(float x, float y, const std::string& text) {
     const float gy1 = gy0 + static_cast<float>(glyph->height);
 
     const std::vector<TexturedVertex> verts = {
-        {gx0, gy0, 0.0f, 0.0f}, {gx1, gy0, 1.0f, 0.0f}, {gx1, gy1, 1.0f, 1.0f},
-        {gx0, gy0, 0.0f, 0.0f}, {gx1, gy1, 1.0f, 1.0f}, {gx0, gy1, 0.0f, 1.0f},
+        {gx0, gy0, 0.0F, 0.0F}, {gx1, gy0, 1.0F, 0.0F}, {gx1, gy1, 1.0F, 1.0F},
+        {gx0, gy0, 0.0F, 0.0F}, {gx1, gy1, 1.0F, 1.0F}, {gx0, gy1, 0.0F, 1.0F},
     };
 
     mBatcher->PushTexturedTriangles(verts, glyph->texture.Handle(), tint,
@@ -412,7 +412,7 @@ void Painter::DrawText(const Rect& rect, const std::string& text,
       x = rect.x;
       break;
     case Alignment::kCenter:
-      x = rect.x + (rect.w - static_cast<float>(text_w)) * 0.5f;
+      x = rect.x + (rect.w - static_cast<float>(text_w)) * 0.5F;
       break;
     case Alignment::kRight:
       x = rect.x + rect.w - static_cast<float>(text_w);
@@ -421,7 +421,7 @@ void Painter::DrawText(const Rect& rect, const std::string& text,
   // Dikdörtgen içinde dikey ortala. text_h = font->height + max_ascent
   // bilesenlerini icerdiginden, yazi kutusunun ust kenari top_y olur ve
   // baseline top_y + font_ascent konumundadir.
-  const float top_y = rect.y + (rect.h - static_cast<float>(text_h)) * 0.5f;
+  const float top_y = rect.y + (rect.h - static_cast<float>(text_h)) * 0.5F;
   const float baseline_y = top_y + static_cast<float>(mCurrentFont->Ascent());
 
   DrawText(x, baseline_y, text);
@@ -515,16 +515,16 @@ void Painter::UpdateProjection() {
   float h = static_cast<float>(mViewportHeight);
 
   const bool is_vulkan = (mRenderer->GetBackend() == RendererBackend::kVulkan);
-  const float sy = is_vulkan ? (2.0f / h) : (-2.0f / h);
-  const float ty = is_vulkan ? -1.0f : 1.0f;
+  const float sy = is_vulkan ? (2.0F / h) : (-2.0F / h);
+  const float ty = is_vulkan ? -1.0F : 1.0F;
 
   // 4x4 sütun-major ortografik matris
   // clang-format off
   float mat[16] = {
-      2.0f / w,  0.0f,  0.0f, 0.0f,
-      0.0f,      sy,    0.0f, 0.0f,
-      0.0f,      0.0f, -1.0f, 0.0f,
-     -1.0f,      ty,    0.0f, 1.0f,
+      2.0F / w,  0.0F,  0.0F, 0.0F,
+      0.0F,      sy,    0.0F, 0.0F,
+      0.0F,      0.0F, -1.0F, 0.0F,
+     -1.0F,      ty,    0.0F, 1.0F,
   };
   // clang-format on
   mRenderer->SetProjectionMatrix(mat);

@@ -32,7 +32,7 @@ struct RenderState {
   Transform transform;
   Pen pen;
   Brush brush;
-  float opacity{1.0f};
+  float opacity{1.0F};
   Rect clip_rect;
   bool has_clip{false};
 };

@@ -25,7 +25,7 @@ Bu belge `IRenderer` arayüzünün arkasındaki **iki somut implementasyonu**
 **Özet:** OpenGL backend basit ve hızlı bir başlangıç sağlar. Vulkan
 backend modern GPU mimarileriyle daha verimli çalışır ve daha fazla
 kontrol verir; karşılığında çok daha fazla kod ve dikkat gerektirir.
-İkisi de aynı `IRenderer` sözleşmesini sağladığı için Painter ikisi
+İkisi de aynı `IRenderer` arayüzünü kullandığı için Painter ikisi
 arasında fark görmez.
 
 ---

@@ -10,7 +10,7 @@ uint32_t FindMemoryType(VkPhysicalDevice phys_device, uint32_t type_filter,
   vkGetPhysicalDeviceMemoryProperties(phys_device, &mem_props);
 
   for (uint32_t i = 0; i < mem_props.memoryTypeCount; ++i) {
-    if ((type_filter & (1u << i)) &&
+    if ((type_filter & (1U << i)) &&
         (mem_props.memoryTypes[i].propertyFlags & props) == props) {
       return i;
     }

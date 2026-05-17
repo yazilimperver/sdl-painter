@@ -6,8 +6,8 @@ namespace sdl_painter {
 
 /// @brief Temel vertex — pozisyon + renk.
 struct Vertex {
-  float x{0.0f};
-  float y{0.0f};
+  float x{0.0F};
+  float y{0.0F};
   uint8_t r{255}, g{255}, b{255}, a{255};
 
   constexpr Vertex() = default;
@@ -19,10 +19,10 @@ struct Vertex {
 
 /// @brief Doku koordinatlı vertex — pozisyon + UV + renk (tint).
 struct TexturedVertex {
-  float x{0.0f};
-  float y{0.0f};
-  float u{0.0f};
-  float v{0.0f};
+  float x{0.0F};
+  float y{0.0F};
+  float u{0.0F};
+  float v{0.0F};
   uint8_t r{255}, g{255}, b{255}, a{255};
 
   constexpr TexturedVertex() = default;

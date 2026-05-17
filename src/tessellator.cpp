@@ -7,7 +7,7 @@
 namespace sdl_painter {
 
 namespace {
-constexpr float kTwoPi = 2.0f * 3.14159265358979323846f;
+constexpr float kTwoPi = 2.0F * 3.14159265358979323846F;
 }  // namespace
 
 // --- Dolu şekiller ---
@@ -111,13 +111,13 @@ std::vector<Vertex> Tessellator::TessellateThickLine(float x1, float y1,
   float dx = x2 - x1;
   float dy = y2 - y1;
   float len = std::sqrt(dx * dx + dy * dy);
-  if (len < 1e-6f)
+  if (len < 1e-6F)
     return {};
 
   // Dike normal vektör (normalize edilmiş)
   float nx = -dy / len;
   float ny = dx / len;
-  float hw = line_width * 0.5f;
+  float hw = line_width * 0.5F;
 
   // Quad'ın 4 köşesi
   // clang-format off
@@ -177,7 +177,7 @@ std::vector<TexturedVertex> Tessellator::TessellateTexturedRect(
 
 bool Tessellator::IsClockwise(const Point& a, const Point& b, const Point& c) {
   float cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-  return cross < 0.0f;
+  return cross < 0.0F;
 }
 
 bool Tessellator::PointInTriangle(const Point& p, const Point& a,
@@ -203,7 +203,7 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& pts) {
   }
 
   // İmzalı alan ile sarma yönünü belirle (shoelace formülü)
-  float area = 0.0f;
+  float area = 0.0F;
   for (std::size_t i = 0; i < pts.size(); ++i) {
     std::size_t j = (i + 1) % pts.size();
     area += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
@@ -213,7 +213,7 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& pts) {
   // CW ise indeks sırasını ters çevir → her zaman CCW olarak işle
   std::vector<int32_t> indices(pts.size());
   std::iota(indices.begin(), indices.end(), 0);
-  if (area < 0.0f) {
+  if (area < 0.0F) {
     std::reverse(indices.begin(), indices.end());
   }
 
@@ -235,7 +235,7 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& pts) {
 
       // CCW poligonda dışbükey köşe: cross(a→b, b→c) > 0
       float cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-      if (cross <= 0.0f)
+      if (cross <= 0.0F)
         continue;  // içbükey (reflex) köşe, kulak değil
 
       // Diğer hiçbir nokta bu üçgenin içinde olmamalı

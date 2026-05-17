@@ -19,10 +19,10 @@ struct Color {
       : r(r_), g(g_), b(b_), a(a_) {}
 
   /// @brief Rengi [0.0, 1.0] aralığında normalize edilmiş float olarak döndür.
-  [[nodiscard]] float RedF() const noexcept { return r / 255.0f; }
-  [[nodiscard]] float GreenF() const noexcept { return g / 255.0f; }
-  [[nodiscard]] float BlueF() const noexcept { return b / 255.0f; }
-  [[nodiscard]] float AlphaF() const noexcept { return a / 255.0f; }
+  [[nodiscard]] float RedF() const noexcept { return r / 255.0F; }
+  [[nodiscard]] float GreenF() const noexcept { return g / 255.0F; }
+  [[nodiscard]] float BlueF() const noexcept { return b / 255.0F; }
+  [[nodiscard]] float AlphaF() const noexcept { return a / 255.0F; }
 
   [[nodiscard]] bool operator==(const Color& other) const noexcept {
     return r == other.r && g == other.g && b == other.b && a == other.a;

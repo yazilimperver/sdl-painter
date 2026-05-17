@@ -1,0 +1,190 @@
+# escape=`
+# ──────────────────────────────────────────────────────────────────────────────
+# SDLPainter — Native Windows (MSVC) CI imajı  (self-contained)
+#
+# Linux `Dockerfile`'ının Windows muadili. `Dockerfile-Example` (VS Build Tools
+# + LLVM base imajı) içeriği BU dosyaya birleştirildi — ayrı bir GitLab base
+# imajına gerek yok. Tek Docker imajı tek-OS olur: Linux conan adımları bu
+# imajda çalışamaz (onlar Linux `Dockerfile`'da kalır); burada Linux'taki
+# "conanfile.py kopyala + conan install ile cache ön-ısıt" akışının birebir
+# Windows/MSVC karşılığı kurulur.
+#
+# Dockerfile-Example'dan SAPMALAR:
+#  • VS Installer (vswhere.exe) SİLİNMİYOR — Conan'ın VS tespiti için gerekli.
+#  • compiler.version elle yazılmıyor — `conan profile detect` otomatik bulur
+#    (aka.ms/vs/17 her zaman güncel 17.x çeker; 193/194 sabiti kırılgan olurdu).
+# ──────────────────────────────────────────────────────────────────────────────
+FROM mcr.microsoft.com/windows/servercore:ltsc2019 AS windows-msvc
+
+SHELL ["cmd", "/S", "/C"]
+
+# ─── 1. VS Build Tools 17 (VS 2022) ──────────────────────────────────────────
+ADD https://aka.ms/vs/17/release/vs_buildtools.exe C:\TEMP\vs_buildtools.exe
+RUN C:\TEMP\vs_buildtools.exe --quiet --wait --norestart --nocache `
+    --installPath C:\BuildTools `
+    --add Microsoft.VisualStudio.Workload.VCTools `
+    --add Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+    --add Microsoft.VisualStudio.Component.Windows10SDK.19041 `
+    --add Microsoft.VisualStudio.Component.VC.ATLMFC `
+    --add Microsoft.VisualStudio.Component.VC.ASan `
+    || IF "%ERRORLEVEL%"=="3010" EXIT 0
+
+# Kurulum doğrulaması: VS Build Tools installer 3010 dışı bir hata kodu
+# döndürdüğünde yukarıdaki `|| IF ... EXIT 0` kalıbı RUN'ı sessizce başarılı
+# gösterir. vcvarsall/vcvars64 yalnız VC.Tools.x86.x64 ile gelir; eksikse
+# burada erken patla (yoksa hata sonraki `call "%VCVARS%"` adımına kayar).
+RUN if not exist "C:\BuildTools\VC\Auxiliary\Build\vcvars64.bat" ( `
+    echo HATA: VC Build Tools kurulamadi - vcvars64.bat yok & exit 1 )
+
+# ─── 2. CMake (standalone — VS bundle yerine, sabit sürüm) ───────────────────
+# VS'in içindeki CMake bileşenine (VC.CMake.Project) bağlı kalmıyoruz: sürümü
+# biz sabitliyoruz, Kitware resmi dağıtımını kuruyoruz. Native windows-* ve
+# Conan bağımlılık build'leri "Visual Studio 17 2022" generator'ı kullandığı
+# için Ninja gerekmiyor. CMAKE_VERSION ARG'ı ile sürüm yükseltilebilir.
+#
+# .zip + `tar` KULLANMIYORUZ: Server 2019'daki bsdtar, CMake zip'inin derin
+# doc/_sources ağacını güvenilir oluşturamıyor ("No such file or directory").
+# Resmi MSI installer dizin ağacını sorunsuz kurar; ADD_CMAKE_TO_PATH=System
+# ile CMake'i sistem PATH'ine kendisi ekler (default konum: C:\Program Files\CMake).
+ARG CMAKE_VERSION=3.30.5
+ADD https://github.com/Kitware/CMake/releases/download/v${CMAKE_VERSION}/cmake-${CMAKE_VERSION}-windows-x86_64.msi C:\TEMP\cmake.msi
+RUN msiexec /i C:\TEMP\cmake.msi /qn /norestart ADD_CMAKE_TO_PATH=System && `
+    del C:\TEMP\cmake.msi
+
+# Standalone CMake doğrulaması (MSI sessizce başarısız olabilir).
+RUN if not exist "C:\Program Files\CMake\bin\cmake.exe" ( `
+    echo HATA: standalone CMake kurulamadi - cmake.exe yok & exit 1 )
+
+# ─── 3. Python (Conan için — servercore'da yok) ──────────────────────────────
+ARG PYTHON_VERSION=3.12.7
+ADD https://www.python.org/ftp/python/${PYTHON_VERSION}/python-${PYTHON_VERSION}-amd64.exe C:\TEMP\python.exe
+RUN C:\TEMP\python.exe /quiet InstallAllUsers=1 PrependPath=1 Include_test=0 Include_doc=0 Include_tcltk=0 && `
+    del C:\TEMP\python.exe
+
+# ─── 4. PATH ─────────────────────────────────────────────────────────────────
+# CMake'i CMake MSI'ı (ADD_CMAKE_TO_PATH=System) zaten sistem PATH'ine ekledi;
+# Python'u kendi installer'ı (PrependPath=1) ekledi. Ek setx gerekmiyor.
+# vcvars64.bat'ı %VCVARS% / ENTRYPOINT zaten her oturumda çağırıyor.
+
+# ─── 5. Conan 2 ──────────────────────────────────────────────────────────────
+ARG CONAN_VERSION=>=2.0,<3.0
+RUN python -m pip install --no-cache-dir --upgrade pip && `
+    python -m pip install --no-cache-dir conan certifi
+
+# servercore'un root CA store'u boş ve container'da otomatik root güncelleme
+# çalışmaz; glad build'i gl.xml'i Python/urllib ile HTTPS'ten indirirken
+# "CERTIFICATE_VERIFY_FAILED" alır. Conan ile gelen certifi CA bundle'ını
+# sabit yola koyup SSL_CERT_FILE ile tanıt — Python ssl.load_default_certs()
+# Windows'ta sonda set_default_verify_paths() çağırır ve bu env var'ı
+# onurlandırır, böylece urllib doğrulaması bu bundle'a güvenir.
+RUN python -c "import certifi,shutil,os;os.makedirs(r'C:\certs',exist_ok=True);shutil.copy(certifi.where(),r'C:\certs\cacert.pem')"
+ENV SSL_CERT_FILE=C:\certs\cacert.pem
+
+# Conan cache'i imaj içinde sabit, Windows-geçerli mutlak yolda tut.
+# DİKKAT: .gitlab-ci.yml top-level `variables: CONAN_HOME: "/root/.conan2"`
+# Windows job'ta bunu EZER ve ön-ısıtılan cache kullanılmaz. Windows
+# job'larında CONAN_HOME'u override edin (dosya sonundaki nota bakın).
+ENV CONAN_HOME=C:\conan2
+ARG VCVARS=C:\BuildTools\VC\Auxiliary\Build\vcvars64.bat
+
+# MSVC profilini otomatik tespit et (vcvars64.bat altında cl.exe görünür olmalı).
+# `conan install .` profil bayrağı olmadan bu `default` profili kullanır —
+RUN call "%VCVARS%" && conan profile detect --force
+
+WORKDIR C:\workspace
+
+# ─── 6. Conan Cache Ön-Isıtma ────────────────────────────────────────────────
+# Linux Dockerfile'daki gibi: yalnız conanfile.py kopyalanır, bağımlılıklar
+# Conan cache'ine (C:\conan2) indirilip MSVC ile derlenir. output-folder geçici;
+# sonda silinir — imaj şişmez. cppstd=17 install satırında verilir (proje C++17).
+# conanfile.py configure(): Vulkan'ı yalnız compiler==gcc iken kapatır; MSVC'de
+# Vulkan SORUNSUZ desteklenir.
+COPY conanfile.py C:\workspace\
+
+RUN call "%VCVARS%" && `
+    conan install . --output-folder=C:\precache --build=missing -s build_type=Debug   -s compiler.cppstd=17 && `
+    conan install . --output-folder=C:\precache --build=missing -s build_type=Release -s compiler.cppstd=17 && `
+    rmdir /S /Q C:\precache
+
+# Vulkan'lı varyant için cache ön-ısıtma (with_vulkan=True): vulkan-loader/
+# headers + shaderc MSVC ile derlenir. Build süresini ciddi uzatır — lokal ilk
+# doğrulamada kapatmak için: --build-arg WITH_VULKAN_PRECACHE=false
+ARG WITH_VULKAN_PRECACHE=true
+RUN if "%WITH_VULKAN_PRECACHE%"=="true" ( `
+    call "%VCVARS%" && `
+    conan install . --output-folder=C:\precache --build=missing -s build_type=Debug   -s compiler.cppstd=17 -o "&:with_vulkan=True" && `
+    conan install . --output-folder=C:\precache --build=missing -s build_type=Release -s compiler.cppstd=17 -o "&:with_vulkan=True" && `
+    rmdir /S /Q C:\precache `
+    ) else ( `
+    echo Vulkan pre-cache atlandi ^(WITH_VULKAN_PRECACHE=false^) `
+    )
+
+# Headless test ortamı (Linux `ci` aşamasındaki SDL_VIDEODRIVER=offscreen ile
+# paralel; Windows'ta yazılım Vulkan ICD'si yoktur — Vulkan testleri uygun
+# runner gerektirir, OpenGL/offscreen yolları çalışır).
+ENV SDL_VIDEODRIVER=offscreen `
+    SDL_AUDIODRIVER=dummy
+
+# vcvars64.bat'ı çalıştırıp komut satırını açık bırakır (Dockerfile-Example ile
+# aynı): docker run ... ile interaktif/CI kullanımında MSVC ortamı hazır gelir.
+ENTRYPOINT ["C:\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat", "&&", "cmd.exe"]
+
+# ─── Kullanım ─────────────────────────────────────────────────────────────────
+# Build (lokal — Docker Windows containers modunda olmalı; `--network nat`
+# ZORUNLU: aksi halde conan adımları DNS çözemez → "getaddrinfo failed"):
+#   docker build --network nat -f Dockerfile.windows -t sdl-painter-windows:latest .
+#
+# İlk doğrulama için Vulkan ön-cache'siz (çok daha hızlı):
+#   docker build --network nat -f Dockerfile.windows --build-arg WITH_VULKAN_PRECACHE=false -t sdl-painter-windows:latest .
+#
+# ─── Deneme / Doğrulama (imaj içinde uçtan uca proje build + test) ────────────
+# DİKKAT: `docker run`/`docker build` adımlarında MUTLAKA `--network nat` verin.
+# Windows'ta build/run ara container'ları varsayılan ağda DNS çözemez
+# (`conan install` → "getaddrinfo failed"); `nat` ağı çalışan tek yoldur.
+#
+# Native MSVC + Vulkan, derleme + 134 testin tamamı (DOĞRULANMIŞ — 134/134 PASS):
+# docker run --rm --network nat --dns 8.8.8.8 --dns 1.1.1.1 -v ${PWD}:C:\workspace --entrypoint cmd
+#   sdl-painter-windows:latest /S /C 'call C:\BuildTools\VC\Auxiliary\Build\vcvars64.bat && cd /d
+#   C:\workspace && conan install . --output-folder=build/windows-release/generators --build=missing -s
+#   build_type=Release -s compiler.cppstd=17 -o ^&:with_vulkan=True && cmake --preset windows-release &&
+#   cmake --build --preset windows-release && ctest --preset windows-release --output-on-failure'
+# Vulkan'sız varyant: `-o "&:with_vulkan=True"` bayrağını çıkarın.
+# docker run --rm --network nat --dns 8.8.8.8 --dns 1.1.1.1 -v ${PWD}:C:\workspace --entrypoint cmd
+#   sdl-painter-windows:latest /S /C 'call C:\BuildTools\VC\Auxiliary\Build\vcvars64.bat && cd /d
+#   C:\workspace && conan install . --output-folder=build/windows-release/generators --build=missing -s
+#   build_type=Release -s compiler.cppstd=17 && cmake --preset windows-release && cmake --build --preset
+#   windows-release && ctest --preset windows-release --output-on-failure'
+# Host shell tırnak/&-kaçışını bozuyorsa (PowerShell 5.1 vb.), komutları tek bir
+# .cmd betiğine yazıp workspace'e mount edin, container'da onu çağırın:
+#   docker run --rm --network nat -v ${PWD}:C:\workspace --entrypoint cmd `
+#     sdl-painter-windows:latest /S /C "C:\workspace\build.cmd"
+# (build.cmd: `call "...\vcvars64.bat"` + `cd /d C:\workspace` + conan/cmake/ctest
+#  satırları, her satır `|| exit /b 1` ile.)
+#
+# NOT (multi-config): `windows-debug/windows-release` "Visual Studio 17 2022"
+# generator'ı multi-config'tir; `ctest --preset` config gerektirir. CMakePresets.json
+# test preset'lerine `"configuration": "Debug|Release"` eklenmiştir — aksi halde
+# tüm testler "Not Run (Missing -C)" olur.
+#
+# ENTRYPOINT formu (vcvars'ı otomatik kurar; basit komutlar için):
+#   docker run --rm --network nat -v ${PWD}:C:\workspace sdl-painter-windows:latest "conan install . --output-folder=build/windows-release/generators --build=missing -s build_type=Release -s compiler.cppstd=17 && cmake --preset windows-release && cmake --build --preset windows-release"
+#
+# ─── CI durumu (ÖNEMLİ — önce oku) ───────────────────────────────────────────
+# Bu NATIVE MSVC imajı GitLab.com SaaS'ta CI image'ı OLARAK KULLANILAMAZ:
+# SaaS Windows runner'ları `shell` executor'dur, özel container image kabul
+# etmez. Windows container'lı job ancak SELF-HOSTED (Docker, Windows-containers
+# modu) bir GitLab Runner'da çalışır.
+#
+# DİKKAT — isim çakışması: CI'daki build:windows:* job'ları
+# `$CI_REGISTRY_IMAGE/sdl-painter-win` imajını kullanır; bu, ana `Dockerfile`
+# `windows-cross` hedefinden üretilen LINUX + MinGW imajıdır (GitLab.com SaaS
+# Linux runner'da cross-compile). Bu MSVC imajını O ETİKETE PUSH'LAMAYIN —
+# MinGW CI'yı bozar (Linux runner Windows container çalıştıramaz).
+#
+# Bu imajın yeri:
+#  • Lokal native MSVC build + test (yukarıdaki Deneme/Doğrulama komutları;
+#    134/134 test ile doğrulandı).
+#  • İsteğe bağlı self-hosted Windows Docker runner: AYRI bir etiketle
+#    push'layın (örn. `$CI_REGISTRY_IMAGE/sdl-painter-win-msvc`), o job'a
+#    `variables: { CONAN_HOME: "C:\\conan2" }` ekleyin ve build/run'da
+#    `--network nat` verin. Mevcut MinGW build:windows:* job'larına DOKUNMAYIN.

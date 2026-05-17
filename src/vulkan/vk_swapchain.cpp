@@ -102,12 +102,12 @@ bool VkSwapchain::Recreate(uint32_t width, uint32_t height) {
   mSwapchain = VK_NULL_HANDLE;
 
   // Framebuffer + image view'ları yok et (swapchain henüz canlı).
-  for (auto fb : mFramebuffers) {
+  for (auto *fb : mFramebuffers) {
     if (fb != VK_NULL_HANDLE)
       vkDestroyFramebuffer(device, fb, nullptr);
   }
   mFramebuffers.clear();
-  for (auto view : mImageViews) {
+  for (auto *view : mImageViews) {
     if (view != VK_NULL_HANDLE)
       vkDestroyImageView(device, view, nullptr);
   }
@@ -135,12 +135,12 @@ bool VkSwapchain::Recreate(uint32_t width, uint32_t height) {
 
 void VkSwapchain::DestroySwapchainResources() {
   VkDevice device = mContext->GetDevice();
-  for (auto fb : mFramebuffers) {
+  for (auto *fb : mFramebuffers) {
     if (fb != VK_NULL_HANDLE)
       vkDestroyFramebuffer(device, fb, nullptr);
   }
   mFramebuffers.clear();
-  for (auto view : mImageViews) {
+  for (auto *view : mImageViews) {
     if (view != VK_NULL_HANDLE)
       vkDestroyImageView(device, view, nullptr);
   }

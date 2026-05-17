@@ -6,8 +6,8 @@ namespace sdl_painter {
 
 /// @brief 2D nokta — float koordinatlar.
 struct Point {
-  float x{0.0f};
-  float y{0.0f};
+  float x{0.0F};
+  float y{0.0F};
 
   constexpr Point() = default;
   constexpr Point(float x_, float y_) : x(x_), y(y_) {}
@@ -32,10 +32,10 @@ struct Point {
 
 /// @brief 2D dikdörtgen — sol üst köşe + genişlik/yükseklik.
 struct Rect {
-  float x{0.0f};
-  float y{0.0f};
-  float w{0.0f};
-  float h{0.0f};
+  float x{0.0F};
+  float y{0.0F};
+  float w{0.0F};
+  float h{0.0F};
 
   constexpr Rect() = default;
   constexpr Rect(float x_, float y_, float w_, float h_)
@@ -49,7 +49,7 @@ struct Rect {
 
   /// @brief Merkez noktası.
   [[nodiscard]] Point Center() const noexcept {
-    return {x + w * 0.5f, y + h * 0.5f};
+    return {x + w * 0.5F, y + h * 0.5F};
   }
 
   /// @brief Verilen nokta dikdörtgen içinde mi?
@@ -67,8 +67,8 @@ struct Rect {
 
 /// @brief 2D boyut — genişlik ve yükseklik.
 struct Size {
-  float w{0.0f};
-  float h{0.0f};
+  float w{0.0F};
+  float h{0.0F};
 
   constexpr Size() = default;
   constexpr Size(float w_, float h_) : w(w_), h(h_) {}

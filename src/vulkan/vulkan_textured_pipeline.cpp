@@ -175,7 +175,7 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
   rasterization.cullMode = VK_CULL_MODE_NONE;
   rasterization.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
   rasterization.depthBiasEnable = VK_FALSE;
-  rasterization.lineWidth = 1.0f;
+  rasterization.lineWidth = 1.0F;
 
   // --- Multisampling ---
   VkPipelineMultisampleStateCreateInfo multisampling{};

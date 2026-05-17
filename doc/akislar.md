@@ -3,7 +3,7 @@
 Bu belge SDLPainter'ın **çalışma zamanı davranışını** sequence ve flow
 diyagramlarıyla anlatır. Statik yapı için
 [Sınıf Diyagramı](sinif-diyagrami.md), katman bağlamı için
-[Mimari Genel Bakış](mimari-genel-bakis.md).
+[Mimari Genel Bakış](mimari-genel-bakis.md) a başvurabilirsiniz.
 
 ---
 

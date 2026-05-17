@@ -275,7 +275,7 @@ bool VkContext::PickPhysicalDevice() {
 
   int best_score = -1;
   VkPhysicalDevice best = VK_NULL_HANDLE;
-  for (auto d : devices) {
+  for (auto *d : devices) {
     int score = ScoreDevice(d, mSurface);
     if (score > best_score) {
       best_score = score;
@@ -304,7 +304,7 @@ bool VkContext::PickPhysicalDevice() {
 bool VkContext::CreateLogicalDevice() {
   std::set<uint32_t> unique_families{mGraphicsQueueFamily, mPresentQueueFamily};
   std::vector<VkDeviceQueueCreateInfo> queue_cis;
-  float priority = 1.0f;
+  float priority = 1.0F;
   for (uint32_t family : unique_families) {
     VkDeviceQueueCreateInfo qci{};
     qci.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;

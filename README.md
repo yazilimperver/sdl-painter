@@ -328,6 +328,9 @@ docker run --rm -v $(pwd):/workspace sdl-painter:windows-cross bash -c \
    cmake --build --preset linux-debug"
 ```
 
+Ayrıntılı kullanım akışları ve dağıtım adımları için:
+[Docker Kullanım Kılavuzu](doc/docker.md) · [Docker Hub'a Dağıtım](doc/docker-hub-deployment.md)
+
 ## Dokümantasyon
 
 ### Tasarım Dokümanları
@@ -343,6 +346,8 @@ docker run --rm -v $(pwd):/workspace sdl-painter:windows-cross bash -c \
 | [Backend İç Yapısı](doc/backend-ic-yapisi.md) | OpenGL / Vulkan implementasyon detayları |
 | [Yazılım Mühendisliği](doc/sdl-painter-yazilim-muhendisligi.md) | Tasarım kararları ve teknik gerekçeler |
 | [Dokümantasyon Rehberi](doc/dokumantasyon-rehberi.md) | Doxygen kurulum ve kullanımı |
+| [Docker Kullanım Kılavuzu](doc/docker.md) | İmaj hiyerarşisi, aşama açıklamaları, CI entegrasyonu, Dockerfile.windows |
+| [Docker Hub'a Dağıtım](doc/docker-hub-deployment.md) | İmaj build/push adımları, Hub ve GitLab Registry, otomatik CI akışı |
 
 ### API Referansı (Doxygen)
 

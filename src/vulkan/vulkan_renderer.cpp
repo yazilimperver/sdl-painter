@@ -37,7 +37,7 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
     return false;
 
   // Default clear: siyah.
-  mClearValue.color = {{0.0f, 0.0f, 0.0f, 1.0f}};
+  mClearValue.color = {{0.0F, 0.0F, 0.0F, 1.0F}};
   mViewportW = static_cast<int32_t>(width);
   mViewportH = static_cast<int32_t>(height);
 
@@ -298,8 +298,8 @@ void VulkanRenderer::ApplyDynamicViewportScissor(VkCommandBuffer cmd) const {
                             : static_cast<float>(extent.width);
   vp.height = mViewportH > 0 ? static_cast<float>(mViewportH)
                              : static_cast<float>(extent.height);
-  vp.minDepth = 0.0f;
-  vp.maxDepth = 1.0f;
+  vp.minDepth = 0.0F;
+  vp.maxDepth = 1.0F;
   vkCmdSetViewport(cmd, 0, 1, &vp);
 
   VkRect2D scissor{};
@@ -383,10 +383,10 @@ void VulkanRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
     return;
 
   // Renk vertex'te taşındığı için tint her zaman 1.0.
-  mPushConstants.tint_color[0] = 1.0f;
-  mPushConstants.tint_color[1] = 1.0f;
-  mPushConstants.tint_color[2] = 1.0f;
-  mPushConstants.tint_color[3] = 1.0f;
+  mPushConstants.tint_color[0] = 1.0F;
+  mPushConstants.tint_color[1] = 1.0F;
+  mPushConstants.tint_color[2] = 1.0F;
+  mPushConstants.tint_color[3] = 1.0F;
   mPushConstants.opacity = mOpacity;
 
   VkCommandBuffer cmd = mFrameSync->GetCommandBuffer(mCurrentFrame);
@@ -465,10 +465,10 @@ void VulkanRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
 
   // Renk vertex'te taşındığı için tint her zaman 1.0.
   PushConstants pc = mPushConstants;
-  pc.tint_color[0] = 1.0f;
-  pc.tint_color[1] = 1.0f;
-  pc.tint_color[2] = 1.0f;
-  pc.tint_color[3] = 1.0f;
+  pc.tint_color[0] = 1.0F;
+  pc.tint_color[1] = 1.0F;
+  pc.tint_color[2] = 1.0F;
+  pc.tint_color[3] = 1.0F;
   pc.opacity = mOpacity;
 
   VkCommandBuffer cmd = mFrameSync->GetCommandBuffer(mCurrentFrame);
@@ -500,10 +500,10 @@ void VulkanRenderer::SetModelMatrix(const float* mat3) {
   // mat3 layout (row-major): [m00 m01 tx | m10 m11 ty | 0 0 1]
   // İndeksler:                 [0]  [1]  [2]  [3]  [4]  [5]
   float m[16] = {
-      mat3[0], mat3[3], 0.0f, 0.0f,  // column 0
-      mat3[1], mat3[4], 0.0f, 0.0f,  // column 1
-      0.0f,    0.0f,    1.0f, 0.0f,  // column 2
-      mat3[2], mat3[5], 0.0f, 1.0f,  // column 3
+      mat3[0], mat3[3], 0.0F, 0.0F,  // column 0
+      mat3[1], mat3[4], 0.0F, 0.0F,  // column 1
+      0.0F,    0.0F,    1.0F, 0.0F,  // column 2
+      mat3[2], mat3[5], 0.0F, 1.0F,  // column 3
   };
   std::memcpy(mPushConstants.model, m, 16 * sizeof(float));
 }
