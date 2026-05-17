@@ -24,7 +24,9 @@ build:linux:debug:
     - cmake --build --preset linux-debug
   artifacts:
     paths:
-      - build/linux-debug/
+      - build/linux-debug/libsdl_painter.a
+      - build/linux-debug/tests/sdl_painter_tests
+      - build/linux-debug/examples/phase*
     expire_in: 1 day
 
 build:linux:release:
@@ -41,7 +43,9 @@ build:linux:release:
     - cmake --build --preset linux-release
   artifacts:
     paths:
-      - build/linux-release/
+      - build/linux-debug/libsdl_painter.a
+      - build/linux-release/tests/sdl_painter_tests
+      - build/linux-release/examples/phase*
     expire_in: 1 day
 
 build:windows:debug:
@@ -51,10 +55,6 @@ build:windows:debug:
     - conan install . --output-folder=build/windows-mingw-debug/generators  --build=missing -s build_type=Debug --profile:build=default --profile:host=windows-mingw
     - cmake --preset windows-mingw-debug
     - cmake --build --preset windows-mingw-debug
-  artifacts:
-    paths:
-      - build/windows-mingw-debug/
-    expire_in: 1 day
 
 build:windows:release:
   stage: build
@@ -63,10 +63,6 @@ build:windows:release:
     - conan install . --output-folder=build/windows-mingw-release/generators  --build=missing -s build_type=Release --profile:build=default --profile:host=windows-mingw
     - cmake --preset windows-mingw-release
     - cmake --build --preset windows-mingw-release
-  artifacts:
-    paths:
-      - build/windows-mingw-release/
-    expire_in: 1 day
 
 # # --- Test Stage ---
 # # Linux: SDL_VIDEODRIVER=offscreen + lavapipe (mesa-vulkan-drivers) ile headless çalışır.
