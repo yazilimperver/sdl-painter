@@ -1,0 +1,325 @@
+# .gitlab-ci.yml'nin GitHub Actions muadili.
+#
+# Eşleme:
+#   GitLab stage  →  GitHub job
+#   $CI_REGISTRY_IMAGE                     → docker.io/yazilimperver/sdl-painter:ci
+#   $CI_REGISTRY_IMAGE/sdl-painter-win-cross → (kullanılmıyor) Windows artık
+#       native MSVC ile Azure-hosted windows-latest runner'da derleniyor.
+#   GitLab Pages   → GitHub Pages
+#   GitLab Release → GitHub Release
+#
+# NOT — stage sıralaması: GitLab'da test/quality job'ları build artifact'ına
+# `needs` ile bağlıydı. GitHub job'ları dosya sistemi paylaşmaz ve CMake build
+# ağacı (CMakeCache.txt mutlak yol tutar) job'lar arası taşınamaz. Bu yüzden
+# test:unit ve quality:clang-tidy job'ları — tıpkı GitLab'daki test:unit:asan
+# gibi — kendi conan+cmake build'ini yapan bağımsız (self-contained) job'lardır.
+# build:linux:* job'ları yalnızca artifact üretip yükler (GitLab paritesi).
+
+name: CI
+
+on:
+  push:
+    branches: ['**']
+    tags: ['v*.*.*']
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  # Tag (release) pipeline'ını iptal etme; branch/PR pipeline'larında iptal et.
+  cancel-in-progress: ${{ !startsWith(github.ref, 'refs/tags/') }}
+
+permissions:
+  contents: read
+
+jobs:
+  # ─── Build Stage ───────────────────────────────────────────────────────────
+  build-linux-debug:
+    name: build:linux:debug
+    runs-on: ubuntu-latest
+    container:
+      image: yazilimperver/sdl-painter:ci
+    env:
+      CONAN_HOME: /root/.conan2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: conan install (Debug)
+        run: |
+          conan install . --output-folder=build/linux-debug/generators --build=missing \
+            -s build_type=Debug \
+            -o "&:with_vulkan=True" \
+            -c tools.system.package_manager:mode=install \
+            -c tools.system.package_manager:sudo=False
+      - name: cmake configure & build
+        run: |
+          cmake --preset linux-debug
+          cmake --build --preset linux-debug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-debug
+          path: |
+            build/linux-debug/libsdl_painter.a
+            build/linux-debug/tests/sdl_painter_tests
+            build/linux-debug/examples/phase*
+          retention-days: 1
+          if-no-files-found: warn
+
+  build-linux-release:
+    name: build:linux:release
+    runs-on: ubuntu-latest
+    container:
+      image: yazilimperver/sdl-painter:ci
+    env:
+      CONAN_HOME: /root/.conan2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: conan install (Release)
+        run: |
+          conan install . --output-folder=build/linux-release/generators --build=missing \
+            -s build_type=Release \
+            -o "&:with_vulkan=True" \
+            -c tools.system.package_manager:mode=install \
+            -c tools.system.package_manager:sudo=False
+      - name: cmake configure & build
+        run: |
+          cmake --preset linux-release
+          cmake --build --preset linux-release
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-release
+          path: |
+            build/linux-release/libsdl_painter.a
+            build/linux-release/tests/sdl_painter_tests
+            build/linux-release/examples/phase*
+          retention-days: 1
+          if-no-files-found: warn
+
+  # Windows: GitLab'daki MinGW cross-compile yerine Azure-hosted windows-latest
+  # runner üzerinde native MSVC. CMakePresets'teki windows-debug/release
+  # (Visual Studio 17 2022) preset'leri kullanılır. MSVC'de USE_MASM sorunsuz
+  # olduğu için Vulkan etkin (-o "&:with_vulkan=True").
+  build-windows-debug:
+    name: build:windows:debug
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Conan
+        run: pip install "conan>=2.0,<3.0"
+      - name: conan profile detect
+        run: conan profile detect --force
+      - name: conan install (Debug)
+        run: conan install . --output-folder=build/windows-debug/generators --build=missing -s build_type=Debug -o "&:with_vulkan=True"
+      - name: cmake configure & build
+        run: |
+          cmake --preset windows-debug
+          cmake --build --preset windows-debug
+
+  build-windows-release:
+    name: build:windows:release
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install Conan
+        run: pip install "conan>=2.0,<3.0"
+      - name: conan profile detect
+        run: conan profile detect --force
+      - name: conan install (Release)
+        run: conan install . --output-folder=build/windows-release/generators --build=missing -s build_type=Release -o "&:with_vulkan=True"
+      - name: cmake configure & build
+        run: |
+          cmake --preset windows-release
+          cmake --build --preset windows-release
+
+  # ─── Test Stage ────────────────────────────────────────────────────────────
+  # Linux: SDL_VIDEODRIVER=offscreen + lavapipe (mesa-vulkan-drivers) ile
+  # headless çalışır. Ortam değişkenleri ci imajında zaten ENV olarak set;
+  # GitLab paritesi için job seviyesinde de açıkça veriliyor.
+  test-unit:
+    name: test:unit
+    runs-on: ubuntu-latest
+    container:
+      image: yazilimperver/sdl-painter:ci
+    env:
+      CONAN_HOME: /root/.conan2
+      SDL_VIDEODRIVER: offscreen
+      VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: conan install (Debug)
+        run: |
+          conan install . --output-folder=build/linux-debug/generators --build=missing \
+            -s build_type=Debug \
+            -o "&:with_vulkan=True" \
+            -c tools.system.package_manager:mode=install \
+            -c tools.system.package_manager:sudo=False
+      - name: build & ctest
+        run: |
+          cmake --preset linux-debug
+          cmake --build --preset linux-debug
+          ctest --preset linux-debug --output-on-failure
+
+  test-unit-asan:
+    name: test:unit:asan
+    runs-on: ubuntu-latest
+    container:
+      image: yazilimperver/sdl-painter:ci
+    env:
+      CONAN_HOME: /root/.conan2
+      SDL_VIDEODRIVER: offscreen
+      VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: conan install (Debug, ASan)
+        run: |
+          conan install . --output-folder=build/linux-debug-asan/generators --build=missing \
+            -s build_type=Debug \
+            -c tools.system.package_manager:mode=install \
+            -c tools.system.package_manager:sudo=False
+      - name: build & ctest (ASan/UBSan)
+        run: |
+          cmake --preset linux-debug-asan
+          cmake --build --preset linux-debug-asan
+          ctest --preset linux-debug-asan --output-on-failure
+
+  # ─── Quality Stage ─────────────────────────────────────────────────────────
+  # clang-format-18 / clang-tidy-18 ci imajında zaten kurulu.
+  # GitLab'da her ikisi de allow_failure: true → continue-on-error.
+  quality-clang-format:
+    name: quality:clang-format
+    runs-on: ubuntu-latest
+    container:
+      image: yazilimperver/sdl-painter:ci
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: clang-format --dry-run --Werror
+        run: find include/ src/ -name '*.h' -o -name '*.cpp' | xargs clang-format-18 --dry-run --Werror
+
+  quality-clang-tidy:
+    name: quality:clang-tidy
+    runs-on: ubuntu-latest
+    container:
+      image: yazilimperver/sdl-painter:ci
+    env:
+      CONAN_HOME: /root/.conan2
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      # clang-tidy compile_commands.json'a ihtiyaç duyar; build ağacı job'lar
+      # arası taşınamadığı için burada conan+cmake build yapılır.
+      # --extra-arg=-Wno-unknown-warning-option: compile_commands.json GCC ile
+      # üretildiği için GCC-özel flag'ler içerir; clang frontend bunları tanımaz.
+      - name: conan install + build (Debug)
+        run: |
+          conan install . --output-folder=build/linux-debug/generators --build=missing \
+            -s build_type=Debug \
+            -o "&:with_vulkan=True" \
+            -c tools.system.package_manager:mode=install \
+            -c tools.system.package_manager:sudo=False
+          cmake --preset linux-debug
+          cmake --build --preset linux-debug
+      - name: clang-tidy
+        run: find src/ -name '*.cpp' | xargs clang-tidy-18 -p build/linux-debug/ --extra-arg=-Wno-unknown-warning-option
+
+  # ─── Docs Stage ────────────────────────────────────────────────────────────
+  # GitLab Pages → GitHub Pages. Yalnızca default branch (main).
+  # Conan/CMake gerektirmez — doxygen doğrudan include/ ve doc/ üzerinde çalışır.
+  pages:
+    name: pages
+    runs-on: ubuntu-latest
+    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Install doxygen
+        run: sudo apt-get update -qq && sudo apt-get install -y doxygen graphviz
+      - name: Generate docs
+        run: |
+          mkdir -p public
+          AWESOME="third_party/doxygen-awesome-css/doxygen-awesome.css"
+          [ -f "$AWESOME" ] || AWESOME=""
+          cat > _ci_doxyfile <<EOF
+          PROJECT_NAME           = "SDLPainter"
+          PROJECT_NUMBER         = "$(grep 'project(SDLPainter VERSION' CMakeLists.txt | grep -oP '\d+\.\d+\.\d+')"
+          PROJECT_BRIEF          = "QPainter benzeri SDL3 + OpenGL/Vulkan 2D çizim kütüphanesi"
+          OUTPUT_DIRECTORY       = public
+          HTML_OUTPUT            = .
+          INPUT                  = include/sdl_painter doc
+          FILE_PATTERNS          = *.h *.md
+          RECURSIVE              = YES
+          USE_MDFILE_AS_MAINPAGE = doc/README.md
+          EXCLUDE_PATTERNS       = */src/* */tests/* */examples/* */third_party/*
+          EXTRACT_ALL            = NO
+          EXTRACT_PRIVATE        = NO
+          EXTRACT_STATIC         = YES
+          HIDE_UNDOC_MEMBERS     = YES
+          HIDE_UNDOC_CLASSES     = YES
+          GENERATE_HTML          = YES
+          GENERATE_LATEX         = NO
+          HTML_EXTRA_STYLESHEET  = $AWESOME
+          HTML_COLORSTYLE        = LIGHT
+          HTML_TIMESTAMP         = NO
+          HAVE_DOT               = YES
+          DOT_IMAGE_FORMAT       = svg
+          INTERACTIVE_SVG        = YES
+          CLASS_GRAPH            = YES
+          COLLABORATION_GRAPH    = NO
+          CALL_GRAPH             = NO
+          QUIET                  = YES
+          WARNINGS               = YES
+          WARN_IF_UNDOCUMENTED   = YES
+          WARN_NO_PARAMDOC       = YES
+          OUTPUT_LANGUAGE        = Turkish
+          SEARCHENGINE           = YES
+          EOF
+          doxygen _ci_doxyfile
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - id: deployment
+        uses: actions/deploy-pages@v4
+
+  # ─── Release Stage ─────────────────────────────────────────────────────────
+  # GitLab release-cli → GitHub Release. v\d+.\d+.\d+ tag'inde tetiklenir,
+  # açıklama CHANGELOG.md.
+  release:
+    name: release:publish
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: SDLPainter ${{ github.ref_name }}
+          body_path: CHANGELOG.md

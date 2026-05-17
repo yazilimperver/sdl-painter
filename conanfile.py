@@ -2,11 +2,9 @@ from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMakeDeps, cmake_layout, CMake
 from conan.tools.files import copy
 import os
-
-
 class SDLPainterConan(ConanFile):
     name = "sdl_painter"
-    version = "0.1.0"
+    version = "1.0.0"
     settings = "os", "compiler", "build_type", "arch"
     options = {
         "with_vulkan": [True, False],
