@@ -147,12 +147,14 @@
       "name": "windows-debug",
       "displayName": "Test Windows Debug",
       "configurePreset": "windows-debug",
+      "configuration": "Debug",
       "output": { "outputOnFailure": true }
     },
     {
       "name": "windows-release",
       "displayName": "Test Windows Release",
       "configurePreset": "windows-release",
+      "configuration": "Release",
       "output": { "outputOnFailure": true }
     },
     {
@@ -171,6 +173,12 @@
       "name": "linux-debug-asan",
       "displayName": "Test Linux Debug + ASan",
       "configurePreset": "linux-debug-asan",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "windows-mingw-debug",
+      "displayName": "Test Windows MinGW Debug",
+      "configurePreset": "windows-mingw-debug",
       "output": { "outputOnFailure": true }
     }
   ]

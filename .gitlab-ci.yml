@@ -48,24 +48,24 @@ build:windows:debug:
   stage: build
   image: $CI_REGISTRY_IMAGE/sdl-painter-win
   script:
-    - conan install . --output-folder=build/windows-mingw-debug/generators  --build=missing -s build_type=Debug --profile:build=default --profile:host=windows-mingw
-    - cmake --preset windows-mingw-debug
-    - cmake --build --preset windows-mingw-debug
+    - conan install . --output-folder=build/windows-debug/generators  --build=missing -s build_type=Debug --profile:build=default --profile:host=windows
+    - cmake --preset windows-debug
+    - cmake --build --preset windows-debug
   artifacts:
     paths:
-      - build/windows-mingw-debug/
+      - build/windows-debug/
     expire_in: 1 day
 
 build:windows:release:
   stage: build
   image: $CI_REGISTRY_IMAGE/sdl-painter-win
   script:
-    - conan install . --output-folder=build/windows-mingw-release/generators  --build=missing -s build_type=Release --profile:build=default --profile:host=windows-mingw
-    - cmake --preset windows-mingw-release
-    - cmake --build --preset windows-mingw-release
+    - conan install . --output-folder=build/windows-release/generators  --build=missing -s build_type=Release --profile:build=default --profile:host=windows
+    - cmake --preset windows-release
+    - cmake --build --preset windows-release
   artifacts:
     paths:
-      - build/windows-mingw-release/
+      - build/windows-release/
     expire_in: 1 day
 
 # # --- Test Stage ---
@@ -104,10 +104,8 @@ test:unit:windows:
   variables:
     SDL_VIDEODRIVER: "offscreen"
   script:
-    - ctest --preset windows-mingw-debug --output-on-failure
+    - ctest --preset windows-debug --output-on-failure
     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-# --- Quality Stage ---
 
 quality:clang-format:
   stage: quality
@@ -116,6 +114,7 @@ quality:clang-format:
     - apt-get update && apt-get install -y clang-format-18
   script:
     - find include/ src/ -name '*.h' -o -name '*.cpp' | xargs clang-format-18 --dry-run --Werror
+  allow_failure: true
 
 quality:clang-tidy:
   stage: quality

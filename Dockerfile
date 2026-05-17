@@ -189,6 +189,7 @@ RUN conan install . \
 #
 # Debug build:
 #   docker run --rm -v "${PWD}:/workspace" sdl-painter:windows-cross bash -c "conan install . --output-folder=build/windows-mingw-debug/generators --build=missing -s build_type=Debug --profile:build=default --profile:host=windows-mingw && cmake --preset windows-mingw-debug && cmake --build --preset windows-mingw-debug"
+#   docker run --rm -v "${PWD}:/workspace" sdl-painter:windows-cross bash -c "conan install . --output-folder=build/windows-mingw-debug/generators --build=missing -s build_type=Debug --profile:build=default --profile:host=windows-mingw && cmake --preset windows-mingw-debug && cmake --build --preset windows-mingw-debug && ctest --preset windows-mingw-debug"
 #
 # Release build:
 #   docker run --rm -v "${PWD}:/workspace" sdl-painter:windows-cross bash -c "conan install . --output-folder=build/windows-mingw-release/generators --build=missing -s build_type=Release --profile:build=default --profile:host=windows-mingw && cmake --preset windows-mingw-release && cmake --build --preset windows-mingw-release"

@@ -73,8 +73,10 @@ VkContext::~VkContext() { Shutdown(); }
 bool VkContext::Initialize(SDL_Window* window) {
   mWindow = window;
   mValidationEnabled = kEnableValidationDefault && CheckValidationLayerSupport();
-  if (kEnableValidationDefault && !mValidationEnabled) {
-    spdlog::warn("Vulkan validation layers requested but not available.");
+  if constexpr (kEnableValidationDefault) {
+    if (!mValidationEnabled) {
+      spdlog::warn("Vulkan validation layers requested but not available.");
+    }
   }
 
   if (!CreateInstance()) return false;
