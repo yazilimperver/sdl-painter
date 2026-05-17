@@ -11,7 +11,7 @@ VkFrameSync::~VkFrameSync() {
   Shutdown();
 }
 
-bool VkFrameSync::Initialize(VkContext* context,
+bool VkFrameSync::Initialize(VkContext *context,
                              uint32_t swapchain_image_count) {
   mContext = context;
   mSwapchainImageCount = swapchain_image_count;

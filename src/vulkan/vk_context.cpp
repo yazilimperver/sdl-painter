@@ -275,7 +275,7 @@ bool VkContext::PickPhysicalDevice() {
 
   int best_score = -1;
   VkPhysicalDevice best = VK_NULL_HANDLE;
-  for (auto *d : devices) {
+  for (auto* d : devices) {
     int score = ScoreDevice(d, mSurface);
     if (score > best_score) {
       best_score = score;

@@ -19,7 +19,7 @@ VkSurfaceFormatKHR PickSurfaceFormat(VkPhysicalDevice device,
   std::vector<VkSurfaceFormatKHR> formats(count);
   vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &count, formats.data());
 
-  for (const auto& f : formats) {
+  for (const auto &f : formats) {
     if (f.format == VK_FORMAT_B8G8R8A8_UNORM &&
         f.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
       return f;
@@ -44,7 +44,7 @@ VkPresentModeKHR PickPresentMode(VkPhysicalDevice device,
   return VK_PRESENT_MODE_FIFO_KHR;  // her zaman desteklenir
 }
 
-VkExtent2D PickExtent(const VkSurfaceCapabilitiesKHR& caps, uint32_t width,
+VkExtent2D PickExtent(const VkSurfaceCapabilitiesKHR &caps, uint32_t width,
                       uint32_t height) {
   if (caps.currentExtent.width != UINT32_MAX)
     return caps.currentExtent;
@@ -62,7 +62,7 @@ VkSwapchain::~VkSwapchain() {
   Shutdown();
 }
 
-bool VkSwapchain::Initialize(VkContext* context, uint32_t width,
+bool VkSwapchain::Initialize(VkContext *context, uint32_t width,
                              uint32_t height) {
   mContext = context;
   if (!CreateSwapchain(width, height))
