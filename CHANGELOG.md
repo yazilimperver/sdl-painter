@@ -1,12 +1,5 @@
 # Changelog
 
-Bu projenin tüm önemli değişiklikleri bu dosyada belgelenir.
-
-Format [Keep a Changelog 1.1.0](https://keepachangelog.com/tr-TR/1.1.0/),
-sürümlendirme [Semantic Versioning 2.0.0](https://semver.org/lang/tr/) standartlarına uyar.
-
-## [Unreleased]
-
 ## [1.0.0] - 2026-05-17
 
 İlk yayın. Önceki commit'ler.
