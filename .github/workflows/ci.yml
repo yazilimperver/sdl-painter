@@ -78,37 +78,37 @@ jobs:
           retention-days: 1
           if-no-files-found: warn
 
-  # build-windows-debug:
-  #   name: build:windows:debug
-  #   runs-on: windows-latest
-  #   container:
-  #     image: yazilimperver/sdl-painter:windows-v1.0
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         submodules: recursive
-  #     - name: conan install (Debug)
-  #       run: conan install . --output-folder=build/windows-debug/generators --build=missing -s build_type=Debug -o "&:with_vulkan=True"
-  #     - name: cmake configure & build
-  #       run: |
-  #         cmake --preset windows-debug
-  #         cmake --build --preset windows-debug
+  build-windows-debug:
+    name: build:windows:debug
+    runs-on: windows-latest
+    container:
+      image: yazilimperver/sdl-painter:windows-v1.0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: conan install (Debug)
+        run: conan install . --output-folder=build/windows-debug/generators --build=missing -s build_type=Debug -o "&:with_vulkan=True"
+      - name: cmake configure & build
+        run: |
+          cmake --preset windows-debug
+          cmake --build --preset windows-debug
 
-  # build-windows-release:
-  #   name: build:windows:release
-  #   runs-on: windows-latest
-  #   container:
-  #     image: yazilimperver/sdl-painter:windows-v1.0
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #       with:
-  #         submodules: recursive
-  #     - name: conan install (Release)
-  #       run: conan install . --output-folder=build/windows-release/generators --build=missing -s build_type=Release -o "&:with_vulkan=True"
-  #     - name: cmake configure & build
-  #       run: |
-  #         cmake --preset windows-release
-  #         cmake --build --preset windows-release
+  build-windows-release:
+    name: build:windows:release
+    runs-on: windows-latest
+    container:
+      image: yazilimperver/sdl-painter:windows-v1.0
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: conan install (Release)
+        run: conan install . --output-folder=build/windows-release/generators --build=missing -s build_type=Release -o "&:with_vulkan=True"
+      - name: cmake configure & build
+        run: |
+          cmake --preset windows-release
+          cmake --build --preset windows-release
 
   test-unit:
     name: test:unit
