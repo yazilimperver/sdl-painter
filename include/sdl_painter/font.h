@@ -22,7 +22,7 @@ struct Glyph {
 };
 
 /// @brief Metin hizalama seçeneği.
-enum class Alignment {
+enum class Alignment : uint8_t {
   kLeft,
   kCenter,
   kRight,
@@ -54,8 +54,8 @@ class Font {
   // Non-copyable, movable
   Font(const Font&) = delete;
   Font& operator=(const Font&) = delete;
-  Font(Font&&) noexcept;
-  Font& operator=(Font&&) noexcept;
+  Font(Font&& other) noexcept;
+  Font& operator=(Font&& other) noexcept;
 
   /// @brief Font başarıyla yüklendi mi?
   [[nodiscard]] bool IsValid() const noexcept { return mHandle != nullptr; }

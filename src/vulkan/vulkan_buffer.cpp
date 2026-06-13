@@ -17,8 +17,9 @@ VulkanBuffer::~VulkanBuffer() {
 bool VulkanBuffer::Init(VkDevice device, VkPhysicalDevice phys_device,
                         VkDeviceSize capacity, VkBufferUsageFlags usage,
                         uint32_t frame_slot_count) {
-  if (frame_slot_count == 0)
+  if (frame_slot_count == 0) {
     frame_slot_count = 1;
+  }
   mCapacity = capacity;
   mFrameSlotCount = frame_slot_count;
   mSlotCapacity = capacity / frame_slot_count;
@@ -41,10 +42,10 @@ bool VulkanBuffer::Init(VkDevice device, VkPhysicalDevice phys_device,
   vkGetBufferMemoryRequirements(device, mBuffer, &mem_req);
 
   // Host-visible + coherent bellek seç (staging gerekmez).
-  const VkMemoryPropertyFlags mem_props = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+  const VkMemoryPropertyFlags kMemProps = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                           VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
   uint32_t mem_type =
-      vk_detail::FindMemoryType(phys_device, mem_req.memoryTypeBits, mem_props);
+      vk_detail::FindMemoryType(phys_device, mem_req.memoryTypeBits, kMemProps);
   if (mem_type == UINT32_MAX) {
     spdlog::error("VulkanBuffer: uygun bellek tipi bulunamadı.");
     vkDestroyBuffer(device, mBuffer, nullptr);
@@ -93,10 +94,11 @@ void VulkanBuffer::Destroy(VkDevice device) {
   // Idempotent — birden fazla Destroy ya da Destroy + destructor güvenli.
   // mDevice geçerliyse onu kullan; aksi halde parametre device'ı kullan.
   VkDevice d = (mDevice != VK_NULL_HANDLE) ? mDevice : device;
-  if (d == VK_NULL_HANDLE)
+  if (d == VK_NULL_HANDLE) {
     return;
+  }
 
-  if (mMapped) {
+  if (mMapped != nullptr) {
     vkUnmapMemory(d, mMemory);
     mMapped = nullptr;
   }
@@ -125,27 +127,27 @@ bool VulkanBuffer::Write(const void* data, VkDeviceSize byte_size,
   }
 
   // Slot'un mutlak başlangıç ve bitiş offset'leri.
-  const VkDeviceSize slot_start = frame_slot * mSlotCapacity;
-  const VkDeviceSize slot_end = slot_start + mSlotCapacity;
+  const VkDeviceSize kSlotStart = frame_slot * mSlotCapacity;
+  const VkDeviceSize kSlotEnd = kSlotStart + mSlotCapacity;
   // Slot içinde geçerli mutlak head.
-  const VkDeviceSize abs_head = slot_start + mHeads[frame_slot];
+  const VkDeviceSize kAbsHead = kSlotStart + mHeads[frame_slot];
   // Hizala.
-  const VkDeviceSize aligned_head =
-      (abs_head + alignment - 1) & ~(alignment - 1);
+  const VkDeviceSize kAlignedHead =
+      (kAbsHead + alignment - 1) & ~(alignment - 1);
 
-  if (aligned_head + byte_size > slot_end) {
+  if (kAlignedHead + byte_size > kSlotEnd) {
     spdlog::warn(
         "VulkanBuffer slot {} overflow: requested {} bytes, available {} "
         "bytes. "
         "Draw call skipped.",
-        frame_slot, byte_size, slot_end - aligned_head);
+        frame_slot, byte_size, kSlotEnd - kAlignedHead);
     return false;
   }
 
-  std::memcpy(static_cast<char*>(mMapped) + aligned_head, data,
+  std::memcpy(static_cast<char*>(mMapped) + kAlignedHead, data,
               static_cast<std::size_t>(byte_size));
-  out_offset_bytes = aligned_head;
-  mHeads[frame_slot] = (aligned_head + byte_size) - slot_start;
+  out_offset_bytes = kAlignedHead;
+  mHeads[frame_slot] = (kAlignedHead + byte_size) - kSlotStart;
   return true;
 }
 

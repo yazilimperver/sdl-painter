@@ -111,7 +111,7 @@ class VulkanRenderer final : public IRenderer {
   TextureHandle mNextTextureHandle{1};  // 0 = kInvalidTexture
 
   /// @brief Shader dizinini build ortamından veya executable yanından çıkarır.
-  std::string ResolveShaderDir() const;
+  static std::string ResolveShaderDir();
 
   /// @brief Ring buffer'daki mevcut frame için viewport + scissor dinamik state'ini ayarla.
   void ApplyDynamicViewportScissor(VkCommandBuffer cmd) const;

@@ -8,6 +8,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3_ttf/SDL_ttf.h>
 
+#include <array>
 #include <spdlog/spdlog.h>
 
 #include "render_batcher.h"
@@ -47,46 +48,46 @@ namespace {
 char32_t DecodeUTF8(const char* str, std::size_t remaining,
                     std::size_t& advance) {
   // Continuation byte kontrolü: `10xxxxxx` pattern'ı.
-  auto IsCont = [](uint8_t b) { return (b & 0xC0) == 0x80; };
+  auto is_cont = [](uint8_t byte) { return (byte & 0xC0) == 0x80; };
 
-  const auto b0 = static_cast<uint8_t>(str[0]);
+  const auto kB0 = static_cast<uint8_t>(str[0]);
 
   // 1-bayt sequence: 0xxxxxxx → ASCII (U+0000..U+007F)
-  if (b0 < 0x80) {
+  if (kB0 < 0x80) {
     advance = 1;
-    return static_cast<char32_t>(b0);
+    return static_cast<char32_t>(kB0);
   }
 
   // 2-bayt sequence: 110xxxxx 10xxxxxx → U+0080..U+07FF
-  if ((b0 & 0xE0) == 0xC0 && remaining >= 2) {
-    const auto b1 = static_cast<uint8_t>(str[1]);
-    if (IsCont(b1)) {
+  if ((kB0 & 0xE0) == 0xC0 && remaining >= 2) {
+    const auto kB1 = static_cast<uint8_t>(str[1]);
+    if (is_cont(kB1)) {
       advance = 2;
-      return static_cast<char32_t>(((b0 & 0x1F) << 6) | (b1 & 0x3F));
+      return static_cast<char32_t>(((kB0 & 0x1F) << 6) | (kB1 & 0x3F));
     }
   }
 
   // 3-bayt sequence: 1110xxxx 10xxxxxx 10xxxxxx → U+0800..U+FFFF (BMP)
-  if ((b0 & 0xF0) == 0xE0 && remaining >= 3) {
-    const auto b1 = static_cast<uint8_t>(str[1]);
-    const auto b2 = static_cast<uint8_t>(str[2]);
-    if (IsCont(b1) && IsCont(b2)) {
+  if ((kB0 & 0xF0) == 0xE0 && remaining >= 3) {
+    const auto kB1 = static_cast<uint8_t>(str[1]);
+    const auto kB2 = static_cast<uint8_t>(str[2]);
+    if (is_cont(kB1) && is_cont(kB2)) {
       advance = 3;
-      return static_cast<char32_t>(((b0 & 0x0F) << 12) | ((b1 & 0x3F) << 6) |
-                                   (b2 & 0x3F));
+      return static_cast<char32_t>(((kB0 & 0x0F) << 12) | ((kB1 & 0x3F) << 6) |
+                                   (kB2 & 0x3F));
     }
   }
 
   // 4-bayt sequence: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx → U+10000..U+10FFFF
   // (supplementary planes — emoji, nadir CJK karakterleri, vs.)
-  if ((b0 & 0xF8) == 0xF0 && remaining >= 4) {
-    const auto b1 = static_cast<uint8_t>(str[1]);
-    const auto b2 = static_cast<uint8_t>(str[2]);
-    const auto b3 = static_cast<uint8_t>(str[3]);
-    if (IsCont(b1) && IsCont(b2) && IsCont(b3)) {
+  if ((kB0 & 0xF8) == 0xF0 && remaining >= 4) {
+    const auto kB1 = static_cast<uint8_t>(str[1]);
+    const auto kB2 = static_cast<uint8_t>(str[2]);
+    const auto kB3 = static_cast<uint8_t>(str[3]);
+    if (is_cont(kB1) && is_cont(kB2) && is_cont(kB3)) {
       advance = 4;
-      return static_cast<char32_t>(((b0 & 0x07) << 18) | ((b1 & 0x3F) << 12) |
-                                   ((b2 & 0x3F) << 6) | (b3 & 0x3F));
+      return static_cast<char32_t>(((kB0 & 0x07) << 18) | ((kB1 & 0x3F) << 12) |
+                                   ((kB2 & 0x3F) << 6) | (kB3 & 0x3F));
     }
   }
 
@@ -100,12 +101,12 @@ char32_t DecodeUTF8(const char* str, std::size_t remaining,
 
 Painter::Painter(SDL_Window* window, RendererBackend backend)
     : mWindow(window), mRenderer(CreateRenderer(backend)) {
-  if (!window) {
+  if (window == nullptr) {
     spdlog::error("Painter: window pointer null, Painter geçersiz durumda.");
     mRenderer.reset();
     return;
   }
-  if (!mRenderer) {
+  if (mRenderer == nullptr) {
     spdlog::error(
         "Painter: renderer oluşturulamadı (Vulkan derlenmemiş olabilir?).");
     return;
@@ -116,7 +117,8 @@ Painter::Painter(SDL_Window* window, RendererBackend backend)
     return;
   }
   mBatcher = std::make_unique<RenderBatcher>(*mRenderer);
-  int w = 0, h = 0;
+  int w = 0;
+  int h = 0;
   SDL_GetWindowSize(window, &w, &h);
   mViewportWidth = w;
   mViewportHeight = h;
@@ -124,8 +126,9 @@ Painter::Painter(SDL_Window* window, RendererBackend backend)
 }
 
 Painter::~Painter() {
-  if (mRenderer)
+  if (mRenderer != nullptr) {
     mRenderer->Shutdown();
+  }
 }
 
 Painter::Painter(Painter&& other) noexcept
@@ -142,8 +145,9 @@ Painter::Painter(Painter&& other) noexcept
 
 Painter& Painter::operator=(Painter&& other) noexcept {
   if (this != &other) {
-    if (mRenderer)
+    if (mRenderer != nullptr) {
       mRenderer->Shutdown();
+    }
     mWindow = other.mWindow;
     mRenderer = std::move(other.mRenderer);
     mBatcher = std::move(other.mBatcher);
@@ -158,10 +162,12 @@ Painter& Painter::operator=(Painter&& other) noexcept {
 }
 
 void Painter::Begin() {
-  if (!mRenderer || !mWindow)
+  if (mRenderer == nullptr || mWindow == nullptr) {
     return;
+  }
   // Pencere yeniden boyutlandirildiysa viewport ve projeksiyon matrisini guncelle.
-  int w = 0, h = 0;
+  int w = 0;
+  int h = 0;
   SDL_GetWindowSize(mWindow, &w, &h);
   if (w != mViewportWidth || h != mViewportHeight) {
     mViewportWidth = w;
@@ -174,18 +180,22 @@ void Painter::Begin() {
 }
 
 void Painter::End() {
-  if (!mRenderer)
+  if (mRenderer == nullptr) {
     return;
-  if (mBatcher)
+  }
+  if (mBatcher != nullptr) {
     mBatcher->Flush();
+  }
   mRenderer->EndFrame();
 }
 
 void Painter::Clear(const Color& color) {
-  if (!mRenderer)
+  if (mRenderer == nullptr) {
     return;
-  if (mBatcher)
+  }
+  if (mBatcher != nullptr) {
     mBatcher->Flush();
+  }
   mRenderer->Clear(color);
 }
 
@@ -200,13 +210,15 @@ void Painter::SetFont(std::shared_ptr<Font> font) {
 }
 void Painter::SetOpacity(float alpha) {
   mCurrentState.opacity = alpha;
-  if (mRenderer)
+  if (mRenderer != nullptr) {
     mRenderer->SetOpacity(alpha);
+  }
 }
 
 void Painter::DrawLine(float x1, float y1, float x2, float y2) {
-  if (!CanDrawPen())
+  if (!CanDrawPen()) {
     return;
+  }
   FlushTransform();
   auto verts = Tessellator::TessellateThickLine(x1, y1, x2, y2,
                                                 mCurrentState.pen.GetWidth());
@@ -215,8 +227,9 @@ void Painter::DrawLine(float x1, float y1, float x2, float y2) {
 }
 
 void Painter::DrawRect(float x, float y, float w, float h) {
-  if (!CanDrawPen())
+  if (!CanDrawPen()) {
     return;
+  }
   FlushTransform();
   auto verts = Tessellator::TessellateStrokedRect(x, y, w, h,
                                                   mCurrentState.pen.GetWidth());
@@ -225,8 +238,9 @@ void Painter::DrawRect(float x, float y, float w, float h) {
 }
 
 void Painter::FillRect(float x, float y, float w, float h) {
-  if (!CanDrawBrush())
+  if (!CanDrawBrush()) {
     return;
+  }
   FlushTransform();
   auto verts = Tessellator::TessellateFilledRect(x, y, w, h);
   mBatcher->PushTriangles(verts, mCurrentState.brush.GetColor(),
@@ -234,8 +248,9 @@ void Painter::FillRect(float x, float y, float w, float h) {
 }
 
 void Painter::DrawCircle(float cx, float cy, float radius) {
-  if (!CanDrawPen())
+  if (!CanDrawPen()) {
     return;
+  }
   FlushTransform();
   auto verts = Tessellator::TessellateStrokedCircle(
       cx, cy, radius, mCurrentState.pen.GetWidth());
@@ -244,8 +259,9 @@ void Painter::DrawCircle(float cx, float cy, float radius) {
 }
 
 void Painter::FillCircle(float cx, float cy, float radius) {
-  if (!CanDrawBrush())
+  if (!CanDrawBrush()) {
     return;
+  }
   FlushTransform();
   auto verts = Tessellator::TessellateFilledCircle(cx, cy, radius);
   mBatcher->PushTriangles(verts, mCurrentState.brush.GetColor(),
@@ -253,8 +269,9 @@ void Painter::FillCircle(float cx, float cy, float radius) {
 }
 
 void Painter::DrawEllipse(float cx, float cy, float rx, float ry) {
-  if (!CanDrawPen())
+  if (!CanDrawPen()) {
     return;
+  }
   FlushTransform();
   auto verts = Tessellator::TessellateStrokedEllipse(
       cx, cy, rx, ry, mCurrentState.pen.GetWidth());
@@ -263,8 +280,9 @@ void Painter::DrawEllipse(float cx, float cy, float rx, float ry) {
 }
 
 void Painter::FillEllipse(float cx, float cy, float rx, float ry) {
-  if (!CanDrawBrush())
+  if (!CanDrawBrush()) {
     return;
+  }
   FlushTransform();
   auto verts = Tessellator::TessellateFilledEllipse(cx, cy, rx, ry);
   mBatcher->PushTriangles(verts, mCurrentState.brush.GetColor(),
@@ -272,8 +290,9 @@ void Painter::FillEllipse(float cx, float cy, float rx, float ry) {
 }
 
 void Painter::DrawPolygon(const std::vector<Point>& points) {
-  if (!CanDrawPen())
+  if (!CanDrawPen()) {
     return;
+  }
   FlushTransform();
   auto verts = Tessellator::TessellateStrokedPolygon(
       points, mCurrentState.pen.GetWidth());
@@ -282,8 +301,9 @@ void Painter::DrawPolygon(const std::vector<Point>& points) {
 }
 
 void Painter::FillPolygon(const std::vector<Point>& points) {
-  if (!CanDrawBrush())
+  if (!CanDrawBrush()) {
     return;
+  }
   FlushTransform();
   auto verts = Tessellator::TessellateFilledPolygon(points);
   mBatcher->PushTriangles(verts, mCurrentState.brush.GetColor(),
@@ -291,8 +311,9 @@ void Painter::FillPolygon(const std::vector<Point>& points) {
 }
 
 void Painter::DrawPolyline(const std::vector<Point>& points) {
-  if (!CanDrawPen())
+  if (!CanDrawPen()) {
     return;
+  }
   FlushTransform();
   auto verts = Tessellator::TessellateThickPolyline(
       points, mCurrentState.pen.GetWidth());
@@ -317,49 +338,53 @@ void Painter::DrawImage(const Image& image, const Rect& dest_rect) {
 
 void Painter::DrawImage(const Image& image, const Rect& src_rect,
                         const Rect& dest_rect) {
-  if (!mRenderer || !image.IsValid())
+  if (mRenderer == nullptr || !image.IsValid()) {
     return;
+  }
 
   TextureHandle handle = image.Upload(*mRenderer);
-  if (handle == kInvalidTexture)
+  if (handle == kInvalidTexture) {
     return;
+  }
 
   // src_rect → UV koordinatlarina donustur [0, 1]
-  const float img_w = static_cast<float>(image.Width());
-  const float img_h = static_cast<float>(image.Height());
-  const float u0 = src_rect.x / img_w;
-  const float v0 = src_rect.y / img_h;
-  const float u1 = (src_rect.x + src_rect.w) / img_w;
-  const float v1 = (src_rect.y + src_rect.h) / img_h;
+  const auto kImgW = static_cast<float>(image.Width());
+  const auto kImgH = static_cast<float>(image.Height());
+  const float kU0 = src_rect.x / kImgW;
+  const float kV0 = src_rect.y / kImgH;
+  const float kU1 = (src_rect.x + src_rect.w) / kImgW;
+  const float kV1 = (src_rect.y + src_rect.h) / kImgH;
 
   // dest_rect → ekran koordinatlari
-  const float x0 = dest_rect.x;
-  const float y0 = dest_rect.y;
-  const float x1 = dest_rect.x + dest_rect.w;
-  const float y1 = dest_rect.y + dest_rect.h;
+  const float kX0 = dest_rect.x;
+  const float kY0 = dest_rect.y;
+  const float kX1 = dest_rect.x + dest_rect.w;
+  const float kY1 = dest_rect.y + dest_rect.h;
 
   // Iki ucgenden olusan quad (CCW)
-  const std::vector<TexturedVertex> verts = {
-      {x0, y0, u0, v0}, {x1, y0, u1, v0}, {x1, y1, u1, v1},
-      {x0, y0, u0, v0}, {x1, y1, u1, v1}, {x0, y1, u0, v1},
+  const std::vector<TexturedVertex> kVerts = {
+      {kX0, kY0, kU0, kV0}, {kX1, kY0, kU1, kV0}, {kX1, kY1, kU1, kV1},
+      {kX0, kY0, kU0, kV0}, {kX1, kY1, kU1, kV1}, {kX0, kY1, kU0, kV1},
   };
 
   FlushTransform();
-  mBatcher->PushTexturedTriangles(verts, handle, Color{255, 255, 255, 255},
+  mBatcher->PushTexturedTriangles(kVerts, handle, Color{255, 255, 255, 255},
                                   mCurrentState.opacity);
 }
 
 void Painter::DrawText(float x, float y, const std::string& text) {
-  if (!mRenderer || !mBatcher || !mCurrentFont || !mCurrentFont->IsValid())
+  if (mRenderer == nullptr || mBatcher == nullptr || mCurrentFont == nullptr || !mCurrentFont->IsValid()) {
     return;
-  if (text.empty())
+  }
+  if (text.empty()) {
     return;
+  }
 
   const Color& tint = mCurrentState.pen.GetColor();
   float current_x = x;
 
   auto* font = static_cast<TTF_Font*>(mCurrentFont->Handle());
-  const float baseline_y = y;
+  const float kBaselineY = y;
 
   for (size_t i = 0; i < text.size();) {
     std::size_t advance = 0;
@@ -369,7 +394,8 @@ void Painter::DrawText(float x, float y, const std::string& text) {
     const Glyph* glyph = mCurrentFont->GetGlyph(*mRenderer, c);
     if (!glyph || !glyph->texture.IsValid()) {
       if (c == ' ') {
-        int w = 0, h = 0;
+        int w = 0;
+        int h = 0;
         TTF_GetStringSize(font, " ", 1, &w, &h);
         current_x += static_cast<float>(w);
       }
@@ -378,17 +404,17 @@ void Painter::DrawText(float x, float y, const std::string& text) {
 
     // Baseline tabanlı çizim:
     // y: baseline - glyph'in baseline'dan yukarı olan yüksekliği
-    const float gx0 = current_x + static_cast<float>(glyph->bearing_x);
-    const float gy0 = baseline_y - static_cast<float>(glyph->bearing_y);
-    const float gx1 = gx0 + static_cast<float>(glyph->width);
-    const float gy1 = gy0 + static_cast<float>(glyph->height);
+    const float kGx0 = current_x + static_cast<float>(glyph->bearing_x);
+    const float kGy0 = kBaselineY - static_cast<float>(glyph->bearing_y);
+    const float kGx1 = kGx0 + static_cast<float>(glyph->width);
+    const float kGy1 = kGy0 + static_cast<float>(glyph->height);
 
-    const std::vector<TexturedVertex> verts = {
-        {gx0, gy0, 0.0F, 0.0F}, {gx1, gy0, 1.0F, 0.0F}, {gx1, gy1, 1.0F, 1.0F},
-        {gx0, gy0, 0.0F, 0.0F}, {gx1, gy1, 1.0F, 1.0F}, {gx0, gy1, 0.0F, 1.0F},
+    const std::vector<TexturedVertex> kVerts = {
+        {kGx0, kGy0, 0.0F, 0.0F}, {kGx1, kGy0, 1.0F, 0.0F}, {kGx1, kGy1, 1.0F, 1.0F},
+        {kGx0, kGy0, 0.0F, 0.0F}, {kGx1, kGy1, 1.0F, 1.0F}, {kGx0, kGy1, 0.0F, 1.0F},
     };
 
-    mBatcher->PushTexturedTriangles(verts, glyph->texture.Handle(), tint,
+    mBatcher->PushTexturedTriangles(kVerts, glyph->texture.Handle(), tint,
                                     mCurrentState.opacity);
 
     current_x += static_cast<float>(glyph->advance);
@@ -397,16 +423,19 @@ void Painter::DrawText(float x, float y, const std::string& text) {
 
 void Painter::DrawText(const Rect& rect, const std::string& text,
                        Alignment alignment) {
-  if (!mRenderer || !mCurrentFont || !mCurrentFont->IsValid())
+  if (mRenderer == nullptr || mCurrentFont == nullptr || !mCurrentFont->IsValid()) {
     return;
-  if (text.empty())
+  }
+  if (text.empty()) {
     return;
+  }
 
   // Metin boyutunu ölç, hizalama ofseti hesapla.
-  int32_t text_w = 0, text_h = 0;
+  int32_t text_w = 0;
+  int32_t text_h = 0;
   mCurrentFont->MeasureText(text, text_w, text_h);
 
-  float x = rect.x;
+  float x = 0.0F;
   switch (alignment) {
     case Alignment::kLeft:
       x = rect.x;
@@ -421,15 +450,16 @@ void Painter::DrawText(const Rect& rect, const std::string& text,
   // Dikdörtgen içinde dikey ortala. text_h = font->height + max_ascent
   // bilesenlerini icerdiginden, yazi kutusunun ust kenari top_y olur ve
   // baseline top_y + font_ascent konumundadir.
-  const float top_y = rect.y + (rect.h - static_cast<float>(text_h)) * 0.5F;
-  const float baseline_y = top_y + static_cast<float>(mCurrentFont->Ascent());
+  const float kTopY = rect.y + (rect.h - static_cast<float>(text_h)) * 0.5F;
+  const float kBaselineY = kTopY + static_cast<float>(mCurrentFont->Ascent());
 
-  DrawText(x, baseline_y, text);
+  DrawText(x, kBaselineY, text);
 }
 
 void Painter::Save() {
-  if (mBatcher)
+  if (mBatcher != nullptr) {
     mBatcher->Flush();
+  }
   mStateStack.push_back(mCurrentState);
 }
 
@@ -441,109 +471,123 @@ void Painter::Restore() {
         "(unbalanced Save/Restore).");
     return;
   }
-  if (mBatcher)
+  if (mBatcher != nullptr) {
     mBatcher->Flush();
+  }
   mCurrentState = mStateStack.back();
   mStateStack.pop_back();
   FlushTransform();
 
   // Opaklik durumunu renderer'a yeniden uygula.
-  if (mRenderer)
+  if (mRenderer != nullptr) {
     mRenderer->SetOpacity(mCurrentState.opacity);
+  }
 
   // Kaydedilen clip durumunu renderer'a yeniden uygula.
   if (mCurrentState.has_clip) {
     ApplyScissor(mCurrentState.clip_rect);
   } else {
-    if (mRenderer)
+    if (mRenderer != nullptr) {
       mRenderer->ClearScissor();
+    }
   }
 }
 
 void Painter::Translate(float dx, float dy) {
-  if (mBatcher)
+  if (mBatcher != nullptr) {
     mBatcher->Flush();
+  }
   mCurrentState.transform.Translate(dx, dy);
 }
 
 void Painter::Rotate(float angle_degrees) {
-  if (mBatcher)
+  if (mBatcher != nullptr) {
     mBatcher->Flush();
+  }
   mCurrentState.transform.Rotate(angle_degrees);
 }
 
 void Painter::Scale(float sx, float sy) {
-  if (mBatcher)
+  if (mBatcher != nullptr) {
     mBatcher->Flush();
+  }
   mCurrentState.transform.Scale(sx, sy);
 }
 
 void Painter::ResetTransform() {
-  if (mBatcher)
+  if (mBatcher != nullptr) {
     mBatcher->Flush();
+  }
   mCurrentState.transform.SetIdentity();
 }
 
 void Painter::SetClipRect(const Rect& rect) {
-  if (!mRenderer)
+  if (mRenderer == nullptr) {
     return;
-  if (mBatcher)
+  }
+  if (mBatcher != nullptr) {
     mBatcher->Flush();
+  }
   mCurrentState.clip_rect = rect;
   mCurrentState.has_clip = true;
   ApplyScissor(rect);
 }
 
 void Painter::ClearClip() {
-  if (!mRenderer)
+  if (mRenderer == nullptr) {
     return;
-  if (mBatcher)
+  }
+  if (mBatcher != nullptr) {
     mBatcher->Flush();
+  }
   mCurrentState.has_clip = false;
   mRenderer->ClearScissor();
 }
 
 void Painter::UpdateProjection() {
-  if (!mRenderer)
+  if (mRenderer == nullptr) {
     return;
-  if (mBatcher)
+  }
+  if (mBatcher != nullptr) {
     mBatcher->Flush();
+  }
   // Ortografik projeksiyon: [0, width] x [0, height] → NDC
   // OpenGL: Y ekseni clip space'de yukarı pozitif → Y'yi ters çevir (-2/h).
   // Vulkan: Y ekseni clip space'de aşağı pozitif → ters çevirme gerekmez (+2/h).
-  float w = static_cast<float>(mViewportWidth);
-  float h = static_cast<float>(mViewportHeight);
+  auto w = static_cast<float>(mViewportWidth);
+  auto h = static_cast<float>(mViewportHeight);
 
-  const bool is_vulkan = (mRenderer->GetBackend() == RendererBackend::kVulkan);
-  const float sy = is_vulkan ? (2.0F / h) : (-2.0F / h);
-  const float ty = is_vulkan ? -1.0F : 1.0F;
+  const bool kIsVulkan = (mRenderer->GetBackend() == RendererBackend::kVulkan);
+  const float kSy = kIsVulkan ? (2.0F / h) : (-2.0F / h);
+  const float kTy = kIsVulkan ? -1.0F : 1.0F;
 
   // 4x4 sütun-major ortografik matris
   // clang-format off
-  float mat[16] = {
+  std::array<float, 16> mat = {
       2.0F / w,  0.0F,  0.0F, 0.0F,
-      0.0F,      sy,    0.0F, 0.0F,
+      0.0F,      kSy,   0.0F, 0.0F,
       0.0F,      0.0F, -1.0F, 0.0F,
-     -1.0F,      ty,    0.0F, 1.0F,
+     -1.0F,      kTy,   0.0F, 1.0F,
   };
   // clang-format on
-  mRenderer->SetProjectionMatrix(mat);
+  mRenderer->SetProjectionMatrix(mat.data());
 }
 
 void Painter::FlushTransform() {
-  if (!mRenderer)
+  if (mRenderer == nullptr) {
     return;
+  }
   mRenderer->SetModelMatrix(mCurrentState.transform.Data());
 }
 
 void Painter::ApplyScissor(const Rect& rect) {
   // OpenGL scissor Y=0 altta; Vulkan Y=0 üstte.
-  const bool is_vulkan = (mRenderer->GetBackend() == RendererBackend::kVulkan);
-  const int32_t scissor_y =
-      is_vulkan ? static_cast<int32_t>(rect.y)
+  const bool kIsVulkan = (mRenderer->GetBackend() == RendererBackend::kVulkan);
+  const int32_t kScissorY =
+      kIsVulkan ? static_cast<int32_t>(rect.y)
                 : (mViewportHeight - static_cast<int32_t>(rect.y) -
                    static_cast<int32_t>(rect.h));
-  mRenderer->SetScissor(static_cast<int32_t>(rect.x), scissor_y,
+  mRenderer->SetScissor(static_cast<int32_t>(rect.x), kScissorY,
                         static_cast<int32_t>(rect.w),
                         static_cast<int32_t>(rect.h));
 }

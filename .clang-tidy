@@ -9,7 +9,14 @@ Checks: >
   -cppcoreguidelines-avoid-magic-numbers,
   -readability-magic-numbers,
   -cppcoreguidelines-pro-bounds-pointer-arithmetic,
-  -cppcoreguidelines-pro-type-reinterpret-cast
+  -cppcoreguidelines-pro-type-reinterpret-cast,
+  -cppcoreguidelines-avoid-do-while,
+  -cppcoreguidelines-avoid-non-const-global-variables,
+  -readability-identifier-length,
+  -performance-no-int-to-ptr,
+  -cppcoreguidelines-pro-bounds-array-to-pointer-decay,
+  -cppcoreguidelines-pro-bounds-constant-array-index,
+  -readability-implicit-bool-conversion
 
 WarningsAsErrors: ''
 
@@ -28,13 +35,10 @@ CheckOptions:
     value: CamelCase
   - key: readability-identifier-naming.ConstantPrefix
     value: k
-  # Lokal const değişkenler Google Style'da lower_case'tir; kPascalCase
-  # yalnız namespace/static sabitler içindir. LocalConstant ayarlanmazsa
-  # Constant kuralına düşüp sahte uyarı üretiyor.
   - key: readability-identifier-naming.LocalConstantCase
-    value: lower_case
+    value: CamelCase
   - key: readability-identifier-naming.LocalConstantPrefix
-    value: ''
+    value: k
   - key: readability-identifier-naming.EnumConstantCase
     value: CamelCase
   - key: readability-identifier-naming.EnumConstantPrefix

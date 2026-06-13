@@ -62,7 +62,7 @@ class Transform {
 
  private:
   // mData[satır][sütun]
-  float mData[3][3]{};
+  float mData[3][3]{};  // NOLINT(cppcoreguidelines-avoid-c-arrays,modernize-avoid-c-arrays)
 };
 
 }  // namespace sdl_painter

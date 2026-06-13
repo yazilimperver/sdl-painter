@@ -38,16 +38,18 @@ VkPresentModeKHR PickPresentMode(VkPhysicalDevice device,
   vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &count,
                                             modes.data());
   for (auto m : modes) {
-    if (m == VK_PRESENT_MODE_MAILBOX_KHR)
+    if (m == VK_PRESENT_MODE_MAILBOX_KHR) {
       return m;
+    }
   }
   return VK_PRESENT_MODE_FIFO_KHR;  // her zaman desteklenir
 }
 
 VkExtent2D PickExtent(const VkSurfaceCapabilitiesKHR &caps, uint32_t width,
                       uint32_t height) {
-  if (caps.currentExtent.width != UINT32_MAX)
+  if (caps.currentExtent.width != UINT32_MAX) {
     return caps.currentExtent;
+  }
   VkExtent2D actual{width, height};
   actual.width = std::clamp(actual.width, caps.minImageExtent.width,
                             caps.maxImageExtent.width);
@@ -65,22 +67,27 @@ VkSwapchain::~VkSwapchain() {
 bool VkSwapchain::Initialize(VkContext *context, uint32_t width,
                              uint32_t height) {
   mContext = context;
-  if (!CreateSwapchain(width, height))
+  if (!CreateSwapchain(width, height)) {
     return false;
-  if (!CreateImageViews())
+  }
+  if (!CreateImageViews()) {
     return false;
-  if (!CreateRenderPass())
+  }
+  if (!CreateRenderPass()) {
     return false;
-  if (!CreateFramebuffers())
+  }
+  if (!CreateFramebuffers()) {
     return false;
+  }
   spdlog::info("Swapchain initialized ({}x{}, {} images).", mExtent.width,
                mExtent.height, mImages.size());
   return true;
 }
 
 void VkSwapchain::Shutdown() {
-  if (!mContext)
+  if (mContext == nullptr) {
     return;
+  }
   VkDevice device = mContext->GetDevice();
   if (device != VK_NULL_HANDLE) {
     DestroySwapchainResources();
@@ -103,31 +110,37 @@ bool VkSwapchain::Recreate(uint32_t width, uint32_t height) {
 
   // Framebuffer + image view'ları yok et (swapchain henüz canlı).
   for (auto *fb : mFramebuffers) {
-    if (fb != VK_NULL_HANDLE)
+    if (fb != VK_NULL_HANDLE) {
       vkDestroyFramebuffer(device, fb, nullptr);
+    }
   }
   mFramebuffers.clear();
   for (auto *view : mImageViews) {
-    if (view != VK_NULL_HANDLE)
+    if (view != VK_NULL_HANDLE) {
       vkDestroyImageView(device, view, nullptr);
+    }
   }
   mImageViews.clear();
   mImages.clear();
 
   // Yeni swapchain'i eski referansıyla oluştur.
   if (!CreateSwapchainWithOld(width, height, old)) {
-    if (old != VK_NULL_HANDLE)
+    if (old != VK_NULL_HANDLE) {
       vkDestroySwapchainKHR(device, old, nullptr);
+    }
     return false;
   }
   // Eski swapchain artık kullanılmıyor — yok et.
-  if (old != VK_NULL_HANDLE)
+  if (old != VK_NULL_HANDLE) {
     vkDestroySwapchainKHR(device, old, nullptr);
+  }
 
-  if (!CreateImageViews())
+  if (!CreateImageViews()) {
     return false;
-  if (!CreateFramebuffers())
+  }
+  if (!CreateFramebuffers()) {
     return false;
+  }
 
   spdlog::info("Swapchain recreated ({}x{}).", mExtent.width, mExtent.height);
   return true;
@@ -136,13 +149,15 @@ bool VkSwapchain::Recreate(uint32_t width, uint32_t height) {
 void VkSwapchain::DestroySwapchainResources() {
   VkDevice device = mContext->GetDevice();
   for (auto *fb : mFramebuffers) {
-    if (fb != VK_NULL_HANDLE)
+    if (fb != VK_NULL_HANDLE) {
       vkDestroyFramebuffer(device, fb, nullptr);
+    }
   }
   mFramebuffers.clear();
   for (auto *view : mImageViews) {
-    if (view != VK_NULL_HANDLE)
+    if (view != VK_NULL_HANDLE) {
       vkDestroyImageView(device, view, nullptr);
+    }
   }
   mImageViews.clear();
   mImages.clear();
@@ -184,12 +199,12 @@ bool VkSwapchain::CreateSwapchainWithOld(uint32_t width, uint32_t height,
   ci.imageArrayLayers = 1;
   ci.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 
-  uint32_t queues[2] = {mContext->GetGraphicsQueueFamily(),
-                        mContext->GetPresentQueueFamily()};
+  std::array<uint32_t, 2> queues = {mContext->GetGraphicsQueueFamily(),
+                                    mContext->GetPresentQueueFamily()};
   if (queues[0] != queues[1]) {
     ci.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
     ci.queueFamilyIndexCount = 2;
-    ci.pQueueFamilyIndices = queues;
+    ci.pQueueFamilyIndices = queues.data();
   } else {
     ci.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
   }

@@ -37,9 +37,9 @@ std::vector<Vertex> Tessellator::TessellateFilledCircle(float cx, float cy,
     float a0 = kTwoPi * static_cast<float>(i) / static_cast<float>(segments);
     float a1 =
         kTwoPi * static_cast<float>(i + 1) / static_cast<float>(segments);
-    result.push_back({cx, cy});
-    result.push_back({cx + std::cos(a0) * radius, cy + std::sin(a0) * radius});
-    result.push_back({cx + std::cos(a1) * radius, cy + std::sin(a1) * radius});
+    result.emplace_back(cx, cy);
+    result.emplace_back(cx + std::cos(a0) * radius, cy + std::sin(a0) * radius);
+    result.emplace_back(cx + std::cos(a1) * radius, cy + std::sin(a1) * radius);
   }
   return result;
 }
@@ -54,17 +54,18 @@ std::vector<Vertex> Tessellator::TessellateFilledEllipse(float cx, float cy,
     float a0 = kTwoPi * static_cast<float>(i) / static_cast<float>(segments);
     float a1 =
         kTwoPi * static_cast<float>(i + 1) / static_cast<float>(segments);
-    result.push_back({cx, cy});
-    result.push_back({cx + std::cos(a0) * rx, cy + std::sin(a0) * ry});
-    result.push_back({cx + std::cos(a1) * rx, cy + std::sin(a1) * ry});
+    result.emplace_back(cx, cy);
+    result.emplace_back(cx + std::cos(a0) * rx, cy + std::sin(a0) * ry);
+    result.emplace_back(cx + std::cos(a1) * rx, cy + std::sin(a1) * ry);
   }
   return result;
 }
 
 std::vector<Vertex> Tessellator::TessellateFilledPolygon(
     const std::vector<Point>& points) {
-  if (points.size() < 3)
+  if (points.size() < 3) {
     return {};
+  }
   return EarClipping(points);
 }
 
@@ -86,7 +87,7 @@ std::vector<Vertex> Tessellator::TessellateStrokedCircle(float cx, float cy,
 
   for (int32_t i = 0; i < segments; ++i) {
     float a = kTwoPi * static_cast<float>(i) / static_cast<float>(segments);
-    pts.push_back({cx + std::cos(a) * radius, cy + std::sin(a) * radius});
+    pts.emplace_back(cx + std::cos(a) * radius, cy + std::sin(a) * radius);
   }
   return TessellateStrokedPolygon(pts, line_width);
 }
@@ -100,7 +101,7 @@ std::vector<Vertex> Tessellator::TessellateStrokedEllipse(float cx, float cy,
 
   for (int32_t i = 0; i < segments; ++i) {
     float a = kTwoPi * static_cast<float>(i) / static_cast<float>(segments);
-    pts.push_back({cx + std::cos(a) * rx, cy + std::sin(a) * ry});
+    pts.emplace_back(cx + std::cos(a) * rx, cy + std::sin(a) * ry);
   }
   return TessellateStrokedPolygon(pts, line_width);
 }
@@ -111,8 +112,9 @@ std::vector<Vertex> Tessellator::TessellateThickLine(float x1, float y1,
   float dx = x2 - x1;
   float dy = y2 - y1;
   float len = std::sqrt(dx * dx + dy * dy);
-  if (len < 1e-6F)
+  if (len < 1e-6F) {
     return {};
+  }
 
   // Dike normal vektör (normalize edilmiş)
   float nx = -dy / len;
@@ -121,10 +123,10 @@ std::vector<Vertex> Tessellator::TessellateThickLine(float x1, float y1,
 
   // Quad'ın 4 köşesi
   // clang-format off
-  float p0x = x1 + hw * nx,  p0y = y1 + hw * ny;  // A üst
-  float p1x = x1 - hw * nx,  p1y = y1 - hw * ny;  // A alt
-  float p2x = x2 + hw * nx,  p2y = y2 + hw * ny;  // B üst
-  float p3x = x2 - hw * nx,  p3y = y2 - hw * ny;  // B alt
+  float p0x = x1 + hw * nx;  float p0y = y1 + hw * ny;  // A üst
+  float p1x = x1 - hw * nx;  float p1y = y1 - hw * ny;  // A alt
+  float p2x = x2 + hw * nx;  float p2y = y2 + hw * ny;  // B üst
+  float p3x = x2 - hw * nx;  float p3y = y2 - hw * ny;  // B alt
 
   return {
       {p0x, p0y}, {p1x, p1y}, {p2x, p2y},
@@ -136,8 +138,9 @@ std::vector<Vertex> Tessellator::TessellateThickLine(float x1, float y1,
 std::vector<Vertex> Tessellator::TessellateThickPolyline(
     const std::vector<Point>& points, float line_width) {
   std::vector<Vertex> result;
-  if (points.size() < 2)
+  if (points.size() < 2) {
     return result;
+  }
 
   for (std::size_t i = 0; i + 1 < points.size(); ++i) {
     auto seg = TessellateThickLine(points[i].x, points[i].y, points[i + 1].x,
@@ -149,8 +152,9 @@ std::vector<Vertex> Tessellator::TessellateThickPolyline(
 
 std::vector<Vertex> Tessellator::TessellateStrokedPolygon(
     const std::vector<Point>& points, float line_width) {
-  if (points.size() < 2)
+  if (points.size() < 2) {
     return {};
+  }
 
   // Kapalı polyline — son noktayı başa bağla
   std::vector<Point> closed = points;
@@ -182,43 +186,45 @@ bool Tessellator::IsClockwise(const Point& a, const Point& b, const Point& c) {
 
 bool Tessellator::PointInTriangle(const Point& p, const Point& a,
                                   const Point& b, const Point& c) {
-  auto Sign = [](const Point& p1, const Point& p2, const Point& p3) {
+  auto sign = [](const Point& p1, const Point& p2, const Point& p3) {
     return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
   };
-  float d1 = Sign(p, a, b);
-  float d2 = Sign(p, b, c);
-  float d3 = Sign(p, c, a);
+  float d1 = sign(p, a, b);
+  float d2 = sign(p, b, c);
+  float d3 = sign(p, c, a);
   bool has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
   bool has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
   return !(has_neg && has_pos);
 }
 
-std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& pts) {
-  if (pts.size() < 3)
+std::vector<Vertex> Tessellator::EarClipping(  // NOLINT(readability-function-cognitive-complexity)
+    const std::vector<Point>& points) {
+  if (points.size() < 3) {
     return {};
+  }
 
   // Basit üçgen durumu
-  if (pts.size() == 3) {
-    return {{pts[0].x, pts[0].y}, {pts[1].x, pts[1].y}, {pts[2].x, pts[2].y}};
+  if (points.size() == 3) {
+    return {{points[0].x, points[0].y}, {points[1].x, points[1].y}, {points[2].x, points[2].y}};
   }
 
   // İmzalı alan ile sarma yönünü belirle (shoelace formülü)
   float area = 0.0F;
-  for (std::size_t i = 0; i < pts.size(); ++i) {
-    std::size_t j = (i + 1) % pts.size();
-    area += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+  for (std::size_t i = 0; i < points.size(); ++i) {
+    std::size_t j = (i + 1) % points.size();
+    area += points[i].x * points[j].y - points[j].x * points[i].y;
   }
   // area > 0 → CCW; area < 0 → CW
 
   // CW ise indeks sırasını ters çevir → her zaman CCW olarak işle
-  std::vector<int32_t> indices(pts.size());
+  std::vector<int32_t> indices(points.size());
   std::iota(indices.begin(), indices.end(), 0);
   if (area < 0.0F) {
     std::reverse(indices.begin(), indices.end());
   }
 
   std::vector<Vertex> result;
-  result.reserve((pts.size() - 2) * 3);
+  result.reserve((points.size() - 2) * 3);
 
   // O(n²) ear clipping
   while (indices.size() > 3) {
@@ -229,21 +235,23 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& pts) {
       std::size_t iprev = (i + n - 1) % n;
       std::size_t inext = (i + 1) % n;
 
-      const Point& a = pts[static_cast<std::size_t>(indices[iprev])];
-      const Point& b = pts[static_cast<std::size_t>(indices[i])];
-      const Point& c = pts[static_cast<std::size_t>(indices[inext])];
+      const Point& a = points[static_cast<std::size_t>(indices[iprev])];
+      const Point& b = points[static_cast<std::size_t>(indices[i])];
+      const Point& c = points[static_cast<std::size_t>(indices[inext])];
 
       // CCW poligonda dışbükey köşe: cross(a→b, b→c) > 0
       float cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-      if (cross <= 0.0F)
+      if (cross <= 0.0F) {
         continue;  // içbükey (reflex) köşe, kulak değil
+      }
 
       // Diğer hiçbir nokta bu üçgenin içinde olmamalı
       bool is_ear = true;
       for (std::size_t j = 0; j < n; ++j) {
-        if (j == iprev || j == i || j == inext)
+        if (j == iprev || j == i || j == inext) {
           continue;
-        if (PointInTriangle(pts[static_cast<std::size_t>(indices[j])], a, b,
+        }
+        if (PointInTriangle(points[static_cast<std::size_t>(indices[j])], a, b,
                             c)) {
           is_ear = false;
           break;
@@ -251,9 +259,9 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& pts) {
       }
 
       if (is_ear) {
-        result.push_back({a.x, a.y});
-        result.push_back({b.x, b.y});
-        result.push_back({c.x, c.y});
+        result.emplace_back(a.x, a.y);
+        result.emplace_back(b.x, b.y);
+        result.emplace_back(c.x, c.y);
         indices.erase(indices.begin() + static_cast<std::ptrdiff_t>(i));
         found_ear = true;
         break;
@@ -261,18 +269,19 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& pts) {
     }
 
     // Dejenere poligon koruması
-    if (!found_ear)
+    if (!found_ear) {
       break;
+    }
   }
 
   // Son üçgeni ekle
   if (indices.size() == 3) {
-    result.push_back({pts[static_cast<std::size_t>(indices[0])].x,
-                      pts[static_cast<std::size_t>(indices[0])].y});
-    result.push_back({pts[static_cast<std::size_t>(indices[1])].x,
-                      pts[static_cast<std::size_t>(indices[1])].y});
-    result.push_back({pts[static_cast<std::size_t>(indices[2])].x,
-                      pts[static_cast<std::size_t>(indices[2])].y});
+    result.emplace_back(points[static_cast<std::size_t>(indices[0])].x,
+                        points[static_cast<std::size_t>(indices[0])].y);
+    result.emplace_back(points[static_cast<std::size_t>(indices[1])].x,
+                        points[static_cast<std::size_t>(indices[1])].y);
+    result.emplace_back(points[static_cast<std::size_t>(indices[2])].x,
+                        points[static_cast<std::size_t>(indices[2])].y);
   }
 
   return result;

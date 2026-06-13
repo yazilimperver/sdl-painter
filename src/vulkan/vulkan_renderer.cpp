@@ -6,6 +6,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
+#include <array>
 #include <cstring>
 #include <spdlog/spdlog.h>
 
@@ -21,20 +22,23 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
   mWindow = window;
 
   mContext = std::make_unique<VkContext>();
-  if (!mContext->Initialize(window))
+  if (!mContext->Initialize(window)) {
     return false;
+  }
 
   uint32_t width = 0;
   uint32_t height = 0;
   QueryWindowDrawableSize(width, height);
 
   mSwapchain = std::make_unique<VkSwapchain>();
-  if (!mSwapchain->Initialize(mContext.get(), width, height))
+  if (!mSwapchain->Initialize(mContext.get(), width, height)) {
     return false;
+  }
 
   mFrameSync = std::make_unique<VkFrameSync>();
-  if (!mFrameSync->Initialize(mContext.get(), mSwapchain->GetImageCount()))
+  if (!mFrameSync->Initialize(mContext.get(), mSwapchain->GetImageCount())) {
     return false;
+  }
 
   // Default clear: siyah.
   mClearValue.color = {{0.0F, 0.0F, 0.0F, 1.0F}};
@@ -92,7 +96,7 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
 }
 
 void VulkanRenderer::Shutdown() {
-  if (mContext && mContext->GetDevice() != VK_NULL_HANDLE) {
+  if (mContext != nullptr && mContext->GetDevice() != VK_NULL_HANDLE) {
     vkDeviceWaitIdle(mContext->GetDevice());
     // Texture'ları önce sil (descriptor set pool mTexturedPipeline'da)
     for (auto& [handle, tex] : mTextures) {
@@ -147,8 +151,8 @@ bool VulkanRenderer::AcquireNextImage() {
   // döngüsel seçim yapılır. mAcquireSlot her frame'de ilerler ve submit'te
   // wait için saklanır. Fence beklendikten sonra slot güvenle yeniden
   // kullanılabilir çünkü bir önceki submit tamamlandı.
-  const uint32_t image_count = mSwapchain->GetImageCount();
-  mAcquireSlot = (mAcquireSlot + 1) % image_count;
+  const uint32_t kImageCount = mSwapchain->GetImageCount();
+  mAcquireSlot = (mAcquireSlot + 1) % kImageCount;
   VkSemaphore acquire_sem =
       mFrameSync->GetImageAvailableSemaphore(mAcquireSlot);
 
@@ -164,7 +168,8 @@ bool VulkanRenderer::AcquireNextImage() {
     mViewportH = static_cast<int32_t>(mSwapchain->GetExtent().height);
     mSwapchainOutOfDate = true;
     return false;
-  } else if (res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR) {
+  }
+  if (res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR) {
     spdlog::error("vkAcquireNextImageKHR failed: {}",
                   vk_detail::VkResultToString(res));
     return false;
@@ -186,10 +191,12 @@ void VulkanRenderer::BeginFrame() {
   vkResetCommandBuffer(cmd, 0);
 
   // Sadece bu frame'in slot'unu sıfırla — diğer slot hâlâ GPU'da kullanılabilir.
-  if (mVertexRing)
+  if (mVertexRing != nullptr) {
     mVertexRing->ResetRing(mCurrentFrame);
-  if (mTexturedVertexRing)
+  }
+  if (mTexturedVertexRing != nullptr) {
     mTexturedVertexRing->ResetRing(mCurrentFrame);
+  }
 
   VkCommandBufferBeginInfo bi{};
   bi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -211,8 +218,9 @@ void VulkanRenderer::BeginFrame() {
 }
 
 void VulkanRenderer::EndFrame() {
-  if (!mFrameActive)
+  if (!mFrameActive) {
     return;
+  }
 
   VkCommandBuffer cmd = mFrameSync->GetCommandBuffer(mCurrentFrame);
   vkCmdEndRenderPass(cmd);
@@ -274,14 +282,14 @@ void VulkanRenderer::SubmitAndPresent() {
   }
 }
 
-std::string VulkanRenderer::ResolveShaderDir() const {
+std::string VulkanRenderer::ResolveShaderDir() {
   // Build sistemi tarafından tanımlanan makroyu önce dene.
 #ifdef SDLPAINTER_VULKAN_SHADER_DIR
   return SDLPAINTER_VULKAN_SHADER_DIR;
 #else
   // Fallback: executable yanında vulkan_shaders/ dizini.
   const char* base = SDL_GetBasePath();
-  if (base) {
+  if (base != nullptr) {
     return std::string(base) + "vulkan_shaders";
   }
   return "vulkan_shaders";
@@ -289,15 +297,15 @@ std::string VulkanRenderer::ResolveShaderDir() const {
 }
 
 void VulkanRenderer::ApplyDynamicViewportScissor(VkCommandBuffer cmd) const {
-  const VkExtent2D extent = mSwapchain->GetExtent();
+  const VkExtent2D kExtent = mSwapchain->GetExtent();
 
   VkViewport vp{};
   vp.x = static_cast<float>(mViewportX);
   vp.y = static_cast<float>(mViewportY);
   vp.width = mViewportW > 0 ? static_cast<float>(mViewportW)
-                            : static_cast<float>(extent.width);
+                            : static_cast<float>(kExtent.width);
   vp.height = mViewportH > 0 ? static_cast<float>(mViewportH)
-                             : static_cast<float>(extent.height);
+                             : static_cast<float>(kExtent.height);
   vp.minDepth = 0.0F;
   vp.maxDepth = 1.0F;
   vkCmdSetViewport(cmd, 0, 1, &vp);
@@ -309,7 +317,7 @@ void VulkanRenderer::ApplyDynamicViewportScissor(VkCommandBuffer cmd) const {
                       static_cast<uint32_t>(mScissorH)};
   } else {
     scissor.offset = {0, 0};
-    scissor.extent = extent;
+    scissor.extent = kExtent;
   }
   vkCmdSetScissor(cmd, 0, 1, &scissor);
 }
@@ -344,8 +352,9 @@ void VulkanRenderer::Clear(const Color& color) {
   mClearValue.color.float32[2] = color.BlueF();
   mClearValue.color.float32[3] = color.AlphaF();
 
-  if (!mFrameActive)
+  if (!mFrameActive) {
     return;
+  }
 
   VkCommandBuffer cmd = mFrameSync->GetCommandBuffer(mCurrentFrame);
   VkClearAttachment clear{};
@@ -368,19 +377,22 @@ void VulkanRenderer::SetOpacity(float alpha) {
 }
 
 void VulkanRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
-  if (!mFrameActive || vertices.empty())
+  if (!mFrameActive || vertices.empty()) {
     return;
-  if (!mPipeline || !mVertexRing)
+  }
+  if (mPipeline == nullptr || mVertexRing == nullptr) {
     return;
+  }
 
-  const VkDeviceSize byte_size =
+  const auto kByteSize =
       static_cast<VkDeviceSize>(vertices.size() * sizeof(Vertex));
   constexpr VkDeviceSize kAlignment = 4;
   VkDeviceSize offset_bytes = 0;
 
-  if (!mVertexRing->Write(vertices.data(), byte_size, kAlignment, mCurrentFrame,
-                          offset_bytes))
+  if (!mVertexRing->Write(vertices.data(), kByteSize, kAlignment, mCurrentFrame,
+                          offset_bytes)) {
     return;
+  }
 
   // Renk vertex'te taşındığı için tint her zaman 1.0.
   mPushConstants.tint_color[0] = 1.0F;
@@ -406,14 +418,15 @@ void VulkanRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
 
 TextureHandle VulkanRenderer::CreateTexture(const uint8_t* data, int32_t width,
                                             int32_t height, int32_t channels) {
-  if (!mTexturedPipeline || !data || width <= 0 || height <= 0) {
+  if (mTexturedPipeline == nullptr || data == nullptr || width <= 0 || height <= 0) {
     return kInvalidTexture;
   }
 
   VkDescriptorSet desc_set =
       mTexturedPipeline->AllocateDescriptorSet(mContext->GetDevice());
-  if (desc_set == VK_NULL_HANDLE)
+  if (desc_set == VK_NULL_HANDLE) {
     return kInvalidTexture;
+  }
 
   auto tex = std::make_unique<VulkanTexture>();
   if (!tex->Upload(mContext.get(), mFrameSync->GetCommandPool(), data, width,
@@ -423,18 +436,19 @@ TextureHandle VulkanRenderer::CreateTexture(const uint8_t* data, int32_t width,
     return kInvalidTexture;
   }
 
-  const TextureHandle handle = mNextTextureHandle++;
-  mTextures[handle] = std::move(tex);
-  return handle;
+  const TextureHandle kHandle = mNextTextureHandle++;
+  mTextures[kHandle] = std::move(tex);
+  return kHandle;
 }
 
 void VulkanRenderer::DestroyTexture(TextureHandle handle) {
   auto it = mTextures.find(handle);
-  if (it == mTextures.end())
+  if (it == mTextures.end()) {
     return;
+  }
 
   vkDeviceWaitIdle(mContext->GetDevice());
-  if (mTexturedPipeline) {
+  if (mTexturedPipeline != nullptr) {
     mTexturedPipeline->FreeDescriptorSet(mContext->GetDevice(),
                                          it->second->GetDescriptorSet());
   }
@@ -444,21 +458,24 @@ void VulkanRenderer::DestroyTexture(TextureHandle handle) {
 
 void VulkanRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
                                   TextureHandle texture) {
-  if (!mFrameActive || vertices.empty())
+  if (!mFrameActive || vertices.empty()) {
     return;
-  if (!mTexturedPipeline || !mTexturedVertexRing)
+  }
+  if (mTexturedPipeline == nullptr || mTexturedVertexRing == nullptr) {
     return;
+  }
 
   auto it = mTextures.find(texture);
-  if (it == mTextures.end())
+  if (it == mTextures.end()) {
     return;
+  }
 
-  const VkDeviceSize byte_size =
+  const auto kByteSize =
       static_cast<VkDeviceSize>(vertices.size() * sizeof(TexturedVertex));
   constexpr VkDeviceSize kAlignment = 4;
   VkDeviceSize offset_bytes = 0;
 
-  if (!mTexturedVertexRing->Write(vertices.data(), byte_size, kAlignment,
+  if (!mTexturedVertexRing->Write(vertices.data(), kByteSize, kAlignment,
                                   mCurrentFrame, offset_bytes)) {
     return;
   }
@@ -499,13 +516,13 @@ void VulkanRenderer::SetModelMatrix(const float* mat3) {
   // 3x3 row-major affine → 4x4 column-major dönüşümü.
   // mat3 layout (row-major): [m00 m01 tx | m10 m11 ty | 0 0 1]
   // İndeksler:                 [0]  [1]  [2]  [3]  [4]  [5]
-  float m[16] = {
+  std::array<float, 16> m = {
       mat3[0], mat3[3], 0.0F, 0.0F,  // column 0
       mat3[1], mat3[4], 0.0F, 0.0F,  // column 1
       0.0F,    0.0F,    1.0F, 0.0F,  // column 2
       mat3[2], mat3[5], 0.0F, 1.0F,  // column 3
   };
-  std::memcpy(mPushConstants.model, m, 16 * sizeof(float));
+  std::memcpy(mPushConstants.model, m.data(), 16 * sizeof(float));
 }
 
 }  // namespace sdl_painter

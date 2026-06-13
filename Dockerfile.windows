@@ -176,7 +176,7 @@ ENTRYPOINT ["C:\\BuildTools\\VC\\Auxiliary\\Build\\vcvars64.bat", "&&", "cmd.exe
 # modu) bir GitLab Runner'da çalışır.
 #
 # DİKKAT — isim çakışması: CI'daki build:windows:* job'ları
-# `$CI_REGISTRY_IMAGE/sdl-painter-win` imajını kullanır; bu, ana `Dockerfile`
+# `$CI_REGISTRY_IMAGE/sdl-painter-win-cross` imajını kullanır; bu, ana `Dockerfile`
 # `windows-cross` hedefinden üretilen LINUX + MinGW imajıdır (GitLab.com SaaS
 # Linux runner'da cross-compile). Bu MSVC imajını O ETİKETE PUSH'LAMAYIN —
 # MinGW CI'yı bozar (Linux runner Windows container çalıştıramaz).

@@ -57,8 +57,8 @@ class Painter {
   // Non-copyable, movable
   Painter(const Painter&) = delete;
   Painter& operator=(const Painter&) = delete;
-  Painter(Painter&&) noexcept;
-  Painter& operator=(Painter&&) noexcept;
+  Painter(Painter&& other) noexcept;
+  Painter& operator=(Painter&& other) noexcept;
 
   /// @brief Renderer başarıyla başlatıldı mı?
   [[nodiscard]] bool IsValid() const noexcept { return mRenderer != nullptr; }

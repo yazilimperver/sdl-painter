@@ -1,5 +1,6 @@
 #include "vulkan_textured_pipeline.h"
 
+#include <array>
 #include <cstddef>
 #include <fstream>
 #include <spdlog/spdlog.h>
@@ -25,14 +26,14 @@ VkShaderModule VulkanTexturedPipeline::LoadSpv(VkDevice device,
     spdlog::error("VulkanTexturedPipeline: shader açılamadı: {}", path);
     return VK_NULL_HANDLE;
   }
-  const std::size_t file_size = static_cast<std::size_t>(file.tellg());
-  std::vector<char> code(file_size);
+  const std::size_t kFileSize = static_cast<std::size_t>(file.tellg());
+  std::vector<char> code(kFileSize);
   file.seekg(0);
-  file.read(code.data(), static_cast<std::streamsize>(file_size));
+  file.read(code.data(), static_cast<std::streamsize>(kFileSize));
 
   VkShaderModuleCreateInfo ci{};
   ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-  ci.codeSize = file_size;
+  ci.codeSize = kFileSize;
   ci.pCode = reinterpret_cast<const uint32_t*>(code.data());  // NOLINT
 
   VkShaderModule mod = VK_NULL_HANDLE;
@@ -84,17 +85,19 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
   }
 
   // --- Shader modülleri ---
-  const std::string vert_path = shader_dir + "/textured.vert.spv";
-  const std::string frag_path = shader_dir + "/textured.frag.spv";
+  const std::string kVertPath = shader_dir + "/textured.vert.spv";
+  const std::string kFragPath = shader_dir + "/textured.frag.spv";
 
-  VkShaderModule vert_mod = LoadSpv(device, vert_path);
-  VkShaderModule frag_mod = LoadSpv(device, frag_path);
+  VkShaderModule vert_mod = LoadSpv(device, kVertPath);
+  VkShaderModule frag_mod = LoadSpv(device, kFragPath);
 
   if (vert_mod == VK_NULL_HANDLE || frag_mod == VK_NULL_HANDLE) {
-    if (vert_mod != VK_NULL_HANDLE)
+    if (vert_mod != VK_NULL_HANDLE) {
       vkDestroyShaderModule(device, vert_mod, nullptr);
-    if (frag_mod != VK_NULL_HANDLE)
+    }
+    if (frag_mod != VK_NULL_HANDLE) {
       vkDestroyShaderModule(device, frag_mod, nullptr);
+    }
     // Önceki kaynaklar (descriptor set layout + pool) için cleanup.
     vkDestroyDescriptorPool(device, mDescriptorPool, nullptr);
     vkDestroyDescriptorSetLayout(device, mDescriptorSetLayout, nullptr);
@@ -103,7 +106,7 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
     return false;
   }
 
-  VkPipelineShaderStageCreateInfo shader_stages[2]{};
+  std::array<VkPipelineShaderStageCreateInfo, 2> shader_stages{};
   shader_stages[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
   shader_stages[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
   shader_stages[0].module = vert_mod;
@@ -120,7 +123,7 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
   binding.stride = static_cast<uint32_t>(sizeof(TexturedVertex));
   binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-  VkVertexInputAttributeDescription attrs[3]{};
+  std::array<VkVertexInputAttributeDescription, 3> attrs{};
   // location=0: position (vec2)
   attrs[0].binding = 0;
   attrs[0].location = 0;
@@ -143,7 +146,7 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
   vertex_input.vertexBindingDescriptionCount = 1;
   vertex_input.pVertexBindingDescriptions = &binding;
   vertex_input.vertexAttributeDescriptionCount = 3;
-  vertex_input.pVertexAttributeDescriptions = attrs;
+  vertex_input.pVertexAttributeDescriptions = attrs.data();
 
   // --- Input assembly ---
   VkPipelineInputAssemblyStateCreateInfo input_assembly{};
@@ -153,12 +156,12 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
   input_assembly.primitiveRestartEnable = VK_FALSE;
 
   // --- Dynamic viewport + scissor ---
-  VkDynamicState dyn_states[] = {VK_DYNAMIC_STATE_VIEWPORT,
-                                 VK_DYNAMIC_STATE_SCISSOR};
+  std::array<VkDynamicState, 2> dyn_states = {VK_DYNAMIC_STATE_VIEWPORT,
+                                              VK_DYNAMIC_STATE_SCISSOR};
   VkPipelineDynamicStateCreateInfo dynamic_state{};
   dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
   dynamic_state.dynamicStateCount = 2;
-  dynamic_state.pDynamicStates = dyn_states;
+  dynamic_state.pDynamicStates = dyn_states.data();
 
   VkPipelineViewportStateCreateInfo viewport_state{};
   viewport_state.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -230,7 +233,7 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
   VkGraphicsPipelineCreateInfo pipeline_ci{};
   pipeline_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
   pipeline_ci.stageCount = 2;
-  pipeline_ci.pStages = shader_stages;
+  pipeline_ci.pStages = shader_stages.data();
   pipeline_ci.pVertexInputState = &vertex_input;
   pipeline_ci.pInputAssemblyState = &input_assembly;
   pipeline_ci.pViewportState = &viewport_state;
@@ -299,8 +302,9 @@ void VulkanTexturedPipeline::FreeDescriptorSet(VkDevice device,
 // ---------------------------------------------------------------------------
 void VulkanTexturedPipeline::Destroy(VkDevice device) {
   VkDevice d = (mDevice != VK_NULL_HANDLE) ? mDevice : device;
-  if (d == VK_NULL_HANDLE)
+  if (d == VK_NULL_HANDLE) {
     return;
+  }
   if (mPipeline != VK_NULL_HANDLE) {
     vkDestroyPipeline(d, mPipeline, nullptr);
     mPipeline = VK_NULL_HANDLE;

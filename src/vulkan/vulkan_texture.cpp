@@ -46,13 +46,13 @@ bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
     rgba_data = rgba_storage.data();
   }
 
-  const VkDeviceSize image_size =
+  const VkDeviceSize kImageSize =  // NOLINT(modernize-use-auto)
       static_cast<VkDeviceSize>(mWidth_u * mHeight_u * 4);
 
   // 1. Staging buffer
   VkBuffer staging_buf = VK_NULL_HANDLE;
   VkDeviceMemory staging_mem = VK_NULL_HANDLE;
-  if (!CreateStagingBuffer(device, phys_device, rgba_data, image_size,
+  if (!CreateStagingBuffer(device, phys_device, rgba_data, kImageSize,
                            staging_buf, staging_mem)) {
     return false;
   }
@@ -76,8 +76,9 @@ bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
   vkFreeMemory(device, staging_mem, nullptr);
 
   // 4. Sampler
-  if (!CreateSampler(device))
+  if (!CreateSampler(device)) {
     return false;
+  }
 
   // 5. Descriptor set güncelle
   UpdateDescriptorSet(device, descriptor_set_layout);
@@ -370,8 +371,9 @@ void VulkanTexture::UpdateDescriptorSet(VkDevice device,
 // ---------------------------------------------------------------------------
 void VulkanTexture::Destroy(VkDevice device) {
   VkDevice d = (mDevice != VK_NULL_HANDLE) ? mDevice : device;
-  if (d == VK_NULL_HANDLE)
+  if (d == VK_NULL_HANDLE) {
     return;
+  }
   if (mSampler != VK_NULL_HANDLE) {
     vkDestroySampler(d, mSampler, nullptr);
     mSampler = VK_NULL_HANDLE;

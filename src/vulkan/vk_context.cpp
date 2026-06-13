@@ -28,8 +28,9 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT severity,
     VkDebugUtilsMessageTypeFlagsEXT /*type*/,
     const VkDebugUtilsMessengerCallbackDataEXT* data, void* /*user_data*/) {
-  if (!data || !data->pMessage)
+  if (data == nullptr || data->pMessage == nullptr) {
     return VK_FALSE;
+  }
   if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
     spdlog::error("[Vulkan] {}", data->pMessage);
   } else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
@@ -48,8 +49,9 @@ bool CheckValidationLayerSupport() {
   std::vector<VkLayerProperties> available(count);
   vkEnumerateInstanceLayerProperties(&count, available.data());
   for (const auto& layer : available) {
-    if (std::strcmp(layer.layerName, kValidationLayer) == 0)
+    if (std::strcmp(layer.layerName, kValidationLayer) == 0) {
       return true;
+    }
   }
   return false;
 }
@@ -82,16 +84,21 @@ bool VkContext::Initialize(SDL_Window* window) {
     }
   }
 
-  if (!CreateInstance())
+  if (!CreateInstance()) {
     return false;
-  if (mValidationEnabled && !CreateDebugMessenger())
+  }
+  if (mValidationEnabled && !CreateDebugMessenger()) {
     return false;
-  if (!CreateSurface(window))
+  }
+  if (!CreateSurface(window)) {
     return false;
-  if (!PickPhysicalDevice())
+  }
+  if (!PickPhysicalDevice()) {
     return false;
-  if (!CreateLogicalDevice())
+  }
+  if (!CreateLogicalDevice()) {
     return false;
+  }
 
   spdlog::info("VkContext initialized (validation={}).", mValidationEnabled);
   return true;
@@ -108,10 +115,11 @@ void VkContext::Shutdown() {
     mSurface = VK_NULL_HANDLE;
   }
   if (mDebugMessenger != VK_NULL_HANDLE && mInstance != VK_NULL_HANDLE) {
-    auto destroyFn = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
+    auto destroy_fn = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(
         vkGetInstanceProcAddr(mInstance, "vkDestroyDebugUtilsMessengerEXT"));
-    if (destroyFn)
-      destroyFn(mInstance, mDebugMessenger, nullptr);
+    if (destroy_fn != nullptr) {
+      destroy_fn(mInstance, mDebugMessenger, nullptr);
+    }
     mDebugMessenger = VK_NULL_HANDLE;
   }
   if (mInstance != VK_NULL_HANDLE) {
@@ -136,7 +144,7 @@ bool VkContext::CreateInstance() {
   Uint32 sdl_ext_count = 0;
   const char* const* sdl_exts =
       SDL_Vulkan_GetInstanceExtensions(&sdl_ext_count);
-  if (!sdl_exts) {
+  if (sdl_exts == nullptr) {
     spdlog::error("SDL_Vulkan_GetInstanceExtensions failed: {}",
                   SDL_GetError());
     return false;
@@ -177,14 +185,14 @@ bool VkContext::CreateInstance() {
 }
 
 bool VkContext::CreateDebugMessenger() {
-  auto createFn = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
+  auto create_fn = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(
       vkGetInstanceProcAddr(mInstance, "vkCreateDebugUtilsMessengerEXT"));
-  if (!createFn) {
+  if (create_fn == nullptr) {
     spdlog::warn("vkCreateDebugUtilsMessengerEXT not available.");
     return true;  // kritik değil
   }
   auto info = MakeDebugMessengerCreateInfo();
-  VkResult res = createFn(mInstance, &info, nullptr, &mDebugMessenger);
+  VkResult res = create_fn(mInstance, &info, nullptr, &mDebugMessenger);
   if (res != VK_SUCCESS) {
     spdlog::warn("Debug messenger creation failed: {}",
                  vk_detail::VkResultToString(res));
@@ -206,7 +214,7 @@ namespace {
 struct QueueFamilies {
   std::optional<uint32_t> graphics;
   std::optional<uint32_t> present;
-  bool IsComplete() const { return graphics && present; }
+  [[nodiscard]] bool IsComplete() const { return graphics && present; }
 };
 
 QueueFamilies FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface) {
@@ -225,8 +233,9 @@ QueueFamilies FindQueueFamilies(VkPhysicalDevice device, VkSurfaceKHR surface) {
     if (present_support) {
       result.present = i;
     }
-    if (result.IsComplete())
+    if (result.IsComplete()) {
       break;
+    }
   }
   return result;
 }
@@ -246,18 +255,22 @@ bool DeviceSupportsSwapchain(VkPhysicalDevice device) {
 
 int ScoreDevice(VkPhysicalDevice device, VkSurfaceKHR surface) {
   auto q = FindQueueFamilies(device, surface);
-  if (!q.IsComplete())
+  if (!q.IsComplete()) {
     return -1;
-  if (!DeviceSupportsSwapchain(device))
+  }
+  if (!DeviceSupportsSwapchain(device)) {
     return -1;
+  }
 
   VkPhysicalDeviceProperties props{};
   vkGetPhysicalDeviceProperties(device, &props);
   int score = 0;
-  if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU)
-    score += 1000;
-  if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU)
-    score += 100;
+  if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+    score += 1000;  // NOLINT(readability-magic-numbers)
+  }
+  if (props.deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
+    score += 100;  // NOLINT(readability-magic-numbers)
+  }
   return score;
 }
 
@@ -282,7 +295,7 @@ bool VkContext::PickPhysicalDevice() {
       best = d;
     }
   }
-  if (best == VK_NULL_HANDLE || best_score < 0) {
+  if (best == VK_NULL_HANDLE || best_score < 0) {  // NOLINT(readability-magic-numbers)
     spdlog::error("No suitable GPU (missing graphics/present/swapchain).");
     return false;
   }

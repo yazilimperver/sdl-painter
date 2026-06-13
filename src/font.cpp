@@ -9,7 +9,7 @@
 namespace sdl_painter {
 
 // TTF subsystem referans sayacı — birden fazla Font nesnesi güvenli paylaşım.
-static int32_t gTTFRefCount = 0;
+static int32_t gTTFRefCount = 0;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables, readability-identifier-naming)
 
 static bool EnsureTTFInit() {
   if (gTTFRefCount == 0) {
@@ -24,8 +24,9 @@ static bool EnsureTTFInit() {
 }
 
 static void ReleaseTTF() {
-  if (gTTFRefCount <= 0)
+  if (gTTFRefCount <= 0) {
     return;
+  }
   --gTTFRefCount;
   if (gTTFRefCount == 0) {
     TTF_Quit();
@@ -34,18 +35,19 @@ static void ReleaseTTF() {
 }
 
 Font::Font(const std::string& file_path, int32_t point_size)
-    : mHandle(nullptr), mPointSize(point_size) {
-  if (!EnsureTTFInit())
+    : mPointSize(point_size) {
+  if (!EnsureTTFInit()) {
     return;
+  }
   mHandle = TTF_OpenFont(file_path.c_str(), static_cast<float>(point_size));
-  if (!mHandle) {
+  if (mHandle == nullptr) {
     spdlog::error("Font yuklenemedi: {} ({})", file_path, SDL_GetError());
     ReleaseTTF();
   }
 }
 
 Font::~Font() {
-  if (mHandle) {
+  if (mHandle != nullptr) {
     TTF_CloseFont(static_cast<TTF_Font*>(mHandle));
     mHandle = nullptr;
     ReleaseTTF();
@@ -60,7 +62,7 @@ Font::Font(Font&& other) noexcept
 
 Font& Font::operator=(Font&& other) noexcept {
   if (this != &other) {
-    if (mHandle) {
+    if (mHandle != nullptr) {
       TTF_CloseFont(static_cast<TTF_Font*>(mHandle));
       ReleaseTTF();
     }
@@ -73,18 +75,20 @@ Font& Font::operator=(Font&& other) noexcept {
 }
 
 int32_t Font::Ascent() const {
-  if (!mHandle)
+  if (mHandle == nullptr) {
     return 0;
+  }
   return TTF_GetFontAscent(static_cast<TTF_Font*>(mHandle));
 }
 
 bool Font::MeasureText(const std::string& text, int32_t& out_width,
                        int32_t& out_height) const {
-  if (!mHandle || text.empty()) {
+  if (mHandle == nullptr || text.empty()) {
     out_width = out_height = 0;
     return false;
   }
-  int w = 0, h = 0;
+  int w = 0;
+  int h = 0;
   bool ok = TTF_GetStringSize(static_cast<TTF_Font*>(mHandle), text.c_str(),
                               text.size(), &w, &h);
   out_width = w;
@@ -94,11 +98,13 @@ bool Font::MeasureText(const std::string& text, int32_t& out_width,
 
 const Glyph* Font::GetGlyph(IRenderer& renderer, char32_t codepoint) const {
   auto it = mGlyphCache.find(codepoint);
-  if (it != mGlyphCache.end())
+  if (it != mGlyphCache.end()) {
     return &it->second;
+  }
 
-  if (!mHandle)
+  if (mHandle == nullptr) {
     return nullptr;
+  }
 
   auto* font = static_cast<TTF_Font*>(mHandle);
 
@@ -107,15 +113,17 @@ const Glyph* Font::GetGlyph(IRenderer& renderer, char32_t codepoint) const {
   // TTF_RenderGlyph_Blended, karakterin sıkıca kırpılmış (tightly cropped)
   // bir yüzeyini verir.
   SDL_Surface* surface = TTF_RenderGlyph_Blended(font, codepoint, white);
-  if (!surface)
+  if (surface == nullptr) {
     return nullptr;
+  }
 
   // RGBA32 formatina donustur
   SDL_Surface* rgba_surface =
       SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
   SDL_DestroySurface(surface);
-  if (!rgba_surface)
+  if (rgba_surface == nullptr) {
     return nullptr;
+  }
 
   // Texture olustur
   TextureHandle handle =
@@ -123,7 +131,11 @@ const Glyph* Font::GetGlyph(IRenderer& renderer, char32_t codepoint) const {
                              rgba_surface->w, rgba_surface->h, 4);
 
   // Metrikleri al
-  int minx, maxx, miny, maxy, advance;
+  int minx = 0;
+  int maxx = 0;
+  int miny = 0;
+  int maxy = 0;
+  int advance = 0;
   if (!TTF_GetGlyphMetrics(font, codepoint, &minx, &maxx, &miny, &maxy,
                            &advance)) {
     SDL_DestroySurface(rgba_surface);

@@ -20,7 +20,7 @@ using TextureHandle = uint32_t;
 constexpr TextureHandle kInvalidTexture = 0;
 
 /// @brief Render backend seçeneği.
-enum class RendererBackend {
+enum class RendererBackend : uint8_t {
   kOpenGL,
   kVulkan,
 };
@@ -95,7 +95,7 @@ class IRenderer {
   // --- Transform ---
 
   /// @brief Backend tipini döndür — projeksiyon yönü için kullanılır.
-  virtual RendererBackend GetBackend() const = 0;
+  [[nodiscard]] virtual RendererBackend GetBackend() const = 0;
 
   /// @brief Ortografik projeksiyon matrisini ayarla (4x4, sütun-major).
   virtual void SetProjectionMatrix(const float* mat4) = 0;

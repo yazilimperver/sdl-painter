@@ -80,9 +80,9 @@ void Transform::Map(float x, float y, float* out_x, float* out_y) const {
 
 Transform Transform::MakeTranslate(float dx, float dy) {
   // clang-format off
-  return Transform(1.0F, 0.0F, dx,
-                   0.0F, 1.0F, dy,
-                   0.0F, 0.0F, 1.0F);
+  return {1.0F, 0.0F, dx,
+          0.0F, 1.0F, dy,
+          0.0F, 0.0F, 1.0F};
   // clang-format on
 }
 
@@ -92,17 +92,17 @@ Transform Transform::MakeRotate(float angle_degrees) {
   float c = std::cos(rad);
   float s = std::sin(rad);
   // clang-format off
-  return Transform(c,    -s,   0.0F,
-                   s,     c,   0.0F,
-                   0.0F,  0.0F, 1.0F);
+  return {c,    -s,   0.0F,
+          s,     c,   0.0F,
+          0.0F,  0.0F, 1.0F};
   // clang-format on
 }
 
 Transform Transform::MakeScale(float sx, float sy) {
   // clang-format off
-  return Transform(sx,   0.0F, 0.0F,
-                   0.0F, sy,   0.0F,
-                   0.0F, 0.0F, 1.0F);
+  return {sx,   0.0F, 0.0F,
+          0.0F, sy,   0.0F,
+          0.0F, 0.0F, 1.0F};
   // clang-format on
 }
 

@@ -5,6 +5,7 @@
 
 #include <SDL3/SDL.h>
 
+#include <cstdint>
 #include <cstring>
 #include <glad/glad.h>
 #include <spdlog/spdlog.h>
@@ -28,14 +29,14 @@ bool OpenGLRenderer::Initialize(SDL_Window* window) {
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
   mGLContext = SDL_GL_CreateContext(window);
-  if (!mGLContext) {
+  if (mGLContext == nullptr) {
     spdlog::error("[OpenGLRenderer] Failed to create GL context: {}",
                   SDL_GetError());
     return false;
   }
 
-  if (!gladLoadGLLoader(
-          reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+  if (gladLoadGLLoader(
+          reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress)) == 0) {
     spdlog::error("[OpenGLRenderer] Failed to load GLAD");
     return false;
   }
@@ -51,7 +52,7 @@ bool OpenGLRenderer::Initialize(SDL_Window* window) {
   shader_dir = std::string(SDLPAINTER_OPENGL_SHADER_DIR) + "/";
 #else
   const char* base_raw = SDL_GetBasePath();
-  if (!base_raw) {
+  if (base_raw == nullptr) {
     spdlog::error("[OpenGLRenderer] SDL_GetBasePath() returned null");
     return false;
   }
@@ -84,11 +85,11 @@ void OpenGLRenderer::SetupBuffers() {
   // Position (Location 0)
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
-                        reinterpret_cast<void*>(0));
+                        reinterpret_cast<void*>(static_cast<uintptr_t>(0)));
   // Color (Location 1) - Normalized uint8 -> float [0, 1]
   glEnableVertexAttribArray(1);
   glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex),
-                        reinterpret_cast<void*>(2 * sizeof(float)));
+                        reinterpret_cast<void*>(static_cast<uintptr_t>(2 * sizeof(float))));
 
   glBindVertexArray(0);
 
@@ -101,22 +102,23 @@ void OpenGLRenderer::SetupBuffers() {
   // Position (Location 0)
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(TexturedVertex),
-                        reinterpret_cast<void*>(0));
+                        reinterpret_cast<void*>(static_cast<uintptr_t>(0)));
   // TexCoord (Location 1)
   glEnableVertexAttribArray(1);
   glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(TexturedVertex),
-                        reinterpret_cast<void*>(2 * sizeof(float)));
+                        reinterpret_cast<void*>(static_cast<uintptr_t>(2 * sizeof(float))));
   // Color (Location 2)
   glEnableVertexAttribArray(2);
   glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(TexturedVertex),
-                        reinterpret_cast<void*>(4 * sizeof(float)));
+                        reinterpret_cast<void*>(static_cast<uintptr_t>(4 * sizeof(float))));
 
   glBindVertexArray(0);
 }
 
 void OpenGLRenderer::Shutdown() {
-  if (!mGLContext)
+  if (mGLContext == nullptr) {
     return;
+  }
 
   // GL kaynakları silinmeden önce context'i aktif et.
   SDL_GL_MakeCurrent(mWindow, static_cast<SDL_GLContext>(mGLContext));
@@ -126,19 +128,19 @@ void OpenGLRenderer::Shutdown() {
   mBasicShader = ShaderProgram{};
   mTexturedShader = ShaderProgram{};
 
-  if (mVao) {
+  if (mVao != 0U) {
     glDeleteVertexArrays(1, &mVao);
     mVao = 0;
   }
-  if (mVbo) {
+  if (mVbo != 0U) {
     glDeleteBuffers(1, &mVbo);
     mVbo = 0;
   }
-  if (mTexturedVao) {
+  if (mTexturedVao != 0U) {
     glDeleteVertexArrays(1, &mTexturedVao);
     mTexturedVao = 0;
   }
-  if (mTexturedVbo) {
+  if (mTexturedVbo != 0U) {
     glDeleteBuffers(1, &mTexturedVbo);
     mTexturedVbo = 0;
   }
@@ -178,8 +180,9 @@ void OpenGLRenderer::SetOpacity(float alpha) {
 }
 
 void OpenGLRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
-  if (vertices.empty())
+  if (vertices.empty()) {
     return;
+  }
 
   mBasicShader.Use();
   mBasicShader.SetUniformMat4("u_projection", mProjection);
@@ -197,8 +200,9 @@ void OpenGLRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
 
 TextureHandle OpenGLRenderer::CreateTexture(const uint8_t* data, int32_t width,
                                             int32_t height, int32_t channels) {
-  if (!data)
+  if (data == nullptr) {
     return kInvalidTexture;
+  }
 
   GLenum format = (channels == 4) ? GL_RGBA : GL_RGB;
   uint32_t tex_id = 0;
@@ -217,16 +221,18 @@ TextureHandle OpenGLRenderer::CreateTexture(const uint8_t* data, int32_t width,
 void OpenGLRenderer::DestroyTexture(TextureHandle handle) {
   // GL context yok olmuşsa (Shutdown sonrası) çağrıya gerek yok:
   // context yıkımı zaten tüm GL kaynaklarını serbest bırakır.
-  if (handle == kInvalidTexture || !mGLContext)
+  if (handle == kInvalidTexture || mGLContext == nullptr) {
     return;
-  uint32_t tex_id = static_cast<uint32_t>(handle);
+  }
+  auto tex_id = static_cast<uint32_t>(handle);
   glDeleteTextures(1, &tex_id);
 }
 
 void OpenGLRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
                                   TextureHandle texture) {
-  if (vertices.empty() || texture == kInvalidTexture)
+  if (vertices.empty() || texture == kInvalidTexture) {
     return;
+  }
 
   mTexturedShader.Use();
   mTexturedShader.SetUniformMat4("u_projection", mProjection);
