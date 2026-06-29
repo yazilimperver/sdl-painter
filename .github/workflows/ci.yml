@@ -80,7 +80,7 @@ jobs:
 
   build-windows-debug:
     name: build:windows:debug
-    runs-on: windows-latest
+    runs-on: windows-2022
     env:
       CONAN_HOME: ${{ github.workspace }}\.conan2
     steps:
@@ -112,7 +112,7 @@ jobs:
 
   build-windows-release:
     name: build:windows:release
-    runs-on: windows-latest
+    runs-on: windows-2022
     env:
       CONAN_HOME: ${{ github.workspace }}\.conan2
     steps:
