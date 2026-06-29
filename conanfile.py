@@ -6,6 +6,7 @@ class SDLPainterConan(ConanFile):
     name = "sdl_painter"
     version = "1.0.0"
     settings = "os", "compiler", "build_type", "arch"
+    exports_sources = "CMakeLists.txt", "cmake/*", "include/*", "src/*"
     options = {
         "with_vulkan": [True, False],
         "build_examples": [True, False],
