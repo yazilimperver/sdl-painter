@@ -54,8 +54,8 @@ class VulkanTexture {
  private:
   /// @brief Host-visible staging buffer oluştur ve veriyi kopyala.
   static bool CreateStagingBuffer(VkDevice device, VkPhysicalDevice phys_device,
-                           const uint8_t* rgba_data, VkDeviceSize size,
-                           VkBuffer& out_buf, VkDeviceMemory& out_mem);
+                                  const uint8_t* rgba_data, VkDeviceSize size,
+                                  VkBuffer& out_buf, VkDeviceMemory& out_mem);
 
   /// @brief Device-local VkImage + VkImageView oluştur.
   bool CreateImage(VkDevice device, VkPhysicalDevice phys_device,

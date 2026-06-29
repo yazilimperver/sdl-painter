@@ -197,15 +197,17 @@ bool Tessellator::PointInTriangle(const Point& p, const Point& a,
   return !(has_neg && has_pos);
 }
 
-std::vector<Vertex> Tessellator::EarClipping(  // NOLINT(readability-function-cognitive-complexity)
-    const std::vector<Point>& points) {
+// NOLINTNEXTLINE(readability-function-cognitive-complexity)
+std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& points) {
   if (points.size() < 3) {
     return {};
   }
 
   // Basit üçgen durumu
   if (points.size() == 3) {
-    return {{points[0].x, points[0].y}, {points[1].x, points[1].y}, {points[2].x, points[2].y}};
+    return {{points[0].x, points[0].y},
+            {points[1].x, points[1].y},
+            {points[2].x, points[2].y}};
   }
 
   // İmzalı alan ile sarma yönünü belirle (shoelace formülü)

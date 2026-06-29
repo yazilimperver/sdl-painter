@@ -418,7 +418,8 @@ void VulkanRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
 
 TextureHandle VulkanRenderer::CreateTexture(const uint8_t* data, int32_t width,
                                             int32_t height, int32_t channels) {
-  if (mTexturedPipeline == nullptr || data == nullptr || width <= 0 || height <= 0) {
+  if (mTexturedPipeline == nullptr || data == nullptr || width <= 0 ||
+      height <= 0) {
     return kInvalidTexture;
   }
 

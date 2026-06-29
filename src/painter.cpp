@@ -373,7 +373,8 @@ void Painter::DrawImage(const Image& image, const Rect& src_rect,
 }
 
 void Painter::DrawText(float x, float y, const std::string& text) {
-  if (mRenderer == nullptr || mBatcher == nullptr || mCurrentFont == nullptr || !mCurrentFont->IsValid()) {
+  if (mRenderer == nullptr || mBatcher == nullptr || mCurrentFont == nullptr ||
+      !mCurrentFont->IsValid()) {
     return;
   }
   if (text.empty()) {
@@ -410,8 +411,9 @@ void Painter::DrawText(float x, float y, const std::string& text) {
     const float kGy1 = kGy0 + static_cast<float>(glyph->height);
 
     const std::vector<TexturedVertex> kVerts = {
-        {kGx0, kGy0, 0.0F, 0.0F}, {kGx1, kGy0, 1.0F, 0.0F}, {kGx1, kGy1, 1.0F, 1.0F},
-        {kGx0, kGy0, 0.0F, 0.0F}, {kGx1, kGy1, 1.0F, 1.0F}, {kGx0, kGy1, 0.0F, 1.0F},
+        {kGx0, kGy0, 0.0F, 0.0F}, {kGx1, kGy0, 1.0F, 0.0F},
+        {kGx1, kGy1, 1.0F, 1.0F}, {kGx0, kGy0, 0.0F, 0.0F},
+        {kGx1, kGy1, 1.0F, 1.0F}, {kGx0, kGy1, 0.0F, 1.0F},
     };
 
     mBatcher->PushTexturedTriangles(kVerts, glyph->texture.Handle(), tint,
@@ -423,7 +425,8 @@ void Painter::DrawText(float x, float y, const std::string& text) {
 
 void Painter::DrawText(const Rect& rect, const std::string& text,
                        Alignment alignment) {
-  if (mRenderer == nullptr || mCurrentFont == nullptr || !mCurrentFont->IsValid()) {
+  if (mRenderer == nullptr || mCurrentFont == nullptr ||
+      !mCurrentFont->IsValid()) {
     return;
   }
   if (text.empty()) {

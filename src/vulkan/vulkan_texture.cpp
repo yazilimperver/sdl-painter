@@ -46,7 +46,8 @@ bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
     rgba_data = rgba_storage.data();
   }
 
-  const VkDeviceSize kImageSize =  // NOLINT(modernize-use-auto)
+  // NOLINTNEXTLINE(modernize-use-auto)
+  const VkDeviceSize kImageSize =
       static_cast<VkDeviceSize>(mWidth_u * mHeight_u * 4);
 
   // 1. Staging buffer

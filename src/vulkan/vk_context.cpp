@@ -295,7 +295,8 @@ bool VkContext::PickPhysicalDevice() {
       best = d;
     }
   }
-  if (best == VK_NULL_HANDLE || best_score < 0) {  // NOLINT(readability-magic-numbers)
+  if (best == VK_NULL_HANDLE ||
+      best_score < 0) {  // NOLINT(readability-magic-numbers)
     spdlog::error("No suitable GPU (missing graphics/present/swapchain).");
     return false;
   }

@@ -19,10 +19,18 @@ struct Color {
       : r(r_), g(g_), b(b_), a(a_) {}
 
   /// @brief Rengi [0.0, 1.0] aralığında normalize edilmiş float olarak döndür.
-  [[nodiscard]] float RedF() const noexcept { return static_cast<float>(r) / 255.0F; }
-  [[nodiscard]] float GreenF() const noexcept { return static_cast<float>(g) / 255.0F; }
-  [[nodiscard]] float BlueF() const noexcept { return static_cast<float>(b) / 255.0F; }
-  [[nodiscard]] float AlphaF() const noexcept { return static_cast<float>(a) / 255.0F; }
+  [[nodiscard]] float RedF() const noexcept {
+    return static_cast<float>(r) / 255.0F;
+  }
+  [[nodiscard]] float GreenF() const noexcept {
+    return static_cast<float>(g) / 255.0F;
+  }
+  [[nodiscard]] float BlueF() const noexcept {
+    return static_cast<float>(b) / 255.0F;
+  }
+  [[nodiscard]] float AlphaF() const noexcept {
+    return static_cast<float>(a) / 255.0F;
+  }
 
   [[nodiscard]] bool operator==(const Color& other) const noexcept {
     return r == other.r && g == other.g && b == other.b && a == other.a;

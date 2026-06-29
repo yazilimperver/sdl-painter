@@ -53,7 +53,8 @@ Image Image::CreateFromData(const uint8_t* data, int32_t width, int32_t height,
                             static_cast<std::size_t>(height) *
                             static_cast<std::size_t>(channels);
   // malloc kullaniyoruz — StbDeleter, stbi_image_free -> free() cagirir.
-  auto* buf = static_cast<uint8_t*>(std::malloc(kSize));  // NOLINT(cppcoreguidelines-no-malloc, cppcoreguidelines-owning-memory)
+  // NOLINTNEXTLINE(cppcoreguidelines-no-malloc, cppcoreguidelines-owning-memory)
+  auto* buf = static_cast<uint8_t*>(std::malloc(kSize));
   if (buf == nullptr) {
     return img;
   }

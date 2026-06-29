@@ -9,7 +9,8 @@
 namespace sdl_painter {
 
 // TTF subsystem referans sayacı — birden fazla Font nesnesi güvenli paylaşım.
-static int32_t gTTFRefCount = 0;  // NOLINT(cppcoreguidelines-avoid-non-const-global-variables, readability-identifier-naming)
+// NOLINTNEXTLINE(cppcoreguidelines-avoid-non-const-global-variables, readability-identifier-naming)
+static int32_t gTTFRefCount = 0;
 
 static bool EnsureTTFInit() {
   if (gTTFRefCount == 0) {

@@ -35,8 +35,8 @@ bool OpenGLRenderer::Initialize(SDL_Window* window) {
     return false;
   }
 
-  if (gladLoadGLLoader(
-          reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress)) == 0) {
+  if (gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress)) ==
+      0) {
     spdlog::error("[OpenGLRenderer] Failed to load GLAD");
     return false;
   }
@@ -88,8 +88,9 @@ void OpenGLRenderer::SetupBuffers() {
                         reinterpret_cast<void*>(static_cast<uintptr_t>(0)));
   // Color (Location 1) - Normalized uint8 -> float [0, 1]
   glEnableVertexAttribArray(1);
-  glVertexAttribPointer(1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex),
-                        reinterpret_cast<void*>(static_cast<uintptr_t>(2 * sizeof(float))));
+  glVertexAttribPointer(
+      1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex),
+      reinterpret_cast<void*>(static_cast<uintptr_t>(2 * sizeof(float))));
 
   glBindVertexArray(0);
 
@@ -105,12 +106,14 @@ void OpenGLRenderer::SetupBuffers() {
                         reinterpret_cast<void*>(static_cast<uintptr_t>(0)));
   // TexCoord (Location 1)
   glEnableVertexAttribArray(1);
-  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(TexturedVertex),
-                        reinterpret_cast<void*>(static_cast<uintptr_t>(2 * sizeof(float))));
+  glVertexAttribPointer(
+      1, 2, GL_FLOAT, GL_FALSE, sizeof(TexturedVertex),
+      reinterpret_cast<void*>(static_cast<uintptr_t>(2 * sizeof(float))));
   // Color (Location 2)
   glEnableVertexAttribArray(2);
-  glVertexAttribPointer(2, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(TexturedVertex),
-                        reinterpret_cast<void*>(static_cast<uintptr_t>(4 * sizeof(float))));
+  glVertexAttribPointer(
+      2, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(TexturedVertex),
+      reinterpret_cast<void*>(static_cast<uintptr_t>(4 * sizeof(float))));
 
   glBindVertexArray(0);
 }
