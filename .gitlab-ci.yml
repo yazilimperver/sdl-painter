@@ -123,7 +123,12 @@ quality:clang-format:
 quality:clang-tidy:
   stage: quality
   image: $CI_REGISTRY_IMAGE
-  needs: ["build:linux:debug"]
+  # needs: [] → build artifact'ına bağımlı değil. clang-tidy bir clang
+  # frontend'idir; AST kurmak için compile_commands.json (include path'leri) ve
+  # Conan bağımlılık header'ları gerekir. Build job'ının artifact'ı bunları
+  # taşımadığından (yalnız .a + binary'ler), DB'yi ve header'ları burada kendi
+  # conan install + cmake configure adımıyla yeniden üretiyoruz.
+  needs: []
   # clang-tidy-18 base imajda zaten kurulu; eski `apt-get install` adımı hem
   # gereksizdi hem de apt-get update + list olmadığı için job'u düşürüyordu.
   #
@@ -133,6 +138,13 @@ quality:clang-tidy:
   # seviyesi diagnostic .clang-tidy Checks filtresiyle bastırılamıyor,
   # yalnız -Wno-... ile susturulabiliyor.
   script:
+    - |
+      conan install . --output-folder=build/linux-debug/generators --build=missing \
+        -s build_type=Debug \
+        -o "&:with_vulkan=True" \
+        -c tools.system.package_manager:mode=install \
+        -c tools.system.package_manager:sudo=False
+    - cmake --preset linux-debug
     - find src/ -name '*.cpp' | xargs clang-tidy-18 -p build/linux-debug/ --extra-arg=-Wno-unknown-warning-option
   allow_failure: true
 
