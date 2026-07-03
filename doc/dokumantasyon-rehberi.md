@@ -19,11 +19,14 @@ Doxygen iki kaynağı birleştirir: **header yorumları** (API referansı)
 ve **doc/ markdown dosyaları** (rehberler, diyagramlar). Sonuç tek bir
 HTML sitesidir.
 
-Mermaid diyagramları Doxygen'in HTML çıktısında **doğrudan render edilmez**
-(Doxygen, Mermaid'i tanımaz). Bu nedenle `doc/*.md` dosyaları hem
-GitLab/GitHub markdown viewer'ında hem de Doxygen sitesinde okunabilir
-düz metin olarak tasarlanmıştır; diyagramlar Doxygen çıktısında kaynak
-kod bloku olarak görünür.
+Mermaid diyagramları Doxygen'in HTML çıktısında **güncel Doxygen
+sürümlerinde (≈1.10+) native olarak render edilir**: ` ```mermaid ` blokları
+`<pre class="mermaid">` içine sarılır ve sayfaya CDN üzerinden mermaid.js
+enjekte edilir. CI'daki `docs` job'u bu nedenle Ubuntu'nun apt deposundaki
+(donmuş, eski) paket yerine Doxygen'in resmi Linux binary'sini indirir.
+Eski/donmuş Doxygen sürümleriyle (apt'tan gelen gibi) diyagramlar düz kaynak
+kod bloku olarak görünür — bu durumda `doc/*.md` dosyaları yine de
+GitLab/GitHub markdown viewer'ında okunabilir kalır.
 
 ---
 

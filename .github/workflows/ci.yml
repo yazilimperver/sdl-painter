@@ -248,8 +248,21 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Install doxygen
-        run: sudo apt-get update -qq && sudo apt-get install -y doxygen graphviz
+      - name: Install doxygen (resmi binary — Mermaid native desteği için)
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y graphviz jq
+          asset_url=$(curl -sL https://api.github.com/repos/doxygen/doxygen/releases/latest \
+            | jq -r '.assets[] | select(.name | endswith("linux.bin.tar.gz")) | .browser_download_url')
+          if [ -z "$asset_url" ]; then
+            echo "Doxygen linux.bin.tar.gz asset'i bulunamadı" >&2
+            exit 1
+          fi
+          curl -sL "$asset_url" -o /tmp/doxygen.tar.gz
+          mkdir -p /tmp/doxygen-install
+          tar -xzf /tmp/doxygen.tar.gz -C /tmp/doxygen-install --strip-components=1
+          echo "/tmp/doxygen-install/bin" >> "$GITHUB_PATH"
+      - name: doxygen sürüm kontrolü
+        run: doxygen --version
       - name: Generate docs
         run: |
           mkdir -p public
