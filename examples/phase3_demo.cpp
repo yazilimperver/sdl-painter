@@ -10,20 +10,20 @@
 ///
 /// ESC veya pencere kapat cikmak icin.
 
-#include <SDL3/SDL.h>
-#include <spdlog/sinks/ansicolor_sink.h>
-#include <spdlog/spdlog.h>
-
-#include <cmath>
-#include <cstdint>
-#include <vector>
-
 #include "sdl_painter/brush.h"
 #include "sdl_painter/color.h"
 #include "sdl_painter/geometry.h"
 #include "sdl_painter/image.h"
 #include "sdl_painter/painter.h"
 #include "sdl_painter/pen.h"
+
+#include <SDL3/SDL.h>
+
+#include <cmath>
+#include <cstdint>
+#include <spdlog/sinks/ansicolor_sink.h>
+#include <spdlog/spdlog.h>
+#include <vector>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -83,14 +83,14 @@ static sdl_painter::Image MakeAlphaCircle(int32_t size) {
   std::vector<uint8_t> pixels(static_cast<std::size_t>(size * size * 4), 0);
   const float cx = static_cast<float>(size) * 0.5f;
   const float cy = static_cast<float>(size) * 0.5f;
-  const float r  = cx - 2.0f;
+  const float r = cx - 2.0f;
   for (int32_t y = 0; y < size; ++y) {
     for (int32_t x = 0; x < size; ++x) {
       float dx = static_cast<float>(x) - cx;
       float dy = static_cast<float>(y) - cy;
       float dist = std::sqrt(dx * dx + dy * dy);
       if (dist < r) {
-        float t = dist / r;                 // 0 = merkez, 1 = kenar
+        float t = dist / r;  // 0 = merkez, 1 = kenar
         auto alpha = static_cast<uint8_t>(255.0f * (1.0f - t * t));
         int32_t idx = (y * size + x) * 4;
         pixels[static_cast<std::size_t>(idx + 0)] = 255;
@@ -115,10 +115,26 @@ static sdl_painter::Image MakeColorAtlas(int32_t size) {
       bool right = x >= half;
       bool bottom = y >= half;
       uint8_t r = 0, g = 0, b = 0;
-      if (!right && !bottom) { r = 220; g = 60;  b = 60; }   // kirmizi
-      if ( right && !bottom) { r = 60;  g = 200; b = 80; }   // yesil
-      if (!right &&  bottom) { r = 60;  g = 100; b = 220; }  // mavi
-      if ( right &&  bottom) { r = 240; g = 200; b = 50; }   // sari
+      if (!right && !bottom) {
+        r = 220;
+        g = 60;
+        b = 60;
+      }  // kirmizi
+      if (right && !bottom) {
+        r = 60;
+        g = 200;
+        b = 80;
+      }  // yesil
+      if (!right && bottom) {
+        r = 60;
+        g = 100;
+        b = 220;
+      }  // mavi
+      if (right && bottom) {
+        r = 240;
+        g = 200;
+        b = 50;
+      }  // sari
       int32_t idx = (y * size + x) * 4;
       pixels[static_cast<std::size_t>(idx + 0)] = r;
       pixels[static_cast<std::size_t>(idx + 1)] = g;
@@ -144,10 +160,9 @@ int main() {
   SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
   SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
-  SDL_Window* window = SDL_CreateWindow(
-      "SDLPainter — Phase 3: Image & Texture",
-      800, 600,
-      SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+  SDL_Window* window =
+      SDL_CreateWindow("SDLPainter — Phase 3: Image & Texture", 800, 600,
+                       SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
   if (!window) {
     spdlog::error("SDL_CreateWindow basarisiz: {}", SDL_GetError());
     SDL_Quit();
@@ -164,12 +179,12 @@ int main() {
     }
 
     // Dokular bir kez olusturulur; Upload() lazy cagrilir (ilk DrawImage'da).
-    sdl_painter::Image checker   = MakeCheckerboard(128, 16);
-    sdl_painter::Image gradient  = MakeGradient(256, 64);
+    sdl_painter::Image checker = MakeCheckerboard(128, 16);
+    sdl_painter::Image gradient = MakeGradient(256, 64);
     sdl_painter::Image alpha_circ = MakeAlphaCircle(128);
-    sdl_painter::Image atlas     = MakeColorAtlas(256);
+    sdl_painter::Image atlas = MakeColorAtlas(256);
 
-    spdlog::info("Dokular hazir. ESC veya pencere kapat -> cikis.");
+    spdlog::info("Dokular hazir. ESC veya pencere kapat sonra cikis.");
 
     float angle = 0.0f;
     constexpr float kPi = 3.14159265358979323846f;
@@ -178,15 +193,16 @@ int main() {
     while (running) {
       SDL_Event event;
       while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_EVENT_QUIT) running = false;
-        if (event.type == SDL_EVENT_KEY_DOWN &&
-            event.key.key == SDLK_ESCAPE) {
+        if (event.type == SDL_EVENT_QUIT)
+          running = false;
+        if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE) {
           running = false;
         }
       }
 
       angle += 0.4f;
-      if (angle >= 360.0f) angle -= 360.0f;
+      if (angle >= 360.0f)
+        angle -= 360.0f;
 
       painter.Begin();
       painter.Clear(sdl_painter::Color{20, 20, 30, 255});
@@ -206,8 +222,7 @@ int main() {
       // ----------------------------------------------------------------
       // Bolum 3: Degrade doku — buyutulmus (360x100)
       // ----------------------------------------------------------------
-      painter.DrawImage(gradient,
-                        sdl_painter::Rect{0.0f, 0.0f, 256.0f, 64.0f},
+      painter.DrawImage(gradient, sdl_painter::Rect{0.0f, 0.0f, 256.0f, 64.0f},
                         sdl_painter::Rect{420.0f, 110.0f, 360.0f, 100.0f});
 
       // ----------------------------------------------------------------
@@ -217,18 +232,14 @@ int main() {
       const float half = 128.0f;
       const float tx = 710.0f, ty = 80.0f, tw = 100.0f, th = 100.0f;
 
-      painter.DrawImage(atlas,
-                        sdl_painter::Rect{0.0f,  0.0f,  half, half},
-                        sdl_painter::Rect{tx,        ty,        tw, th});
-      painter.DrawImage(atlas,
-                        sdl_painter::Rect{half,  0.0f,  half, half},
-                        sdl_painter::Rect{tx + tw,  ty,        tw, th});
-      painter.DrawImage(atlas,
-                        sdl_painter::Rect{0.0f,  half,  half, half},
-                        sdl_painter::Rect{tx,        ty + th,  tw, th});
-      painter.DrawImage(atlas,
-                        sdl_painter::Rect{half,  half,  half, half},
-                        sdl_painter::Rect{tx + tw,  ty + th,  tw, th});
+      painter.DrawImage(atlas, sdl_painter::Rect{0.0f, 0.0f, half, half},
+                        sdl_painter::Rect{tx, ty, tw, th});
+      painter.DrawImage(atlas, sdl_painter::Rect{half, 0.0f, half, half},
+                        sdl_painter::Rect{tx + tw, ty, tw, th});
+      painter.DrawImage(atlas, sdl_painter::Rect{0.0f, half, half, half},
+                        sdl_painter::Rect{tx, ty + th, tw, th});
+      painter.DrawImage(atlas, sdl_painter::Rect{half, half, half, half},
+                        sdl_painter::Rect{tx + tw, ty + th, tw, th});
 
       // Atlas karti: cerceve
       painter.SetPen(
@@ -254,8 +265,7 @@ int main() {
       painter.Rotate(angle);
       // Merkez etrafinda cizmek icin: sol-ust = (-w/2, -h/2)
       // 192x192 boyut: tam doku 128x128 kaynak, buyutulmus hedef
-      painter.DrawImage(checker,
-                        sdl_painter::Rect{0.0f, 0.0f, 128.0f, 128.0f},
+      painter.DrawImage(checker, sdl_painter::Rect{0.0f, 0.0f, 128.0f, 128.0f},
                         sdl_painter::Rect{-96.0f, -96.0f, 192.0f, 192.0f});
       painter.Restore();
 
@@ -276,8 +286,8 @@ int main() {
 
         constexpr float kCenterX = 400.0f;
         constexpr float kCenterY = 300.0f;
-        constexpr float kImgW    = 320.0f;
-        constexpr float kImgH    = 100.0f;
+        constexpr float kImgW = 320.0f;
+        constexpr float kImgH = 100.0f;
 
         painter.Save();
         // Once merkeze tasi, sonra orada olcekle. Scale lokal orijin
@@ -285,10 +295,9 @@ int main() {
         // kendi merkezinden olceklenmesini saglariz.
         painter.Translate(kCenterX, kCenterY);
         painter.Scale(sx, sy);
-        painter.DrawImage(gradient,
-                          sdl_painter::Rect{0.0f, 0.0f, 256.0f, 64.0f},
-                          sdl_painter::Rect{-kImgW * 0.5f, -kImgH * 0.5f,
-                                            kImgW, kImgH});
+        painter.DrawImage(
+            gradient, sdl_painter::Rect{0.0f, 0.0f, 256.0f, 64.0f},
+            sdl_painter::Rect{-kImgW * 0.5f, -kImgH * 0.5f, kImgW, kImgH});
         painter.Restore();
       }
 
@@ -307,8 +316,7 @@ int main() {
       painter.DrawCircle(610.0f, 410.0f, 35.0f);
 
       painter.SetPen(sdl_painter::Pen(sdl_painter::Color{255, 220, 60, 255},
-                                      3.0f, sdl_painter::Color::Black(),
-                                      2.0f));
+                                      3.0f, sdl_painter::Color::Black(), 2.0f));
       painter.DrawCircle(710.0f, 410.0f, 35.0f);
       painter.DrawRect(600.0f, 465.0f, 140.0f, 60.0f);
 

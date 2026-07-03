@@ -9,6 +9,7 @@
 #include <SDL3_ttf/SDL_ttf.h>
 
 #include <array>
+#include <glm/gtc/type_ptr.hpp>
 #include <spdlog/spdlog.h>
 
 #include "render_batcher.h"
@@ -532,28 +533,45 @@ void Painter::Translate(float dx, float dy) {
   if (mBatcher != nullptr) {
     mBatcher->Flush();
   }
-  mCurrentState.transform.Translate(dx, dy);
+  // Sağdan çarp (post-multiply): QPainter / HTML Canvas semantiği.
+  // glm::mat3 column-major → çeviri sütun 2'de: t[2][0]=dx, t[2][1]=dy.
+  glm::mat3 t(1.0F);
+  t[2][0] = dx;
+  t[2][1] = dy;
+  mCurrentState.transform = mCurrentState.transform * t;
 }
 
 void Painter::Rotate(float angle_degrees) {
   if (mBatcher != nullptr) {
     mBatcher->Flush();
   }
-  mCurrentState.transform.Rotate(angle_degrees);
+  const float r = glm::radians(angle_degrees);
+  const float c = std::cos(r);
+  const float s = std::sin(r);
+  // column-major: rot[col][row]. Row-major {c,-s; s,c} karşılığı.
+  glm::mat3 rot(1.0F);
+  rot[0][0] = c;
+  rot[0][1] = s;
+  rot[1][0] = -s;
+  rot[1][1] = c;
+  mCurrentState.transform = mCurrentState.transform * rot;
 }
 
 void Painter::Scale(float sx, float sy) {
   if (mBatcher != nullptr) {
     mBatcher->Flush();
   }
-  mCurrentState.transform.Scale(sx, sy);
+  glm::mat3 sc(1.0F);
+  sc[0][0] = sx;
+  sc[1][1] = sy;
+  mCurrentState.transform = mCurrentState.transform * sc;
 }
 
 void Painter::ResetTransform() {
   if (mBatcher != nullptr) {
     mBatcher->Flush();
   }
-  mCurrentState.transform.SetIdentity();
+  mCurrentState.transform = glm::mat3(1.0F);
 }
 
 void Painter::SetClipRect(const Rect& rect) {
@@ -612,7 +630,7 @@ void Painter::FlushTransform() {
   if (mRenderer == nullptr) {
     return;
   }
-  mRenderer->SetModelMatrix(mCurrentState.transform.Data());
+  mRenderer->SetModelMatrix(glm::value_ptr(mCurrentState.transform));
 }
 
 void Painter::ApplyScissor(const Rect& rect) {

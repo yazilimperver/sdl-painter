@@ -43,6 +43,7 @@ find_package(SDL3 REQUIRED)
 find_package(glad REQUIRED)
 find_package(stb REQUIRED)
 find_package(spdlog REQUIRED)
+find_package(glm REQUIRED)
 find_package(OpenGL REQUIRED)
 
 # Compiler warnings + sanitizer seçenekleri
@@ -56,7 +57,6 @@ set(SDLPAINTER_SOURCES
     src/color.cpp
     src/pen.cpp
     src/brush.cpp
-    src/transform.cpp
     src/image.cpp
     src/geometry.cpp
     src/tessellator.cpp
@@ -139,6 +139,7 @@ target_include_directories(sdl_painter
 target_link_libraries(sdl_painter
     PUBLIC  SDL3::SDL3
     PUBLIC  OpenGL::GL
+    PUBLIC  glm::glm
     PRIVATE glad::glad
     PRIVATE stb::stb
     PRIVATE spdlog::spdlog_header_only

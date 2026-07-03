@@ -100,7 +100,8 @@ class IRenderer {
   /// @brief Ortografik projeksiyon matrisini ayarla (4x4, sütun-major).
   virtual void SetProjectionMatrix(const float* mat4) = 0;
 
-  /// @brief Model dönüşüm matrisini ayarla (3x3, satır-major).
+  /// @brief Model dönüşüm matrisini ayarla
+  /// (3x3, sütun-major — glm::mat3 / glm::value_ptr düzeni).
   virtual void SetModelMatrix(const float* mat3) = 0;
 };
 

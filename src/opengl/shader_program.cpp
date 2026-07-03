@@ -145,9 +145,9 @@ void ShaderProgram::SetUniformMat3(const std::string& name,
   if (kLoc == -1) {
     return;
   }
-  // Transform sınıfı satır-büyük (row-major) düzende veri tutar; OpenGL
-  // varsayılan olarak sütun-büyük bekler, bu nedenle transpose=GL_TRUE.
-  glUniformMatrix3fv(kLoc, 1, GL_TRUE, mat3);
+  // glm::mat3 sütun-büyük (column-major) düzende veri sağlar; OpenGL de
+  // sütun-büyük bekler, bu nedenle transpose gerekmez: GL_FALSE.
+  glUniformMatrix3fv(kLoc, 1, GL_FALSE, mat3);
 }
 
 void ShaderProgram::SetUniformMat4(const std::string& name,

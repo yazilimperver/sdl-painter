@@ -6,9 +6,9 @@
 #include "sdl_painter/geometry.h"
 #include "sdl_painter/pen.h"
 #include "sdl_painter/renderer.h"
-#include "sdl_painter/transform.h"
 
 #include <cstdint>
+#include <glm/glm.hpp>
 #include <memory>
 #include <string>
 #include <vector>
@@ -29,7 +29,7 @@ class RenderBatcher;
 
 /// @brief Aktif render durumu — transform stack elemanı.
 struct RenderState {
-  Transform transform;
+  glm::mat3 transform{1.0F};  ///< 3x3 affine dönüşüm (column-major, birim).
   Pen pen;
   Brush brush;
   float opacity{1.0F};

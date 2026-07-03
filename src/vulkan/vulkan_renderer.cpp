@@ -514,14 +514,14 @@ void VulkanRenderer::SetProjectionMatrix(const float* mat4) {
 }
 
 void VulkanRenderer::SetModelMatrix(const float* mat3) {
-  // 3x3 row-major affine → 4x4 column-major dönüşümü.
-  // mat3 layout (row-major): [m00 m01 tx | m10 m11 ty | 0 0 1]
-  // İndeksler:                 [0]  [1]  [2]  [3]  [4]  [5]
+  // 3x3 column-major (glm::mat3) affine → 4x4 column-major dönüşümü.
+  // mat3 layout (column-major): [m00 m10 0 | m01 m11 0 | tx ty 1]
+  // İndeksler:                    [0]  [1] [2] [3]  [4] [5] [6][7][8]
   std::array<float, 16> m = {
-      mat3[0], mat3[3], 0.0F, 0.0F,  // column 0
-      mat3[1], mat3[4], 0.0F, 0.0F,  // column 1
+      mat3[0], mat3[1], 0.0F, 0.0F,  // column 0 (m00, m10)
+      mat3[3], mat3[4], 0.0F, 0.0F,  // column 1 (m01, m11)
       0.0F,    0.0F,    1.0F, 0.0F,  // column 2
-      mat3[2], mat3[5], 0.0F, 1.0F,  // column 3
+      mat3[6], mat3[7], 0.0F, 1.0F,  // column 3 (tx, ty)
   };
   std::memcpy(mPushConstants.model, m.data(), 16 * sizeof(float));
 }

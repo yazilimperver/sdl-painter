@@ -6,14 +6,15 @@
 ///
 /// ESC veya pencere kapat cikmak icin.
 
-#include <SDL3/SDL.h>
-#include <spdlog/sinks/ansicolor_sink.h>
-#include <spdlog/spdlog.h>
-
 #include "sdl_painter/brush.h"
 #include "sdl_painter/color.h"
 #include "sdl_painter/painter.h"
 #include "sdl_painter/pen.h"
+
+#include <SDL3/SDL.h>
+
+#include <spdlog/sinks/ansicolor_sink.h>
+#include <spdlog/spdlog.h>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -48,10 +49,9 @@ int main() {
   SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
   SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
-  SDL_Window* window = SDL_CreateWindow(
-      "SDLPainter — Phase 2b: Merkez Rotasyon",
-      800, 600,
-      SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+  SDL_Window* window =
+      SDL_CreateWindow("SDLPainter — Phase 2b: Merkez Rotasyon", 800, 600,
+                       SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
   if (!window) {
     spdlog::error("SDL_CreateWindow basarisiz: {}", SDL_GetError());
     SDL_Quit();
@@ -66,7 +66,7 @@ int main() {
       SDL_Quit();
       return 1;
     }
-    spdlog::info("Painter hazir. ESC veya pencere kapat → cikis.");
+    spdlog::info("Painter hazir. ESC veya pencere kapat sonra cikis.");
 
     float angle = 0.0f;
 
@@ -74,15 +74,16 @@ int main() {
     while (running) {
       SDL_Event event;
       while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_EVENT_QUIT) running = false;
-        if (event.type == SDL_EVENT_KEY_DOWN &&
-            event.key.key == SDLK_ESCAPE) {
+        if (event.type == SDL_EVENT_QUIT)
+          running = false;
+        if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE) {
           running = false;
         }
       }
 
       angle += 0.5f;
-      if (angle >= 360.0f) angle -= 360.0f;
+      if (angle >= 360.0f)
+        angle -= 360.0f;
 
       // Pencere boyutunu her karede oku — boyut degisirse merkez de tasinir.
       int win_w = 0, win_h = 0;
@@ -94,7 +95,8 @@ int main() {
       painter.Clear(sdl_painter::Color{20, 20, 30, 255});
 
       // Ekran merkezini gosteren arti isareti (referans).
-      painter.SetPen(sdl_painter::Pen(sdl_painter::Color{200, 200, 200, 200}, 1.0f));
+      painter.SetPen(
+          sdl_painter::Pen(sdl_painter::Color{200, 200, 200, 200}, 1.0f));
       painter.DrawLine(cx - 15.0f, cy, cx + 15.0f, cy);
       painter.DrawLine(cx, cy - 15.0f, cx, cy + 15.0f);
 
@@ -102,8 +104,10 @@ int main() {
       painter.Save();
       painter.Translate(cx, cy);
       painter.Rotate(angle);
-      painter.SetBrush(sdl_painter::Brush(sdl_painter::Color{255, 180, 60, 220}));
-      painter.SetPen(sdl_painter::Pen(sdl_painter::Color{255, 230, 140, 255}, 2.0f));
+      painter.SetBrush(
+          sdl_painter::Brush(sdl_painter::Color{255, 180, 60, 220}));
+      painter.SetPen(
+          sdl_painter::Pen(sdl_painter::Color{255, 230, 140, 255}, 2.0f));
       painter.FillRect(-100.0f, -50.0f, 200.0f, 100.0f);
       painter.DrawRect(-100.0f, -50.0f, 200.0f, 100.0f);
       painter.Restore();

@@ -58,6 +58,7 @@ class SDLPainterConan(ConanFile):
         self.requires("sdl/3.2.14")
         self.requires("glad/0.1.36")
         self.requires("stb/cci.20240531")
+        self.requires("glm/1.0.3")
         self.requires("spdlog/1.15.3", options={"spdlog/*:header_only": True})
         self.requires("sdl_ttf/3.2.2")
 

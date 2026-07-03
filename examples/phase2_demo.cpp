@@ -70,7 +70,7 @@ int main() {
       SDL_Quit();
       return 1;
     }
-    spdlog::info("Painter hazir. ESC veya pencere kapat -> cikis.");
+    spdlog::info("Painter hazir. ESC veya pencere kapat sonra cikis.");
 
     float angle = 0.0f;  // animasyon acisi
 
