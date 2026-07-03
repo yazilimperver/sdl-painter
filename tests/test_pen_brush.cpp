@@ -57,6 +57,49 @@ TEST(PenTest, Equality) {
   EXPECT_NE(a, c);
 }
 
+TEST(PenTest, DefaultHasNoOutline) {
+  Pen pen;
+  EXPECT_FALSE(pen.HasOutline());
+}
+
+TEST(PenTest, OutlineConstructor) {
+  Pen pen(Color::Red(), 2.0f, Color::Black(), 1.5f);
+  EXPECT_EQ(pen.GetColor(), Color::Red());
+  EXPECT_FLOAT_EQ(pen.GetWidth(), 2.0f);
+  EXPECT_EQ(pen.GetOutlineColor(), Color::Black());
+  EXPECT_FLOAT_EQ(pen.GetOutlineWidth(), 1.5f);
+  EXPECT_TRUE(pen.HasOutline());
+}
+
+TEST(PenTest, SetOutlineColorAndWidth) {
+  Pen pen;
+  pen.SetOutlineColor(Color::Black());
+  pen.SetOutlineWidth(1.0f);
+  EXPECT_EQ(pen.GetOutlineColor(), Color::Black());
+  EXPECT_FLOAT_EQ(pen.GetOutlineWidth(), 1.0f);
+  EXPECT_TRUE(pen.HasOutline());
+}
+
+TEST(PenTest, HasOutlineFalseWhenOutlineWidthZero) {
+  Pen pen(Color::Red(), 2.0f, Color::Black(), 0.0f);
+  EXPECT_FALSE(pen.HasOutline());
+}
+
+TEST(PenTest, HasOutlineFalseWhenOutlineColorTransparent) {
+  Pen pen(Color::Red(), 2.0f, Color::Transparent(), 1.0f);
+  EXPECT_FALSE(pen.HasOutline());
+}
+
+TEST(PenTest, EqualityWithOutline) {
+  Pen a(Color::Red(), 2.0f, Color::Black(), 1.0f);
+  Pen b(Color::Red(), 2.0f, Color::Black(), 1.0f);
+  Pen c(Color::Red(), 2.0f, Color::Black(), 2.0f);
+  Pen d(Color::Red(), 2.0f);
+  EXPECT_EQ(a, b);
+  EXPECT_NE(a, c);
+  EXPECT_NE(a, d);
+}
+
 // --- Brush ---
 
 TEST(BrushTest, DefaultConstructor) {

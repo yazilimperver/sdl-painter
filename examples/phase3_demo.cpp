@@ -292,6 +292,26 @@ int main() {
         painter.Restore();
       }
 
+      // ----------------------------------------------------------------
+      // Bolum 8: Pen outline — damali doku uzerinde kontrast
+      // Ayni renk/kalinliktaki iki kalem yan yana: solda outline yok,
+      // sagda siyah dis kontur. Kontur, karmasik arka plan uzerinde
+      // cizginin belirginligini artirir.
+      // ----------------------------------------------------------------
+      painter.SetPen(sdl_painter::Pen(sdl_painter::Color{0, 0, 0, 0}, 0.0f));
+      painter.DrawImage(checker,
+                        sdl_painter::Rect{560.0f, 350.0f, 220.0f, 200.0f});
+
+      painter.SetPen(
+          sdl_painter::Pen(sdl_painter::Color{255, 220, 60, 255}, 3.0f));
+      painter.DrawCircle(610.0f, 410.0f, 35.0f);
+
+      painter.SetPen(sdl_painter::Pen(sdl_painter::Color{255, 220, 60, 255},
+                                      3.0f, sdl_painter::Color::Black(),
+                                      2.0f));
+      painter.DrawCircle(710.0f, 410.0f, 35.0f);
+      painter.DrawRect(600.0f, 465.0f, 140.0f, 60.0f);
+
       painter.End();
     }
   }  // Painter burada yok edilir; GL kaynaklari context gecerliyken silinir.

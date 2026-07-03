@@ -220,10 +220,15 @@ void Painter::DrawLine(float x1, float y1, float x2, float y2) {
     return;
   }
   FlushTransform();
-  auto verts = Tessellator::TessellateThickLine(x1, y1, x2, y2,
-                                                mCurrentState.pen.GetWidth());
-  mBatcher->PushTriangles(verts, mCurrentState.pen.GetColor(),
-                          mCurrentState.opacity);
+  const Pen& pen = mCurrentState.pen;
+  if (pen.HasOutline()) {
+    auto outline_verts = Tessellator::TessellateThickLine(
+        x1, y1, x2, y2, pen.GetWidth() + 2.0F * pen.GetOutlineWidth());
+    mBatcher->PushTriangles(outline_verts, pen.GetOutlineColor(),
+                            mCurrentState.opacity);
+  }
+  auto verts = Tessellator::TessellateThickLine(x1, y1, x2, y2, pen.GetWidth());
+  mBatcher->PushTriangles(verts, pen.GetColor(), mCurrentState.opacity);
 }
 
 void Painter::DrawRect(float x, float y, float w, float h) {
@@ -231,10 +236,15 @@ void Painter::DrawRect(float x, float y, float w, float h) {
     return;
   }
   FlushTransform();
-  auto verts = Tessellator::TessellateStrokedRect(x, y, w, h,
-                                                  mCurrentState.pen.GetWidth());
-  mBatcher->PushTriangles(verts, mCurrentState.pen.GetColor(),
-                          mCurrentState.opacity);
+  const Pen& pen = mCurrentState.pen;
+  if (pen.HasOutline()) {
+    auto outline_verts = Tessellator::TessellateStrokedRect(
+        x, y, w, h, pen.GetWidth() + 2.0F * pen.GetOutlineWidth());
+    mBatcher->PushTriangles(outline_verts, pen.GetOutlineColor(),
+                            mCurrentState.opacity);
+  }
+  auto verts = Tessellator::TessellateStrokedRect(x, y, w, h, pen.GetWidth());
+  mBatcher->PushTriangles(verts, pen.GetColor(), mCurrentState.opacity);
 }
 
 void Painter::FillRect(float x, float y, float w, float h) {
@@ -252,10 +262,16 @@ void Painter::DrawCircle(float cx, float cy, float radius) {
     return;
   }
   FlushTransform();
-  auto verts = Tessellator::TessellateStrokedCircle(
-      cx, cy, radius, mCurrentState.pen.GetWidth());
-  mBatcher->PushTriangles(verts, mCurrentState.pen.GetColor(),
-                          mCurrentState.opacity);
+  const Pen& pen = mCurrentState.pen;
+  if (pen.HasOutline()) {
+    auto outline_verts = Tessellator::TessellateStrokedCircle(
+        cx, cy, radius, pen.GetWidth() + 2.0F * pen.GetOutlineWidth());
+    mBatcher->PushTriangles(outline_verts, pen.GetOutlineColor(),
+                            mCurrentState.opacity);
+  }
+  auto verts =
+      Tessellator::TessellateStrokedCircle(cx, cy, radius, pen.GetWidth());
+  mBatcher->PushTriangles(verts, pen.GetColor(), mCurrentState.opacity);
 }
 
 void Painter::FillCircle(float cx, float cy, float radius) {
@@ -273,10 +289,16 @@ void Painter::DrawEllipse(float cx, float cy, float rx, float ry) {
     return;
   }
   FlushTransform();
-  auto verts = Tessellator::TessellateStrokedEllipse(
-      cx, cy, rx, ry, mCurrentState.pen.GetWidth());
-  mBatcher->PushTriangles(verts, mCurrentState.pen.GetColor(),
-                          mCurrentState.opacity);
+  const Pen& pen = mCurrentState.pen;
+  if (pen.HasOutline()) {
+    auto outline_verts = Tessellator::TessellateStrokedEllipse(
+        cx, cy, rx, ry, pen.GetWidth() + 2.0F * pen.GetOutlineWidth());
+    mBatcher->PushTriangles(outline_verts, pen.GetOutlineColor(),
+                            mCurrentState.opacity);
+  }
+  auto verts =
+      Tessellator::TessellateStrokedEllipse(cx, cy, rx, ry, pen.GetWidth());
+  mBatcher->PushTriangles(verts, pen.GetColor(), mCurrentState.opacity);
 }
 
 void Painter::FillEllipse(float cx, float cy, float rx, float ry) {
@@ -294,10 +316,15 @@ void Painter::DrawPolygon(const std::vector<Point>& points) {
     return;
   }
   FlushTransform();
-  auto verts = Tessellator::TessellateStrokedPolygon(
-      points, mCurrentState.pen.GetWidth());
-  mBatcher->PushTriangles(verts, mCurrentState.pen.GetColor(),
-                          mCurrentState.opacity);
+  const Pen& pen = mCurrentState.pen;
+  if (pen.HasOutline()) {
+    auto outline_verts = Tessellator::TessellateStrokedPolygon(
+        points, pen.GetWidth() + 2.0F * pen.GetOutlineWidth());
+    mBatcher->PushTriangles(outline_verts, pen.GetOutlineColor(),
+                            mCurrentState.opacity);
+  }
+  auto verts = Tessellator::TessellateStrokedPolygon(points, pen.GetWidth());
+  mBatcher->PushTriangles(verts, pen.GetColor(), mCurrentState.opacity);
 }
 
 void Painter::FillPolygon(const std::vector<Point>& points) {
@@ -315,10 +342,15 @@ void Painter::DrawPolyline(const std::vector<Point>& points) {
     return;
   }
   FlushTransform();
-  auto verts = Tessellator::TessellateThickPolyline(
-      points, mCurrentState.pen.GetWidth());
-  mBatcher->PushTriangles(verts, mCurrentState.pen.GetColor(),
-                          mCurrentState.opacity);
+  const Pen& pen = mCurrentState.pen;
+  if (pen.HasOutline()) {
+    auto outline_verts = Tessellator::TessellateThickPolyline(
+        points, pen.GetWidth() + 2.0F * pen.GetOutlineWidth());
+    mBatcher->PushTriangles(outline_verts, pen.GetOutlineColor(),
+                            mCurrentState.opacity);
+  }
+  auto verts = Tessellator::TessellateThickPolyline(points, pen.GetWidth());
+  mBatcher->PushTriangles(verts, pen.GetColor(), mCurrentState.opacity);
 }
 
 void Painter::DrawImage(const Image& image, float x, float y) {
