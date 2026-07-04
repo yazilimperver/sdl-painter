@@ -2,7 +2,6 @@
 
 #include <SDL3/SDL.h>
 
-#include <algorithm>
 #include <spdlog/sinks/ansicolor_sink.h>
 #include <spdlog/spdlog.h>
 
@@ -32,9 +31,16 @@ void InitDefaultLogger() {
   spdlog::set_default_logger(logger);
 }
 
-/// @brief Ardışık frame'ler arası maksimum delta zaman (saniye).
-/// Debugger duraklaması / pencere sürüklemesi gibi büyük sıçramaları sınırlar.
-constexpr float kMaxDeltaSeconds = 0.25F;
+/// @brief Ardışık frame'ler arası azami delta zaman (nanosaniye).
+/// Debugger duraklaması / pencere sürüklemesi gibi büyük sıçramaları sınırlar
+/// ("spiral of death" koruması).
+constexpr uint64_t kMaxDeltaNs = 250'000'000ULL;  // 0.25 s
+
+/// @brief kFixed modda bir frame'de izin verilen azami sabit güncelleme sayısı.
+constexpr int32_t kMaxFixedStepsPerFrame = 5;
+
+/// @brief Saniyedeki nanosaniye.
+constexpr uint64_t kNsPerSecond = 1'000'000'000ULL;
 
 }  // namespace
 
@@ -184,21 +190,64 @@ int Application::Run() {
   }
 
   mRunning = true;
+
+  // kFixed modda sabit adım süresi; kVariable'da 0 (devre dışı).
+  const uint64_t fixed_step_ns =
+      (mConfig.timing == TimingMode::kFixed && mConfig.fixed_update_hz > 0)
+          ? kNsPerSecond / static_cast<uint64_t>(mConfig.fixed_update_hz)
+          : 0;
+  const bool fixed = fixed_step_ns > 0;
+  const float fixed_step_dt =
+      fixed ? 1.0F / static_cast<float>(mConfig.fixed_update_hz) : 0.0F;
+  // target_fps freni için asgari kare süresi; 0 = fren yok.
+  const uint64_t frame_min_ns =
+      (mConfig.target_fps > 0)
+          ? kNsPerSecond / static_cast<uint64_t>(mConfig.target_fps)
+          : 0;
+
+  uint64_t lag_ns = 0;
   mLastTickNs = SDL_GetTicksNS();
 
   while (mRunning) {
+    const uint64_t frame_start_ns = SDL_GetTicksNS();
     ProcessEvents();
 
     const uint64_t now_ns = SDL_GetTicksNS();
-    const float dt = std::min(static_cast<float>(now_ns - mLastTickNs) * 1e-9F,
-                              kMaxDeltaSeconds);
+    uint64_t elapsed_ns = now_ns - mLastTickNs;
     mLastTickNs = now_ns;
+    if (elapsed_ns > kMaxDeltaNs) {
+      elapsed_ns = kMaxDeltaNs;
+    }
 
-    OnUpdate(dt);
+    float alpha = 1.0F;
+    if (fixed) {
+      lag_ns += elapsed_ns;
+      int32_t steps = 0;
+      while (lag_ns >= fixed_step_ns && steps < kMaxFixedStepsPerFrame) {
+        OnUpdate(fixed_step_dt);
+        lag_ns -= fixed_step_ns;
+        ++steps;
+      }
+      // Catch-up üst sınırına ulaşıldıysa biriken artık zamanı düşür.
+      if (steps == kMaxFixedStepsPerFrame) {
+        lag_ns = 0;
+      }
+      alpha = static_cast<float>(lag_ns) / static_cast<float>(fixed_step_ns);
+    } else {
+      OnUpdate(static_cast<float>(elapsed_ns) * 1e-9F);
+    }
 
     mPainter->Begin();
-    OnRender(*mPainter);
+    OnRender(*mPainter, alpha);
     mPainter->End();
+
+    // Hedef FPS freni (vsync yoksa/kapalıysa etkin).
+    if (frame_min_ns > 0) {
+      const uint64_t frame_ns = SDL_GetTicksNS() - frame_start_ns;
+      if (frame_ns < frame_min_ns) {
+        SDL_DelayNS(frame_min_ns - frame_ns);
+      }
+    }
   }
 
   OnShutdown();

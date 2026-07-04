@@ -87,10 +87,29 @@ class Application {
   virtual bool OnInit() { return true; }
 
   /// @brief Her frame'de güncelleme — @p dt saniye cinsinden delta zaman.
+  /// @note @ref TimingMode::kFixed modunda sabit adımla (`1/fixed_update_hz`)
+  ///       frame başına 0..N kez çağrılır; kVariable'da her frame bir kez.
   virtual void OnUpdate(float dt) { (void)dt; }
 
-  /// @brief Her frame'de çizim — tek zorunlu override.
-  virtual void OnRender(Painter& painter) = 0;
+  /// @brief Her frame'de çizim.
+  /// @note En az bir @c OnRender override edilmelidir. Basit uygulamalar bu
+  ///       tek-argümanlı sürümü override eder.
+  virtual void OnRender(Painter& painter) { (void)painter; }
+
+  /// @brief İnterpolasyonlu çizim — @p alpha son sabit adımdan bu yana biriken
+  ///        artık zamanın oranı [0,1].
+  /// @note Döngü her zaman bu sürümü çağırır. Varsayılanı @p alpha'yı
+  ///       yoksayarak tek-argümanlı @ref OnRender'a delege eder — böylece
+  ///       mevcut kod değişmeden çalışır. @ref TimingMode::kVariable modunda
+  ///       @p alpha daima 1.0'dır. Oyunvari uygulamalar bu sürümü override edip
+  ///       önceki/geçerli state arasında interpolasyon yapabilir.
+  /// @warning Yalnızca bu sürümü override eden türeyen sınıflar, `-Woverloaded-`
+  ///          `virtual` etkinken tek-argümanlı sürümü gizlediğine dair uyarı
+  ///          alabilir; gerekirse `using Application::OnRender;` ekleyin.
+  virtual void OnRender(Painter& painter, float alpha) {
+    (void)alpha;
+    OnRender(painter);
+  }
 
   /// @brief Tuşa basıldı.
   virtual void OnKeyDown(const KeyEvent& event) { (void)event; }

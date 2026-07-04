@@ -7,6 +7,19 @@
 
 namespace sdl_painter {
 
+/// @brief Uygulama döngüsünün zamanlama modeli.
+enum class TimingMode : uint8_t {
+  /// @brief Değişken adım — her frame'de bir kez `OnUpdate(dt)` (varsayılan).
+  /// Basit görselleştirme/çizim uygulamaları için yeterlidir.
+  kVariable,
+
+  /// @brief Sabit adım + interpolasyon (Game Programming Patterns "play catch up").
+  /// `OnUpdate` sabit `dt` ile 0..N kez çağrılır; `OnRender(Painter&, alpha)`
+  /// biriken artık zamanı [0,1] interpolasyon faktörü olarak alır. Fizik/oyun
+  /// mantığı için deterministik.
+  kFixed,
+};
+
 /// @brief Application penceresi ve backend yapılandırması.
 ///
 /// C++17 aggregate — varsayılan değerlerle oluşturulup alan alan doldurulur:
@@ -41,6 +54,18 @@ struct AppConfig {
 
   /// @brief Kullanılacak render backend'i.
   RendererBackend backend{RendererBackend::kOpenGL};
+
+  /// @brief Döngü zamanlama modeli.
+  TimingMode timing{TimingMode::kVariable};
+
+  /// @brief Sabit güncelleme frekansı (Hz) — yalnızca @ref TimingMode::kFixed.
+  /// `OnUpdate` bu sıklıkta, `1/fixed_update_hz` saniyelik sabit adımla çağrılır.
+  int32_t fixed_update_hz{60};
+
+  /// @brief Hedef kare hızı (FPS) freni; 0 = sınırsız (yalnızca vsync sınırlar).
+  /// >0 ise her frame sonunda `SDL_DelayNS` ile kare süresi bu değere frenlenir.
+  /// vsync ile birlikte kullanılabilir (hangisi daha kısıtlayıcıysa o baskındır).
+  int32_t target_fps{0};
 
   /// @brief spdlog varsayılan logger'ını kur (renkli konsol + Win32 VT).
   /// @note Host uygulama kendi logger'ını kullanacaksa `false` yapın.

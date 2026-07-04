@@ -38,6 +38,12 @@ target_link_libraries(phase6_app_demo PRIVATE sdl_painter_app spdlog::spdlog_hea
 sdlpainter_copy_shaders(phase6_app_demo)
 sdlpainter_copy_runtime_dlls(phase6_app_demo)
 
+# Sabit adımlı (fixed-timestep) oyun döngüsü + interpolasyon demosu.
+add_executable(phase7_game_demo phase7_game_demo.cpp)
+target_link_libraries(phase7_game_demo PRIVATE sdl_painter_app spdlog::spdlog_header_only)
+sdlpainter_copy_shaders(phase7_game_demo)
+sdlpainter_copy_runtime_dlls(phase7_game_demo)
+
 if(SDLPAINTER_WITH_VULKAN)
     add_executable(phase5e_vulkan_text phase5e_vulkan_text.cpp)
     if(TARGET SDL3_ttf::SDL3_ttf-static)

@@ -15,6 +15,19 @@ TEST(AppConfigTest, Defaults) {
   EXPECT_EQ(cfg.msaa_samples, 4);
   EXPECT_EQ(cfg.backend, RendererBackend::kOpenGL);
   EXPECT_TRUE(cfg.init_logger);
+  EXPECT_EQ(cfg.timing, TimingMode::kVariable);
+  EXPECT_EQ(cfg.fixed_update_hz, 60);
+  EXPECT_EQ(cfg.target_fps, 0);
+}
+
+TEST(AppConfigTest, FixedTimingFields) {
+  AppConfig cfg;
+  cfg.timing = TimingMode::kFixed;
+  cfg.fixed_update_hz = 120;
+  cfg.target_fps = 144;
+  EXPECT_EQ(cfg.timing, TimingMode::kFixed);
+  EXPECT_EQ(cfg.fixed_update_hz, 120);
+  EXPECT_EQ(cfg.target_fps, 144);
 }
 
 TEST(AppConfigTest, FieldAssignment) {

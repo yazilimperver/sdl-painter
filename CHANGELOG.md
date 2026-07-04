@@ -10,7 +10,12 @@
   yönetilir. SDL'den bağımsız `Key`/`KeyEvent`/`MouseButtonEvent` tipleri ve ileri
   kullanım için `OnRawEvent(const SDL_Event&)` kaçış kapısı sunar. Core
   `sdl_painter` saf çizim API'si olarak korunur (bkz. ADR-008).
-- **Örnek:** `phase6_app_demo` — çatının kullanımını gösteren animasyonlu demo.
+- **Zamanlama modları:** `AppConfig::timing` ile `kVariable` (varsayılan, değişken
+  delta-time) veya `kFixed` (sabit adımlı deterministik `OnUpdate` +
+  `OnRender(Painter&, alpha)` interpolasyonu — Game Programming Patterns "play
+  catch up"). Ayrıca `target_fps` ile `SDL_DelayNS` tabanlı kare hızı freni.
+- **Örnekler:** `phase6_app_demo` (kVariable) ve `phase7_game_demo` (kFixed +
+  interpolasyon, seken top) çatının kullanımını gösterir.
 
 ## [1.0.0] - 2026-05-17
 

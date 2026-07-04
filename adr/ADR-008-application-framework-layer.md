@@ -49,9 +49,17 @@ uygulamalar (ör. `uforces_viewer`) yalnızca core'a link etmeye devam eder.
 
 - **Ayrı target:** Çizim ile ilgisi olmayan sorumlulukların (event loop, timing)
   core'a karışmasını önler; core'un saf ve testlenebilir kalmasını sağlar.
-- **Değişken delta-time (`SDL_GetTicksNS`):** vsync yaygın durumu karşılar;
-  fixed-timestep uEngine4'ün kaçınılmak istenen ağırlığıdır. `OnUpdate(dt)` büyük
-  sıçramalara karşı 0.25 s'ye clamp edilir. Fixed-timestep gelecekte eklenebilir.
+- **İki zamanlama modu (`AppConfig::timing`):** Varsayılan `kVariable` — değişken
+  delta-time (`SDL_GetTicksNS`), her frame bir kez `OnUpdate(dt)`; basit
+  görselleştirme/çizim için yeterli. Opsiyonel `kFixed` — Game Programming
+  Patterns "play catch up" yaklaşımı: sabit adımlı (`fixed_update_hz`)
+  deterministik `OnUpdate` + `OnRender(Painter&, alpha)` ile interpolasyonlu
+  render; fizik/oyunvari uygulamalar için. Her iki modda da `OnUpdate` büyük
+  sıçramalara karşı 0.25 s'ye, kFixed catch-up ise frame başına 5 adıma
+  sınırlanır ("spiral of death" koruması). Ek olarak `target_fps` (>0) ile
+  `SDL_DelayNS` tabanlı kare freni sunulur (vsync ile birlikte kullanılabilir).
+  Tek `Application` sınıfı korunur; uEngine4'ün listener + asset + touch
+  ağırlığından kaçınılır.
 - **dtor tabanlı yıkım sıralaması:** Painter, `~Application()` içinde yıkılır.
   Türeyen sınıfın `Image`/`Font` üyeleri temel sınıf yıkıcısından **önce** yok
   edildiğinden, Painter'ın yaşam sözleşmesi (kaynaklar Painter'dan önce yıkılmalı)
@@ -64,9 +72,16 @@ uygulamalar (ör. `uforces_viewer`) yalnızca core'a link etmeye devam eder.
 - SDL keycode → `Key` çevirisi internal `event_translator` içinde; düz tam sayı
   imzasıyla pencere/context olmadan headless test edilebilir
   (`tests/test_event_translator.cpp`, `tests/test_app_config.cpp`).
-- `examples/phase6_app_demo.cpp` çatıyı gösterir (~70 satır, phase2'nin ~250
-  satırlık boilerplate'i olmadan). Mevcut phase0–phase5 örnekleri **kasıtlı
-  olarak** ham SDL+Painter kullanımını belgelemeye devam eder; migrasyon yapılmadı.
+- `examples/phase6_app_demo.cpp` kVariable modu (~70 satır, phase2'nin ~250
+  satırlık boilerplate'i olmadan), `examples/phase7_game_demo.cpp` ise kFixed
+  modu + interpolasyonu (yerçekimiyle seken top) gösterir. Mevcut phase0–phase5
+  örnekleri **kasıtlı olarak** ham SDL+Painter kullanımını belgelemeye devam eder;
+  migrasyon yapılmadı.
+- `OnRender(Painter&)` artık pure değil (boş varsayılan); interpolasyon için
+  `OnRender(Painter&, float alpha)` eklendi ve varsayılanı tek-argümanlıya delege
+  eder. Mevcut tek-argümanlı override'lar değişmeden çalışır; oyun uygulamaları
+  iki-argümanlıyı override eder (`-Woverloaded-virtual` etkin katı build'lerde
+  `using Application::OnRender;` gerekebilir — header'da belgelendi).
 - `conanfile.py` `package_info` artık `["sdl_painter_app", "sdl_painter"]` (sıra:
   app → core) yayınlar; `exports_sources`/`package` zaten `include/*`, `src/*` ve
   `*.lib/*.a`'yı kapsadığından ek değişiklik gerekmedi.
