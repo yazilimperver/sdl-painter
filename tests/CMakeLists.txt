@@ -7,6 +7,8 @@ set(TEST_SOURCES
     test_image.cpp
     test_render_batcher.cpp
     test_texture_image_upload.cpp
+    test_event_translator.cpp
+    test_app_config.cpp
 )
 
 add_executable(sdl_painter_tests ${TEST_SOURCES})
@@ -17,6 +19,7 @@ target_include_directories(sdl_painter_tests PRIVATE
 
 target_link_libraries(sdl_painter_tests
     PRIVATE sdl_painter
+    PRIVATE sdl_painter_app
     PRIVATE GTest::gtest
     PRIVATE GTest::gtest_main
 )

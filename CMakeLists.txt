@@ -182,6 +182,25 @@ endif()
 set_target_warnings(sdl_painter)
 set_target_sanitizers(sdl_painter)
 
+# --- Uygulama çatısı katmanı (opsiyonsuz — her zaman derlenir ve paketlenir) ---
+# SDL pencere/olay-döngüsü boilerplate'ini soyutlar. İki .cpp, sıfır yeni
+# bağımlılık; static lib olduğundan kullanmayan tüketiciye maliyeti yoktur
+# (bkz. ADR-008).
+add_library(sdl_painter_app
+    src/app/application.cpp
+    src/app/event_translator.cpp
+)
+target_include_directories(sdl_painter_app
+    PUBLIC  include
+    PRIVATE src
+)
+target_link_libraries(sdl_painter_app
+    PUBLIC  sdl_painter
+    PRIVATE spdlog::spdlog_header_only
+)
+set_target_warnings(sdl_painter_app)
+set_target_sanitizers(sdl_painter_app)
+
 # Helper: Vulkan SPIR-V dosyalarını executable'ın yanındaki vulkan_shaders/ dizinine kopyalar.
 #
 # MSVC: OpenGL shader'larıyla aynı race condition riski var (5 Vulkan exe aynı dizine

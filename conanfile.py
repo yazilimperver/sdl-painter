@@ -133,7 +133,8 @@ class SDLPainterConan(ConanFile):
              keep_path=False)
 
     def package_info(self):
-        self.cpp_info.libs = ["sdl_painter"]
+        # Sıra önemli: uygulama çatısı core'a bağımlı (statik link).
+        self.cpp_info.libs = ["sdl_painter_app", "sdl_painter"]
         self.cpp_info.set_property("cmake_target_name", "sdl_painter::sdl_painter")
         if self.options.with_vulkan:
             self.cpp_info.defines.append("SDLPAINTER_HAS_VULKAN")

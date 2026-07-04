@@ -1,5 +1,17 @@
 # Changelog
 
+## [Yayınlanmadı]
+
+### Eklendi
+- **Uygulama çatısı (`sdl_painter_app`):** SDL pencere/olay-döngüsü
+  boilerplate'ini soyutlayan ayrı static kütüphane. `sdl_painter::Application`'dan
+  türeyip `OnRender`/`OnUpdate`/`OnKeyDown` gibi sanal metotları override etmek
+  yeterli; SDL init, pencere, GL context, olay döngüsü ve yıkım çatı tarafından
+  yönetilir. SDL'den bağımsız `Key`/`KeyEvent`/`MouseButtonEvent` tipleri ve ileri
+  kullanım için `OnRawEvent(const SDL_Event&)` kaçış kapısı sunar. Core
+  `sdl_painter` saf çizim API'si olarak korunur (bkz. ADR-008).
+- **Örnek:** `phase6_app_demo` — çatının kullanımını gösteren animasyonlu demo.
+
 ## [1.0.0] - 2026-05-17
 
 İlk yayın. Önceki commit'ler.

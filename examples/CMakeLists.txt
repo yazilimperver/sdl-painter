@@ -32,6 +32,12 @@ endif()
 sdlpainter_copy_shaders(phase4_demo)
 sdlpainter_copy_runtime_dlls(phase4_demo)
 
+# Application çatısı demosu — SDL boilerplate'i olmadan animasyonlu çizim.
+add_executable(phase6_app_demo phase6_app_demo.cpp)
+target_link_libraries(phase6_app_demo PRIVATE sdl_painter_app spdlog::spdlog_header_only)
+sdlpainter_copy_shaders(phase6_app_demo)
+sdlpainter_copy_runtime_dlls(phase6_app_demo)
+
 if(SDLPAINTER_WITH_VULKAN)
     add_executable(phase5e_vulkan_text phase5e_vulkan_text.cpp)
     if(TARGET SDL3_ttf::SDL3_ttf-static)
