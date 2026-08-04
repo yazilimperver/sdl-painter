@@ -83,6 +83,17 @@ class SDLPainterConan(ConanFile):
         deps = CMakeDeps(self)
         deps.generate()
         tc = CMakeToolchain(self)
+        # Conan'ın ürettiği CMakeUserPresets.json'ı devre dışı bırak.
+        # Conan preset adını yalnızca build_type'tan türetiyor (conan-debug /
+        # conan-release); --output-folder ve hedef platform adı etkilemiyor.
+        # Bu yüzden aynı ağaçta İKİ Debug install'ı yapmak yeterli:
+        # windows-debug + linux-debug (Docker/WSL) ya da sadece Linux'ta
+        # linux-debug + linux-debug-asan. Her iki fragment de "conan-debug"
+        # tanımlayınca CMake "Duplicate preset" hatasıyla HİÇBİR preset'i
+        # yükleyemiyor — mevcut windows-debug preset'i bile kırılıyor.
+        # Projenin kendi CMakePresets.json'ı toolchain dosyasının yolunu
+        # zaten açıkça veriyor, bu yüzden bu dosyaya ihtiyaç yok.
+        tc.user_presets_path = False
         tc.variables["SDLPAINTER_WITH_VULKAN"] = self.options.with_vulkan
         tc.variables["SDLPAINTER_BUILD_EXAMPLES"] = self.options.build_examples
         tc.variables["SDLPAINTER_BUILD_TESTS"] = self.options.build_tests

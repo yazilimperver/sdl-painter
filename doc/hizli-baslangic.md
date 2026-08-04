@@ -27,19 +27,97 @@ git clone https://example.com/sdl-painter.git
 cd sdl-painter
 
 # 2) Bağımlılıkları yükle (debug build için)
-conan install . --build=missing -s build_type=Debug
+conan install . --output-folder=build/linux-debug/generators \
+    --build=missing -s build_type=Debug
 
 # 3) Configure + build
-cmake --preset conan-debug
-cmake --build --preset conan-debug
+cmake --preset linux-debug
+cmake --build --preset linux-debug
 
 # 4) Demo'yu çalıştır
-./build/Debug/examples/phase1_demo
+./build/linux-debug/examples/phase1_demo
 ```
 
+> Preset adı `--output-folder` ile eşleşmek zorundadır: projenin
+> `CMakePresets.json` dosyası her preset için toolchain yolunu
+> `build/<preset>/generators/...` altında arar.
+>
 > Windows / MSVC için preset adları `windows-debug` ve `windows-release`
-> şeklindedir. Cross-compile için Dockerfile içindeki `windows-cross`
-> stage'i kullanılabilir.
+> şeklindedir (`--output-folder=build/windows-debug/generators`).
+> Cross-compile için Dockerfile içindeki `windows-cross` stage'i ve
+> `windows-mingw-debug` / `windows-mingw-release` presetleri kullanılır.
+
+### 2.1 Windows (Visual Studio 2022) — Manuel
+
+```powershell
+# 0. VS 2022 ortam değişkenlerini yükle
+$vsInstallPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
+Import-Module "$vsInstallPath\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
+Enter-VsDevShell -VsInstallPath $vsInstallPath -DevCmdArguments "-arch=x64"
+
+# 1. Conan profili oluştur (ilk seferde)
+conan profile detect
+
+# 2. Bağımlılıkları yükle
+conan install . --output-folder=build/windows-debug/generators --build=missing -s build_type=Debug
+
+# 3. Derle
+cmake --preset windows-debug
+cmake --build --preset windows-debug
+```
+
+### 2.2 Script ile Derleme
+
+Tüm scriptler proje kökünden çalıştırılmalıdır. Bayrakların tam listesi için
+[README — Script Referansı](../README.md#script-referansı).
+
+```bash
+chmod +x scripts/*.sh
+
+./scripts/build.sh              # Derle (Debug, varsayılan)
+./scripts/build.sh Release      # Release derle
+./scripts/build.sh --docs       # Build + API dokümantasyonu
+./scripts/run-tests.sh          # Testleri çalıştır
+./scripts/format-check.sh       # Format kontrolü
+```
+
+```powershell
+.\scripts\Build.ps1             # Derle (Debug, varsayılan)
+.\scripts\Build.ps1 Release     # Release derle
+.\scripts\Build.ps1 -Docs       # Build + API dokümantasyonu
+.\scripts\Run-Tests.ps1         # Testleri çalıştır
+.\scripts\Format-Check.ps1      # Format kontrolü
+```
+
+### 2.3 CMake Preset Referansı
+
+| Preset | Platform | Build Type | Notlar |
+|--------|----------|------------|--------|
+| `linux-debug` | Linux | Debug | CI'da kullanılır |
+| `linux-release` | Linux | Release | CI'da kullanılır |
+| `linux-debug-asan` | Linux | Debug | ASan + UBSan aktif |
+| `windows-debug` | Windows | Debug | MSVC, Visual Studio 17 2022 |
+| `windows-release` | Windows | Release | MSVC, Visual Studio 17 2022 |
+| `windows-mingw-debug` | Windows (cross) | Debug | Linux host'ta MinGW-w64 cross-compile, Vulkan'sız |
+| `windows-mingw-release` | Windows (cross) | Release | Linux host'ta MinGW-w64 cross-compile, Vulkan'sız |
+
+### 2.4 CMake Seçenekleri
+
+| Seçenek | Varsayılan | Açıklama |
+|---------|-----------|----------|
+| `SDLPAINTER_WITH_VULKAN` | `OFF` | Vulkan backend |
+| `SDLPAINTER_BUILD_EXAMPLES` | `ON` | Örnek uygulamalar |
+| `SDLPAINTER_BUILD_TESTS` | `ON` | GTest birim testleri |
+| `ENABLE_SANITIZERS` | `OFF` | ASan + UBSan (GCC/Clang) |
+
+Vulkan dahil tüm özelliklerle derleme:
+
+```bash
+conan install . --output-folder=build/linux-debug/generators --build=missing \
+    -s build_type=Debug -o "&:with_vulkan=True"
+cmake --preset linux-debug
+cmake --build --preset linux-debug
+```
 
 ---
 

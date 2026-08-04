@@ -20,8 +20,9 @@ cmake-build-*/
 .idea/
 *.user
 
-# Claude
+# AI
 .claude/
+.localllm/
 
 # OS
 .DS_Store

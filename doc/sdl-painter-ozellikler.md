@@ -20,7 +20,7 @@
 - `Translate`, `Rotate`, `Scale`
 - `Save` / `Restore` — QPainter ile birebir aynı semantik
 - `ResetTransform`
-- 3×3 affine matris — GLM bağımlılığı yok, özel implementasyon
+- 3×3 affine matris — `glm::mat3` (column-major), bkz. ADR-007
 
 ## Clipping
 
@@ -63,7 +63,7 @@ Her çizim çağrısı doğrudan GPU'ya gitmez; `RenderBatcher` vertex'leri bir 
 
 ## Altyapı
 
-- CMake Presets (5 preset: `linux-debug`, `linux-release`, `linux-debug-asan`, `windows-debug`, `windows-release`)
+- CMake Presets (7 preset: `linux-debug`, `linux-release`, `linux-debug-asan`, `windows-debug`, `windows-release`, `windows-mingw-debug`, `windows-mingw-release`)
 - Conan 2 bağımlılık yönetimi — opsiyonel Vulkan ve metin bağımlılıkları
 - Docker multi-stage: geliştirme / headless CI / cross-compile
 - GitLab CI/CD: build → test → quality (clang-format zorunlu, clang-tidy soft)
