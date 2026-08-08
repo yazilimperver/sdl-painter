@@ -44,6 +44,19 @@ target_link_libraries(phase7_game_demo PRIVATE sdl_painter_app spdlog::spdlog_he
 sdlpainter_copy_shaders(phase7_game_demo)
 sdlpainter_copy_runtime_dlls(phase7_game_demo)
 
+# Fare girdisi + durum makinesi + duyarlı yerleşim: eksiksiz uygulama örneği.
+# Metin çizdiği için phase4 gibi SDL3_ttf'e de bağlanır.
+add_executable(phase8_tictactoe phase8_tictactoe.cpp)
+if(TARGET SDL3_ttf::SDL3_ttf-static)
+    target_link_libraries(phase8_tictactoe
+        PRIVATE sdl_painter_app SDL3_ttf::SDL3_ttf-static spdlog::spdlog_header_only)
+else()
+    target_link_libraries(phase8_tictactoe
+        PRIVATE sdl_painter_app SDL3_ttf::SDL3_ttf spdlog::spdlog_header_only)
+endif()
+sdlpainter_copy_shaders(phase8_tictactoe)
+sdlpainter_copy_runtime_dlls(phase8_tictactoe)
+
 if(SDLPAINTER_WITH_VULKAN)
     add_executable(phase5e_vulkan_text phase5e_vulkan_text.cpp)
     if(TARGET SDL3_ttf::SDL3_ttf-static)

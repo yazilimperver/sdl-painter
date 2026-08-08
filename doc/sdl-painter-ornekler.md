@@ -224,9 +224,96 @@ sağlar.
 
 ---
 
+## phase6_app_demo — Application Çatısı
+
+**Amaç:** `phase2_demo` ile aynı görsel içeriği (dönen dikdörtgen + nabız
+gibi ölçeklenen daire) SDL boilerplate'i olmadan üretir.
+
+### Kullanılan yetenekler
+
+| Yetenek | Detay |
+|---------|-------|
+| `Application` türetme | `OnInit` / `OnUpdate` / `OnRender` / `OnKeyDown` override |
+| Otomatik yaşam döngüsü | SDL init, pencere, GL context, olay döngüsü ve yıkım çatıda |
+| `TimingMode::kVariable` | Her frame bir `OnUpdate`, `dt` gerçek geçen süre |
+
+### Mühendislik notu
+
+Karşılaştırma noktası `phase2_demo`'dur: aynı çıktı, ~250 satır daha az kod.
+Çatının değeri burada ölçülebilir hale gelir. `Application` yıkım sırası
+(Painter → pencere → SDL_Quit) türeyen sınıfın üyelerini de kapsayacak
+şekilde tasarlandığı için `Image`/`Font` üyeleri düz üye olarak tutulabilir
+(bkz. [ADR-008](../adr/ADR-008-application-framework-layer.md)).
+
+---
+
+## phase7_game_demo — Sabit Adımlı Oyun Döngüsü
+
+**Amaç:** `TimingMode::kFixed` ile deterministik simülasyonu ve render
+interpolasyonunu doğrular. Bir top yerçekimiyle düşüp zemine çarparak seker.
+
+### Kullanılan yetenekler
+
+| Yetenek | Detay |
+|---------|-------|
+| `TimingMode::kFixed` | Fizik sabit adımla; `OnUpdate` frame başına 0..N kez |
+| `OnRender(Painter&, alpha)` | Önceki/geçerli konum arasında interpolasyon |
+| `fixed_update_hz = 30` | Kasıtlı düşük sim hızı — interpolasyonun etkisi görünür |
+
+### Mühendislik notu
+
+Sim hızı 30 Hz'e düşürülmesine rağmen hareket akıcı görünür; çünkü çizim
+`alpha` ile son iki durum arasında interpolasyon yapar (Game Programming
+Patterns "play catch up"). `alpha` yok sayılırsa aynı demo takılmalı görünür —
+interpolasyonun neden gerekli olduğunu doğrudan gösteren bir karşıtlık.
+
+---
+
+## phase8_tictactoe — Eksiksiz Uygulama: Girdi + Durum + Yerleşim
+
+**Amaç:** Çatının **girdi** tarafını ve gerçek bir uygulamanın akışını
+gösterir. phase6 çatının temelini, phase7 zamanlamayı gösterirken bu demo
+diğer örneklerin hiçbirinde bulunmayan yetenekleri kapsar.
+
+### Kullanılan yetenekler
+
+| Yetenek | Detay |
+|---------|-------|
+| `OnMouseButtonDown` | Tıklama koordinatı → tahta hücresi (hit testing) |
+| `OnMouseMove` | İmlecin üzerindeki boş hücreyi yarı saydam vurgulama |
+| `OnResize` | Tahta geometrisi pencere boyutundan yeniden hesaplanır |
+| Durum makinesi | oynanıyor → kazanan / berabere → yeniden başlat |
+| `DrawText(Rect, ..., kCenter)` | Alt durum çubuğunda ortalanmış metin |
+| `SetTitle` | Pencere başlığı sırayı/sonucu yansıtır |
+| Kalın çizgi + daire | Izgara ve X çapraz çizgilerle, O daireyle çizilir |
+
+**Kontroller:** Sol tık hamle · `R` yeniden başlat · `ESC` çıkış.
+Oyun bittiğinde herhangi bir tık yeni oyun başlatır.
+
+### Mühendislik notu
+
+Oyun mantığı (`examples/tictactoe_logic.h`) çizimden ve SDL'den **tamamen
+bağımsız** saf fonksiyonlardır: kazanan tespiti, hamle geçerliliği ve hit
+testing. Bu ayrım sayesinde mantık headless olarak birim testlerle
+doğrulanabilir (`tests/test_tictactoe_logic.cpp`) — demo dosyası yalnızca
+girdi ve çizimden sorumlu kalır. Örnek uygulamalardan test edilen ilk mantık
+budur.
+
+Sıra tabanlı bir oyun olduğu için `TimingMode::kVariable` kullanılır; sabit
+adıma ihtiyaç yoktur. phase7 ile yan yana okunduğunda iki zamanlama modunun
+ne zaman seçileceği somutlaşır: sürekli simülasyon → `kFixed`,
+olay güdümlü etkileşim → `kVariable`.
+
+Duyarlı yerleşim `OnResize` içinde tek bir hesapla çözülür; tahta her zaman
+pencereye ortalanır ve kısa kenara göre ölçeklenir. Hit testing aynı
+geometriyi kullandığı için pencere boyutundan bağımsız olarak doğru çalışır.
+
+---
+
 ## Örneklerin Genel Mühendislik Deseni
 
-Tüm demolar aynı yapıyı izler:
+Aşağıdaki desen `phase0`–`phase5e` demoları içindir; `phase6`+ demoları bu
+boilerplate'i `Application` çatısına devreder:
 
 ```
 1. InitLogger()          → renkli spdlog başlat
