@@ -1,5 +1,7 @@
+**Türkçe** | [English](README.en.md)
+
 <div align="center">
-  <img src="sdl-logo.png" alt="SDLPainter" width="120">
+  <img src="sdl-logo-small.png" alt="SDLPainter" width="120">
   <h1>SDLPainter</h1>
   <p><strong>SDL3 + OpenGL/Vulkan dual backend destekli C++17 2B çizim kütüphanesi.</strong></p>
   <p>
@@ -15,15 +17,16 @@
 
 ## Neden SDLPainter?
 
-SDL3 ile 2B çizim yapmayı kolay bir hale getitir. Vertex üretimi, shader derleme, buffer ve state yönetimi,
-pipeline kurulumu, OpenGL/Vulkan farklılıklar ile uğraşmak durumunda kalmazsınız.
+SDLPainter, SDL3 ile 2B çizim yapmayı kolaylaştırır. Vertex üretimi, shader derleme,
+buffer ve state yönetimi, pipeline kurulumu, OpenGL/Vulkan farklılıkları ile uğraşmak
+durumunda kalmazsınız.
 
 SDLPainter **sadece çizime** odaklanmanıza imkan sağlar:
 
 - **Tek API, çoklu backend** — Aynı kod OpenGL 3.3 ve Vulkan 1.1'de aynı sonucu üretir; backend'i değiştirmek tek satır.
 - **Doğru geometri** — Kalın çizgiler `glLineWidth` yerine quad tabanlı (platformlar arası tutarlı), konkav çokgenler ear clipping ile doğru dolduruluyor.
 - **Draw call'ları biriktirir** — `RenderBatcher` aynı mod/texture/opacity'deki çizimleri birleştirir; binlerce küçük şekil ucuzlar.
-- **İsteğe bağlı uygulama çatısı** — `sdl_painter_app` ile pencere, olay döngüsü ve zamanlama da hazır gelir; istemezsen hiç kullanma.
+- **İsteğe bağlı uygulama çatısı** — `sdl_painter_app` ile pencere, olay döngüsü ve zamanlama da hazır gelir; istemezseniz hiç kullanmayın.
 - **Tanıdık API** — QPainter kullandıysanız, çoğu API tanıdık gelecektir. Duymadıysanız ya da kullanmadıysanız ise zaten aşikar API'ler: `DrawRect`, `FillCircle`, `Save`/`Restore`.
 
 ## Hızlı Başlangıç
@@ -222,12 +225,14 @@ Tüm scriptler proje kökünden çalıştırılmalıdır.
 
 ```
 sdl-painter/
-├── include/sdl_painter/   # Public header'lar
+├── include/sdl_painter/   # Public header'lar (app/ dahil)
 ├── src/                   # Implementasyon
+│   ├── app/               # Application çatısı (sdl_painter_app)
 │   ├── opengl/            # OpenGL backend + GLSL shader'lar
 │   └── vulkan/            # Vulkan backend + SPIR-V shader'lar
 ├── tests/                 # GTest birim testleri
-├── examples/              # Phase demo uygulamaları (phase0..phase5e)
+├── examples/              # Phase demo uygulamaları (phase0..phase7)
+├── doc/                   # Tasarım dokümanları, diyagramlar, ekran görüntüleri
 ├── cmake/                 # CMake yardımcı modülleri
 ├── scripts/               # Build/test yardımcı scriptleri (.sh + .ps1)
 └── adr/                   # Architecture Decision Records
@@ -245,8 +250,9 @@ sdl-painter/
 ./build/linux-debug/examples/phase4_demo
 
 # Application çatısı demo'ları (bkz. ADR-008)
-./build/linux-debug/examples/phase6_app_demo
-./build/linux-debug/examples/phase7_game_demo
+./build/linux-debug/examples/phase6_app_demo    # çatının temeli
+./build/linux-debug/examples/phase7_game_demo   # sabit adımlı oyun döngüsü
+./build/linux-debug/examples/phase8_tictactoe   # fare girdisi + durum makinesi
 
 # Vulkan demo'ları (--vulkan ile derlenmişse)
 ./build/linux-debug/examples/phase5a_vulkan_clear
@@ -363,9 +369,9 @@ Ayrıntılı kullanım akışları ve dağıtım adımları için:
 
 API referans dokümantasyonu [Doxygen](https://www.doxygen.nl/) ile üretilir.
 
-**Online:** `main` branch'e her push'ta GitLab CI otomatik olarak yayınlar.
-URL formatı: `https://<namespace>.gitlab.io/sdl-painter`
-_(namespace: GitLab kullanıcı adın veya grup adın)_
+**Online:** Varsayılan branch'e her push'ta GitHub Actions `docs` job'ı Doxygen
+çıktısını GitHub Pages'e yayınlar:
+<https://yazilimperver.github.io/sdl-painter>
 
 **Yerel üretim:**
 
@@ -408,20 +414,27 @@ find src/ -name '*.cpp' | xargs clang-tidy-18 -p build/linux-debug/
 
 ## CI/CD
 
-GitLab CI pipeline aşamaları (tüm özellikler aktif: OpenGL + Vulkan + metin):
+Projenin birincil pipeline'ı **GitHub Actions** (`.github/workflows/ci.yml`).
+Linux job'ları Docker Hub'daki hazır imajı (`yazilimperver/sdl-painter:ci-v1.0`)
+kullanır; Windows job'ları native MSVC runner'da çalışır.
 
-| Stage | Job | Platform | Açıklama |
-|-------|-----|----------|----------|
-| build | `build:linux:debug` | Linux (Docker) | Debug, Vulkan + metin dahil |
-| build | `build:linux:release` | Linux (Docker) | Release, Vulkan + metin dahil |
-| build | `build:windows:debug` | Windows (SaaS, MSVC) | Debug, Vulkan + metin dahil |
-| build | `build:windows:release` | Windows (SaaS, MSVC) | Release, Vulkan + metin dahil |
-| test | `test:unit` | Linux | GTest — headless (lavapipe + offscreen) |
-| test | `test:unit:asan` | Linux | ASan + UBSan — headless |
-| test | `test:unit:windows` | Windows | GTest — SDL offscreen |
-| quality | `quality:clang-format` | Linux | Google Style format kontrolü (zorunlu) |
-| quality | `quality:clang-tidy` | Linux | Static analysis (opsiyonel) |
-| docs | `pages` | Linux | Doxygen → GitLab Pages (yalnızca `main`) |
+| Job | Ortam | Açıklama |
+|-----|-------|----------|
+| `build:linux:debug` | Linux (container) | Debug, Vulkan dahil |
+| `build:linux:release` | Linux (container) | Release, Vulkan dahil |
+| `build:windows:debug` | `windows-2022`, native MSVC | Debug, Vulkan dahil |
+| `build:windows:release` | `windows-2022`, native MSVC | Release, Vulkan dahil |
+| `test:unit` | Linux (container) | GTest — headless (offscreen + lavapipe ICD) |
+| `test:unit:asan` | Linux (container) | ASan + UBSan — Vulkan'sız derlenir |
+| `quality:clang-format` | Linux (container) | Google Style kontrolü — *soft fail* |
+| `quality:clang-tidy` | Linux (container) | Static analysis — *soft fail* |
+| `docs` | `ubuntu-latest` | Doxygen → GitHub Pages (yalnızca varsayılan branch) |
+| `release:publish` | `ubuntu-latest` | `v*.*.*` tag'inde GitHub Release oluşturur |
+
+> Repoda ayrıca bir `.gitlab-ci.yml` bulunur (GitLab aynası için). Aynı aşamaları
+> kurar, iki farkla: Windows build'leri **MinGW cross-compile** ile Linux
+> runner'da yapılır (Vulkan'sız) ve `pages` job'ı GitLab Pages'e yayınlar.
+> GitLab tarafındaki `test:unit:windows` job'ı yorum satırı olarak devre dışıdır.
 
 ## Mimari Kararlar (ADR)
 
