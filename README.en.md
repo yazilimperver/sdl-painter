@@ -80,7 +80,7 @@ For Windows, script-based builds and Vulkan-enabled builds see the
 | ![Primitives](doc/screenshots/primitifler.png) | ![Texture](doc/screenshots/texture.png) |
 | **Basic primitives** — stroke/fill, thick lines, concave polygon (`phase1_demo`) | **Image / texture** — scaling, atlas slicing, rotation (`phase3_demo`) |
 | ![Text](doc/screenshots/metin.png) | ![Application](doc/screenshots/uygulama.png) |
-| **Text** — SDL_ttf, alignment, layout inside a rect (`phase4_demo`) | **Application framework** — game loop via `sdl_painter_app` (`phase7_game_demo`) |
+| **Text** — SDL_ttf, alignment, layout inside a rect (`phase4_demo`) | **Application framework** — tic-tac-toe game via `sdl_painter_app` (`phase8_tictactoe`) |
 
 What each demo does: [Examples Guide](doc/sdl-painter-ornekler.md) *(in Turkish)*.
 

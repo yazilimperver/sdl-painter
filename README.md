@@ -76,7 +76,7 @@ Windows, script tabanlı derleme ve Vulkan'lı build için:
 | ![Primitifler](doc/screenshots/primitifler.png) | ![Texture](doc/screenshots/texture.png) |
 | **Temel primitifler** — stroke/fill, kalın çizgiler, konkav poligon (`phase1_demo`) | **Image / texture** — ölçekleme, atlas dilimleme, döndürme (`phase3_demo`) |
 | ![Metin](doc/screenshots/metin.png) | ![Uygulama](doc/screenshots/uygulama.png) |
-| **Metin** — SDL_ttf, hizalama, rect içine yerleştirme (`phase4_demo`) | **Uygulama çatısı** — `sdl_painter_app` ile oyun döngüsü (`phase7_game_demo`) |
+| **Metin** — SDL_ttf, hizalama, rect içine yerleştirme (`phase4_demo`) | **Uygulama çatısı** — `sdl_painter_app` ile tic-tac-toe oyunu (`phase8_tictactoe`) |
 
 Tüm demoların ne yaptığı: [Örnekler Rehberi](doc/sdl-painter-ornekler.md).
 
