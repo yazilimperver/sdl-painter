@@ -40,7 +40,7 @@
     {
       "name": "linux-debug",
       "displayName": "Linux Debug (Ninja + GCC)",
-      "description": "GitLab CI debug build. Requires: conan install --output-folder=build/linux-debug/generators -s build_type=Debug",
+      "description": "Linux CI debug build. Requires: conan install --output-folder=build/linux-debug/generators -s build_type=Debug",
       "inherits": "base",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/linux-debug",
@@ -53,7 +53,7 @@
     {
       "name": "linux-release",
       "displayName": "Linux Release (Ninja + GCC)",
-      "description": "GitLab CI release build. Requires: conan install --output-folder=build/linux-release/generators -s build_type=Release",
+      "description": "Linux CI release build. Requires: conan install --output-folder=build/linux-release/generators -s build_type=Release",
       "inherits": "base",
       "generator": "Ninja",
       "binaryDir": "${sourceDir}/build/linux-release",

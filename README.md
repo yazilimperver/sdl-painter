@@ -1,9 +1,9 @@
-**Türkçe** | [English](README.en.md)
+[Türkçe](README.tr.md) | **English**
 
 <div align="center">
   <img src="sdl-logo-small.png" alt="SDLPainter" width="120">
   <h1>SDLPainter</h1>
-  <p><strong>SDL3 + OpenGL/Vulkan dual backend destekli C++17 2B çizim kütüphanesi.</strong></p>
+  <p><strong>A C++17 2D drawing library for SDL3 with dual OpenGL/Vulkan backends.</strong></p>
   <p>
     <img src="https://img.shields.io/badge/C%2B%2B-17-blue" alt="C++17">
     <img src="https://img.shields.io/badge/SDL-3.2-green" alt="SDL3">
@@ -13,39 +13,46 @@
   </p>
 </div>
 
-![sdl-painter-overview](doc/sdl-painter-general-overview.png)
+![SDLPainter overview](doc/sdl-painter-general-overview.png)
 
-## Neden SDLPainter?
+> **Note:** The infographics above and below, and the design documents under
+> `doc/`, are currently written in Turkish. The API itself and all source
+> comments follow the naming conventions shown in this document.
 
-SDLPainter, SDL3 ile 2B çizim yapmayı kolaylaştırır. Vertex üretimi, shader derleme,
-buffer ve state yönetimi, pipeline kurulumu, OpenGL/Vulkan farklılıkları ile uğraşmak
-durumunda kalmazsınız.
+> SDLPainter is an independent community project. It is not affiliated with, nor
+> endorsed by, the SDL team.
 
-SDLPainter **sadece çizime** odaklanmanıza imkan sağlar:
+## Why SDLPainter?
 
-- **Tek API, çoklu backend** — Aynı kod OpenGL 3.3 ve Vulkan 1.1'de aynı sonucu üretir; backend'i değiştirmek tek satır.
-- **Doğru geometri** — Kalın çizgiler `glLineWidth` yerine quad tabanlı (platformlar arası tutarlı), konkav çokgenler ear clipping ile doğru dolduruluyor.
-- **Draw call'ları biriktirir** — `RenderBatcher` aynı mod/texture/opacity'deki çizimleri birleştirir; binlerce küçük şekil ucuzlar.
-- **İsteğe bağlı uygulama çatısı** — `sdl_painter_app` ile pencere, olay döngüsü ve zamanlama da hazır gelir; istemezseniz hiç kullanmayın.
-- **Tanıdık API** — QPainter kullandıysanız, çoğu API tanıdık gelecektir. Duymadıysanız ya da kullanmadıysanız ise zaten aşikar API'ler: `DrawRect`, `FillCircle`, `Save`/`Restore`.
+SDLPainter makes 2D drawing with SDL3 straightforward. You no longer have to
+deal with vertex generation, shader compilation, buffer and state management,
+pipeline setup, or the differences between OpenGL and Vulkan.
 
-## Hızlı Başlangıç
+SDLPainter lets you focus **only on drawing**:
+
+- **One API, multiple backends** — The same code produces the same result on OpenGL 3.3 and Vulkan 1.1; switching backends is a one-line change.
+- **Correct geometry** — Thick lines are quad-based instead of `glLineWidth` (consistent across platforms), and concave polygons are filled correctly via ear clipping.
+- **Batches draw calls** — `RenderBatcher` merges draws that share mode/texture/opacity, making thousands of small shapes cheap.
+- **Optional application framework** — `sdl_painter_app` also gives you the window, event loop and timing; skip it entirely if you don't want it.
+- **Familiar API** — If you have used QPainter, most of the API will feel familiar. If you haven't, the names speak for themselves: `DrawRect`, `FillCircle`, `Save`/`Restore`.
+
+## Quick Start
 
 ```bash
-# 1) Bağımlılıklar (ilk seferde: conan profile detect)
+# 1) Dependencies (first time: conan profile detect)
 conan install . --output-folder=build/linux-debug/generators \
     --build=missing -s build_type=Debug
 
-# 2) Derle
+# 2) Build
 cmake --preset linux-debug
 cmake --build --preset linux-debug
 
-# 3) Testler + ilk demo
+# 3) Tests + your first demo
 ctest --preset linux-debug
 ./build/linux-debug/examples/phase1_demo
 ```
 
-Çizim kodu şuna benzer:
+Drawing code looks like this:
 
 ```cpp
 sdl_painter::Painter painter(window, sdl_painter::RendererBackend::kOpenGL);
@@ -66,182 +73,182 @@ painter.Restore();
 painter.End();
 ```
 
-Windows, script tabanlı derleme ve Vulkan'lı build için:
-[Hızlı Başlangıç Rehberi](doc/hizli-baslangic.md).
+For Windows, script-based builds and Vulkan-enabled builds see the
+[Quick Start Guide](doc/hizli-baslangic.md) *(in Turkish)*.
 
-## Örnek Ekran Görüntüleri
+## Screenshots
 
 | | |
 |:---:|:---:|
-| ![Primitifler](doc/screenshots/primitifler.png) | ![Texture](doc/screenshots/texture.png) |
-| **Temel primitifler** — stroke/fill, kalın çizgiler, konkav poligon (`phase1_demo`) | **Image / texture** — ölçekleme, atlas dilimleme, döndürme (`phase3_demo`) |
-| ![Metin](doc/screenshots/metin.png) | ![Uygulama](doc/screenshots/uygulama.png) |
-| **Metin** — SDL_ttf, hizalama, rect içine yerleştirme (`phase4_demo`) | **Uygulama çatısı** — `sdl_painter_app` ile tic-tac-toe oyunu (`phase8_tictactoe`) |
+| ![Primitives](doc/screenshots/primitifler.png) | ![Texture](doc/screenshots/texture.png) |
+| **Basic primitives** — stroke/fill, thick lines, concave polygon (`phase1_demo`) | **Image / texture** — scaling, atlas slicing, rotation (`phase3_demo`) |
+| ![Text](doc/screenshots/metin.png) | ![Application](doc/screenshots/uygulama.png) |
+| **Text** — SDL_ttf, alignment, layout inside a rect (`phase4_demo`) | **Application framework** — tic-tac-toe game via `sdl_painter_app` (`phase8_tictactoe`) |
 
-Tüm demoların ne yaptığı: [Örnekler Rehberi](doc/sdl-painter-ornekler.md).
+What each demo does: [Examples Guide](doc/sdl-painter-ornekler.md) *(in Turkish)*.
 
-## Özellikler
+## Features
 
-| Alan | Desteklenen |
-|------|-------------|
-| **Primitifler** | Çizgi, dikdörtgen, daire, elips, çokgen, polyline — hepsi stroke + fill |
-| **Stiller** | Pen (renk, kalınlık, outline), Brush (dolgu rengi), global opacity |
-| **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` yığını — QPainter semantiği |
-| **Clipping** | Scissor tabanlı dikdörtgen kırpma |
-| **Image** | PNG / JPG yükleme (stb_image), kaynak→hedef ölçekleme, alpha blending |
-| **Metin** | SDL_ttf 3.x, glyph cache, left/center/right hizalama |
-| **Backend** | OpenGL 3.3 Core ve Vulkan 1.1 — `IRenderer` ile değiştirilebilir |
-| **Platform** | Linux (GCC/Clang), Windows (MSVC), Linux'ta MinGW cross-compile |
+| Area | Supported |
+|------|-----------|
+| **Primitives** | Line, rectangle, circle, ellipse, polygon, polyline — all with stroke + fill |
+| **Styles** | Pen (color, width, outline), Brush (fill color), global opacity |
+| **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` stack — QPainter semantics |
+| **Clipping** | Scissor-based rectangular clipping |
+| **Image** | PNG / JPG loading (stb_image), source→destination scaling, alpha blending |
+| **Text** | SDL_ttf 3.x, glyph cache, left/center/right alignment |
+| **Backend** | OpenGL 3.3 Core and Vulkan 1.1 — interchangeable through `IRenderer` |
+| **Platform** | Linux (GCC/Clang), Windows (MSVC), MinGW cross-compile from Linux |
 
-Ayrıntılı liste: [Özellik Listesi](doc/sdl-painter-ozellikler.md).
+Detailed list: [Feature List](doc/sdl-painter-ozellikler.md) *(in Turkish)*.
 
-## Mimari
+## Architecture
 
-![SDLPainter mimarisi](doc/sdl-painter-architecture.png)
+![SDLPainter architecture](doc/sdl-painter-architecture.png)
 
-Beş katman, her biri tek bir sorumluluğa odaklı:
+Five layers, each with a single responsibility:
 
-1. **Application** *(opsiyonel)* — pencere, olay döngüsü, zamanlama ([ADR-008](adr/ADR-008-application-framework-layer.md))
-2. **Painter** — public API; çizim komutlarını toplar ve state'e göre işler
-3. **RenderState + Tessellator** — transform/pen/brush/opacity/clip yığını; şekilleri vertex'e çevirir. Transform matrisi 3×3 affine `glm::mat3`, column-major ([ADR-007](adr/ADR-007-glm-transform-matrix.md))
-4. **RenderBatcher → IRenderer** — draw call'ları birleştirir, backend'e gönderir
-5. **Backend** — `OpenGLRenderer` / `VulkanRenderer`, altta SDL3 platform katmanı
+1. **Application** *(optional)* — window, event loop, timing ([ADR-008](adr/ADR-008-application-framework-layer.md))
+2. **Painter** — public API; collects drawing commands and applies the current state
+3. **RenderState + Tessellator** — transform/pen/brush/opacity/clip stack; converts shapes into vertices. The transform matrix is a 3×3 affine `glm::mat3`, column-major ([ADR-007](adr/ADR-007-glm-transform-matrix.md))
+4. **RenderBatcher → IRenderer** — merges draw calls and forwards them to the backend
+5. **Backend** — `OpenGLRenderer` / `VulkanRenderer`, on top of the SDL3 platform layer
 
-Yeni bir backend eklemek için yalnızca `IRenderer` implement edilir; Painter kodu değişmez.
-Detay: [Mimari Genel Bakış](doc/mimari-genel-bakis.md) · [Backend İç Yapısı](doc/backend-ic-yapisi.md) · [ADR'ler](adr/)
+Adding a new backend only requires implementing `IRenderer`; Painter code stays untouched.
+Details: [Architecture Overview](doc/mimari-genel-bakis.md) · [Backend Internals](doc/backend-ic-yapisi.md) · [ADRs](adr/)
 
-## Ön Koşullar
+## Prerequisites
 
-| Araç | Minimum Sürüm |
-|------|--------------|
+| Tool | Minimum Version |
+|------|-----------------|
 | CMake | 3.20 |
 | Conan | 2.x |
-| GCC / Clang | C++17 desteği |
+| GCC / Clang | C++17 support |
 | MSVC | VS 2022 (v143) |
-| Ninja | Herhangi bir sürüm (Linux) |
+| Ninja | Any version (Linux) |
 
-**Opsiyonel:**
-- Vulkan SDK (`glslc` için) — Vulkan backend kullanılacaksa
-- `clang-format-18`, `clang-tidy-18` — Kalite kontrolü için
-- `doxygen` — API referans dokümantasyonu üretmek için
+**Optional:**
+- Vulkan SDK (for `glslc`) — if you use the Vulkan backend
+- `clang-format-18`, `clang-tidy-18` — for quality checks
+- `doxygen` — to generate the API reference
 
-## Derleme
+## Building
 
-Platform bazlı adımlar, CMake preset/seçenek tabloları ve Vulkan'lı derleme
-için: **[Hızlı Başlangıç Rehberi](doc/hizli-baslangic.md)**
+For platform-specific steps, CMake preset/option tables and Vulkan-enabled
+builds see: **[Quick Start Guide](doc/hizli-baslangic.md)** *(in Turkish)*
 
-| Konu | Nerede |
-|------|--------|
-| Windows (VS 2022) manuel derleme | [§2.1](doc/hizli-baslangic.md#21-windows-visual-studio-2022--manuel) |
-| Script ile derleme (Linux + Windows) | [§2.2](doc/hizli-baslangic.md#22-script-ile-derleme) |
-| CMake preset referansı (7 preset) | [§2.3](doc/hizli-baslangic.md#23-cmake-preset-referansı) |
-| CMake seçenekleri + Vulkan'lı derleme | [§2.4](doc/hizli-baslangic.md#24-cmake-seçenekleri) |
-| Sık karşılaşılan sorunlar | [§7](doc/hizli-baslangic.md#7-sık-karşılaşılan-sorunlar) |
+| Topic | Where |
+|-------|-------|
+| Windows (VS 2022) manual build | [§2.1](doc/hizli-baslangic.md#21-windows-visual-studio-2022--manuel) |
+| Building with scripts (Linux + Windows) | [§2.2](doc/hizli-baslangic.md#22-script-ile-derleme) |
+| CMake preset reference (7 presets) | [§2.3](doc/hizli-baslangic.md#23-cmake-preset-referansı) |
+| CMake options + Vulkan-enabled build | [§2.4](doc/hizli-baslangic.md#24-cmake-seçenekleri) |
+| Troubleshooting | [§7](doc/hizli-baslangic.md#7-sık-karşılaşılan-sorunlar) |
 
-## Script Referansı
+## Script Reference
 
-Tüm scriptler proje kökünden çalıştırılmalıdır.
+All scripts must be run from the project root.
 
-### build.sh / Build.ps1 — Derleme
+### build.sh / Build.ps1 — Build
 
 ```bash
-# Kullanım: ./scripts/build.sh [Debug|Release|ASan] [bayraklar]
-./scripts/build.sh                              # Debug (varsayılan)
+# Usage: ./scripts/build.sh [Debug|Release|ASan] [flags]
+./scripts/build.sh                              # Debug (default)
 ./scripts/build.sh Release                      # Release
 ./scripts/build.sh ASan                         # Debug + ASan/UBSan
 ./scripts/build.sh Debug --vulkan               # Vulkan backend
-./scripts/build.sh Release --no-examples        # Örneksiz derleme
-./scripts/build.sh Debug --target phase2_demo   # Tek hedef
-./scripts/build.sh --clean                      # Build dizinini sil, baştan derle
-./scripts/build.sh --jobs 8                     # 8 paralel iş
-./scripts/build.sh --skip-conan                 # Sadece CMake (Conan atla)
-./scripts/build.sh --docs                       # Build + Doxygen HTML dokümantasyonu
+./scripts/build.sh Release --no-examples        # Build without examples
+./scripts/build.sh Debug --target phase2_demo   # Single target
+./scripts/build.sh --clean                      # Remove build dir, rebuild from scratch
+./scripts/build.sh --jobs 8                     # 8 parallel jobs
+./scripts/build.sh --skip-conan                 # CMake only (skip Conan)
+./scripts/build.sh --docs                       # Build + Doxygen HTML docs
 ```
 
 ```powershell
-# Kullanım: .\scripts\Build.ps1 [Debug|Release] [bayraklar]
-.\scripts\Build.ps1                             # Debug (varsayılan)
+# Usage: .\scripts\Build.ps1 [Debug|Release] [flags]
+.\scripts\Build.ps1                             # Debug (default)
 .\scripts\Build.ps1 Release                     # Release
 .\scripts\Build.ps1 -Vulkan                     # Vulkan backend
-.\scripts\Build.ps1 Release -NoExamples         # Örneksiz derleme
-.\scripts\Build.ps1 -Target phase2_demo         # Tek hedef
-.\scripts\Build.ps1 -Clean                      # Temiz build
-.\scripts\Build.ps1 -Jobs 8                     # 8 paralel iş
-.\scripts\Build.ps1 -SkipConan                  # Sadece CMake
-.\scripts\Build.ps1 -Docs                       # Build + Doxygen HTML dokümantasyonu
+.\scripts\Build.ps1 Release -NoExamples         # Build without examples
+.\scripts\Build.ps1 -Target phase2_demo         # Single target
+.\scripts\Build.ps1 -Clean                      # Clean build
+.\scripts\Build.ps1 -Jobs 8                     # 8 parallel jobs
+.\scripts\Build.ps1 -SkipConan                  # CMake only
+.\scripts\Build.ps1 -Docs                       # Build + Doxygen HTML docs
 ```
 
-> Toolchain eksikse veya bayraklar değiştiyse `build` scriptleri `conan-install` scriptini otomatik çağırır.
+> If the toolchain is missing or the flags changed, the `build` scripts invoke the `conan-install` script automatically.
 
-### conan-install.sh / Conan-Install.ps1 — Bağımlılıklar
+### conan-install.sh / Conan-Install.ps1 — Dependencies
 
 ```bash
-# Kullanım: ./scripts/conan-install.sh [Debug|Release|ASan] [bayraklar]
-./scripts/conan-install.sh                       # Debug (varsayılan)
+# Usage: ./scripts/conan-install.sh [Debug|Release|ASan] [flags]
+./scripts/conan-install.sh                       # Debug (default)
 ./scripts/conan-install.sh Release               # Release
-./scripts/conan-install.sh Debug --vulkan        # Vulkan bağımlılıkları dahil
-./scripts/conan-install.sh Release --no-tests    # Test bağımlılıkları hariç
-./scripts/conan-install.sh Debug --no-examples   # Örnek bağımlılıkları hariç
+./scripts/conan-install.sh Debug --vulkan        # Include Vulkan dependencies
+./scripts/conan-install.sh Release --no-tests    # Exclude test dependencies
+./scripts/conan-install.sh Debug --no-examples   # Exclude example dependencies
 ```
 
 ```powershell
-.\scripts\Conan-Install.ps1                      # Debug (varsayılan)
+.\scripts\Conan-Install.ps1                      # Debug (default)
 .\scripts\Conan-Install.ps1 Release              # Release
-.\scripts\Conan-Install.ps1 -Vulkan              # Vulkan bağımlılıkları dahil
-.\scripts\Conan-Install.ps1 -NoTests             # Test bağımlılıkları hariç
-.\scripts\Conan-Install.ps1 -NoExamples          # Örnek bağımlılıkları hariç
+.\scripts\Conan-Install.ps1 -Vulkan              # Include Vulkan dependencies
+.\scripts\Conan-Install.ps1 -NoTests             # Exclude test dependencies
+.\scripts\Conan-Install.ps1 -NoExamples          # Exclude example dependencies
 ```
 
-### run-tests.sh / Run-Tests.ps1 — Testler
+### run-tests.sh / Run-Tests.ps1 — Tests
 
 ```bash
-# Kullanım: ./scripts/run-tests.sh [Debug|Release|ASan] [bayraklar]
-./scripts/run-tests.sh                           # Tüm testler, Debug
-./scripts/run-tests.sh Release                   # Tüm testler, Release
-./scripts/run-tests.sh ASan                      # Sanitizer'lı testler
-./scripts/run-tests.sh --filter Transform        # Sadece Transform testleri
+# Usage: ./scripts/run-tests.sh [Debug|Release|ASan] [flags]
+./scripts/run-tests.sh                           # All tests, Debug
+./scripts/run-tests.sh Release                   # All tests, Release
+./scripts/run-tests.sh ASan                      # Tests with sanitizers
+./scripts/run-tests.sh --filter Transform        # Only Transform tests
 ```
 
 ```powershell
-.\scripts\Run-Tests.ps1                          # Tüm testler, Debug
-.\scripts\Run-Tests.ps1 Release                  # Tüm testler, Release
-.\scripts\Run-Tests.ps1 -Filter Transform        # Sadece Transform testleri
+.\scripts\Run-Tests.ps1                          # All tests, Debug
+.\scripts\Run-Tests.ps1 Release                  # All tests, Release
+.\scripts\Run-Tests.ps1 -Filter Transform        # Only Transform tests
 ```
 
-### format-check.sh / Format-Check.ps1 — Format Kontrolü
+### format-check.sh / Format-Check.ps1 — Format Check
 
 ```bash
-./scripts/format-check.sh           # Format kontrolü (hata varsa çıkar)
-./scripts/format-check.sh --fix     # Otomatik düzelt
+./scripts/format-check.sh           # Check formatting (exits non-zero on error)
+./scripts/format-check.sh --fix     # Fix automatically
 ```
 
 ```powershell
-.\scripts\Format-Check.ps1                            # Format kontrolü
-.\scripts\Format-Check.ps1 -FixMode                   # Otomatik düzelt
-.\scripts\Format-Check.ps1 -ClangFormat clang-format-18  # Özel binary
+.\scripts\Format-Check.ps1                            # Check formatting
+.\scripts\Format-Check.ps1 -FixMode                   # Fix automatically
+.\scripts\Format-Check.ps1 -ClangFormat clang-format-18  # Custom binary
 ```
 
-## Dizin Yapısı
+## Directory Layout
 
 ```
 sdl-painter/
-├── include/sdl_painter/   # Public header'lar (app/ dahil)
-├── src/                   # Implementasyon
-│   ├── app/               # Application çatısı (sdl_painter_app)
-│   ├── opengl/            # OpenGL backend + GLSL shader'lar
-│   └── vulkan/            # Vulkan backend + SPIR-V shader'lar
-├── tests/                 # GTest birim testleri
-├── examples/              # Phase demo uygulamaları (phase0..phase7)
-├── doc/                   # Tasarım dokümanları, diyagramlar, ekran görüntüleri
-├── cmake/                 # CMake yardımcı modülleri
-├── scripts/               # Build/test yardımcı scriptleri (.sh + .ps1)
+├── include/sdl_painter/   # Public headers (including app/)
+├── src/                   # Implementation
+│   ├── app/               # Application framework (sdl_painter_app)
+│   ├── opengl/            # OpenGL backend + GLSL shaders
+│   └── vulkan/            # Vulkan backend + SPIR-V shaders
+├── tests/                 # GTest unit tests
+├── examples/              # Phase demo applications (phase0..phase7)
+├── doc/                   # Design documents, diagrams, screenshots
+├── cmake/                 # CMake helper modules
+├── scripts/               # Build/test helper scripts (.sh + .ps1)
 └── adr/                   # Architecture Decision Records
 ```
 
-## Örnekler
+## Examples
 
 ```bash
-# OpenGL demo'ları (build sonrası)
+# OpenGL demos (after building)
 ./build/linux-debug/examples/phase0_demo
 ./build/linux-debug/examples/phase1_demo
 ./build/linux-debug/examples/phase2_demo
@@ -249,12 +256,12 @@ sdl-painter/
 ./build/linux-debug/examples/phase3_demo
 ./build/linux-debug/examples/phase4_demo
 
-# Application çatısı demo'ları (bkz. ADR-008)
-./build/linux-debug/examples/phase6_app_demo    # çatının temeli
-./build/linux-debug/examples/phase7_game_demo   # sabit adımlı oyun döngüsü
-./build/linux-debug/examples/phase8_tictactoe   # fare girdisi + durum makinesi
+# Application framework demos (see ADR-008)
+./build/linux-debug/examples/phase6_app_demo    # framework basics
+./build/linux-debug/examples/phase7_game_demo   # fixed-timestep game loop
+./build/linux-debug/examples/phase8_tictactoe   # mouse input + state machine
 
-# Vulkan demo'ları (--vulkan ile derlenmişse)
+# Vulkan demos (if built with --vulkan)
 ./build/linux-debug/examples/phase5a_vulkan_clear
 ./build/linux-debug/examples/phase5b_vulkan_triangles
 ./build/linux-debug/examples/phase5c_vulkan_textured
@@ -264,44 +271,44 @@ sdl-painter/
 
 ## Docker
 
-Dockerfile üç ayrı stage içerir:
+The Dockerfile contains three separate stages:
 
-| Stage | Tag örneği | İçerik |
-|-------|-----------|--------|
-| `builder` | `sdl-painter:dev` | GCC 13, Clang 18, CMake, Ninja, Conan 2, SDL3 sistem bağımlılıkları |
+| Stage | Example tag | Contents |
+|-------|-------------|----------|
+| `builder` | `sdl-painter:dev` | GCC 13, Clang 18, CMake, Ninja, Conan 2, SDL3 system dependencies |
 | `ci` | `sdl-painter:ci` | `builder` + lcov/gcovr + headless OpenGL (`SDL_VIDEODRIVER=offscreen`) |
-| `windows-cross` | `sdl-painter:windows-cross` | `builder` + MinGW-w64 + Wine + Conan `windows-mingw` profili |
+| `windows-cross` | `sdl-painter:windows-cross` | `builder` + MinGW-w64 + Wine + Conan `windows-mingw` profile |
 
-### Image'ları build etme
+### Building the images
 
 ```bash
-# Geliştirme ortamı (Linux)
+# Development environment (Linux)
 docker build --target builder -t sdl-painter:dev .
 
-# CI (headless OpenGL testi)
+# CI (headless OpenGL testing)
 docker build --target ci -t sdl-painter:ci .
 
 # Windows cross-compile
 docker build --target windows-cross -t sdl-painter:windows-cross .
 ```
 
-### Bind mount söz dizimi — kabuğa göre değişir
+### Bind mount syntax — depends on your shell
 
-Aşağıdaki komutlar proje dizinini konteynerdeki `/workspace`'e bağlar.
-**Mount ifadesinin yazımı kullandığın kabuğa göre değişir**; yanlış kabukta
-kopyalanan komut sessizce yanlış dizini bağlar veya hata verir:
+The commands below mount the project directory to `/workspace` inside the
+container. **How you write the mount depends on the shell you use**; copied into
+the wrong shell, the command silently mounts the wrong directory or fails:
 
-| Kabuk | Doğru yazım | Yanlış yazımda ne olur |
-|-------|-------------|------------------------|
+| Shell | Correct form | What goes wrong otherwise |
+|-------|--------------|---------------------------|
 | Linux / macOS | `-v $(pwd):/workspace` | — |
-| Windows PowerShell | `-v "${PWD}:/workspace"` (tırnak **zorunlu**) | Tırnaksız `$(pwd):/workspace` iki ayrı argümana bölünür, `:/workspace` imaj adı sanılır → `docker: invalid reference format` |
-| Windows Git Bash | `MSYS_NO_PATHCONV=1 docker run ... -v "$(pwd):/workspace"` | MSYS, konteyner içindeki `/workspace` yolunu `C:/Program Files/Git/workspace`'e çevirir; mount yanlış dizine bağlanır ve konteyner içinde `CMakePresets.json bulunamadı` hatası alınır |
+| Windows PowerShell | `-v "${PWD}:/workspace"` (quotes are **mandatory**) | Unquoted, `$(pwd):/workspace` splits into two arguments and `:/workspace` is taken as the image name → `docker: invalid reference format` |
+| Windows Git Bash | `MSYS_NO_PATHCONV=1 docker run ... -v "$(pwd):/workspace"` | MSYS rewrites the in-container path `/workspace` to `C:/Program Files/Git/workspace`; the mount points at the wrong directory and the container fails with `CMakePresets.json not found` |
 
-Aşağıdaki örnekler Linux/macOS söz dizimindedir. Windows'ta yukarıdaki
-tabloya göre uyarla — PowerShell akışlarının tamamı için
-[Docker Kullanım Kılavuzu](doc/docker.md).
+The examples below use Linux/macOS syntax. On Windows adapt them per the table
+above — for the full PowerShell workflows see the
+[Docker Guide](doc/docker.md) *(in Turkish)*.
 
-### Geliştirme shell'i
+### Development shell
 
 ```bash
 docker run --rm -it -v $(pwd):/workspace sdl-painter:dev bash
@@ -311,7 +318,7 @@ docker run --rm -it -v $(pwd):/workspace sdl-painter:dev bash
 docker run --rm -it -v "${PWD}:/workspace" sdl-painter:dev bash
 ```
 
-### Headless Linux testleri
+### Headless Linux tests
 
 ```bash
 docker run --rm -v $(pwd):/workspace sdl-painter:ci bash -c \
@@ -322,12 +329,12 @@ docker run --rm -v $(pwd):/workspace sdl-painter:ci bash -c \
    ctest --preset linux-debug --output-on-failure"
 ```
 
-### Windows cross-compile (Linux host'ta)
+### Windows cross-compile (on a Linux host)
 
-MinGW hedefinin kendi output-folder'ı ve preset'i vardır — Linux preset'i
-kullanılmaz. Conan profilinde `os=Windows` ve MinGW derleyicileri tanımlı
-olduğu için üretilen `conan_toolchain.cmake` yeterlidir; ayrıca bir
-`-DCMAKE_TOOLCHAIN_FILE` vermeye gerek yoktur.
+The MinGW target has its own output folder and preset — the Linux preset is not
+used. Because the Conan profile defines `os=Windows` and the MinGW compilers,
+the generated `conan_toolchain.cmake` is sufficient; you do not need to pass an
+extra `-DCMAKE_TOOLCHAIN_FILE`.
 
 ```bash
 docker run --rm -v $(pwd):/workspace sdl-painter:windows-cross bash -c \
@@ -339,118 +346,121 @@ docker run --rm -v $(pwd):/workspace sdl-painter:windows-cross bash -c \
    cmake --build --preset windows-mingw-debug"
 ```
 
-> Bu hedefte Vulkan desteklenmez — `vulkan-loader` recipe'ı Windows'ta
-> `USE_MASM`'i zorunlu kılıyor ve MinGW gcc bunu derleyemiyor.
-> `conanfile.py` `configure()` bu hedefte `with_vulkan`'ı otomatik kapatır.
-> Windows'ta Vulkan için native MSVC build (`windows-release` preset) kullan.
+> Vulkan is not supported on this target — the `vulkan-loader` recipe forces
+> `USE_MASM` on Windows and MinGW gcc cannot compile it. `configure()` in
+> `conanfile.py` turns `with_vulkan` off automatically here. For Vulkan on
+> Windows use a native MSVC build (`windows-release` preset).
 
-Ayrıntılı kullanım akışları ve dağıtım adımları için:
-[Docker Kullanım Kılavuzu](doc/docker.md) · [Docker Hub'a Dağıtım](doc/docker-hub-deployment.md)
+For detailed workflows and publishing steps see:
+[Docker Guide](doc/docker.md) · [Publishing to Docker Hub](doc/docker-hub-deployment.md) *(in Turkish)*
 
-## Dokümantasyon
+## Documentation
 
-### Tasarım Dokümanları
+### Design Documents
 
-| Doküman | Açıklama |
-|---------|----------|
-| [Hızlı Başlangıç](doc/hizli-baslangic.md) | Kurulum ve ilk derleme adımları |
-| [Mimari Genel Bakış](doc/mimari-genel-bakis.md) | Katman yapısı ve bileşenler |
-| [Özellik Listesi](doc/sdl-painter-ozellikler.md) | Desteklenen ve planlanan özellikler |
-| [Örnekler Rehberi](doc/sdl-painter-ornekler.md) | Örnek uygulama açıklamaları |
-| [Sınıf Diyagramları](doc/sinif-diyagrami.md) | UML sınıf diyagramları |
-| [Akış Diyagramları](doc/akislar.md) | Çizim ve durum akışları |
-| [Backend İç Yapısı](doc/backend-ic-yapisi.md) | OpenGL / Vulkan implementasyon detayları |
-| [Yazılım Mühendisliği](doc/sdl-painter-yazilim-muhendisligi.md) | Tasarım kararları ve teknik gerekçeler |
-| [Dokümantasyon Rehberi](doc/dokumantasyon-rehberi.md) | Doxygen kurulum ve kullanımı |
-| [Docker Kullanım Kılavuzu](doc/docker.md) | İmaj hiyerarşisi, aşama açıklamaları, CI entegrasyonu, Dockerfile.windows |
-| [Docker Hub'a Dağıtım](doc/docker-hub-deployment.md) | İmaj build/push adımları, Hub ve GitLab Registry, otomatik CI akışı |
+All design documents are currently written in Turkish.
 
-### API Referansı (Doxygen)
+| Document | Description |
+|----------|-------------|
+| [Quick Start](doc/hizli-baslangic.md) | Setup and first build steps |
+| [Architecture Overview](doc/mimari-genel-bakis.md) | Layer structure and components |
+| [Feature List](doc/sdl-painter-ozellikler.md) | Supported and planned features |
+| [Examples Guide](doc/sdl-painter-ornekler.md) | Descriptions of the example applications |
+| [Class Diagrams](doc/sinif-diyagrami.md) | UML class diagrams |
+| [Flow Diagrams](doc/akislar.md) | Drawing and state flows |
+| [Backend Internals](doc/backend-ic-yapisi.md) | OpenGL / Vulkan implementation details |
+| [Software Engineering](doc/sdl-painter-yazilim-muhendisligi.md) | Design decisions and technical rationale |
+| [Documentation Guide](doc/dokumantasyon-rehberi.md) | Doxygen setup and usage |
+| [Docker Guide](doc/docker.md) | Image hierarchy, stage descriptions, CI integration, Dockerfile.windows |
+| [Publishing to Docker Hub](doc/docker-hub-deployment.md) | Image build/push steps, Hub and GitLab Registry, automated CI flow |
 
-API referans dokümantasyonu [Doxygen](https://www.doxygen.nl/) ile üretilir.
+### API Reference (Doxygen)
 
-**Online:** Varsayılan branch'e her push'ta GitHub Actions `docs` job'ı Doxygen
-çıktısını GitHub Pages'e yayınlar:
+The API reference is generated with [Doxygen](https://www.doxygen.nl/).
+
+**Online:** On every push to the default branch, the GitHub Actions `docs` job
+publishes the Doxygen output to GitHub Pages:
 <https://yazilimperver.github.io/sdl-painter>
 
-**Yerel üretim:**
+**Generating locally:**
 
 ```bash
-# Linux — sadece dokümantasyon
+# Linux — documentation only
 doxygen Doxyfile
 
-# Linux — build + dokümantasyon birlikte
+# Linux — build + documentation together
 ./scripts/build.sh --docs
 
-# Tarayıcıda aç
+# Open in a browser
 xdg-open build/docs/index.html
 ```
 
 ```powershell
-# Windows — sadece dokümantasyon
+# Windows — documentation only
 doxygen Doxyfile
 
-# Windows — build + dokümantasyon birlikte
+# Windows — build + documentation together
 .\scripts\Build.ps1 -Docs
 
-# Tarayıcıda aç
+# Open in a browser
 Start-Process build\docs\index.html
 ```
 
-> Doxygen kurulu değilse: `apt install doxygen` (Linux) veya [doxygen.nl](https://www.doxygen.nl/download.html) (Windows).
+> If Doxygen is not installed: `apt install doxygen` (Linux) or [doxygen.nl](https://www.doxygen.nl/download.html) (Windows).
 
-## Kalite Kontrolü
+## Quality Checks
 
 ```bash
-# Format kontrolü
+# Format check
 ./scripts/format-check.sh
 
-# Format otomatik düzeltme
+# Auto-fix formatting
 ./scripts/format-check.sh --fix
 
-# clang-tidy (build sonrası)
+# clang-tidy (after building)
 find src/ -name '*.cpp' | xargs clang-tidy-18 -p build/linux-debug/
 ```
 
 ## CI/CD
 
-Projenin birincil pipeline'ı **GitHub Actions** (`.github/workflows/ci.yml`).
-Linux job'ları Docker Hub'daki hazır imajı (`yazilimperver/sdl-painter:ci-v1.0`)
-kullanır; Windows job'ları native MSVC runner'da çalışır.
+The project's primary pipeline is **GitHub Actions** (`.github/workflows/ci.yml`).
+Linux jobs use the prebuilt image from Docker Hub
+(`yazilimperver/sdl-painter:ci-v1.0`); Windows jobs run on a native MSVC runner.
 
-| Job | Ortam | Açıklama |
-|-----|-------|----------|
-| `build:linux:debug` | Linux (container) | Debug, Vulkan dahil |
-| `build:linux:release` | Linux (container) | Release, Vulkan dahil |
-| `build:windows:debug` | `windows-2022`, native MSVC | Debug, Vulkan dahil |
-| `build:windows:release` | `windows-2022`, native MSVC | Release, Vulkan dahil |
+| Job | Environment | Description |
+|-----|-------------|-------------|
+| `build:linux:debug` | Linux (container) | Debug, Vulkan included |
+| `build:linux:release` | Linux (container) | Release, Vulkan included |
+| `build:windows:debug` | `windows-2022`, native MSVC | Debug, Vulkan included |
+| `build:windows:release` | `windows-2022`, native MSVC | Release, Vulkan included |
 | `test:unit` | Linux (container) | GTest — headless (offscreen + lavapipe ICD) |
-| `test:unit:asan` | Linux (container) | ASan + UBSan — Vulkan'sız derlenir |
-| `quality:clang-format` | Linux (container) | Google Style kontrolü — *soft fail* |
+| `test:unit:asan` | Linux (container) | ASan + UBSan — built without Vulkan |
+| `quality:clang-format` | Linux (container) | Google Style check — *soft fail* |
 | `quality:clang-tidy` | Linux (container) | Static analysis — *soft fail* |
-| `docs` | `ubuntu-latest` | Doxygen → GitHub Pages (yalnızca varsayılan branch) |
-| `release:publish` | `ubuntu-latest` | `v*.*.*` tag'inde GitHub Release oluşturur |
+| `docs` | `ubuntu-latest` | Doxygen → GitHub Pages (default branch only) |
+| `release:publish` | `ubuntu-latest` | Creates a GitHub Release on `v*.*.*` tags |
 
-> Repoda ayrıca bir `.gitlab-ci.yml` bulunur (GitLab aynası için). Aynı aşamaları
-> kurar, iki farkla: Windows build'leri **MinGW cross-compile** ile Linux
-> runner'da yapılır (Vulkan'sız) ve `pages` job'ı GitLab Pages'e yayınlar.
-> GitLab tarafındaki `test:unit:windows` job'ı yorum satırı olarak devre dışıdır.
+> The repository also contains a `.gitlab-ci.yml` (for the GitLab mirror). It
+> sets up the same stages with two differences: Windows builds are done via
+> **MinGW cross-compile** on a Linux runner (without Vulkan), and the `pages`
+> job publishes to GitLab Pages. The `test:unit:windows` job on the GitLab side
+> is commented out and therefore disabled.
 
-## Mimari Kararlar (ADR)
+## Architecture Decision Records (ADR)
 
-Büyük tasarım kararları [Architecture Decision Records](adr/) formatında belgelenmiştir.
+Major design decisions are documented as [Architecture Decision Records](adr/) *(in Turkish)*.
 
-| ADR | Karar |
-|-----|-------|
-| [ADR-001](adr/ADR-001-opengl-33-core-profile.md) | OpenGL 3.3 Core Profile Seçimi |
-| [ADR-002](adr/ADR-002-opengl-vulkan-dual-backend.md) | OpenGL + Vulkan Çift Backend Kararı |
-| [ADR-003](adr/ADR-003-geometry-quad-line-thickness.md) | Kalın Çizgiler için Geometry Quad Yaklaşımı |
-| [ADR-004](adr/ADR-004-tessellator-backend-agnostic.md) | Tessellator'ın Backend-Agnostic Tasarımı |
-| [ADR-005](adr/ADR-005-stb-image-vs-sdl-image.md) | Image Yükleme — stb_image vs SDL_image |
-| [ADR-006](adr/ADR-006-ear-clipping-triangulation.md) | Poligon Triangulation — Ear Clipping Seçimi |
-| [ADR-007](adr/ADR-007-glm-transform-matrix.md) | Transform Matrisi için GLM Kullanımı |
-| [ADR-008](adr/ADR-008-application-framework-layer.md) | Application Çatısı Katmanı |
+| ADR | Decision |
+|-----|----------|
+| [ADR-001](adr/ADR-001-opengl-33-core-profile.md) | Choosing OpenGL 3.3 Core Profile |
+| [ADR-002](adr/ADR-002-opengl-vulkan-dual-backend.md) | OpenGL + Vulkan Dual Backend Decision |
+| [ADR-003](adr/ADR-003-geometry-quad-line-thickness.md) | Geometry Quad Approach for Thick Lines |
+| [ADR-004](adr/ADR-004-tessellator-backend-agnostic.md) | Backend-Agnostic Tessellator Design |
+| [ADR-005](adr/ADR-005-stb-image-vs-sdl-image.md) | Image Loading — stb_image vs SDL_image |
+| [ADR-006](adr/ADR-006-ear-clipping-triangulation.md) | Polygon Triangulation — Choosing Ear Clipping |
+| [ADR-007](adr/ADR-007-glm-transform-matrix.md) | Using GLM for the Transform Matrix |
+| [ADR-008](adr/ADR-008-application-framework-layer.md) | Application Framework Layer |
 
-## Lisans
+## License
 
-MIT License — bkz. [LICENSE](LICENSE)
+MIT License — see [LICENSE](LICENSE)

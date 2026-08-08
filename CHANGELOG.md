@@ -2,6 +2,8 @@
 
 ## [Yayınlanmadı]
 
+## [1.1.0] - 2026-08-08
+
 ### Eklendi
 - **Uygulama çatısı (`sdl_painter_app`):** SDL pencere/olay-döngüsü
   boilerplate'ini soyutlayan ayrı static kütüphane. `sdl_painter::Application`'dan
@@ -14,8 +16,11 @@
   delta-time) veya `kFixed` (sabit adımlı deterministik `OnUpdate` +
   `OnRender(Painter&, alpha)` interpolasyonu — Game Programming Patterns "play
   catch up"). Ayrıca `target_fps` ile `SDL_DelayNS` tabanlı kare hızı freni.
-- **Örnekler:** `phase6_app_demo` (kVariable) ve `phase7_game_demo` (kFixed +
-  interpolasyon, seken top) çatının kullanımını gösterir.
+- **Örnekler:** `phase6_app_demo` (kVariable), `phase7_game_demo` (kFixed +
+  interpolasyon, seken top) ve `phase8_tictactoe` (fare girdisi + durum makinesi)
+  çatının kullanımını gösterir.
+- **Dokümantasyon:** Ana `README.md` İngilizce oldu; Türkçe sürüm `README.tr.md`
+  olarak ayrıldı.
 
 ## [1.0.0] - 2026-05-17
 

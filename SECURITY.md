@@ -7,18 +7,19 @@ yayınlanır.
 
 | Sürüm | Destek Durumu |
 |-------|--------------|
-| 0.1.x | ✅ Aktif |
-| < 0.1 | ❌ Desteklenmiyor |
+| 1.1.x | ✅ Aktif |
+| 1.0.x | ⚠️ Yalnızca kritik açıklar |
+| < 1.0 | ❌ Desteklenmiyor |
 
 ## Güvenlik Açığı Bildirimi
 
 Bir güvenlik açığı tespit ettiysen, lütfen **kamuya açık bir issue olarak
 açma**. Bunun yerine aşağıdaki kanallardan biriyle bize özel olarak bildir:
 
-### Tercih edilen yol: GitLab Security Advisory
+### Tercih edilen yol: GitHub Security Advisory
 
-Repo'da **Security → Vulnerability report** üzerinden özel bir bildirim
-aç. Yalnızca proje sürdürücüleri görür.
+[Yeni bir güvenlik danışma kaydı aç](https://github.com/yazilimperver/sdl-painter/security/advisories/new)
+— **Security → Report a vulnerability**. Yalnızca proje sürdürücüleri görür.
 
 ### Alternatif: E-posta
 
@@ -45,7 +46,7 @@ aç. Yalnızca proje sürdürücüleri görür.
 5. Açıklama tarihinde:
    - Yamayı yayınlarız (patch sürüm)
    - CHANGELOG'a güvenlik notu eklenir
-   - GitLab Security Advisory (gerekirse CVE) yayınlanır
+   - GitHub Security Advisory (gerekirse CVE) yayınlanır
 6. Bildirim yapan kişi, isterse, açıklamada kredilendirilir.
 
 ## Etki Alanı

@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or idea
+    url: https://github.com/yazilimperver/sdl-painter/discussions
+    about: Ask how to do something, or float an idea before opening an issue.
+  - name: Security vulnerability
+    url: https://github.com/yazilimperver/sdl-painter/security/advisories/new
+    about: Report privately — please do not open a public issue.

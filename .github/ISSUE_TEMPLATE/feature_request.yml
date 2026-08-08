@@ -1,0 +1,46 @@
+name: Feature request
+description: Suggest a new capability or an API change
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Some features are deliberately out of scope for v1 — paths, beziers,
+        gradients and path-based clipping among them. See
+        [the scope notes](../../doc/sdl-painter-yazilim-muhendisligi.md) before
+        opening a request for those.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: |
+        Describe the situation you hit, not the solution you have in mind. This
+        usually leads to a better API than starting from a proposed signature.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed API (optional)
+      description: If you already have a shape in mind, sketch it here.
+      render: cpp
+    validations:
+      required: false
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Workarounds you have tried
+      description: What you do today to work around the missing feature.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: architectural
+    attributes:
+      label: Scope
+      options:
+        - label: This change would affect the public API, a backend, or a dependency (an ADR under `adr/` will be needed)
+          required: false

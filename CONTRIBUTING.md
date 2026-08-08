@@ -12,7 +12,7 @@ projeye nasıl katkı yapabileceğini ve hangi standartlara uyman gerektiğini
 - [Commit Mesajları](#commit-mesajları)
 - [Kod Stili](#kod-stili)
 - [Test Beklentileri](#test-beklentileri)
-- [Merge Request (MR) Süreci](#merge-request-mr-süreci)
+- [Pull Request (PR) Süreci](#pull-request-pr-süreci)
 - [Hata Bildirimi](#hata-bildirimi)
 - [Özellik Önerisi](#özellik-önerisi)
 
@@ -56,7 +56,7 @@ Daha ayrıntılı kurulum için [doc/hizli-baslangic.md](doc/hizli-baslangic.md)
 
 | Branch | Amaç |
 |--------|------|
-| `main` | Stabil, yayınlanmış sürüm. Doğrudan push yapılmaz; yalnızca MR ile değişir. |
+| `main` | Stabil, yayınlanmış sürüm. Doğrudan push yapılmaz; yalnızca PR ile değişir. |
 | `develop` | Aktif geliştirme dalı. Yeni özellikler buraya birleştirilir. |
 | `feature/<kısa-ad>` | Yeni özellik geliştirme. `develop`'tan açılır, `develop`'a birleşir. |
 | `fix/<kısa-ad>` | Hata düzeltme dalı. |
@@ -116,14 +116,14 @@ Bu proje **Google C++ Style Guide** standartlarına uyar. Özet:
 - **Include guard:** `#pragma once`
 - **Yorumlar:** Türkçe, Doxygen stili. Her public fonksiyon için `/// @brief`.
 
-**Format kontrolü zorunludur** ve MR'lar bu kontrolden geçmek zorundadır:
+**Format kontrolü zorunludur** ve PR'lar bu kontrolden geçmek zorundadır:
 
 ```bash
 ./scripts/format-check.sh             # Kontrol
 ./scripts/format-check.sh --fix       # Otomatik düzelt
 ```
 
-CI'da `quality:clang-format` job'u başarısız olursa MR birleştirilemez.
+CI'daki `quality-clang-format` job'u başarısız olursa PR birleştirilmez.
 
 ### Ek Kurallar
 
@@ -148,14 +148,14 @@ CI'da `quality:clang-format` job'u başarısız olursa MR birleştirilemez.
   ctest --preset linux-debug-asan --output-on-failure
   ```
 
-## Merge Request (MR) Süreci
+## Pull Request (PR) Süreci
 
 1. **Issue aç** — Büyük değişikliklerden önce tartışma için.
 2. **Feature branch oluştur** — `feature/<kısa-ad>` formatında.
 3. **Değişiklikleri yap, test yaz.**
 4. **Format ve testleri çalıştır.**
-5. **CHANGELOG güncelle** — `[Unreleased]` bölümüne girdi ekle.
-6. **MR aç** — Şablonu doldur; bağlı olduğu issue'yu referans et.
+5. **CHANGELOG güncelle** — `[Yayınlanmadı]` bölümüne girdi ekle.
+6. **PR aç** — Şablonu doldur; bağlı olduğu issue'yu referans et.
 7. **CI'ı yeşil bekle.** Format zorunlu, clang-tidy uyarılar bilgilendirme amaçlıdır.
 8. **Review** — En az bir review onayı gerekir.
 
@@ -167,8 +167,8 @@ dosyaları örnek alabilirsin.
 
 ## Hata Bildirimi
 
-Hata bildirirken [Bug Report şablonunu](.gitlab/issue_templates/Bug.md)
-kullan. Bilgi olarak şunları ekle:
+Hata bildirirken [Bug Report şablonunu](.github/ISSUE_TEMPLATE/bug_report.yml)
+kullan — GitHub'da issue açarken otomatik olarak sunulur. Bilgi olarak şunları ekle:
 
 - SDLPainter sürümü
 - Platform (OS, derleyici, sürücü)
@@ -180,7 +180,7 @@ kullan. Bilgi olarak şunları ekle:
 ## Özellik Önerisi
 
 Yeni özellik önerirken
-[Feature Request şablonunu](.gitlab/issue_templates/Feature.md) kullan. v1
+[Feature Request şablonunu](.github/ISSUE_TEMPLATE/feature_request.yml) kullan. v1
 kapsamında olmayan bazı özellikler (path, gradient, bezier) bilinçli olarak
 ertelenmiştir — bkz.
 [doc/sdl-painter-yazilim-muhendisligi.md → Kapsam Yönetimi](doc/sdl-painter-yazilim-muhendisligi.md).

@@ -1,0 +1,67 @@
+name: Bug report
+description: Report something that does not work as documented
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a report. Please fill in as much as
+        you can — a minimal reproducer is worth more than a long description.
+
+  - type: input
+    id: version
+    attributes:
+      label: SDLPainter version
+      description: Release tag, or commit SHA if you built from `main`.
+      placeholder: "v1.1.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: backend
+    attributes:
+      label: Backend
+      options:
+        - OpenGL 3.3
+        - Vulkan 1.1
+        - Both
+        - Not backend specific
+    validations:
+      required: true
+
+  - type: input
+    id: platform
+    attributes:
+      label: Platform and compiler
+      description: OS, compiler and version, GPU driver if relevant.
+      placeholder: "Ubuntu 24.04, GCC 13.2, Mesa 24.0 (Intel UHD 620)"
+    validations:
+      required: true
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you observed, and what you expected instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproducer
+    attributes:
+      label: Minimal reproducer
+      description: |
+        The smallest piece of code that shows the problem. If it only reproduces
+        in one of the bundled examples, say which one.
+      render: cpp
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log output
+      description: Relevant spdlog / validation-layer / driver output, if any.
+      render: shell
+    validations:
+      required: false

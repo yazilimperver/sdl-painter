@@ -1,10 +1,10 @@
 from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMakeDeps, cmake_layout, CMake
-from conan.tools.files import copy
+from conan.tools.files import copy, load
 import os
+import re
 class SDLPainterConan(ConanFile):
     name = "sdl_painter"
-    version = "1.0.0"
     settings = "os", "compiler", "build_type", "arch"
     exports_sources = "CMakeLists.txt", "cmake/*", "include/*", "src/*"
     options = {
@@ -20,6 +20,21 @@ class SDLPainterConan(ConanFile):
         # tüm bağımlılıklarda aynı shared zlib kullan.
         "zlib/*:shared": True,
     }
+
+    def set_version(self):
+        # Versiyonun tek kaynağı include/sdl_painter/version.h. CMake de aynı
+        # dosyadan okur; böylece Conan ve CMake sürümleri ayrışamaz.
+        header = load(self, os.path.join(
+            self.recipe_folder, "include", "sdl_painter", "version.h"))
+        parts = []
+        for component in ("MAJOR", "MINOR", "PATCH"):
+            match = re.search(
+                r"#define\s+SDLPAINTER_VERSION_%s\s+(\d+)" % component, header)
+            if not match:
+                raise RuntimeError(
+                    "version.h icinde SDLPAINTER_VERSION_%s bulunamadi" % component)
+            parts.append(match.group(1))
+        self.version = ".".join(parts)
 
     def configure(self):
         if self.settings.os == "Windows":

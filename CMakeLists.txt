@@ -1,5 +1,48 @@
 cmake_minimum_required(VERSION 3.20)
-project(SDLPainter VERSION 0.1.0 LANGUAGES CXX)
+
+# --- Sürüm: tek kaynak include/sdl_painter/version.h ---
+set(SDLPAINTER_VERSION_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/include/sdl_painter/version.h")
+file(READ "${SDLPAINTER_VERSION_HEADER}" SDLPAINTER_VERSION_HEADER_CONTENT)
+
+# SDL surum kontrolleri
+foreach(_component MAJOR MINOR PATCH)
+    if(NOT SDLPAINTER_VERSION_HEADER_CONTENT MATCHES
+       "#define SDLPAINTER_VERSION_${_component}[^0-9]+([0-9]+)")
+        message(FATAL_ERROR
+            "SDLPAINTER_VERSION_${_component} okunamadi: ${SDLPAINTER_VERSION_HEADER}")
+    endif()
+    set(SDLPAINTER_VERSION_${_component} "${CMAKE_MATCH_1}")
+endforeach()
+
+set(SDLPAINTER_VERSION
+    "${SDLPAINTER_VERSION_MAJOR}.${SDLPAINTER_VERSION_MINOR}.${SDLPAINTER_VERSION_PATCH}")
+
+# STRING makrosu sayisal makrolarla uyusmali — elle guncellemede kacan
+# tutarsizligi configure asamasinda yakalar.
+if(NOT SDLPAINTER_VERSION_HEADER_CONTENT MATCHES
+   "#define SDLPAINTER_VERSION_STRING[^\"]+\"([^\"]+)\"")
+    message(FATAL_ERROR
+        "SDLPAINTER_VERSION_STRING okunamadi: ${SDLPAINTER_VERSION_HEADER}")
+endif()
+
+if(NOT CMAKE_MATCH_1 STREQUAL SDLPAINTER_VERSION)
+    message(FATAL_ERROR
+        "version.h tutarsiz: SDLPAINTER_VERSION_STRING=\"${CMAKE_MATCH_1}\" "
+        "ancak sayisal makrolar ${SDLPAINTER_VERSION} diyor.")
+endif()
+
+project(SDLPainter VERSION ${SDLPAINTER_VERSION} LANGUAGES CXX)
+
+# Kok Doxyfile (dogrudan `doxygen Doxyfile` icin) surumu kendi icinde tutmak
+# zorunda — Doxygen header okuyamaz. Bu kontrol sessizce ayrismasini onler.
+# cmake/Doxyfile.in zaten @PROJECT_VERSION@ kullaniyor, o dosya etkilenmez.
+file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile" SDLPAINTER_DOXYFILE_VERSION
+     REGEX "^PROJECT_NUMBER[ \t]*=")
+if(NOT SDLPAINTER_DOXYFILE_VERSION MATCHES "${PROJECT_VERSION}")
+    message(WARNING
+        "Doxyfile PROJECT_NUMBER (${SDLPAINTER_DOXYFILE_VERSION}) "
+        "version.h surumu ${PROJECT_VERSION} ile uyusmuyor.")
+endif()
 
 include(cmake/InsourceGuard.cmake)
 

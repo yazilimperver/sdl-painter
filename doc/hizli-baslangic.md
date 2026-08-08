@@ -69,7 +69,7 @@ cmake --build --preset windows-debug
 ### 2.2 Script ile Derleme
 
 Tüm scriptler proje kökünden çalıştırılmalıdır. Bayrakların tam listesi için
-[README — Script Referansı](../README.md#script-referansı).
+[README — Script Referansı](../README.tr.md#script-referansı).
 
 ```bash
 chmod +x scripts/*.sh

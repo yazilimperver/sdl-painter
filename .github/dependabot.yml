@@ -1,0 +1,12 @@
+version: 2
+updates:
+  # CI'da kullanilan GitHub Action'larinin surumlerini guncel tut.
+  # Conan bagimliliklari conanfile.py'de elle sabitlenir; Dependabot Conan'i
+  # desteklemiyor, o yuzden burada yalnizca actions var.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "chore(ci)"
