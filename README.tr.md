@@ -5,11 +5,16 @@
   <h1>SDLPainter</h1>
   <p><strong>SDL3 + OpenGL/Vulkan dual backend destekli C++17 2B çizim kütüphanesi.</strong></p>
   <p>
+    <a href="https://github.com/yazilimperver/sdl-painter/actions/workflows/ci.yml"><img src="https://github.com/yazilimperver/sdl-painter/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+    <a href="https://github.com/yazilimperver/sdl-painter/releases/latest"><img src="https://img.shields.io/github/v/release/yazilimperver/sdl-painter?logo=github" alt="Son sürüm"></a>
+    <a href="https://yazilimperver.github.io/sdl-painter"><img src="https://img.shields.io/badge/dok%C3%BCman-Doxygen-informational" alt="Dokümantasyon"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/github/license/yazilimperver/sdl-painter" alt="MIT lisansı"></a>
+  </p>
+  <p>
     <img src="https://img.shields.io/badge/C%2B%2B-17-blue" alt="C++17">
     <img src="https://img.shields.io/badge/SDL-3.2-green" alt="SDL3">
     <img src="https://img.shields.io/badge/OpenGL-3.3%20Core-orange" alt="OpenGL 3.3">
     <img src="https://img.shields.io/badge/Vulkan-1.1-red" alt="Vulkan 1.1">
-    <img src="https://img.shields.io/badge/license-MIT-lightgrey" alt="MIT">
   </p>
 </div>
 
