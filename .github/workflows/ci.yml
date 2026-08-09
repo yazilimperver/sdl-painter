@@ -442,9 +442,15 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
+      # Release notu olarak CHANGELOG'un TAMAMI kullaniliyordu; 1.1.0 notunda
+      # 1.0.0 ve bos "Yayinlanmadi" basliklari da goruntuleniyordu. Artik
+      # yalnizca etiketlenen surumun bolumu cikariliyor. Bolum bulunamazsa
+      # script hata verir — bos release notu yayinlanmasin.
+      - name: Release notunu hazirla
+        run: bash scripts/changelog-section.sh "${{ github.ref_name }}" | tee RELEASE_NOTES.md
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ github.ref_name }}
           name: SDLPainter ${{ github.ref_name }}
-          body_path: CHANGELOG.md
+          body_path: RELEASE_NOTES.md
