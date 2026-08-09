@@ -25,10 +25,10 @@
 
 ## Neden SDLPainter?
 
-`SDL_RenderGeometry` size **üçgen** verir; ihtiyacınız olan şey **şekil**.
-SDLPainter tam bu boşluğu doldurur — kalın çizgi geometrisi, poligon
-triangulation'ı, adaptif tessellation, transform stack ve batching'i bir kez ve
-doğru şekilde yazar.
+SDL3 size pencereyi, girdiyi ve üçgen seviyesinde yetenekli bir renderer'ı
+verir. SDLPainter bunun üzerine bir katman ekler — kalın çizgi geometrisi,
+poligon triangulation'ı, adaptif tessellation, transform stack ve batching —
+böylece vertex yerine **şekil** düşünürsünüz.
 
 - **Tek API, iki backend** — Aynı kod OpenGL 3.3 ve Vulkan 1.1'de aynı sonucu
   üretir; backend değiştirmek tek satır, üçüncüsünü eklemek yalnızca `IRenderer`
@@ -132,7 +132,7 @@ Ayrıntılı anlatım: [Hızlı Başlangıç Rehberi](doc/hizli-baslangic.md).
 | ![Metin](doc/screenshots/metin.png) | ![Uygulama](doc/screenshots/uygulama.png) |
 | **Metin** — SDL_ttf, hizalama, rect içine yerleştirme (`text`) | **Uygulama çatısı** — `sdl_painter_app` ile tic-tac-toe (`tictactoe`) |
 
-Her biri tek bir yeteneği izole eden on beş çalışan demo:
+Her biri tek bir yeteneği izole eden on altı çalışan demo:
 [Örnekler Rehberi](doc/sdl-painter-ornekler.md).
 
 ## Özellikler
@@ -160,14 +160,11 @@ backend'ine ve kendi backend'inizi ekleyebilmeye ihtiyacınız varsa.
 **Başka yere bakın:** Path, bezier veya gradient gerekiyorsa; üst düzey
 anti-aliasing arıyorsanız; D3D/Metal backend'i şartsa.
 
-### SDL_Renderer ile karşılaştırma
+### SDL_Renderer ile ilişkisi
 
-SDL3'ün `SDL_Renderer`'ı çok gelişti: `SDL_RenderGeometry` keyfi üçgen
-çizebiliyor, backend'i platforma göre kendisi seçiyor, sıfır ek bağımlılık
-istiyor ve SDL ekibi tarafından bakılıyor. **Birçok proje için doğru cevap
-odur.** Fark, üçgenlerin bitip şekillerin başladığı yerde ortaya çıkıyor:
+SDL3'ün `SDL_Renderer`'ı ile üçgenlerden oluşan şekilleri çizebilirsiniz, backend'i platforma göre kendisi seçer. SDLPainter ise daha çok şekil seviyesindeki işi üstlenir:
 
-| İhtiyaç | `SDL_Renderer` ile | SDLPainter ile |
+| İhtiyaç | Elle yazınca | SDLPainter ile |
 |---|---|---|
 | 3 px kalınlığında çizgi | Normal vektör hesapla, quad kur, 2 üçgen üret | `SetPen(Pen(color, 3.0F)); DrawLine(...)` |
 | Konkav poligon doldur | Triangle fan yetmez → ear clipping yaz | `FillPolygon(points)` |
@@ -175,10 +172,6 @@ odur.** Fark, üçgenlerin bitip şekillerin başladığı yerde ortaya çıkıy
 | Döndürülmüş bir grup şekil | Vertex'leri elle çarp | `Save(); Rotate(45); …; Restore()` |
 | 5.000 küçük şekil | Elle grupla, draw call'ları birleştir | `RenderBatcher` otomatik yapar |
 
-Dürüst maliyeti de var: `SDL_Renderer` D3D11/D3D12/Metal'i de destekliyor,
-SDLPainter desteklemiyor. Path, gradient ve analitik anti-aliasing istiyorsanız
-NanoVG daha iyi araç — SDLPainter bunları Vulkan backend'i, modern C++ API'si ve
-gerçek paket yöneticisi entegrasyonu karşılığında takas ediyor.
 
 ## Mimari
 

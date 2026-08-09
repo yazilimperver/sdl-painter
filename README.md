@@ -25,10 +25,10 @@
 
 ## Why SDLPainter?
 
-`SDL_RenderGeometry` hands you **triangles**. What you actually want is
-**shapes**. SDLPainter fills that gap — thick-line geometry, polygon
-triangulation, adaptive tessellation, a transform stack and batching, written
-once and correctly.
+SDL3 gives you the window, the input and a capable triangle-level renderer.
+SDLPainter adds the layer above it — thick-line geometry, polygon
+triangulation, adaptive tessellation, a transform stack and batching — so you
+can think in **shapes** instead of vertices.
 
 - **One API, two backends** — the same code produces the same result on OpenGL
   3.3 and Vulkan 1.1; switching is a one-line change, and adding a third backend
@@ -130,7 +130,7 @@ Full instructions: [Building from source](doc/building.md).
 | ![Text](doc/screenshots/metin.png) | ![Application](doc/screenshots/uygulama.png) |
 | **Text** — SDL_ttf, alignment, layout inside a rect (`text`) | **Application framework** — tic-tac-toe via `sdl_painter_app` (`tictactoe`) |
 
-Fifteen runnable demos, one capability each:
+Sixteen runnable demos, one capability each:
 [examples/README.md](examples/README.md).
 
 ## Features
@@ -158,25 +158,18 @@ Vulkan backend and the ability to plug in your own.
 **Look elsewhere if** you need paths, béziers or gradients, top-quality
 anti-aliasing, or D3D/Metal backends.
 
-### SDL_Renderer vs SDLPainter
+### How it relates to SDL_Renderer
 
-SDL3's `SDL_Renderer` improved a lot: `SDL_RenderGeometry` draws arbitrary
-triangles, it picks a backend per platform, needs zero extra dependencies and is
-maintained by the SDL team. **For many projects it is the right answer.** The
-difference shows up where triangles end and shapes begin:
+SDL3's `SDL_Renderer` draws arbitrary triangles through `SDL_RenderGeometry`,
+picks a backend per platform. SDLPainter takes on the shape-level work you would otherwise write yourself:
 
-| Need | With `SDL_Renderer` | With SDLPainter |
+| Need | Written by hand | With SDLPainter |
 |---|---|---|
 | A 3 px thick line | Compute the normal, build a quad, emit 2 triangles | `SetPen(Pen(color, 3.0F)); DrawLine(...)` |
 | Fill a concave polygon | A triangle fan is not enough → write ear clipping | `FillPolygon(points)` |
 | A smooth circle at any radius | Tune the segment count by hand, build the fan | `FillCircle(cx, cy, r)` — segments adapt |
 | Rotate a group of shapes | Multiply the vertices yourself | `Save(); Rotate(45); …; Restore()` |
 | 5,000 small shapes | Group them and merge draw calls by hand | `RenderBatcher` does it |
-
-The honest cost: `SDL_Renderer` also supports D3D11/D3D12/Metal. SDLPainter does
-not. And if you want paths, gradients and analytic anti-aliasing, NanoVG is the
-better tool — SDLPainter trades those for a Vulkan backend, a modern C++ API and
-real package-manager integration.
 
 ## Architecture
 
