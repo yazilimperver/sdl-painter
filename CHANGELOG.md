@@ -2,6 +2,62 @@
 
 ## [Yayınlanmadı]
 
+### Değişti
+- **Örnek uygulamalar anlamlı isimler aldı:** `phase0_demo` → `hello_window`,
+  `phase1_demo` → `primitives`, `phase2_demo` → `transforms`,
+  `phase2b_demo` → `clipping`, `phase3_demo` → `images`, `phase4_demo` → `text`,
+  `phase5a–5e_vulkan_*` → `vulkan_clear` / `vulkan_triangles` /
+  `vulkan_textured` / `vulkan_demo` / `vulkan_text`,
+  `phase6_app_demo` → `app_basics`, `phase7_game_demo` → `game_loop`,
+  `phase8_tictactoe` → `tictactoe`. Faz numaraları projeyi içeriden bilmeyene
+  hiçbir şey anlatmıyordu. Demoları adıyla çalıştıran veya `--target` ile
+  derleyen herkesi etkiler; kütüphane API'si değişmedi.
+  Eski→yeni eşleme tablosu `examples/README.md` içinde ve her örneğin dosya
+  başı yorumunda korunuyor. Pencere başlıkları da yeni adı öne alacak şekilde
+  güncellendi, faz numarası parantez içinde duruyor
+  (ör. `SDLPainter — vulkan_triangles (Phase 5b)`).
+- **README yeniden yapılandırıldı:** `README.md` 550 → 242 satır. Derleme,
+  script referansı, Docker, dizin yapısı, kalite kontrolleri ve CI/CD bölümleri
+  `doc/building.md`, `doc/scripts.md` ve `doc/development.md`'ye taşındı
+  (silinmedi); ADR tablosu `adr/README.md`'ye. `README.tr.md` aynı yapıya
+  çekildi. Yeni bölümler: "Is SDLPainter for you?" ve
+  "SDL_Renderer vs SDLPainter".
+
+### Eklendi
+- **`examples/README.md`:** Her demonun ne gösterdiği, gerektirdiği bağımlılık
+  (Vulkan / SDL_ttf), çalıştırma satırı ve faz eşleme tablosu.
+- **`hero` örneği + GIF üretim script'leri:** README tanıtım görseli için
+  koreografili, 8 saniyede tam bir periyot tamamlayan (yani kusursuz döngü
+  yapan) sahne. `--dump-frames` ile gizli pencereden 240 PPM karesi yazıyor;
+  `scripts/make-hero-gif.sh` / `Make-HeroGif.ps1` bunları iki geçişli palet ile
+  GIF'e (isteğe bağlı mp4'e) çeviriyor. Ekran kaydına göre imleç/pencere
+  çerçevesi karışmıyor ve kare atlaması olmuyor.
+- **`doc/getting-started.md` ve `doc/architecture.md`:** `hizli-baslangic.md` ve
+  `mimari-genel-bakis.md` dokümanlarının İngilizce sürümleri. Türkçe
+  orijinaller yerinde; her iki tarafa karşılıklı dil değiştirici satırı eklendi.
+- **`doc/building.md`, `doc/scripts.md`, `doc/development.md`, `adr/README.md`:**
+  README'den taşınan içerik + eksik olanlar (`changelog-section.sh`, presetsiz
+  CMake derlemesi, CI'ın shader tazelik ve paketleme job'ları).
+
+### Düzeltildi
+- **CI artifact glob'ları sessizce boş artifact üretecekti:** `examples/phase*`
+  deseni yeni adlarla eşleşmiyordu ve GitHub tarafında `if-no-files-found: warn`
+  olduğu için pipeline yeşil kalırdı. `examples/*` + `CMakeFiles`/`*.cmake`
+  dışlaması olarak düzeltildi (`.github/workflows/ci.yml`, `.gitlab-ci.yml`).
+- **README'nin CI/CD tablosu yanlıştı:** `quality:clang-format` "soft fail"
+  yazıyordu; Faz 1.5'te hard-fail'e çevrilmişti. `build:standalone-cmake`,
+  `package:conan-create` ve `quality:shader-freshness` job'ları da tabloda
+  yoktu. Doğru hâli `doc/development.md`'de.
+- **`doc/hizli-baslangic.md`** artık var olmayan `README.tr.md#script-referansı`
+  bölümüne link veriyordu → `doc/scripts.md`.
+- **`doc/hizli-baslangic.md`'deki klonlama komutu placeholder URL kullanıyordu**
+  (`https://example.com/sdl-painter.git`) → gerçek repo adresi. Aynı dosyadaki
+  Vulkan opsiyonu `-o sdl_painter/*:with_vulkan=True` yerine projenin her yerde
+  kullandığı `-o "&:with_vulkan=True"` biçimine getirildi.
+- **`doc/mimari-genel-bakis.md` var olmayan `transform.h`'yi listeliyordu**
+  (ADR-007 ile `glm::mat3`'e geçilmişti). Bağımlılık grafiğinde SDL_ttf hâlâ
+  opsiyonel görünüyordu ve GLM hiç yoktu — ikisi de zorunlu listeye alındı.
+
 ## [1.1.0] - 2026-08-09
 
 ### Değişti

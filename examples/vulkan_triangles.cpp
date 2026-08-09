@@ -1,4 +1,6 @@
-/// @brief Phase 5b demo — Vulkan backend ile untextured çizim.
+/// @brief vulkan_triangles — Vulkan backend ile untextured çizim.
+///
+/// Geliştirme Fazı 5b demosu (eski ad: phase5b_vulkan_triangles).
 ///
 /// DrawTriangles, FillRect, FillCircle, FillPolygon üzerinden renkli şekiller
 /// çizer. Transform stack (translate + rotate) ve SetOpacity da test edilir.
@@ -44,7 +46,7 @@ void InitLogger() {
 
 int main() {
   InitLogger();
-  spdlog::info("SDLPainter Phase 5b (Vulkan triangles) starting...");
+  spdlog::info("SDLPainter vulkan_triangles demo starting...");
 
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     spdlog::error("SDL_Init failed: {}", SDL_GetError());
@@ -52,7 +54,7 @@ int main() {
   }
 
   SDL_Window* window = SDL_CreateWindow(
-      "SDLPainter — Phase 5b (Vulkan Untextured)", 800, 600,
+      "SDLPainter — vulkan_triangles (Phase 5b)", 800, 600,
       SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
   if (!window) {
     spdlog::error("SDL_CreateWindow failed: {}", SDL_GetError());

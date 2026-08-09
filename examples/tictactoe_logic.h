@@ -7,7 +7,7 @@
 /// @brief Tic-tac-toe saf oyun mantigi — cizim ve SDL'den tamamen bagimsiz.
 ///
 /// Bu baslik bilincli olarak hicbir sdl_painter tipine bagimli degildir:
-/// boylece hem @c phase8_tictactoe demosu hem de birim testler ayni mantigi
+/// boylece hem @c tictactoe demosu hem de birim testler ayni mantigi
 /// kullanir. Demo yalnizca burayi cagirir ve sonucu cizer.
 
 namespace tictactoe {

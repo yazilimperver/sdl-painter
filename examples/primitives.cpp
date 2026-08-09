@@ -1,4 +1,6 @@
-/// @brief Phase 1 demo — OpenGL backend ile tüm temel primitifleri çizer.
+/// @brief primitives — OpenGL backend ile tüm temel primitifleri çizer.
+///
+/// Geliştirme Fazı 1 demosu (eski ad: phase1_demo).
 ///
 /// Pencerede gösterilen şekiller:
 ///   - Dolu dikdörtgenler, daire ve elips
@@ -41,7 +43,7 @@ static void InitLogger() {
 
 int main() {
   InitLogger();
-  spdlog::info("SDLPainter Phase 1 demo baslatiliyor...");
+  spdlog::info("SDLPainter primitives demo baslatiliyor...");
 
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     spdlog::error("SDL_Init basarisiz: {}", SDL_GetError());
@@ -55,7 +57,7 @@ int main() {
   SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
   SDL_Window* window =
-      SDL_CreateWindow("SDLPainter — Phase 1 Demo", 900, 700,
+      SDL_CreateWindow("SDLPainter — primitives (Phase 1)", 900, 700,
                        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
   if (!window) {
     spdlog::error("SDL_CreateWindow basarisiz: {}", SDL_GetError());

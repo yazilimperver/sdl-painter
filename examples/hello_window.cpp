@@ -1,7 +1,9 @@
-/// @brief Phase 0 demo — SDL penceresi açar, birkaç saniye bekler, kapanır.
+/// @brief hello_window — SDL penceresi açar; ESC veya pencere kapatma ile çıkar.
 ///
-/// Bu demo Phase 0 altyapısının derlendiğini doğrular.
-/// Gerçek çizim Phase 1'de eklenecek.
+/// Geliştirme Fazı 0 demosu (eski ad: phase0_demo).
+///
+/// Bu demo altyapının derlendiğini doğrular; gerçek çizim primitives
+/// örneğinde başlar.
 
 #include <SDL3/SDL.h>
 #include <spdlog/sinks/ansicolor_sink.h>
@@ -36,7 +38,7 @@ static void InitLogger() {
 int main() {
   InitLogger();
 
-  spdlog::info("SDLPainter Phase 0 demo starting...");
+  spdlog::info("SDLPainter hello_window demo starting...");
 
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     spdlog::error("SDL_Init failed: {}", SDL_GetError());
@@ -49,7 +51,7 @@ int main() {
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
   SDL_Window* window = SDL_CreateWindow(
-      "SDLPainter — Phase 0 Demo", 800, 600, SDL_WINDOW_OPENGL);
+      "SDLPainter — hello_window (Phase 0)", 800, 600, SDL_WINDOW_OPENGL);
   if (!window) {
     spdlog::error("SDL_CreateWindow failed: {}", SDL_GetError());
     SDL_Quit();

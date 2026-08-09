@@ -26,7 +26,10 @@ build:linux:debug:
     paths:
       - build/linux-debug/libsdl_painter.a
       - build/linux-debug/tests/sdl_painter_tests
-      - build/linux-debug/examples/phase*
+      - build/linux-debug/examples/*
+    exclude:
+      - build/linux-debug/examples/CMakeFiles/**/*
+      - build/linux-debug/examples/*.cmake
     expire_in: 1 day
 
 build:linux:release:
@@ -45,7 +48,10 @@ build:linux:release:
     paths:
       - build/linux-debug/libsdl_painter.a
       - build/linux-release/tests/sdl_painter_tests
-      - build/linux-release/examples/phase*
+      - build/linux-release/examples/*
+    exclude:
+      - build/linux-release/examples/CMakeFiles/**/*
+      - build/linux-release/examples/*.cmake
     expire_in: 1 day
 
 build:windows:debug:

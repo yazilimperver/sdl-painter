@@ -1,4 +1,6 @@
-/// @brief Phase 7 demo — Sabit adımlı (fixed-timestep) oyun döngüsü.
+/// @brief game_loop — Sabit adımlı (fixed-timestep) oyun döngüsü.
+///
+/// Geliştirme Fazı 7 demosu (eski ad: phase7_game_demo).
 ///
 /// TimingMode::kFixed ile deterministik simülasyon: fizik sabit adımla
 /// (fixed_update_hz) güncellenir, render ise OnRender(Painter&, alpha) ile
@@ -30,7 +32,7 @@ constexpr float Lerp(float a, float b, float t) {
 }  // namespace
 
 /// @brief Sabit adımlı fizik + interpolasyonlu render örneği.
-class Phase7Demo : public sp::Application {
+class GameLoopDemo : public sp::Application {
  public:
   using Application::Application;
 
@@ -91,7 +93,7 @@ class Phase7Demo : public sp::Application {
 
 int main() {
   sp::AppConfig config;
-  config.title = "SDLPainter — Phase 7: Fixed-Timestep Game Loop";
+  config.title = "SDLPainter — game_loop: Fixed-Timestep Game Loop (Phase 7)";
   config.width = 900;
   config.height = 700;
   config.timing = sp::TimingMode::kFixed;
@@ -99,6 +101,6 @@ int main() {
       30;                 // düşük sim hızı; interpolasyon akıcılığı sağlar
   config.target_fps = 0;  // vsync sınırlasın
 
-  Phase7Demo app(config);
+  GameLoopDemo app(config);
   return app.Run();
 }

@@ -44,15 +44,16 @@ flowchart LR
 
 | Doküman | İçerik |
 |---------|--------|
-| 🚀 [Hızlı Başlangıç](hizli-baslangic.md) | Önkoşullar, kurulum, ilk uygulama, sık sorunlar |
+| 🚀 [Hızlı Başlangıç](hizli-baslangic.md) · [Getting Started](getting-started.md) | Önkoşullar, kurulum, ilk uygulama, sık sorunlar |
 | 📝 [Özellik Listesi](sdl-painter-ozellikler.md) | Desteklenen primitifler, stiller, backend'ler |
-| 💡 [Örnekler](sdl-painter-ornekler.md) | Kullanım örnekleri ve kod parçaları |
+| 💡 [Örnekler](sdl-painter-ornekler.md) · [examples/README.md](../examples/README.md) | Kullanım örnekleri ve kod parçaları |
+| 🔧 [Building](building.md) · [Scripts](scripts.md) · [Development](development.md) | Derleme, Docker, script referansı, kalite kontrolleri, CI/CD *(İngilizce)* |
 
 ### Mimari
 
 | Doküman | İçerik |
 |---------|--------|
-| 🏗️ [Mimari Genel Bakış](mimari-genel-bakis.md) | Katmanlar, bileşen bağımlılıkları, kaynak ağacı, sözleşmeler |
+| 🏗️ [Mimari Genel Bakış](mimari-genel-bakis.md) · [Architecture](architecture.md) | Katmanlar, bileşen bağımlılıkları, kaynak ağacı, sözleşmeler |
 | 🧩 [Sınıf Diyagramı](sinif-diyagrami.md) | UML class diagram (Mermaid) — Painter, render hattı, görseller, backend'ler |
 | 🔄 [Akış Diyagramları](akislar.md) | Frame yaşam döngüsü, draw call, batch flush, transform stack, texture upload, Vulkan frame |
 | 🏛️ [Yazılım Mühendisliği Perspektifi](sdl-painter-yazilim-muhendisligi.md) | Tasarım kararlarının gerekçeleri, SOLID, kapsam yönetimi |
@@ -116,7 +117,7 @@ Detay: [akislar.md → §3](akislar.md#3-render-batcher-akışı).
 - **CI/CD:** `.gitlab-ci.yml`
 - **Proje kuralları:** `.claude/CLAUDE.md`, `.claude/rules/*.md`
 - **ADR'ler:** `adr/` dizini
-- **Demo kodları:** `examples/phase*_demo.cpp`
+- **Demo kodları:** `examples/*.cpp` (bkz. [examples/README.md](../examples/README.md))
 - **Birim testler:** `tests/test_*.cpp`
 
 ---

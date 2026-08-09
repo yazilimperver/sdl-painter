@@ -1,7 +1,9 @@
-/// @brief Phase 6 demo — Application çatısı.
+/// @brief app_basics — Application çatısı.
+///
+/// Geliştirme Fazı 6 demosu (eski ad: phase6_app_demo).
 ///
 /// Aynı görsel içeriğin (dönen dikdörtgen + nabız gibi ölçeklenen daire)
-/// phase2_demo'daki ~250 satır SDL boilerplate'i olmadan nasıl yazıldığını
+/// transforms örneğindeki ~250 satır SDL boilerplate'i olmadan nasıl yazıldığını
 /// gösterir. SDL init, pencere, GL context, olay döngüsü ve yıkım
 /// sdl_painter::Application tarafından yönetilir.
 ///
@@ -20,7 +22,7 @@ constexpr float kPi = 3.14159265358979323846F;
 }  // namespace
 
 /// @brief Basit animasyonlu demo uygulaması.
-class Phase6Demo : public sp::Application {
+class AppBasicsDemo : public sp::Application {
  public:
   using Application::Application;
 
@@ -69,10 +71,10 @@ class Phase6Demo : public sp::Application {
 
 int main() {
   sp::AppConfig config;
-  config.title = "SDLPainter — Phase 6: Application Framework";
+  config.title = "SDLPainter — app_basics: Application Framework (Phase 6)";
   config.width = 900;
   config.height = 700;
 
-  Phase6Demo app(config);
+  AppBasicsDemo app(config);
   return app.Run();
 }

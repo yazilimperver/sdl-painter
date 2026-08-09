@@ -1,5 +1,5 @@
 /// @file
-/// @brief phase8_tictactoe demosunun saf oyun mantigi testleri.
+/// @brief tictactoe demosunun saf oyun mantigi testleri.
 ///
 /// Mantik cizimden bagimsiz oldugu icin (examples/tictactoe_logic.h) headless
 /// olarak tam kapsamli test edilebilir.

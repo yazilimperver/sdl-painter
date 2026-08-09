@@ -1,6 +1,8 @@
-/// @brief Phase 5e demo — Vulkan backend metin çizimi.
+/// @brief vulkan_text — Vulkan backend metin çizimi.
 ///
-/// Phase 4 (OpenGL metin) ile aynı özellikleri Vulkan üzerinde doğrular:
+/// Geliştirme Fazı 5e demosu (eski ad: phase5e_vulkan_text).
+///
+/// text örneğiyle (OpenGL metin) aynı özellikleri Vulkan üzerinde doğrular:
 ///   - DrawText(x, y, text)          — konuma metin
 ///   - DrawText(rect, text, align)   — hizalı metin
 ///   - Farklı punto boyutları
@@ -96,7 +98,7 @@ void DrawLabelBox(sdl_painter::Painter& p, const sdl_painter::Rect& box,
 int main() {
   InitLogger();
 
-  spdlog::info("SDLPainter Phase 5e (Vulkan + Metin) başlıyor...");
+  spdlog::info("SDLPainter vulkan_text (Vulkan + Metin) başlıyor...");
   spdlog::info("ESC veya pencereyi kapat ile çıkış.");
 
   if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -119,7 +121,7 @@ int main() {
   }
 
   SDL_Window* window =
-      SDL_CreateWindow("SDLPainter — Phase 5e (Vulkan + Metin)", 900, 650,
+      SDL_CreateWindow("SDLPainter — vulkan_text (Phase 5e)", 900, 650,
                        SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
   if (!window) {
     spdlog::error("SDL_CreateWindow hata: {}", SDL_GetError());
@@ -155,8 +157,8 @@ int main() {
 
     // MeasureText kontrolü
     int32_t mw = 0, mh = 0;
-    font_md->MeasureText("SDLPainter Phase 5e", mw, mh);
-    spdlog::info("MeasureText: \"SDLPainter Phase 5e\" → {}×{} piksel", mw, mh);
+    font_md->MeasureText("SDLPainter vulkan_text", mw, mh);
+    spdlog::info("MeasureText: \"SDLPainter vulkan_text\" → {}×{} piksel", mw, mh);
 
     float angle     = 0.0f;
     uint32_t frames = 0;

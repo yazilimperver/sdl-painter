@@ -1,4 +1,6 @@
-/// @brief Phase 3 demo — Image / texture cizimi.
+/// @brief images — Image / texture cizimi.
+///
+/// Gelistirme Fazi 3 demosu (eski ad: phase3_demo).
 ///
 /// Gosterilen ozellikler:
 ///   - CreateFromData ile prosedürel dokular (checkerboard, degrade, alfa daire)
@@ -147,7 +149,7 @@ static sdl_painter::Image MakeColorAtlas(int32_t size) {
 
 int main() {
   InitLogger();
-  spdlog::info("SDLPainter Phase 3 demo baslatiliyor...");
+  spdlog::info("SDLPainter images demo baslatiliyor...");
 
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     spdlog::error("SDL_Init basarisiz: {}", SDL_GetError());
@@ -161,7 +163,7 @@ int main() {
   SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
   SDL_Window* window =
-      SDL_CreateWindow("SDLPainter — Phase 3: Image & Texture", 800, 600,
+      SDL_CreateWindow("SDLPainter — images: Image & Texture (Phase 3)", 800, 600,
                        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
   if (!window) {
     spdlog::error("SDL_CreateWindow basarisiz: {}", SDL_GetError());

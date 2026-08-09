@@ -1,3 +1,5 @@
+**Türkçe** | [English version](architecture.md)
+
 # SDLPainter — Mimari Genel Bakış
 
 Bu belge SDLPainter'ın **katmanlı mimarisini**, **bileşenler arasındaki bağımlılıkları**
@@ -20,7 +22,7 @@ flowchart TB
 
     subgraph api["1) Public API Katmanı"]
         PAINTER["Painter<br/>(QPainter benzeri API)"]
-        STYLE["Pen / Brush / Color<br/>Transform / Image / Font"]
+        STYLE["Pen / Brush / Color<br/>Image / Font"]
     end
 
     subgraph mid["2) Geometri Katmanı (backend-agnostik)"]
@@ -99,7 +101,7 @@ graph LR
     Painter --> Image
     Painter --> Font
 
-    RenderState --> Transform
+    RenderState --> Mat3["glm::mat3 (transform)"]
     RenderState --> Pen
     RenderState --> Brush
     RenderState --> Rect
@@ -182,7 +184,6 @@ sdl-painter/
 ├── include/sdl_painter/        ← Public API (kullanıcı bu header'ları görür)
 │   ├── painter.h               · Ana çizim sınıfı
 │   ├── pen.h, brush.h, color.h · Stil tipleri
-│   ├── transform.h             · 3×3 affine matris
 │   ├── geometry.h              · Point, Rect, Size
 │   ├── image.h, texture.h      · Görsel + RAII texture sarmalayıcı
 │   ├── font.h                  · SDL_ttf wrapper, Alignment
@@ -211,11 +212,11 @@ sdl-painter/
 │       └── shaders/*.spv               · SPIR-V derlenmiş shader'lar
 │
 ├── examples/                   ← Faz bazlı demo uygulamaları
-│   ├── phase1_demo.cpp         · Primitifler
-│   ├── phase2_demo.cpp         · Transform stack
-│   ├── phase3_demo.cpp         · Image
-│   ├── phase4_demo.cpp         · Text
-│   └── phase5*_vulkan_*.cpp    · Vulkan örnekleri
+│   ├── primitives.cpp          · Primitifler
+│   ├── transforms.cpp          · Transform stack
+│   ├── images.cpp              · Image
+│   ├── text.cpp                · Text
+│   └── vulkan_*.cpp            · Vulkan örnekleri
 │
 └── tests/                      ← GTest birim testleri
     ├── mock_renderer.h         · IRenderer mock'u
@@ -244,10 +245,11 @@ graph TB
         SDL3["SDL3 (sdl/3.2.x)"]
         GLAD["GLAD (glad/0.1.x)"]
         STB["stb_image (stb/cci.*)"]
+        GLM["GLM (transform matrisi)"]
+        TTF["SDL_ttf (sdl_ttf/3.2.x)"]
     end
 
     subgraph ops["Opsiyonel — option ile etkinleştirilir"]
-        TTF["SDL_ttf"]
         VK["Vulkan loader/headers (with_vulkan)"]
         GTEST["GTest (build_tests)"]
     end
@@ -255,7 +257,8 @@ graph TB
     Painter --> SDL3
     Painter --> GLAD
     Painter --> STB
-    Painter -.opt.-> TTF
+    Painter --> GLM
+    Painter --> TTF
     Painter -.opt.-> VK
     Painter -.opt.-> GTEST
 
@@ -264,8 +267,11 @@ graph TB
 ```
 
 `with_vulkan=False` olduğunda Vulkan loader hiç indirilmez; CI süresi ve
-container imaj boyutu küçük kalır. Detaylar için
-`.claude/rules/build-deps.md` ve `conanfile.py`.
+container imaj boyutu küçük kalır. Detaylar için `conanfile.py` ve
+[Derleme](building.md) *(İngilizce)*.
+
+> SDL_ttf bir dönem `with_text` opsiyonuna bağlıydı; artık **zorunlu**
+> bağımlılıktır ve o opsiyon kaldırılmıştır.
 
 ---
 

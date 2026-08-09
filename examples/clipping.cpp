@@ -1,4 +1,6 @@
-/// @brief Phase 2b demo — Merkez rotasyon dogrulama testi.
+/// @brief clipping — Merkez rotasyon dogrulama testi.
+///
+/// Gelistirme Fazi 2b demosu (eski ad: phase2b_demo).
 ///
 /// Pencere boyutu degisse de dikdortgen daima ekranin tam ortasinda
 /// kendi merkezi etrafinda doner. Referans olarak ekran merkezinde kucuk
@@ -36,7 +38,7 @@ static void InitLogger() {
 
 int main() {
   InitLogger();
-  spdlog::info("SDLPainter Phase 2b demo baslatiliyor...");
+  spdlog::info("SDLPainter clipping demo baslatiliyor...");
 
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     spdlog::error("SDL_Init basarisiz: {}", SDL_GetError());
@@ -50,7 +52,7 @@ int main() {
   SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
   SDL_Window* window =
-      SDL_CreateWindow("SDLPainter — Phase 2b: Merkez Rotasyon", 800, 600,
+      SDL_CreateWindow("SDLPainter — clipping: Merkez Rotasyon (Phase 2b)", 800, 600,
                        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
   if (!window) {
     spdlog::error("SDL_CreateWindow basarisiz: {}", SDL_GetError());

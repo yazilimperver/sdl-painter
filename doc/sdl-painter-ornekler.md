@@ -7,7 +7,7 @@ olduğunu** açıklar.
 
 ---
 
-## phase0_demo — Altyapı Doğrulaması
+## hello_window — Altyapı Doğrulaması
 
 **Amaç:** Derleme, SDL3 başlatma ve spdlog entegrasyonunun çalıştığını
 doğrular. Herhangi bir çizim yapmaz.
@@ -30,7 +30,7 @@ anlam taşımaz. Demo bu altyapının entegrasyon testi işlevi görür.
 
 ---
 
-## phase1_demo — Temel Primitifler
+## primitives — Temel Primitifler
 
 **Amaç:** OpenGL backend'in tüm temel çizim primitiflerini doğrular.
 Tek bir pencerede stroke/fill çiftleri, kalın çizgiler, polyline ve
@@ -61,7 +61,7 @@ stateful render state birikimi olmaz.
 
 ---
 
-## phase2_demo — Transform Stack
+## transforms — Transform Stack
 
 **Amaç:** Transform stack'in tüm operasyonlarını animasyonlu olarak
 doğrular. Yedi bağımsız bölüm her operasyonu izole eder.
@@ -89,7 +89,7 @@ eder.
 
 ---
 
-## phase2b_demo — Merkez Rotasyon Doğrulaması
+## clipping — Merkez Rotasyon Doğrulaması
 
 **Amaç:** `Translate → Rotate` sırasının doğru uygulandığını izole
 biçimde doğrular. Pencere yeniden boyutlandırılsa bile dikdörtgen daima
@@ -105,7 +105,7 @@ ekranın tam ortasında kendi merkezi etrafında döner.
 
 ### Mühendislik notu
 
-Bu örnek, phase2_demo içinde gösterilip geçilebilecek bir senaryonun
+Bu örnek, transforms içinde gösterilip geçilebilecek bir senaryonun
 **ayrı bir demo olarak çıkarılmasının** neden gerekli olduğunu gösterir:
 döndürme pivotunun doğru noktada olması, transform matrisinin sıralamasına
 son derece duyarlıdır. `Rotate → Translate` yerine `Translate → Rotate`
@@ -115,7 +115,7 @@ gerektiğinin somut örneğidir.
 
 ---
 
-## phase3_demo — Image / Texture
+## images — Image / Texture
 
 **Amaç:** Image yükleme, ölçekleme, atlas dilimleme ve alpha blending
 pipeline'ını doğrular. Harici dosyaya bağımlı olmamak için tüm dokular
@@ -153,7 +153,7 @@ sonra çizilir.
 
 ---
 
-## phase4_demo — Metin Çizimi
+## text — Metin Çizimi
 
 **Amaç:** SDL_ttf üzerinden font yükleme, ölçüm, hizalama ve transform
 entegrasyonunu doğrular.
@@ -184,7 +184,7 @@ açık biçimde yönetmenin örneğidir.
 
 ### CMakeLists.txt notu
 
-`phase4_demo`, SDL_ttf'in static veya shared linklenmiş olmasına göre
+`text`, SDL_ttf'in static veya shared linklenmiş olmasına göre
 iki farklı `target_link_libraries` dalından birini seçer. Opsiyonel
 bağımlılıkların build sistemi seviyesinde ele alınması burada görülür.
 
@@ -197,7 +197,7 @@ sadece geometriyle değil, text rendering pipeline'ıyla da doğru
 
 ---
 
-## phase5a–5e — Vulkan Backend
+## vulkan_* — Vulkan Backend
 
 Bu beş demo, Vulkan backend'in OpenGL ile aynı davranışı sergilediğini
 kademeli olarak doğrular. Hepsi `SDLPAINTER_WITH_VULKAN=ON` ile
@@ -205,15 +205,15 @@ derlenir.
 
 | Demo | Doğrulanan yetenek |
 |------|--------------------|
-| `phase5a_vulkan_clear` | Vulkan context başlatma, swapchain, `Clear` |
-| `phase5b_vulkan_triangles` | Untextured primitifler (tüm şekil tipleri) |
-| `phase5c_vulkan_textured` | `DrawImage` — texture upload, sampling |
-| `phase5d_vulkan_demo` | Swapchain recreate (pencere yeniden boyutlandırma), tüm primitifler, opacity, validation layer çıktısı |
-| `phase5e_vulkan_text` | SDL_ttf + Vulkan backend entegrasyonu |
+| `vulkan_clear` | Vulkan context başlatma, swapchain, `Clear` |
+| `vulkan_triangles` | Untextured primitifler (tüm şekil tipleri) |
+| `vulkan_textured` | `DrawImage` — texture upload, sampling |
+| `vulkan_demo` | Swapchain recreate (pencere yeniden boyutlandırma), tüm primitifler, opacity, validation layer çıktısı |
+| `vulkan_text` | SDL_ttf + Vulkan backend entegrasyonu |
 
 ### Mühendislik notu
 
-`phase5d_vulkan_demo` özellikle **swapchain recreate** senaryosunu test
+`vulkan_demo` özellikle **swapchain recreate** senaryosunu test
 eder: pencere boyutu değiştiğinde Vulkan swapchain yeniden oluşturulmalı,
 bu süreçte çizim bozulmamalıdır. `IRenderer` arayüzünün bu senaryoyu
 soyutlaması, `Painter` katmanında hiçbir ek kod gerektirmez.
@@ -224,9 +224,9 @@ sağlar.
 
 ---
 
-## phase6_app_demo — Application Çatısı
+## app_basics — Application Çatısı
 
-**Amaç:** `phase2_demo` ile aynı görsel içeriği (dönen dikdörtgen + nabız
+**Amaç:** `transforms` ile aynı görsel içeriği (dönen dikdörtgen + nabız
 gibi ölçeklenen daire) SDL boilerplate'i olmadan üretir.
 
 ### Kullanılan yetenekler
@@ -239,7 +239,7 @@ gibi ölçeklenen daire) SDL boilerplate'i olmadan üretir.
 
 ### Mühendislik notu
 
-Karşılaştırma noktası `phase2_demo`'dur: aynı çıktı, ~250 satır daha az kod.
+Karşılaştırma noktası `transforms`'dur: aynı çıktı, ~250 satır daha az kod.
 Çatının değeri burada ölçülebilir hale gelir. `Application` yıkım sırası
 (Painter → pencere → SDL_Quit) türeyen sınıfın üyelerini de kapsayacak
 şekilde tasarlandığı için `Image`/`Font` üyeleri düz üye olarak tutulabilir
@@ -247,7 +247,7 @@ Karşılaştırma noktası `phase2_demo`'dur: aynı çıktı, ~250 satır daha a
 
 ---
 
-## phase7_game_demo — Sabit Adımlı Oyun Döngüsü
+## game_loop — Sabit Adımlı Oyun Döngüsü
 
 **Amaç:** `TimingMode::kFixed` ile deterministik simülasyonu ve render
 interpolasyonunu doğrular. Bir top yerçekimiyle düşüp zemine çarparak seker.
@@ -269,10 +269,10 @@ interpolasyonun neden gerekli olduğunu doğrudan gösteren bir karşıtlık.
 
 ---
 
-## phase8_tictactoe — Eksiksiz Uygulama: Girdi + Durum + Yerleşim
+## tictactoe — Eksiksiz Uygulama: Girdi + Durum + Yerleşim
 
 **Amaç:** Çatının **girdi** tarafını ve gerçek bir uygulamanın akışını
-gösterir. phase6 çatının temelini, phase7 zamanlamayı gösterirken bu demo
+gösterir. app_basics çatının temelini, game_loop zamanlamayı gösterirken bu demo
 diğer örneklerin hiçbirinde bulunmayan yetenekleri kapsar.
 
 ### Kullanılan yetenekler
@@ -300,7 +300,7 @@ girdi ve çizimden sorumlu kalır. Örnek uygulamalardan test edilen ilk mantık
 budur.
 
 Sıra tabanlı bir oyun olduğu için `TimingMode::kVariable` kullanılır; sabit
-adıma ihtiyaç yoktur. phase7 ile yan yana okunduğunda iki zamanlama modunun
+adıma ihtiyaç yoktur. game_loop ile yan yana okunduğunda iki zamanlama modunun
 ne zaman seçileceği somutlaşır: sürekli simülasyon → `kFixed`,
 olay güdümlü etkileşim → `kVariable`.
 
@@ -312,7 +312,8 @@ geometriyi kullandığı için pencere boyutundan bağımsız olarak doğru çal
 
 ## Örneklerin Genel Mühendislik Deseni
 
-Aşağıdaki desen `phase0`–`phase5e` demoları içindir; `phase6`+ demoları bu
+Aşağıdaki desen `hello_window`–`vulkan_text` demoları içindir; `app_basics`,
+`game_loop` ve `tictactoe` bu
 boilerplate'i `Application` çatısına devreder:
 
 ```

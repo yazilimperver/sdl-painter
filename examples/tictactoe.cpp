@@ -1,6 +1,8 @@
-/// @brief Phase 8 demo — Application catisiyla eksiksiz bir uygulama.
+/// @brief tictactoe — Application catisiyla eksiksiz bir uygulama.
 ///
-/// phase6 catinin temelini, phase7 sabit adimli oyun dongusunu gosterir.
+/// Gelistirme Fazi 8 demosu (eski ad: phase8_tictactoe).
+///
+/// app_basics catinin temelini, game_loop sabit adimli oyun dongusunu gosterir.
 /// Bu demo ise catinin **girdi** tarafini ve gercek bir uygulamanin akisini
 /// gosterir — diger orneklerin hicbirinde bulunmayan yetenekler:
 ///
@@ -12,7 +14,7 @@
 ///   - Metin + sekil birlikte: durum cubugu, Rect + Alignment ile hizalama
 ///
 /// Sira tabanli bir oyun oldugu icin TimingMode::kVariable yeterlidir; sabit
-/// adima (phase7) ihtiyac yoktur — iki zamanlama modunun ne zaman secilecegini
+/// adima (game_loop) ihtiyac yoktur — iki zamanlama modunun ne zaman secilecegini
 /// yan yana gosterir.
 ///
 /// Oyun mantigi (kazanan tespiti, hit testing) tictactoe_logic.h icinde saf
@@ -194,7 +196,7 @@ class TicTacToeApp : public sp::Application {
         suffix = mCurrent == ttt::Cell::kX ? "sira: X" : "sira: O";
         break;
     }
-    SetTitle("SDLPainter — Phase 8: Tic-Tac-Toe (" + suffix + ")");
+    SetTitle("SDLPainter — tictactoe (Phase 8) (" + suffix + ")");
   }
 
   /// @brief Hucrenin sol ust kosesi.
@@ -322,7 +324,7 @@ class TicTacToeApp : public sp::Application {
 
 int main() {
   sp::AppConfig config;
-  config.title = "SDLPainter — Phase 8: Tic-Tac-Toe";
+  config.title = "SDLPainter — tictactoe: Tic-Tac-Toe (Phase 8)";
   config.width = 700;
   config.height = 780;
   config.resizable = true;  // OnResize ile duyarli yerlesim gosterilir

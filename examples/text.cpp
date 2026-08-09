@@ -1,4 +1,6 @@
-/// @brief Phase 4 demo — Metin çizimi (SDL_ttf).
+/// @brief text — Metin çizimi (SDL_ttf).
+///
+/// Geliştirme Fazı 4 demosu (eski ad: phase4_demo).
 ///
 /// Gösterilen özellikler:
 ///   - DrawText(x, y, text) — konuma metin çiz
@@ -94,7 +96,7 @@ static void DrawLabelBox(sdl_painter::Painter& p,
 
 int main() {
   InitLogger();
-  spdlog::info("SDLPainter Phase 4 demo baslatiliyor...");
+  spdlog::info("SDLPainter text demo baslatiliyor...");
 
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     spdlog::error("SDL_Init basarisiz: {}", SDL_GetError());
@@ -108,7 +110,7 @@ int main() {
   SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
   SDL_Window* window = SDL_CreateWindow(
-      "SDLPainter — Phase 4: Metin Cizimi",
+      "SDLPainter — text: Metin Cizimi (Phase 4)",
       900, 650,
       SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
   if (!window) {
@@ -150,8 +152,8 @@ int main() {
 
     // MeasureText kontrolü
     int32_t mw = 0, mh = 0;
-    font_md->MeasureText("SDLPainter Phase 4", mw, mh);
-    spdlog::info("MeasureText: \"SDLPainter Phase 4\" -> {}x{} piksel", mw, mh);
+    font_md->MeasureText("SDLPainter text demo", mw, mh);
+    spdlog::info("MeasureText: \"SDLPainter text demo\" -> {}x{} piksel", mw, mh);
 
     float angle = 0.0f;
 

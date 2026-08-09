@@ -1,3 +1,5 @@
+**Türkçe** | [English version](getting-started.md)
+
 # SDLPainter — Hızlı Başlangıç
 
 Bu rehber SDLPainter'ı **ilk defa kullananlar** içindir. Beş dakikada
@@ -23,7 +25,7 @@ mimari arka planı için [Mimari Genel Bakış](mimari-genel-bakis.md).
 
 ```bash
 # 1) Klonla
-git clone https://example.com/sdl-painter.git
+git clone https://github.com/yazilimperver/sdl-painter.git
 cd sdl-painter
 
 # 2) Bağımlılıkları yükle (debug build için)
@@ -35,7 +37,7 @@ cmake --preset linux-debug
 cmake --build --preset linux-debug
 
 # 4) Demo'yu çalıştır
-./build/linux-debug/examples/phase1_demo
+./build/linux-debug/examples/primitives
 ```
 
 > Preset adı `--output-folder` ile eşleşmek zorundadır: projenin
@@ -69,7 +71,7 @@ cmake --build --preset windows-debug
 ### 2.2 Script ile Derleme
 
 Tüm scriptler proje kökünden çalıştırılmalıdır. Bayrakların tam listesi için
-[README — Script Referansı](../README.tr.md#script-referansı).
+[Script Referansı](scripts.md) *(İngilizce)*.
 
 ```bash
 chmod +x scripts/*.sh
@@ -280,7 +282,7 @@ sdl_painter::Painter painter(window,
 ```
 
 > Vulkan backend için kütüphane `with_vulkan=True` ile build edilmiş
-> olmalı: `conan install . -o sdl_painter/*:with_vulkan=True`.
+> olmalı: `conan install . -o "&:with_vulkan=True"`.
 
 Diğer hiçbir kullanıcı kodu değişmez. Aynı `painter.FillRect`,
 `painter.DrawText`, `painter.Save` çağrıları çalışır. Bu **IRenderer
@@ -295,16 +297,16 @@ başlayanlar için önerilen okuma sırası:
 
 | Demo | Konu | İlgili API |
 |------|------|------------|
-| `phase1_demo.cpp` | Tüm temel primitifler | `DrawRect`, `FillCircle`, `DrawPolyline` |
-| `phase2_demo.cpp` | Transform stack | `Save`/`Restore`, `Translate`/`Rotate`/`Scale` |
-| `phase2b_demo.cpp` | Clipping | `SetClipRect` / `ClearClip` |
-| `phase3_demo.cpp` | Image / texture | `Image`, `DrawImage` |
-| `phase4_demo.cpp` | Metin | `Font`, `DrawText`, `Alignment` |
-| `phase5a_vulkan_clear.cpp` | Vulkan: pencereyi temizle | `RendererBackend::kVulkan` |
-| `phase5b_vulkan_triangles.cpp` | Vulkan: ilk üçgenler | — |
-| `phase5c_vulkan_textured.cpp` | Vulkan: image | — |
-| `phase5d_vulkan_demo.cpp` | Vulkan: tüm primitifler | — |
-| `phase5e_vulkan_text.cpp` | Vulkan: metin | — |
+| `primitives.cpp` | Tüm temel primitifler | `DrawRect`, `FillCircle`, `DrawPolyline` |
+| `transforms.cpp` | Transform stack | `Save`/`Restore`, `Translate`/`Rotate`/`Scale` |
+| `clipping.cpp` | Clipping | `SetClipRect` / `ClearClip` |
+| `images.cpp` | Image / texture | `Image`, `DrawImage` |
+| `text.cpp` | Metin | `Font`, `DrawText`, `Alignment` |
+| `vulkan_clear.cpp` | Vulkan: pencereyi temizle | `RendererBackend::kVulkan` |
+| `vulkan_triangles.cpp` | Vulkan: ilk üçgenler | — |
+| `vulkan_textured.cpp` | Vulkan: image | — |
+| `vulkan_demo.cpp` | Vulkan: tüm primitifler | — |
+| `vulkan_text.cpp` | Vulkan: metin | — |
 
 ---
 

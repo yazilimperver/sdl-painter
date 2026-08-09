@@ -1,10 +1,12 @@
-/// @brief Phase 5c demo — Vulkan backend ile texture çizimi.
+/// @brief vulkan_textured — Vulkan backend ile texture çizimi.
+///
+/// Geliştirme Fazı 5c demosu (eski ad: phase5c_vulkan_textured).
 ///
 /// DrawTextured (textured pipeline) ile iki farklı texture çizer:
 ///   1. Programatik olarak oluşturulan 256x256 dama tahtası deseni.
 ///   2. assets/ altından yüklenen PNG (varsa); yoksa ikinci dama çizilir.
 ///
-/// Ayrıca Phase 5b'den gelen untextured çizim (FillRect, FillCircle) ve
+/// Ayrıca vulkan_triangles'tan gelen untextured çizim (FillRect, FillCircle) ve
 /// transform stack (Translate + Rotate) da test edilir.
 /// ESC veya pencere kapat ile sonlandırılır.
 
@@ -75,7 +77,7 @@ std::vector<uint8_t> MakeCheckerboard(int32_t tile_size,
 
 int main() {
   InitLogger();
-  spdlog::info("SDLPainter Phase 5c (Vulkan textured) starting...");
+  spdlog::info("SDLPainter vulkan_textured demo starting...");
 
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     spdlog::error("SDL_Init failed: {}", SDL_GetError());
@@ -83,7 +85,7 @@ int main() {
   }
 
   SDL_Window* window = SDL_CreateWindow(
-      "SDLPainter — Phase 5c (Vulkan Textured)", 800, 600,
+      "SDLPainter — vulkan_textured (Phase 5c)", 800, 600,
       SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
   if (!window) {
     spdlog::error("SDL_CreateWindow failed: {}", SDL_GetError());

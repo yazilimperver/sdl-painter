@@ -6,7 +6,7 @@
 #   ./scripts/build.sh ASan                                  # Debug + ASan/UBSan
 #   ./scripts/build.sh Debug --vulkan                        # Vulkan backend
 #   ./scripts/build.sh Release --vulkan --no-examples        # Birleşik
-#   ./scripts/build.sh Debug --target phase2b_demo           # Tek hedef
+#   ./scripts/build.sh Debug --target clipping               # Tek hedef
 #   ./scripts/build.sh Debug --clean                         # build/<preset> sil, baştan
 #   ./scripts/build.sh Debug --jobs 8                        # Paralel iş sayısı
 #   ./scripts/build.sh Debug --skip-conan                    # Sadece cmake

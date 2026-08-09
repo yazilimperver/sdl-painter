@@ -1,4 +1,6 @@
-/// @brief Phase 2 demo — Transform stack ve scissor clip.
+/// @brief transforms — Transform stack ve scissor clip.
+///
+/// Geliştirme Fazı 2 demosu (eski ad: phase2_demo).
 ///
 /// Gosterilen ozellikler:
 ///   - Translate / Rotate / Scale kombinasyonlari
@@ -40,7 +42,7 @@ static void InitLogger() {
 
 int main() {
   InitLogger();
-  spdlog::info("SDLPainter Phase 2 demo baslatiliyor...");
+  spdlog::info("SDLPainter transforms demo baslatiliyor...");
 
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     spdlog::error("SDL_Init basarisiz: {}", SDL_GetError());
@@ -54,7 +56,7 @@ int main() {
   SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
   SDL_Window* window =
-      SDL_CreateWindow("SDLPainter — Phase 2: Transform Stack & Clip", 900, 700,
+      SDL_CreateWindow("SDLPainter — transforms: Transform Stack & Clip (Phase 2)", 900, 700,
                        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
   if (!window) {
     spdlog::error("SDL_CreateWindow basarisiz: {}", SDL_GetError());

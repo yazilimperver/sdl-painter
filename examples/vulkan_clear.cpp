@@ -1,4 +1,6 @@
-/// @brief Phase 5a demo — Vulkan backend ile pencere temizleme.
+/// @brief vulkan_clear — Vulkan backend ile pencere temizleme.
+///
+/// Geliştirme Fazı 5a demosu (eski ad: phase5a_vulkan_clear).
 ///
 /// SDL_WINDOW_VULKAN bayrağıyla pencere açar, Painter'ı Vulkan backend ile
 /// oluşturur ve her frame'de pencereyi CornflowerBlue renge boyar.
@@ -39,7 +41,7 @@ void InitLogger() {
 
 int main() {
   InitLogger();
-  spdlog::info("SDLPainter Phase 5a (Vulkan clear) starting...");
+  spdlog::info("SDLPainter vulkan_clear demo starting...");
 
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     spdlog::error("SDL_Init failed: {}", SDL_GetError());
@@ -47,7 +49,7 @@ int main() {
   }
 
   SDL_Window* window = SDL_CreateWindow(
-      "SDLPainter — Phase 5a (Vulkan Clear)", 800, 600,
+      "SDLPainter — vulkan_clear (Phase 5a)", 800, 600,
       SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
   if (!window) {
     spdlog::error("SDL_CreateWindow failed: {}", SDL_GetError());

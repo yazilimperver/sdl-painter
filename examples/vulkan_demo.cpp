@@ -1,4 +1,6 @@
-/// @brief Phase 5d demo — Vulkan backend polish & doğrulama.
+/// @brief vulkan_demo — Vulkan backend polish & doğrulama.
+///
+/// Geliştirme Fazı 5d demosu (eski ad: phase5d_vulkan_demo).
 ///
 /// Test edilen özellikler:
 ///   - Swapchain recreate: pencereyi yeniden boyutlandır, çizim bozulmamalı.
@@ -87,7 +89,7 @@ std::vector<uint8_t> MakeGradientTexture() {
 
 int main() {
   InitLogger();
-  spdlog::info("SDLPainter Phase 5d (Vulkan polish & doğrulama) başlıyor...");
+  spdlog::info("SDLPainter vulkan_demo (polish & doğrulama) başlıyor...");
   spdlog::info("Pencereyi yeniden boyutlandırarak resize testini yapabilirsiniz.");
   spdlog::info("ESC veya pencereyi kapat ile çıkış.");
 
@@ -97,7 +99,7 @@ int main() {
   }
 
   SDL_Window* window = SDL_CreateWindow(
-      "SDLPainter — Phase 5d (Vulkan Polish)", 900, 650,
+      "SDLPainter — vulkan_demo (Phase 5d)", 900, 650,
       SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
   if (!window) {
     spdlog::error("SDL_CreateWindow hata: {}", SDL_GetError());

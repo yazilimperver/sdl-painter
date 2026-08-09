@@ -16,7 +16,7 @@ param(
 #   .\scripts\Build.ps1 Release                        # Release
 #   .\scripts\Build.ps1 -Vulkan                        # Debug + Vulkan backend
 #   .\scripts\Build.ps1 Release -Vulkan -NoExamples    # Combined options
-#   .\scripts\Build.ps1 -Target phase2b_demo           # Build single target
+#   .\scripts\Build.ps1 -Target clipping               # Build single target
 #   .\scripts\Build.ps1 -Clean                         # Wipe build dir, reinstall, rebuild
 #   .\scripts\Build.ps1 -Jobs 8                        # Parallel build with 8 jobs
 #   .\scripts\Build.ps1 -Docs                          # Build + Doxygen HTML documentation

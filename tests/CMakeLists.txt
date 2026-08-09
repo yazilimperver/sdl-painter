@@ -18,7 +18,7 @@ add_executable(sdl_painter_tests ${TEST_SOURCES})
 
 target_include_directories(sdl_painter_tests PRIVATE
     ${PROJECT_SOURCE_DIR}/src
-    # phase8_tictactoe demosunun saf oyun mantığı (tictactoe_logic.h) burada.
+    # tictactoe demosunun saf oyun mantığı (tictactoe_logic.h) burada.
     ${PROJECT_SOURCE_DIR}/examples
     # Gömülü shader başlıkları — test_renderer_smoke.cpp SPIR-V'yi doğruluyor.
     ${PROJECT_BINARY_DIR}/generated

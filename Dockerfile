@@ -209,7 +209,7 @@ RUN conan install . \
 #   docker run --rm -v "${PWD}:/workspace" sdl-painter:windows-cross bash -c "conan install . --output-folder=build/windows-mingw-release/generators --build=missing -s build_type=Release --profile:build=default --profile:host=windows-mingw && cmake --preset windows-mingw-release && cmake --build --preset windows-mingw-release"
 #
 # Çıktılar: build/windows-mingw-{debug,release}/ altında .exe ve .dll dosyaları
-# docker run --rm -v "${PWD}:/workspace" sdl-painter:windows-cross x86_64-w64-mingw32-objdump -p build/windows-mingw-release/examples/phase0_demo.exe | grep "DLL Name"
+# docker run --rm -v "${PWD}:/workspace" sdl-painter:windows-cross x86_64-w64-mingw32-objdump -p build/windows-mingw-release/examples/hello_window.exe | grep "DLL Name"
 #
 # Vulkan destekli build — yalnızca Linux (Windows MinGW cross-compile'da
 # vulkan-loader recipe'ı USE_MASM nedeniyle derlenemiyor; configure() bu
