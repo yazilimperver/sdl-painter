@@ -57,7 +57,7 @@ include(FetchContent)
 
 FetchContent_Declare(sdl_painter
     GIT_REPOSITORY https://github.com/yazilimperver/sdl-painter.git
-    GIT_TAG        main)   # tekrarlanabilir derleme için sürüm etiketine sabitleyin
+    GIT_TAG        v1.1.0)   # tekrarlanabilir derleme için sürüm etiketine sabitleyin
 
 # Demoları ve birim testleri kendi projenizin parçası olarak derlemeyin.
 set(SDLPAINTER_BUILD_EXAMPLES OFF)

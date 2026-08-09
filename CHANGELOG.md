@@ -2,6 +2,8 @@
 
 ## [Yayınlanmadı]
 
+## [1.1.0] - 2026-08-09
+
 ### Değişti
 - **Shader'lar binary'ye gömüldü:** GLSL kaynakları ve derlenmiş SPIR-V modülleri
   artık kütüphane binary'sine gömülüyor; çalışma zamanında hiçbir shader dosyası
@@ -57,6 +59,23 @@
   ve `package:conan-create` job'ları eklendi; clang-format kontrolü zorunlu
   hâle getirildi.
 
+- **Uygulama çatısı (`sdl_painter_app`):** SDL pencere/olay-döngüsü
+  boilerplate'ini soyutlayan ayrı static kütüphane. `sdl_painter::Application`'dan
+  türeyip `OnRender`/`OnUpdate`/`OnKeyDown` gibi sanal metotları override etmek
+  yeterli; SDL init, pencere, GL context, olay döngüsü ve yıkım çatı tarafından
+  yönetilir. SDL'den bağımsız `Key`/`KeyEvent`/`MouseButtonEvent` tipleri ve ileri
+  kullanım için `OnRawEvent(const SDL_Event&)` kaçış kapısı sunar. Core
+  `sdl_painter` saf çizim API'si olarak korunur (bkz. ADR-008).
+- **Zamanlama modları:** `AppConfig::timing` ile `kVariable` (varsayılan, değişken
+  delta-time) veya `kFixed` (sabit adımlı deterministik `OnUpdate` +
+  `OnRender(Painter&, alpha)` interpolasyonu — Game Programming Patterns "play
+  catch up"). Ayrıca `target_fps` ile `SDL_DelayNS` tabanlı kare hızı freni.
+- **Örnekler:** `phase6_app_demo` (kVariable), `phase7_game_demo` (kFixed +
+  interpolasyon, seken top) ve `phase8_tictactoe` (fare girdisi + durum makinesi)
+  çatının kullanımını gösterir.
+- **Dokümantasyon:** Ana `README.md` İngilizce oldu; Türkçe sürüm `README.tr.md`
+  olarak ayrıldı.
+
 ### Düzeltildi
 - **Conan paketi doğru üretiliyor:** `package()` artık binary glob'lamak yerine
   projenin install kurallarını kullanıyor (`cmake.install()`), `LICENSE` pakete
@@ -82,26 +101,6 @@
   merkezi kopyalama target'ları — shader'lar gömülü olduğu için gereksiz.
 - `VulkanRenderer::ResolveShaderDir()`; `VulkanPipeline` ve
   `VulkanTexturedPipeline` `Init()` imzalarından `shader_dir` parametresi.
-
-## [1.1.0] - 2026-08-08
-
-### Eklendi
-- **Uygulama çatısı (`sdl_painter_app`):** SDL pencere/olay-döngüsü
-  boilerplate'ini soyutlayan ayrı static kütüphane. `sdl_painter::Application`'dan
-  türeyip `OnRender`/`OnUpdate`/`OnKeyDown` gibi sanal metotları override etmek
-  yeterli; SDL init, pencere, GL context, olay döngüsü ve yıkım çatı tarafından
-  yönetilir. SDL'den bağımsız `Key`/`KeyEvent`/`MouseButtonEvent` tipleri ve ileri
-  kullanım için `OnRawEvent(const SDL_Event&)` kaçış kapısı sunar. Core
-  `sdl_painter` saf çizim API'si olarak korunur (bkz. ADR-008).
-- **Zamanlama modları:** `AppConfig::timing` ile `kVariable` (varsayılan, değişken
-  delta-time) veya `kFixed` (sabit adımlı deterministik `OnUpdate` +
-  `OnRender(Painter&, alpha)` interpolasyonu — Game Programming Patterns "play
-  catch up"). Ayrıca `target_fps` ile `SDL_DelayNS` tabanlı kare hızı freni.
-- **Örnekler:** `phase6_app_demo` (kVariable), `phase7_game_demo` (kFixed +
-  interpolasyon, seken top) ve `phase8_tictactoe` (fare girdisi + durum makinesi)
-  çatının kullanımını gösterir.
-- **Dokümantasyon:** Ana `README.md` İngilizce oldu; Türkçe sürüm `README.tr.md`
-  olarak ayrıldı.
 
 ## [1.0.0] - 2026-05-17
 
