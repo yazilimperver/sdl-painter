@@ -1,0 +1,6 @@
+# GENERATED — regenerate_shaders hedefi uretir, elle duzenlemeyin.
+# GLSL kaynaklarinin SHA-256'lari; spirv/*.spv bunlardan uretildi.
+c4667ba25cb44052482f06fc949c006bc431f2d3f11863baa13f45bde53d9c78  untextured.vert
+61e2bc86b802e1ad102963e59ac2f3baaf7b2d9dd068c43c0a7b8408f02c31fb  untextured.frag
+12fe4c4570735248ec76b39f6a14d4fd4a1889074a25a9eaa06d46984b346e87  textured.vert
+03be94df479af54092f8679e3b70acd1999dc38380ddba791095672e7075c83a  textured.frag

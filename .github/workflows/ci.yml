@@ -109,6 +109,13 @@ jobs:
         run: |
           cmake --preset windows-debug
           cmake --build --preset windows-debug
+      # Windows'ta testler daha once HIC kosmuyordu; yalnizca derleniyordu.
+      # NOT: offscreen surucusu Windows'ta EGL yukleyemedigi icin renderer
+      # smoke testleri burada SKIP olur — Linux tarafinda gercekten kosuyorlar.
+      - name: ctest
+        env:
+          SDL_VIDEODRIVER: offscreen
+        run: ctest --preset windows-debug --output-on-failure
 
   build-windows-release:
     name: build:windows:release
@@ -151,11 +158,28 @@ jobs:
     env:
       CONAN_HOME: /root/.conan2
       SDL_VIDEODRIVER: offscreen
-      VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      # lavapipe ICD dosyasinin adi mesa surumune gore degisiyor
+      # (lvp_icd.json / lvp_icd.x86_64.json). Sabit yol yanlissa loader HIC
+      # surucu yuklemiyor, surface extension'lari kayboluyor ve Vulkan
+      # testleri sessizce SKIP oluyor. Bu yuzden yolu calisma aninda cozuyoruz;
+      # bulunamazsa degisken bos kalir ve loader varsayilanina duser.
+      - name: Resolve lavapipe ICD
+        run: |
+          ICD=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json 2>/dev/null | head -1 || true)
+          if [ -n "$ICD" ]; then
+            echo "VK_ICD_FILENAMES=$ICD" >> "$GITHUB_ENV"
+            echo "lavapipe ICD: $ICD"
+          else
+            # Bos degere cekiyoruz: imajin ENV'inde kalmis olabilecek yanlis
+            # bir yol yururlukte kalmasin, loader varsayilanina dussun.
+            echo "VK_ICD_FILENAMES=" >> "$GITHUB_ENV"
+            echo "lavapipe ICD bulunamadi — loader varsayilani kullanilacak"
+            ls -la /usr/share/vulkan/icd.d/ || true
+          fi
       - name: conan install (Debug)
         run: |
           conan install . --output-folder=build/linux-debug/generators --build=missing \
@@ -178,11 +202,28 @@ jobs:
     env:
       CONAN_HOME: /root/.conan2
       SDL_VIDEODRIVER: offscreen
-      VK_ICD_FILENAMES: /usr/share/vulkan/icd.d/lvp_icd.x86_64.json
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
+      # lavapipe ICD dosyasinin adi mesa surumune gore degisiyor
+      # (lvp_icd.json / lvp_icd.x86_64.json). Sabit yol yanlissa loader HIC
+      # surucu yuklemiyor, surface extension'lari kayboluyor ve Vulkan
+      # testleri sessizce SKIP oluyor. Bu yuzden yolu calisma aninda cozuyoruz;
+      # bulunamazsa degisken bos kalir ve loader varsayilanina duser.
+      - name: Resolve lavapipe ICD
+        run: |
+          ICD=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json 2>/dev/null | head -1 || true)
+          if [ -n "$ICD" ]; then
+            echo "VK_ICD_FILENAMES=$ICD" >> "$GITHUB_ENV"
+            echo "lavapipe ICD: $ICD"
+          else
+            # Bos degere cekiyoruz: imajin ENV'inde kalmis olabilecek yanlis
+            # bir yol yururlukte kalmasin, loader varsayilanina dussun.
+            echo "VK_ICD_FILENAMES=" >> "$GITHUB_ENV"
+            echo "lavapipe ICD bulunamadi — loader varsayilani kullanilacak"
+            ls -la /usr/share/vulkan/icd.d/ || true
+          fi
       - name: conan install (Debug, ASan)
         run: |
           conan install . --output-folder=build/linux-debug-asan/generators --build=missing \
@@ -195,6 +236,84 @@ jobs:
           cmake --build --preset linux-debug-asan
           ctest --preset linux-debug-asan --output-on-failure
 
+  # Faz 1.3 — Conan Center CMake'i preset kullanmadan surer. Preset'ler Conan
+  # toolchain yolunu hardcode ettigi icin bu yol ayrica dogrulanmali; kirilirsa
+  # paketleme kirilir ama normal build yesil kalir.
+  build-standalone-cmake:
+    name: build:standalone-cmake
+    runs-on: ubuntu-latest
+    needs: [build-linux-debug]
+    container:
+      image: yazilimperver/sdl-painter:ci-v1.0
+    env:
+      CONAN_HOME: /root/.conan2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: conan install
+        run: |
+          conan install . --output-folder=build/standalone/generators --build=missing \
+            -s build_type=Release \
+            -o "&:with_vulkan=True" \
+            -c tools.system.package_manager:mode=install \
+            -c tools.system.package_manager:sudo=False
+      - name: configure & build (preset YOK, ornek/test KAPALI)
+        run: |
+          TC=$(find build/standalone/generators -name conan_toolchain.cmake | head -1)
+          echo "toolchain: $TC"
+          cmake -S . -B build/standalone/out \
+            -DCMAKE_TOOLCHAIN_FILE="$PWD/$TC" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DSDLPAINTER_WITH_VULKAN=ON \
+            -DSDLPAINTER_BUILD_EXAMPLES=OFF \
+            -DSDLPAINTER_BUILD_TESTS=OFF
+          cmake --build build/standalone/out
+      - name: install + tuketici dogrulamasi
+        run: |
+          cmake --install build/standalone/out --prefix "$PWD/build/standalone/prefix"
+          TC=$(find build/standalone/generators -name conan_toolchain.cmake | head -1)
+          cmake -S roadmap/verify/consumer -B build/standalone/consumer \
+            -DCMAKE_TOOLCHAIN_FILE="$PWD/$TC" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$PWD/build/standalone/prefix" \
+            -DCONSUMER_MODE=find_package
+          cmake --build build/standalone/consumer
+          ./build/standalone/consumer/consumer
+
+  # Faz 1.5 — SPIR-V ciktilarinin GLSL kaynagiyla senkron oldugunu dogrular.
+  # glslc GEREKTIRMEZ: karsilastirma sources.sha256 manifesti uzerinden yapilir.
+  quality-shader-freshness:
+    name: quality:shader-freshness
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: SPIR-V guncel mi
+        run: cmake -P cmake/CheckShaderFreshness.cmake
+
+  # Faz 1.5 — paketleme yolunun erken uyari sistemi. Conan Center'a gitmeden
+  # once `conan create` + test_package burada kirilirsa gorulur.
+  package-conan-create:
+    name: package:conan-create
+    runs-on: ubuntu-latest
+    needs: [build-linux-debug]
+    container:
+      image: yazilimperver/sdl-painter:ci-v1.0
+    env:
+      CONAN_HOME: /root/.conan2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: conan create + test_package
+        run: |
+          conan create . --build=missing \
+            -o "&:with_vulkan=False" \
+            -o "&:build_examples=False" \
+            -o "&:build_tests=False" \
+            -c tools.system.package_manager:mode=install \
+            -c tools.system.package_manager:sudo=False
+
   quality-clang-format:
     name: quality:clang-format
     runs-on: ubuntu-latest
@@ -203,9 +322,10 @@ jobs:
       image: yazilimperver/sdl-painter:ci-v1.0
     steps:
       - uses: actions/checkout@v4
+      # Zorunlu: CONTRIBUTING.md "format kontrolu zorunludur" diyor, CI de
+      # oyle davranmali. Duzeltmek icin: ./scripts/format-check.sh --fix
       - name: clang-format --dry-run --Werror
-        continue-on-error: true
-        run: find include/ src/ -name '*.h' -o -name '*.cpp' | xargs clang-format-18 --dry-run --Werror
+        run: find include/ src/ tests/ -name '*.h' -o -name '*.cpp' | xargs clang-format-18 --dry-run --Werror
 
   quality-clang-tidy:
     name: quality:clang-tidy

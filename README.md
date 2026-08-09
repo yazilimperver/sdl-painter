@@ -36,6 +36,82 @@ SDLPainter lets you focus **only on drawing**:
 - **Optional application framework** — `sdl_painter_app` also gives you the window, event loop and timing; skip it entirely if you don't want it.
 - **Familiar API** — If you have used QPainter, most of the API will feel familiar. If you haven't, the names speak for themselves: `DrawRect`, `FillCircle`, `Save`/`Restore`.
 
+## Installation
+
+How to use SDLPainter **in your own project**. (To build the repository itself,
+see [Quick Start](#quick-start) below.)
+
+### CMake — `find_package`
+
+Build and install SDLPainter once (see [Building](#building) for dependency
+setup), then:
+
+```cmake
+find_package(sdl_painter CONFIG REQUIRED)
+
+target_link_libraries(my_app PRIVATE sdl_painter::sdl_painter)
+```
+
+Point CMake at the install prefix with `-DCMAKE_PREFIX_PATH=/path/to/prefix`.
+
+### CMake — `FetchContent`
+
+```cmake
+include(FetchContent)
+
+FetchContent_Declare(sdl_painter
+    GIT_REPOSITORY https://github.com/yazilimperver/sdl-painter.git
+    GIT_TAG        main)   # pin to a release tag for reproducible builds
+
+# Don't build the demos and unit tests as part of your project.
+set(SDLPAINTER_BUILD_EXAMPLES OFF)
+set(SDLPAINTER_BUILD_TESTS    OFF)
+
+FetchContent_MakeAvailable(sdl_painter)
+
+target_link_libraries(my_app PRIVATE sdl_painter::sdl_painter)
+```
+
+Both routes expose the **same target names**, so the snippets above are
+interchangeable.
+
+### Optional application framework
+
+The window / event-loop / timing layer is a separate target — link it only if
+you want it (see [ADR-008](adr/ADR-008-application-framework-layer.md)):
+
+```cmake
+target_link_libraries(my_app PRIVATE sdl_painter::app)
+```
+
+### Windows: runtime DLLs
+
+SDL3 and its dependencies are shared libraries, so they must sit next to your
+executable or your program exits with `0xC0000135` (DLL not found). SDLPainter
+does not manage your deployment layout; the standard CMake one-liner is:
+
+```cmake
+if(WIN32)
+    add_custom_command(TARGET my_app POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_RUNTIME_DLLS:my_app> $<TARGET_FILE_DIR:my_app>
+        COMMAND_EXPAND_LISTS)
+endif()
+```
+
+> This covers imported targets that report their DLL location, which in practice
+> means SDL3, SDL3_ttf and the Vulkan loader. It does **not** reliably catch
+> *transitive* DLLs — SDL_ttf itself pulls in freetype, harfbuzz, glib, plutosvg
+> and zlib, and several Conan recipes leave `IMPORTED_LOCATION` unset for those.
+> If you use text rendering, deploy that chain too. The least error-prone route
+> is Conan's `VirtualRunEnv` generator or a deployer, which stages every runtime
+> dependency for you.
+
+### Conan
+
+SDLPainter is **not on Conan Center yet**. Conan is currently used to resolve
+SDLPainter's *own* dependencies when building from source.
+
 ## Quick Start
 
 ```bash

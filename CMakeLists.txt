@@ -39,12 +39,17 @@ project(SDLPainter VERSION ${SDLPAINTER_VERSION} LANGUAGES CXX)
 # Kok Doxyfile (dogrudan `doxygen Doxyfile` icin) surumu kendi icinde tutmak
 # zorunda — Doxygen header okuyamaz. Bu kontrol sessizce ayrismasini onler.
 # cmake/Doxyfile.in zaten @PROJECT_VERSION@ kullaniyor, o dosya etkilenmez.
-file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile" SDLPAINTER_DOXYFILE_VERSION
-     REGEX "^PROJECT_NUMBER[ \t]*=")
-if(NOT SDLPAINTER_DOXYFILE_VERSION MATCHES "${PROJECT_VERSION}")
-    message(WARNING
-        "Doxyfile PROJECT_NUMBER (${SDLPAINTER_DOXYFILE_VERSION}) "
-        "version.h surumu ${PROJECT_VERSION} ile uyusmuyor.")
+#
+# EXISTS kontrolu sart: paket derlemelerinde (Conan/vcpkg) kaynak agacinin
+# yalnizca derleme icin gereken kismi kopyalanir, Doxyfile bulunmaz.
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile")
+    file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile"
+         SDLPAINTER_DOXYFILE_VERSION REGEX "^PROJECT_NUMBER[ \t]*=")
+    if(NOT SDLPAINTER_DOXYFILE_VERSION MATCHES "${PROJECT_VERSION}")
+        message(WARNING
+            "Doxyfile PROJECT_NUMBER (${SDLPAINTER_DOXYFILE_VERSION}) "
+            "version.h surumu ${PROJECT_VERSION} ile uyusmuyor.")
+    endif()
 endif()
 
 include(cmake/InsourceGuard.cmake)
@@ -201,8 +206,15 @@ if(SDLPAINTER_REGENERATE_SHADERS)
         list(APPEND SDLPAINTER_REGENERATED_SPVS "${_spv}")
     endforeach()
 
-    add_custom_target(regenerate_shaders DEPENDS ${SDLPAINTER_REGENERATED_SPVS}
-        COMMENT "SPIR-V ciktilari yeniden uretildi — degisiklikleri commit'lemeyi unutmayin")
+    # Manifest, CI'daki guncellik kontrolunun dayanagi (bkz.
+    # cmake/CheckShaderFreshness.cmake). SPIR-V ile birlikte guncellenmeli,
+    # yoksa kontrol anlamsizlasir.
+    add_custom_target(regenerate_shaders
+        DEPENDS ${SDLPAINTER_REGENERATED_SPVS}
+        COMMAND ${CMAKE_COMMAND}
+                -DSDLPAINTER_SHADER_DIR=${CMAKE_CURRENT_SOURCE_DIR}/src/vulkan/shaders
+                -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/WriteShaderManifest.cmake
+        COMMENT "SPIR-V ciktilari + sources.sha256 yeniden uretildi — commit'leyin")
 endif()
 
 find_package(SDL3_ttf REQUIRED)

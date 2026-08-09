@@ -32,6 +32,82 @@ SDLPainter **sadece çizime** odaklanmanıza imkan sağlar:
 - **İsteğe bağlı uygulama çatısı** — `sdl_painter_app` ile pencere, olay döngüsü ve zamanlama da hazır gelir; istemezseniz hiç kullanmayın.
 - **Tanıdık API** — QPainter kullandıysanız, çoğu API tanıdık gelecektir. Duymadıysanız ya da kullanmadıysanız ise zaten aşikar API'ler: `DrawRect`, `FillCircle`, `Save`/`Restore`.
 
+## Kurulum
+
+SDLPainter'ı **kendi projenizde** nasıl kullanacağınız. (Reponun kendisini
+derlemek için aşağıdaki [Hızlı Başlangıç](#hızlı-başlangıç) bölümüne bakın.)
+
+### CMake — `find_package`
+
+SDLPainter'ı bir kez derleyip kurun (bağımlılık kurulumu için
+[Derleme](#derleme)), sonra:
+
+```cmake
+find_package(sdl_painter CONFIG REQUIRED)
+
+target_link_libraries(my_app PRIVATE sdl_painter::sdl_painter)
+```
+
+CMake'i kurulum dizinine `-DCMAKE_PREFIX_PATH=/kurulum/yolu` ile yönlendirin.
+
+### CMake — `FetchContent`
+
+```cmake
+include(FetchContent)
+
+FetchContent_Declare(sdl_painter
+    GIT_REPOSITORY https://github.com/yazilimperver/sdl-painter.git
+    GIT_TAG        main)   # tekrarlanabilir derleme için sürüm etiketine sabitleyin
+
+# Demoları ve birim testleri kendi projenizin parçası olarak derlemeyin.
+set(SDLPAINTER_BUILD_EXAMPLES OFF)
+set(SDLPAINTER_BUILD_TESTS    OFF)
+
+FetchContent_MakeAvailable(sdl_painter)
+
+target_link_libraries(my_app PRIVATE sdl_painter::sdl_painter)
+```
+
+Her iki yol da **aynı hedef isimlerini** sunar; yukarıdaki parçalar birbirinin
+yerine kullanılabilir.
+
+### Opsiyonel uygulama çatısı
+
+Pencere / olay döngüsü / zamanlama katmanı ayrı bir hedeftir — yalnızca
+istiyorsanız linkleyin (bkz. [ADR-008](adr/ADR-008-application-framework-layer.md)):
+
+```cmake
+target_link_libraries(my_app PRIVATE sdl_painter::app)
+```
+
+### Windows: çalışma zamanı DLL'leri
+
+SDL3 ve bağımlılıkları shared kütüphanedir; executable'ınızın yanında olmak
+zorundadırlar, aksi hâlde program `0xC0000135` (DLL bulunamadı) ile kapanır.
+SDLPainter sizin dağıtım düzeninizi yönetmez; standart CMake çözümü:
+
+```cmake
+if(WIN32)
+    add_custom_command(TARGET my_app POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                $<TARGET_RUNTIME_DLLS:my_app> $<TARGET_FILE_DIR:my_app>
+        COMMAND_EXPAND_LISTS)
+endif()
+```
+
+> Bu, DLL konumunu bildiren imported hedefleri kapsar — pratikte SDL3, SDL3_ttf
+> ve Vulkan loader. **Geçişli** DLL'leri güvenilir biçimde yakalamaz: SDL_ttf
+> kendisi freetype, harfbuzz, glib, plutosvg ve zlib çeker ve bazı Conan
+> recipe'leri bunlar için `IMPORTED_LOCATION` set etmez. Metin çizimi
+> kullanıyorsanız bu zinciri de dağıtın. En az hata yapılan yol, her çalışma
+> zamanı bağımlılığını sizin için hazırlayan Conan `VirtualRunEnv` generator'ı
+> veya bir deployer kullanmaktır.
+
+### Conan
+
+SDLPainter **henüz Conan Center'da değil**. Conan şu an yalnızca SDLPainter'ın
+*kendi* bağımlılıklarını çözmek için kullanılıyor.
+
 ## Hızlı Başlangıç
 
 ```bash

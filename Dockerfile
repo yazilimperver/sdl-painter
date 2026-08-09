@@ -108,11 +108,25 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     vulkan-tools \
     && rm -rf /var/lib/apt/lists/*
 
+# Vulkan ICD'sini lavapipe'a sabitle — birden fazla ICD varsa belirsizliği
+# önler. Ancak mesa paketinin verdiği dosya adı sürüme göre değişiyor
+# (lvp_icd.json / lvp_icd.x86_64.json). ENV'e sabit ad yazmak, ad değiştiğinde
+# loader'ın HİÇBİR sürücü yüklememesine ve Vulkan testlerinin sessizce
+# atlanmasına yol açıyordu. Bu yüzden imaj derlenirken gerçek dosyaya sabit
+# adlı bir symlink kuruyoruz; lavapipe yoksa imaj derlemesi burada durur.
+RUN mkdir -p /etc/vulkan/icd.d \
+    && ICD="$(ls /usr/share/vulkan/icd.d/lvp_icd*.json 2>/dev/null | head -1)" \
+    && if [ -z "$ICD" ]; then \
+         echo "HATA: lavapipe ICD bulunamadi (mesa-vulkan-drivers eksik?)" >&2; \
+         ls -la /usr/share/vulkan/icd.d/ >&2 || true; \
+         exit 1; \
+       fi \
+    && ln -sf "$ICD" /etc/vulkan/icd.d/lvp_icd.json \
+    && echo "lavapipe ICD -> $ICD"
+
 ENV SDL_VIDEODRIVER=offscreen \
     SDL_AUDIODRIVER=dummy \
-    # Vulkan ICD'sini lavapipe'a sabitle — birden fazla ICD varsa
-    # (örn. NVIDIA driver geçişi) belirsizliği önler.
-    VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json \
+    VK_ICD_FILENAMES=/etc/vulkan/icd.d/lvp_icd.json \
     # Mesa software renderer override (OpenGL kod yolları için).
     MESA_LOADER_DRIVER_OVERRIDE=llvmpipe
 

@@ -1,18 +1,54 @@
 from conan import ConanFile
+from conan.errors import ConanInvalidConfiguration
+from conan.tools.build import check_min_cppstd
 from conan.tools.cmake import CMakeToolchain, CMakeDeps, cmake_layout, CMake
-from conan.tools.files import copy, load
+from conan.tools.files import copy, load, rmdir
+from conan.tools.scm import Version
 import os
 import re
+
+
 class SDLPainterConan(ConanFile):
+    """SDLPainter'ın repo içi Conan recipe'ı.
+
+    NOT: Bu dosya Conan Center'a gönderilecek recipe DEĞİLDİR. CCI recipe'i
+    `conan-io/conan-center-index` deposunda `recipes/sdl_painter/all/` altında
+    yaşar, kaynağı `conandata.yml` üzerinden tarball'dan indirir ve
+    `build_examples`/`build_tests` gibi seçenekleri barındıramaz.
+    Bu dosya geliştiricinin bağımlılıkları çekmesi ve yerel `conan create`
+    denemesi içindir (bkz. roadmap/03-conan-center-plani.md).
+    """
+
+    author = "yazilimperver"
     name = "sdl_painter"
+    description = ("Modern C++17 2D drawing library for SDL3 with "
+                   "interchangeable OpenGL 3.3 and Vulkan 1.1 backends.")
+    license = "MIT"
+    homepage = "https://github.com/yazilimperver/sdl-painter"
+    url = "https://github.com/yazilimperver/sdl-painter"
+    topics = ("sdl", "sdl3", "graphics", "2d", "rendering", "opengl", "vulkan")
+
+    package_type = "library"
     settings = "os", "compiler", "build_type", "arch"
-    exports_sources = "CMakeLists.txt", "cmake/*", "include/*", "src/*"
+    exports_sources = (
+        "CMakeLists.txt", "cmake/*", "include/*", "src/*",
+        # conan create sırasında CMake bu dizinlere de giriyor (secenekler
+        # varsayilan olarak acik); export edilmezlerse configure duser.
+        "examples/*", "tests/*",
+        # package() lisansi pakete kopyaliyor.
+        "LICENSE",
+    )
+
     options = {
+        "shared": [True, False],
+        "fPIC": [True, False],
         "with_vulkan": [True, False],
         "build_examples": [True, False],
         "build_tests": [True, False],
     }
     default_options = {
+        "shared": False,
+        "fPIC": True,
         "with_vulkan": False,
         "build_examples": True,
         "build_tests": True,
@@ -20,6 +56,14 @@ class SDLPainterConan(ConanFile):
         # tüm bağımlılıklarda aynı shared zlib kullan.
         "zlib/*:shared": True,
     }
+
+    @property
+    def _min_cppstd(self):
+        return 17
+
+    @property
+    def _compilers_minimum_version(self):
+        return {"gcc": "8", "clang": "7", "apple-clang": "12", "msvc": "192"}
 
     def set_version(self):
         # Versiyonun tek kaynağı include/sdl_painter/version.h. CMake de aynı
@@ -50,7 +94,31 @@ class SDLPainterConan(ConanFile):
 
         self.version = version
 
+    def config_options(self):
+        if self.settings.os == "Windows":
+            del self.options.fPIC
+
+    def validate(self):
+        if self.settings.os not in ("Linux", "Windows", "FreeBSD"):
+            raise ConanInvalidConfiguration(
+                "%s henuz %s desteklemiyor (macOS v1.1 hedefinde)."
+                % (self.ref, self.settings.os))
+
+        if self.settings.compiler.get_safe("cppstd"):
+            check_min_cppstd(self, self._min_cppstd)
+
+        minimum = self._compilers_minimum_version.get(
+            str(self.settings.compiler))
+        if minimum and Version(self.settings.compiler.version) < minimum:
+            raise ConanInvalidConfiguration(
+                "%s C++%d gerektiriyor; %s %s bunu desteklemiyor."
+                % (self.ref, self._min_cppstd, self.settings.compiler,
+                   self.settings.compiler.version))
+
     def configure(self):
+        if self.options.shared:
+            self.options.rm_safe("fPIC")
+
         if self.settings.os == "Windows":
             # MinGW cross-compile (Windows + gcc): vulkan-loader Conan recipe'ı
             # Windows'ta USE_MASM=True'yu hardcoded set ediyor ve kapatan bir
@@ -84,10 +152,14 @@ class SDLPainterConan(ConanFile):
             self.options["plutovg"].shared = True
 
     def requirements(self):
-        self.requires("sdl/3.2.14")
+        # SDL3: tuketici pencereyi kendisi olusturup Painter'a veriyor, yani
+        # SDL basliklarina ihtiyaci var.
+        self.requires("sdl/3.2.14", transitive_headers=True,
+                      transitive_libs=True)
+        # glm: painter.h dogrudan <glm/glm.hpp> include ediyor — public.
+        self.requires("glm/1.0.3", transitive_headers=True)
         self.requires("glad/0.1.36")
         self.requires("stb/cci.20240531")
-        self.requires("glm/1.0.3")
         self.requires("spdlog/1.15.3", options={"spdlog/*:header_only": True})
         self.requires("sdl_ttf/3.2.2")
 
@@ -95,15 +167,16 @@ class SDLPainterConan(ConanFile):
             self.requires("vulkan-loader/1.3.290.0")
             self.requires("vulkan-headers/1.3.290.0")
 
-        if self.options.build_tests:
-            self.requires("gtest/1.15.0")
-
     def build_requirements(self):
-        # Vulkan shader'larını derlemek için glslc gerekli. shaderc paketini
-        # tool_requires olarak çek — cross-compile'da build profile (Linux)
-        # için derlenir, host binary'lerine bulaşmaz.
-        if self.options.with_vulkan:
-            self.tool_requires("shaderc/2024.1")
+        # GTest yalnizca bu recipe'in kendi testlerini derlemek icin gerekli;
+        # `requires` olsaydi tuketicinin bagimlilik grafigine sizardi.
+        if self.options.build_tests:
+            self.test_requires("gtest/1.15.0")
+
+    # NOT: Eskiden burada `tool_requires("shaderc")` vardi (Vulkan shader'larini
+    # glslc ile derlemek icin). SPIR-V ciktilari artik repo'da tutulup binary'ye
+    # gomuldugu icin gerekmiyor — bkz. ADR-009. glslc yalnizca
+    # -DSDLPAINTER_REGENERATE_SHADERS=ON ile aranir.
 
     def layout(self):
         cmake_layout(self)
@@ -148,33 +221,45 @@ class SDLPainterConan(ConanFile):
         cmake.build()
 
     def package(self):
-        copy(self, "*.h",
-             src=os.path.join(self.source_folder, "include"),
-             dst=os.path.join(self.package_folder, "include"))
-        copy(self, "*.a",
-             src=self.build_folder,
-             dst=os.path.join(self.package_folder, "lib"),
-             keep_path=False)
-        copy(self, "*.lib",
-             src=self.build_folder,
-             dst=os.path.join(self.package_folder, "lib"),
-             keep_path=False)
-        copy(self, "*.so*",
-             src=self.build_folder,
-             dst=os.path.join(self.package_folder, "lib"),
-             keep_path=False)
-        copy(self, "*.dylib",
-             src=self.build_folder,
-             dst=os.path.join(self.package_folder, "lib"),
-             keep_path=False)
-        copy(self, "*.dll",
-             src=self.build_folder,
-             dst=os.path.join(self.package_folder, "bin"),
-             keep_path=False)
+        # Lisans pakete kopyalanmali (Conan Center zorunlu tutuyor, ve dogru
+        # olan da bu — ikili dagitiliyorsa lisansi da dagitilmali).
+        copy(self, "LICENSE",
+             src=self.source_folder,
+             dst=os.path.join(self.package_folder, "licenses"))
+
+        # Binary glob'lamak yerine projenin kendi install kurallarini kullan
+        # (Faz 1.2 ile eklendi). Boylece paket icerigi ile `cmake --install`
+        # ciktisi ayrisamaz ve test binary'leri yanlislikla pakete girmez.
+        cmake = CMake(self)
+        cmake.install()
+
+        # Projenin urettigi CMake config'i pakete girmemeli: Conan kendi
+        # config'ini CMakeDeps ile uretir, ikisi cakisir.
+        rmdir(self, os.path.join(self.package_folder, "lib", "cmake"))
 
     def package_info(self):
-        # Sıra önemli: uygulama çatısı core'a bağımlı (statik link).
-        self.cpp_info.libs = ["sdl_painter_app", "sdl_painter"]
-        self.cpp_info.set_property("cmake_target_name", "sdl_painter::sdl_painter")
+        self.cpp_info.set_property("cmake_file_name", "sdl_painter")
+
+        # --- core: cizim kutuphanesi ---
+        core = self.cpp_info.components["core"]
+        core.set_property("cmake_target_name", "sdl_painter::sdl_painter")
+        core.libs = ["sdl_painter"]
+        core.requires = ["sdl::sdl", "glm::glm", "sdl_ttf::sdl_ttf",
+                         "glad::glad", "stb::stb", "spdlog::spdlog"]
         if self.options.with_vulkan:
-            self.cpp_info.defines.append("SDLPAINTER_HAS_VULKAN")
+            core.requires += ["vulkan-loader::vulkan-loader",
+                              "vulkan-headers::vulkan-headers"]
+            core.defines.append("SDLPAINTER_HAS_VULKAN")
+
+        # OpenGL sistemden geliyor (CMakeLists find_package(OpenGL)).
+        if self.settings.os == "Windows":
+            core.system_libs = ["opengl32"]
+        elif self.settings.os in ("Linux", "FreeBSD"):
+            core.system_libs = ["GL", "m", "dl", "pthread"]
+
+        # --- app: opsiyonel pencere/olay-dongusu katmani (bkz. ADR-008) ---
+        # Ayri component: yalnizca cizim isteyen tuketici bunu linklemez.
+        app = self.cpp_info.components["app"]
+        app.set_property("cmake_target_name", "sdl_painter::app")
+        app.libs = ["sdl_painter_app"]
+        app.requires = ["core"]

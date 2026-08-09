@@ -48,7 +48,25 @@
   test kapsamı dışındaydı. Pencere/context kurulamayan ortamlarda testler
   başarısız olmak yerine atlanır.
 
+- **SPIR-V güncellik kontrolü:** `cmake -P cmake/CheckShaderFreshness.cmake`,
+  GLSL kaynakları değişip `.spv` çıktıları yeniden üretilmediğinde hata verir.
+  Karşılaştırma `sources.sha256` manifesti üzerinden yapıldığı için `glslc`
+  veya Vulkan SDK gerektirmez. CI'da `quality:shader-freshness` job'ı koşar.
+- **CI:** Windows'ta artık `ctest` çalışıyor (daha önce yalnızca derleniyordu);
+  `build:standalone-cmake` (preset'siz derleme + kurulum + tüketici doğrulaması)
+  ve `package:conan-create` job'ları eklendi; clang-format kontrolü zorunlu
+  hâle getirildi.
+
 ### Düzeltildi
+- **Conan paketi doğru üretiliyor:** `package()` artık binary glob'lamak yerine
+  projenin install kurallarını kullanıyor (`cmake.install()`), `LICENSE` pakete
+  kopyalanıyor ve GTest artifact'ları pakete sızmıyor. `gtest` bağımlılığı
+  `test_requires`'a alındı, böylece tüketicinin bağımlılık grafiğine girmiyor.
+  `test_package` çalıştırma yolu düzeltildi.
+- **lavapipe ICD yolu:** CI ve Dockerfile `lvp_icd.x86_64.json` yolunu sabit
+  yazıyordu; mesa sürümüne göre dosya adı `lvp_icd.json` olabiliyor ve yanlış
+  yol verildiğinde Vulkan loader hiçbir sürücü yüklemiyor — Vulkan testleri
+  sessizce atlanıyordu. Yol artık çalışma anında çözülüyor.
 - **Alt proje olarak eklenince yanlış dizin kullanımı:** `cmake/Docs.cmake`,
   `cmake/Doxyfile.in`, `cmake/InsourceGuard.cmake` ve `tests/CMakeLists.txt`
   `CMAKE_SOURCE_DIR` kullanıyordu; `add_subdirectory` ile eklendiğinde bu

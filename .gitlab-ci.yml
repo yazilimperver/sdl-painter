@@ -73,8 +73,12 @@ test:unit:
   needs: ["build:linux:debug"]
   variables:
     SDL_VIDEODRIVER: "offscreen"
-    VK_ICD_FILENAMES: "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
   script:
+    # lavapipe ICD dosya adi mesa surumune gore degisiyor
+    # (lvp_icd.json / lvp_icd.x86_64.json). Sabit yol yanlissa loader
+    # HIC surucu yuklemiyor ve Vulkan testleri sessizce SKIP oluyor.
+    - export VK_ICD_FILENAMES=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json 2>/dev/null | head -1)
+    - echo "lavapipe ICD=${VK_ICD_FILENAMES:-<bulunamadi, loader varsayilani>}"
     - ctest --preset linux-debug --output-on-failure
 
 test:unit:asan:
@@ -86,8 +90,12 @@ test:unit:asan:
   needs: []
   variables:
     SDL_VIDEODRIVER: "offscreen"
-    VK_ICD_FILENAMES: "/usr/share/vulkan/icd.d/lvp_icd.x86_64.json"
   script:
+    # lavapipe ICD dosya adi mesa surumune gore degisiyor
+    # (lvp_icd.json / lvp_icd.x86_64.json). Sabit yol yanlissa loader
+    # HIC surucu yuklemiyor ve Vulkan testleri sessizce SKIP oluyor.
+    - export VK_ICD_FILENAMES=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json 2>/dev/null | head -1)
+    - echo "lavapipe ICD=${VK_ICD_FILENAMES:-<bulunamadi, loader varsayilani>}"
     - |
       conan install . --output-folder=build/linux-debug-asan/generators --build=missing \
         -s build_type=Debug \
