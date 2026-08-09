@@ -22,7 +22,7 @@ jobs:
     env:
       CONAN_HOME: /root/.conan2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - name: conan install (Debug)
@@ -54,7 +54,7 @@ jobs:
     env:
       CONAN_HOME: /root/.conan2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - name: conan install (Release)
@@ -84,7 +84,7 @@ jobs:
     env:
       CONAN_HOME: ${{ github.workspace }}\.conan2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - uses: ilammy/msvc-dev-cmd@v1
@@ -123,7 +123,7 @@ jobs:
     env:
       CONAN_HOME: ${{ github.workspace }}\.conan2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - uses: ilammy/msvc-dev-cmd@v1
@@ -159,7 +159,7 @@ jobs:
       CONAN_HOME: /root/.conan2
       SDL_VIDEODRIVER: offscreen
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       # lavapipe ICD dosyasinin adi mesa surumune gore degisiyor
@@ -203,7 +203,7 @@ jobs:
       CONAN_HOME: /root/.conan2
       SDL_VIDEODRIVER: offscreen
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       # lavapipe ICD dosyasinin adi mesa surumune gore degisiyor
@@ -248,7 +248,7 @@ jobs:
     env:
       CONAN_HOME: /root/.conan2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - name: conan install
@@ -287,7 +287,7 @@ jobs:
     name: quality:shader-freshness
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: SPIR-V guncel mi
         run: cmake -P cmake/CheckShaderFreshness.cmake
 
@@ -302,7 +302,7 @@ jobs:
     env:
       CONAN_HOME: /root/.conan2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - name: conan create + test_package
@@ -321,7 +321,7 @@ jobs:
     container:
       image: yazilimperver/sdl-painter:ci-v1.0
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # Zorunlu: CONTRIBUTING.md "format kontrolu zorunludur" diyor, CI de
       # oyle davranmali. Duzeltmek icin: ./scripts/format-check.sh --fix
       # Kapsam bilincli olarak include/ + src/ ile sinirli. tests/ altindaki
@@ -340,7 +340,7 @@ jobs:
     env:
       CONAN_HOME: /root/.conan2
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - name: conan install + build (Debug)
@@ -369,7 +369,7 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
       - name: Install doxygen (resmi binary — Mermaid native desteği için)
@@ -441,7 +441,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
