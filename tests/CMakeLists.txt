@@ -1,4 +1,6 @@
 set(TEST_SOURCES
+    test_version.cpp
+    test_renderer_smoke.cpp
     test_color.cpp
     test_geometry.cpp
     test_pen_brush.cpp
@@ -15,9 +17,11 @@ set(TEST_SOURCES
 add_executable(sdl_painter_tests ${TEST_SOURCES})
 
 target_include_directories(sdl_painter_tests PRIVATE
-    ${CMAKE_SOURCE_DIR}/src
+    ${PROJECT_SOURCE_DIR}/src
     # phase8_tictactoe demosunun saf oyun mantığı (tictactoe_logic.h) burada.
-    ${CMAKE_SOURCE_DIR}/examples
+    ${PROJECT_SOURCE_DIR}/examples
+    # Gömülü shader başlıkları — test_renderer_smoke.cpp SPIR-V'yi doğruluyor.
+    ${PROJECT_BINARY_DIR}/generated
 )
 
 target_link_libraries(sdl_painter_tests

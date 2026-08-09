@@ -1,8 +1,9 @@
 #include "vulkan_textured_pipeline.h"
 
+#include "sdl_painter/embedded_vk_shaders.h"
+
 #include <array>
 #include <cstddef>
-#include <fstream>
 #include <spdlog/spdlog.h>
 #include <vector>
 
@@ -17,24 +18,14 @@ VulkanTexturedPipeline::~VulkanTexturedPipeline() {
 }
 
 // ---------------------------------------------------------------------------
-// Yardımcı: .spv yükle
+// Yardımcı: gömülü SPIR-V'den shader modülü oluştur
 // ---------------------------------------------------------------------------
-VkShaderModule VulkanTexturedPipeline::LoadSpv(VkDevice device,
-                                               const std::string& path) {
-  std::ifstream file(path, std::ios::ate | std::ios::binary);
-  if (!file.is_open()) {
-    spdlog::error("VulkanTexturedPipeline: shader açılamadı: {}", path);
-    return VK_NULL_HANDLE;
-  }
-  const std::size_t kFileSize = static_cast<std::size_t>(file.tellg());
-  std::vector<char> code(kFileSize);
-  file.seekg(0);
-  file.read(code.data(), static_cast<std::streamsize>(kFileSize));
-
+VkShaderModule VulkanTexturedPipeline::CreateShaderModule(
+    VkDevice device, const uint32_t* code, std::size_t byte_size) {
   VkShaderModuleCreateInfo ci{};
   ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-  ci.codeSize = kFileSize;
-  ci.pCode = reinterpret_cast<const uint32_t*>(code.data());  // NOLINT
+  ci.codeSize = byte_size;
+  ci.pCode = code;
 
   VkShaderModule mod = VK_NULL_HANDLE;
   VK_CHECK_HANDLE(vkCreateShaderModule(device, &ci, nullptr, &mod));
@@ -44,8 +35,7 @@ VkShaderModule VulkanTexturedPipeline::LoadSpv(VkDevice device,
 // ---------------------------------------------------------------------------
 // Init
 // ---------------------------------------------------------------------------
-bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
-                                  const std::string& shader_dir) {
+bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass) {
   // --- Descriptor set layout: set=0, binding=0 → combined image sampler ---
   VkDescriptorSetLayoutBinding sampler_binding{};
   sampler_binding.binding = 0;
@@ -84,12 +74,11 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass,
     return false;
   }
 
-  // --- Shader modülleri ---
-  const std::string kVertPath = shader_dir + "/textured.vert.spv";
-  const std::string kFragPath = shader_dir + "/textured.frag.spv";
-
-  VkShaderModule vert_mod = LoadSpv(device, kVertPath);
-  VkShaderModule frag_mod = LoadSpv(device, kFragPath);
+  // --- Shader modülleri (binary'ye gömülü SPIR-V) ---
+  VkShaderModule vert_mod = CreateShaderModule(device, detail::kTexturedVert,
+                                               sizeof(detail::kTexturedVert));
+  VkShaderModule frag_mod = CreateShaderModule(device, detail::kTexturedFrag,
+                                               sizeof(detail::kTexturedFrag));
 
   if (vert_mod == VK_NULL_HANDLE || frag_mod == VK_NULL_HANDLE) {
     if (vert_mod != VK_NULL_HANDLE) {

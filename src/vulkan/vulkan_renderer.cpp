@@ -59,14 +59,16 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
   }
 
   // Phase 5b: untextured graphics pipeline
-  mShaderDir = ResolveShaderDir();
+  //
+  // Pipeline kurulumu başarısız olursa sert hata veriyoruz. Eskiden burada
+  // uyarı loglanıp devam ediliyordu; gerekçe, .spv dosyalarının çalışma
+  // zamanında eksik olabilmesiydi. Shader'lar artık binary'ye gömülü olduğu
+  // için o senaryo imkânsız (bkz. ADR-009) ve sessizce devam etmek kullanıcıya
+  // sebebi log'a gömülü siyah bir pencere bırakıyordu.
   mPipeline = std::make_unique<VulkanPipeline>();
-  if (!mPipeline->Init(mContext->GetDevice(), mSwapchain->GetRenderPass(),
-                       mShaderDir)) {
-    spdlog::warn(
-        "VulkanRenderer: pipeline init failed (shader files missing?). "
-        "DrawTriangles will be a no-op.");
-    mPipeline.reset();
+  if (!mPipeline->Init(mContext->GetDevice(), mSwapchain->GetRenderPass())) {
+    spdlog::error("VulkanRenderer: untextured pipeline init failed.");
+    return false;
   }
 
   // Phase 5c: textured vertex ring buffer — aynı slot mantığı.
@@ -81,11 +83,9 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
   // Phase 5c: textured pipeline
   mTexturedPipeline = std::make_unique<VulkanTexturedPipeline>();
   if (!mTexturedPipeline->Init(mContext->GetDevice(),
-                               mSwapchain->GetRenderPass(), mShaderDir)) {
-    spdlog::warn(
-        "VulkanRenderer: textured pipeline init failed (shader files "
-        "missing?). DrawTextured will be a no-op.");
-    mTexturedPipeline.reset();
+                               mSwapchain->GetRenderPass())) {
+    spdlog::error("VulkanRenderer: textured pipeline init failed.");
+    return false;
   }
 
   // Identity projection başlangıç değeri (Painter SetProjectionMatrix çağırır)
@@ -280,20 +280,6 @@ void VulkanRenderer::SubmitAndPresent() {
     spdlog::error("vkQueuePresentKHR failed: {}",
                   vk_detail::VkResultToString(res));
   }
-}
-
-std::string VulkanRenderer::ResolveShaderDir() {
-  // Build sistemi tarafından tanımlanan makroyu önce dene.
-#ifdef SDLPAINTER_VULKAN_SHADER_DIR
-  return SDLPAINTER_VULKAN_SHADER_DIR;
-#else
-  // Fallback: executable yanında vulkan_shaders/ dizini.
-  const char* base = SDL_GetBasePath();
-  if (base != nullptr) {
-    return std::string(base) + "vulkan_shaders";
-  }
-  return "vulkan_shaders";
-#endif
 }
 
 void VulkanRenderer::ApplyDynamicViewportScissor(VkCommandBuffer cmd) const {

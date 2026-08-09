@@ -4,31 +4,34 @@ cmake_minimum_required(VERSION 3.20)
 set(SDLPAINTER_VERSION_HEADER "${CMAKE_CURRENT_SOURCE_DIR}/include/sdl_painter/version.h")
 file(READ "${SDLPAINTER_VERSION_HEADER}" SDLPAINTER_VERSION_HEADER_CONTENT)
 
-# SDL surum kontrolleri
-foreach(_component MAJOR MINOR PATCH)
+# Surum bilesenleri: `inline constexpr int32_t kVersionMajor = 1;` gibi
+# satirlardan okunur. `constexpr int32_t` capasi kasitli — dosyada yalnizca
+# tanimda gecer, dokuman yorumlarinda gecmez.
+foreach(_component Major Minor Patch)
     if(NOT SDLPAINTER_VERSION_HEADER_CONTENT MATCHES
-       "#define SDLPAINTER_VERSION_${_component}[^0-9]+([0-9]+)")
+       "constexpr int32_t kVersion${_component} = ([0-9]+)")
         message(FATAL_ERROR
-            "SDLPAINTER_VERSION_${_component} okunamadi: ${SDLPAINTER_VERSION_HEADER}")
+            "kVersion${_component} okunamadi: ${SDLPAINTER_VERSION_HEADER}")
     endif()
-    set(SDLPAINTER_VERSION_${_component} "${CMAKE_MATCH_1}")
+    string(TOUPPER "${_component}" _component_upper)
+    set(SDLPAINTER_VERSION_${_component_upper} "${CMAKE_MATCH_1}")
 endforeach()
 
 set(SDLPAINTER_VERSION
     "${SDLPAINTER_VERSION_MAJOR}.${SDLPAINTER_VERSION_MINOR}.${SDLPAINTER_VERSION_PATCH}")
 
-# STRING makrosu sayisal makrolarla uyusmali — elle guncellemede kacan
+# kVersionString sayisal bilesenlerle uyusmali — elle guncellemede kacan
 # tutarsizligi configure asamasinda yakalar.
 if(NOT SDLPAINTER_VERSION_HEADER_CONTENT MATCHES
-   "#define SDLPAINTER_VERSION_STRING[^\"]+\"([^\"]+)\"")
+   "constexpr std::string_view kVersionString = \"([^\"]+)\"")
     message(FATAL_ERROR
-        "SDLPAINTER_VERSION_STRING okunamadi: ${SDLPAINTER_VERSION_HEADER}")
+        "kVersionString okunamadi: ${SDLPAINTER_VERSION_HEADER}")
 endif()
 
 if(NOT CMAKE_MATCH_1 STREQUAL SDLPAINTER_VERSION)
     message(FATAL_ERROR
-        "version.h tutarsiz: SDLPAINTER_VERSION_STRING=\"${CMAKE_MATCH_1}\" "
-        "ancak sayisal makrolar ${SDLPAINTER_VERSION} diyor.")
+        "version.h tutarsiz: kVersionString=\"${CMAKE_MATCH_1}\" "
+        "ancak sayisal sabitler ${SDLPAINTER_VERSION} diyor.")
 endif()
 
 project(SDLPainter VERSION ${SDLPAINTER_VERSION} LANGUAGES CXX)
@@ -50,13 +53,18 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+# Yalnizca ust proje iken: alt proje olarak eklendigimizde tuketicinin
+# ayarini ezmeyelim.
+if(PROJECT_IS_TOP_LEVEL)
+    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+endif()
 
 # MinGW cross-compile: libgcc_s_seh-1.dll ve libstdc++-6.dll çalışma zamanı
 # bağımlılıklarını exe'ye gömerek dağıtımı tek-dosyaya indir.
-if(MINGW)
-    add_link_options(-static-libgcc -static-libstdc++)
-endif()
+#
+# Dizin kapsamli add_link_options() KULLANILMAZ: add_subdirectory() ile ekleyen
+# tuketicinin kendi hedefleri de bundan etkilenirdi. Bayraklar asagida
+# dogrudan sdl_painter / sdl_painter_app hedeflerine veriliyor.
 
 # MinGW cross-compile'da Conan'dan gelen shared DLL'ler libgcc_s_seh-1.dll'e
 # dinamik bağımlı kalabiliyor.
@@ -78,8 +86,11 @@ endif()
 
 # Options (Conan tarafından da set edilebilir)
 option(SDLPAINTER_WITH_VULKAN "Enable Vulkan backend" OFF)
-option(SDLPAINTER_BUILD_EXAMPLES "Build examples" ON)
-option(SDLPAINTER_BUILD_TESTS "Build tests" ON)
+# Ornek ve testler yalnizca SDLPainter ust proje iken varsayilan olarak acik.
+# add_subdirectory()/FetchContent ile ekleyen tuketici, istemedigi 15 ornegi ve
+# GTest bagimliligini derlemek zorunda kalmasin.
+option(SDLPAINTER_BUILD_EXAMPLES "Build examples" ${PROJECT_IS_TOP_LEVEL})
+option(SDLPAINTER_BUILD_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
 
 # Conan ile gelen paketleri bul
 find_package(SDL3 REQUIRED)
@@ -92,6 +103,29 @@ find_package(OpenGL REQUIRED)
 # Compiler warnings + sanitizer seçenekleri
 include(cmake/CompilerWarnings.cmake)
 include(cmake/CompilerOptions.cmake)
+
+# Kurulum dizinleri (CMAKE_INSTALL_INCLUDEDIR/LIBDIR/BINDIR) — hedef arayuzleri
+# bunlari kullandigi icin hedeflerden ONCE include edilmeli.
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+
+# --- Shader gomme ---
+# Shader'lar binary'ye gomulur; calisma zamaninda dosya aranmaz. Paketlenmis
+# kutuphanenin (Conan/vcpkg/sistem kurulumu) tuketici tarafinda ek dosya
+# kopyalamadan calisabilmesi icin zorunlu.
+include(cmake/EmbedShaders.cmake)
+
+set(SDLPAINTER_GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated/sdl_painter")
+set(SDLPAINTER_VULKAN_SHADER_SPIRV_DIR
+    "${CMAKE_CURRENT_SOURCE_DIR}/src/vulkan/shaders/spirv")
+
+sdlpainter_embed_glsl(
+    OUTPUT "${SDLPAINTER_GENERATED_DIR}/embedded_gl_shaders.h"
+    FILES
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/opengl/shaders/basic.vert"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/opengl/shaders/basic.frag"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/opengl/shaders/textured.vert"
+        "${CMAKE_CURRENT_SOURCE_DIR}/src/opengl/shaders/textured.frag")
 
 # Ana kütüphane kaynak dosyaları
 set(SDLPAINTER_SOURCES
@@ -125,58 +159,65 @@ if(SDLPAINTER_WITH_VULKAN)
         src/vulkan/vulkan_textured_pipeline.cpp
     )
 
-    # --- Vulkan shader derleme (offline, glslc) ---
+    # --- SPIR-V gomme ---
+    # Derlenmis .spv dosyalari repo'da tutulur (src/vulkan/shaders/spirv/) ve
+    # binary'ye gomulur. Boylece kutuphaneyi derlemek icin Vulkan SDK / glslc
+    # GEREKMEZ ve calisma zamaninda hicbir .spv dosyasi aranmaz.
+    sdlpainter_embed_spirv(
+        OUTPUT "${SDLPAINTER_GENERATED_DIR}/embedded_vk_shaders.h"
+        FILES
+            "${SDLPAINTER_VULKAN_SHADER_SPIRV_DIR}/untextured.vert.spv"
+            "${SDLPAINTER_VULKAN_SHADER_SPIRV_DIR}/untextured.frag.spv"
+            "${SDLPAINTER_VULKAN_SHADER_SPIRV_DIR}/textured.vert.spv"
+            "${SDLPAINTER_VULKAN_SHADER_SPIRV_DIR}/textured.frag.spv")
+endif()
+
+# --- Shader yeniden uretimi (yalnizca shader kaynagini degistiren gelistirici) ---
+# GLSL kaynagini degistirdiysen: -DSDLPAINTER_REGENERATE_SHADERS=ON ile configure
+# et, `regenerate_shaders` hedefini derle ve uretilen .spv dosyalarini commit'le.
+# Normal derlemede glslc HIC aranmaz.
+option(SDLPAINTER_REGENERATE_SHADERS
+       "Vulkan SPIR-V ciktilarini glslc ile yeniden uret (gelistirici araci)" OFF)
+
+if(SDLPAINTER_REGENERATE_SHADERS)
     find_program(GLSLC_EXECUTABLE glslc
-        HINTS
-            "$ENV{VULKAN_SDK}/Bin"
-            "$ENV{VULKAN_SDK}/bin"
+        HINTS "$ENV{VULKAN_SDK}/Bin" "$ENV{VULKAN_SDK}/bin"
         DOC "glslc SPIR-V compiler")
-
     if(NOT GLSLC_EXECUTABLE)
-        message(WARNING "glslc not found — Vulkan shaders will not be compiled. "
-                        "Install the Vulkan SDK and ensure glslc is on PATH or "
-                        "set VULKAN_SDK environment variable.")
-    else()
-        set(VULKAN_SHADER_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src/vulkan/shaders)
-        set(VULKAN_SHADER_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/vulkan_shaders CACHE STRING
-            "Directory where compiled Vulkan SPIR-V shaders are stored")
-        file(MAKE_DIRECTORY ${VULKAN_SHADER_BINARY_DIR})
-
-        # compile_vulkan_shader(TARGET shader.vert) → TARGET_FILE_DIR/vulkan_shaders/shader.vert.spv
-        function(compile_vulkan_shader SHADER_FILE)
-            set(SRC "${VULKAN_SHADER_SOURCE_DIR}/${SHADER_FILE}")
-            set(SPV "${VULKAN_SHADER_BINARY_DIR}/${SHADER_FILE}.spv")
-            add_custom_command(
-                OUTPUT  "${SPV}"
-                COMMAND ${GLSLC_EXECUTABLE} "${SRC}" -o "${SPV}"
-                DEPENDS "${SRC}"
-                COMMENT "Compiling Vulkan shader: ${SHADER_FILE}"
-            )
-            set_source_files_properties("${SPV}" PROPERTIES GENERATED TRUE)
-            # SPV dosyasını global listene ekle.
-            set(VULKAN_SHADER_SPVS ${VULKAN_SHADER_SPVS} "${SPV}" PARENT_SCOPE)
-        endfunction()
-
-        compile_vulkan_shader(untextured.vert)
-        compile_vulkan_shader(untextured.frag)
-        compile_vulkan_shader(textured.vert)
-        compile_vulkan_shader(textured.frag)
-
-        add_custom_target(vulkan_shaders ALL DEPENDS ${VULKAN_SHADER_SPVS})
+        message(FATAL_ERROR
+            "SDLPAINTER_REGENERATE_SHADERS=ON ancak glslc bulunamadi. "
+            "Vulkan SDK kurun veya VULKAN_SDK ortam degiskenini ayarlayin.")
     endif()
+
+    set(SDLPAINTER_REGENERATED_SPVS "")
+    foreach(_shader untextured.vert untextured.frag textured.vert textured.frag)
+        set(_src "${CMAKE_CURRENT_SOURCE_DIR}/src/vulkan/shaders/${_shader}")
+        set(_spv "${SDLPAINTER_VULKAN_SHADER_SPIRV_DIR}/${_shader}.spv")
+        add_custom_command(
+            OUTPUT  "${_spv}"
+            COMMAND "${GLSLC_EXECUTABLE}" "${_src}" -o "${_spv}"
+            DEPENDS "${_src}"
+            COMMENT "glslc: ${_shader} -> ${_shader}.spv (kaynak agacina yaziliyor)")
+        list(APPEND SDLPAINTER_REGENERATED_SPVS "${_spv}")
+    endforeach()
+
+    add_custom_target(regenerate_shaders DEPENDS ${SDLPAINTER_REGENERATED_SPVS}
+        COMMENT "SPIR-V ciktilari yeniden uretildi — degisiklikleri commit'lemeyi unutmayin")
 endif()
 
 find_package(SDL3_ttf REQUIRED)
 
 add_library(sdl_painter ${SDLPAINTER_SOURCES})
 
-if(SDLPAINTER_WITH_VULKAN AND TARGET vulkan_shaders)
-    add_dependencies(sdl_painter vulkan_shaders)
-endif()
-
 target_include_directories(sdl_painter
-    PUBLIC  include
+    PUBLIC
+        # Build agacinda kaynak include/, kurulumda CMAKE_INSTALL_INCLUDEDIR.
+        # Goreli yol export edilemez; generator expression sart.
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     PRIVATE src
+    # Gomulu shader basliklari (embedded_gl_shaders.h / embedded_vk_shaders.h)
+    PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated"
 )
 
 target_link_libraries(sdl_painter
@@ -188,32 +229,12 @@ target_link_libraries(sdl_painter
     PRIVATE spdlog::spdlog_header_only
 )
 
-# OpenGL shader kaynak dizinini makro olarak ver (Vulkan ile tutarlı pattern).
-# Development build'inde shader'ları doğrudan source ağacından okumayı sağlar;
-# install build'inde fallback olarak SDL_GetBasePath() + "shaders/" devreye girer.
-#
-# Windows hedeflerinde tanımlanmıyor: cross-compile'da Linux source path'i
-# (örn. /workspace/src/opengl/shaders) Windows exe'sine gömülüp runtime'da
-# çözülemiyor. SDL_GetBasePath() fallback'i devreye girsin —
-# sdlpainter_copy_shaders() exe yanına shaders/ dizinini zaten kopyalıyor.
-if(NOT WIN32)
-    target_compile_definitions(sdl_painter PRIVATE
-        SDLPAINTER_OPENGL_SHADER_DIR="${CMAKE_CURRENT_SOURCE_DIR}/src/opengl/shaders")
-endif()
-
 if(SDLPAINTER_WITH_VULKAN)
     target_compile_definitions(sdl_painter PUBLIC SDLPAINTER_HAS_VULKAN)
     target_link_libraries(sdl_painter
         PRIVATE Vulkan::Loader
         PRIVATE vulkan-headers::vulkan-headers
     )
-    # Shader binary dizinini kütüphaneye makro olarak ver (add_library'den sonra).
-    # Windows'ta tanımlama: OpenGL ile aynı cross-compile path-gömme tuzağı.
-    # SDL_GetBasePath() + "vulkan_shaders" fallback'i devreye girsin.
-    if(DEFINED VULKAN_SHADER_BINARY_DIR AND NOT WIN32)
-        target_compile_definitions(sdl_painter PRIVATE
-            SDLPAINTER_VULKAN_SHADER_DIR="${VULKAN_SHADER_BINARY_DIR}")
-    endif()
 endif()
 
 if(TARGET SDL3_ttf::SDL3_ttf-static)
@@ -234,7 +255,9 @@ add_library(sdl_painter_app
     src/app/event_translator.cpp
 )
 target_include_directories(sdl_painter_app
-    PUBLIC  include
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     PRIVATE src
 )
 target_link_libraries(sdl_painter_app
@@ -244,64 +267,73 @@ target_link_libraries(sdl_painter_app
 set_target_warnings(sdl_painter_app)
 set_target_sanitizers(sdl_painter_app)
 
-# Helper: Vulkan SPIR-V dosyalarını executable'ın yanındaki vulkan_shaders/ dizinine kopyalar.
-#
-# MSVC: OpenGL shader'larıyla aynı race condition riski var (5 Vulkan exe aynı dizine
-# paralel yazıyor). Tek merkez target ile çözülür.
-if(SDLPAINTER_WITH_VULKAN AND TARGET vulkan_shaders)
-    if(MSVC)
-        add_custom_target(copy_vulkan_shaders ALL
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${VULKAN_SHADER_BINARY_DIR}"
-                "${CMAKE_CURRENT_BINARY_DIR}/examples/$<CONFIG>/vulkan_shaders"
-            COMMENT "Copying Vulkan shaders"
-        )
-        add_dependencies(copy_vulkan_shaders vulkan_shaders)
-    endif()
+# --- Namespace'li ALIAS hedefler ---
+# add_subdirectory()/FetchContent ile ekleyen tuketici de kurulmus paketle
+# AYNI ismi kullanabilsin diye. Ismin iki yolda ayni olmasi, ornek kodun
+# her iki senaryoda da calismasini saglar.
+add_library(sdl_painter::sdl_painter ALIAS sdl_painter)
+add_library(sdl_painter::app         ALIAS sdl_painter_app)
+
+# sdl_painter_app export'ta `sdl_painter::app` olarak gorunsun
+# (varsayilan `sdl_painter::sdl_painter_app` olurdu).
+set_target_properties(sdl_painter_app PROPERTIES EXPORT_NAME app)
+
+set_target_properties(sdl_painter sdl_painter_app PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+    VERSION   ${PROJECT_VERSION}
+    SOVERSION ${PROJECT_VERSION_MAJOR}
+)
+
+# MinGW runtime'ini exe'ye gom — hedef kapsamli, tuketiciye sizmaz.
+if(MINGW)
+    target_link_options(sdl_painter      PRIVATE -static-libgcc -static-libstdc++)
+    target_link_options(sdl_painter_app  PRIVATE -static-libgcc -static-libstdc++)
 endif()
 
-function(sdlpainter_copy_vulkan_shaders target)
-    if(SDLPAINTER_WITH_VULKAN AND TARGET vulkan_shaders)
-        if(MSVC)
-            if(TARGET copy_vulkan_shaders)
-                add_dependencies(${target} copy_vulkan_shaders)
-            endif()
-        else()
-            # Ninja/Make: binary dir sabit, $<TARGET_FILE_DIR> WSL mount sorunu yaratır
-            add_dependencies(${target} vulkan_shaders)
-            add_custom_command(TARGET ${target} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_directory
-                    "${VULKAN_SHADER_BINARY_DIR}"
-                    "${CMAKE_CURRENT_BINARY_DIR}/vulkan_shaders"
-                COMMENT "Copying Vulkan shaders for ${target}"
-            )
-        endif()
-    endif()
-endfunction()
-
-# Helper: OpenGL shader dosyalarını her executable'ın binary dizinine kopyalar.
+# --- Kurulum ve export ---
 #
-# MSVC: Paralel build'de birden fazla exe aynı dizine aynı anda yazmayı
-# denediğinde race condition çıkıyor. Tek bir merkez target ile çözülür —
-# CMake jobserver bu target'ın yalnızca bir kez ve sıralı çalışmasını garantiler.
-if(MSVC)
-    add_custom_target(copy_opengl_shaders ALL
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
-            "${CMAKE_SOURCE_DIR}/src/opengl/shaders"
-            "${CMAKE_CURRENT_BINARY_DIR}/examples/$<CONFIG>/shaders"
-        COMMENT "Copying OpenGL shaders"
-    )
-endif()
+# Bu blok olmadan kutuphane repo disindan tuketilemez: `cmake --install`
+# hicbir sey kurmaz, `find_package(sdl_painter)` calismaz. Conan/vcpkg
+# paketlemesi de bunun ustune biner (recipe `cmake.install()` cagirir).
 
-function(sdlpainter_copy_shaders target)
-    if(MSVC)
-        add_dependencies(${target} copy_opengl_shaders)
-    else()
-        # Ninja/Make: configure zamanında kopyala — WSL /mnt/ mount sorununu önler
-        set(SHADER_SRC_DIR "${CMAKE_SOURCE_DIR}/src/opengl/shaders")
-        file(COPY "${SHADER_SRC_DIR}" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}")
-    endif()
-endfunction()
+install(TARGETS sdl_painter sdl_painter_app
+        EXPORT  sdl_painterTargets
+        RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+        LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
+        INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+install(EXPORT sdl_painterTargets
+        FILE        sdl_painterTargets.cmake
+        NAMESPACE   sdl_painter::
+        DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/sdl_painter)
+
+# Config dosyasi, tuketicinin PUBLIC bagimliliklari bulabilmesi icin
+# find_dependency cagirir. STATIC kutuphanede PRIVATE bagimliliklar da
+# $<LINK_ONLY:...> olarak export'a girer ve tuketici tarafinda hedeflerinin
+# var olmasi gerekir — bu yuzden hepsi sablonda aranir.
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/cmake/sdl_painterConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/sdl_painterConfig.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/sdl_painter)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/sdl_painterConfigVersion.cmake"
+    VERSION       ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/sdl_painterConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/sdl_painterConfigVersion.cmake"
+    DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/sdl_painter)
+
+# Not: Eskiden burada sdlpainter_copy_shaders() ve
+# sdlpainter_copy_vulkan_shaders() yardimcilari vardi; shader dosyalarini her
+# executable'in yanina kopyaliyorlardi (MSVC'de paralel yazma race condition'i
+# icin ayrica merkezi target'lar gerekiyordu). Shader'lar artik binary'ye
+# gomulu oldugu icin hicbiri gerekmiyor — bkz. cmake/EmbedShaders.cmake.
 
 # Helper: Windows hedeflerinde Conan'dan gelen shared DLL'leri (SDL3, SDL3_ttf,
 # harfbuzz, freetype, plutosvg, plutovg, zlib, ...) executable'ın yanına
@@ -377,4 +409,8 @@ if(SDLPAINTER_BUILD_TESTS)
 endif()
 
 # Docs — Doxygen varsa sdlpainter_docs target'ı oluşturur, yoksa sessizce atlar.
-include(cmake/Docs.cmake)
+# Yalnizca ust proje iken: alt proje olarak eklenen tuketicinin hedef listesini
+# kirletmeyelim, ayrica gereksiz find_package(Doxygen) maliyeti olmasin.
+if(PROJECT_IS_TOP_LEVEL)
+    include(cmake/Docs.cmake)
+endif()

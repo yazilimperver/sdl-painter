@@ -56,6 +56,27 @@ bool CheckValidationLayerSupport() {
   return false;
 }
 
+/// @brief Verilen instance extension'ı loader destekliyor mu?
+bool IsInstanceExtensionAvailable(const char* name) {
+  uint32_t count = 0;
+  vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
+  std::vector<VkExtensionProperties> available(count);
+  vkEnumerateInstanceExtensionProperties(nullptr, &count, available.data());
+  for (const auto& ext : available) {
+    if (std::strcmp(ext.extensionName, name) == 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// @brief Extension listesinde verilen ad zaten var mı?
+bool ContainsExtension(const std::vector<const char*>& list, const char* name) {
+  return std::any_of(list.begin(), list.end(), [name](const char* entry) {
+    return std::strcmp(entry, name) == 0;
+  });
+}
+
 VkDebugUtilsMessengerCreateInfoEXT MakeDebugMessengerCreateInfo() {
   VkDebugUtilsMessengerCreateInfoEXT info{};
   info.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
@@ -154,6 +175,25 @@ bool VkContext::CreateInstance() {
   if (mValidationEnabled) {
     extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
   }
+
+#ifdef VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME
+  // Başsız (offscreen/dummy) video sürücüsünde SDL, surface'i
+  // VK_EXT_headless_surface ile oluşturur — ancak bu extension'ı
+  // SDL_Vulkan_GetInstanceExtensions() listesinde **bildirmez**; yalnızca
+  // VK_KHR_surface döndürür. Sonuç: SDL_Vulkan_CreateSurface
+  // "VK_EXT_headless_surface extension is not enabled" ile başarısız olur.
+  //
+  // Mevcutsa kendimiz ekliyoruz. Böylece CI ve WSL2 gibi GPU'suz ortamlarda
+  // Vulkan backend'i gerçekten test edilebiliyor. Extension bulunmayan
+  // platformlarda (ör. Windows loader'ı) sessizce atlanır; masaüstü
+  // çalıştırmada davranış değişmez.
+  if (!ContainsExtension(extensions, VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME) &&
+      IsInstanceExtensionAvailable(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME)) {
+    extensions.push_back(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
+    spdlog::debug("VkContext: {} etkinleştirildi (başsız surface desteği).",
+                  VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
+  }
+#endif
 
   std::vector<const char*> layers;
   if (mValidationEnabled) {

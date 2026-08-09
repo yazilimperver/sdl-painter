@@ -2,6 +2,69 @@
 
 ## [Yayınlanmadı]
 
+### Değişti
+- **Shader'lar binary'ye gömüldü:** GLSL kaynakları ve derlenmiş SPIR-V modülleri
+  artık kütüphane binary'sine gömülüyor; çalışma zamanında hiçbir shader dosyası
+  aranmıyor. Daha önce shader dizini ya kaynak ağacı yolu olarak binary'ye
+  gömülüyor ya da `SDL_GetBasePath()` ile executable'ın yanında aranıyordu — bu,
+  paketlenmiş kütüphaneyi kullanan tüketicinin shader dosyalarını kendi çıktı
+  dizinine elle kopyalamasını gerektiriyordu (bkz. ADR-009).
+- **Vulkan SDK artık derleme için gerekli değil:** SPIR-V çıktıları
+  `src/vulkan/shaders/spirv/` altında repo'da tutuluyor. `glslc` yalnızca shader
+  kaynağını değiştirenler için, `-DSDLPAINTER_REGENERATE_SHADERS=ON` ile
+  gelen `regenerate_shaders` hedefinde aranıyor.
+- **`VulkanRenderer::Initialize()` pipeline hatasında artık başarısız oluyor:**
+  Eskiden uyarı loglayıp devam ediyor, kullanıcıya sebebi log'a gömülü boş bir
+  pencere bırakıyordu. Shader dosyaları artık eksik olamayacağı için bu sessiz
+  degradasyonun gerekçesi kalmadı; hata `Painter::IsValid() == false` olarak
+  yukarı taşınıyor.
+- **Sürüm sabitleri makrodan `constexpr`'a taşındı:** `SDLPAINTER_VERSION_*`
+  makroları kaldırıldı; yerine `sdl_painter::kVersionMajor/Minor/Patch` ve
+  `kVersionString` geldi. Sürüm artık `#if` içinde kullanılamaz; tüketici
+  tarafında sürüm kısıtı `find_package(sdl_painter 1.1 CONFIG REQUIRED)` ile
+  ifade edilir.
+
+### Eklendi
+- **CMake kurulum/export katmanı:** Kütüphane artık `cmake --install` ile
+  kurulabiliyor ve dışarıdan tüketilebiliyor:
+  ```cmake
+  find_package(sdl_painter CONFIG REQUIRED)
+  target_link_libraries(my_app PRIVATE sdl_painter::sdl_painter)
+  ```
+  `FetchContent`/`add_subdirectory` ile ekleyen tüketici de **aynı hedef ismini**
+  kullanır (`sdl_painter::sdl_painter`, opsiyonel uygulama çatısı için
+  `sdl_painter::app`). Örnekler, testler ve Doxygen hedefi yalnızca SDLPainter
+  üst proje iken varsayılan olarak açık.
+- **Başsız Vulkan desteği (`VK_EXT_headless_surface`):** SDL, offscreen/dummy
+  video sürücüsünde surface'i bu extension ile oluşturur ama onu
+  `SDL_Vulkan_GetInstanceExtensions()` listesinde bildirmez; sonuç, GPU'suz
+  ortamda `SDL_Vulkan_CreateSurface`'in başarısız olmasıydı. Extension mevcutsa
+  `VkContext` artık kendisi ekliyor. Böylece Vulkan backend'i CI ve WSL2 gibi
+  ekransız ortamlarda gerçekten test edilebiliyor. Extension bulunmayan
+  platformlarda sessizce atlanır, masaüstü davranışı değişmez.
+- **Renderer smoke testleri (`tests/test_renderer_smoke.cpp`):** Gerçek bir
+  backend ayağa kaldırıp gömülü shader'ların sürücü tarafından kabul edildiğini
+  doğrular. Daha önce hiçbir test gerçek bir renderer örneklemiyordu; shader'lar
+  test kapsamı dışındaydı. Pencere/context kurulamayan ortamlarda testler
+  başarısız olmak yerine atlanır.
+
+### Düzeltildi
+- **Alt proje olarak eklenince yanlış dizin kullanımı:** `cmake/Docs.cmake`,
+  `cmake/Doxyfile.in`, `cmake/InsourceGuard.cmake` ve `tests/CMakeLists.txt`
+  `CMAKE_SOURCE_DIR` kullanıyordu; `add_subdirectory` ile eklendiğinde bu
+  tüketicinin kök dizinini gösterip configure'u kırıyordu. `PROJECT_SOURCE_DIR`
+  ile değiştirildi.
+- **MinGW link seçenekleri dizin kapsamındaydı:** `add_link_options()` ile
+  verilen `-static-libgcc -static-libstdc++`, projeyi alt proje olarak ekleyen
+  tüketicinin kendi hedeflerini de etkiliyordu. Hedef kapsamına alındı.
+
+### Kaldırıldı
+- `sdlpainter_copy_shaders()` / `sdlpainter_copy_vulkan_shaders()` CMake
+  yardımcıları ve bunların MSVC paralel-build race condition'ı için gereken
+  merkezi kopyalama target'ları — shader'lar gömülü olduğu için gereksiz.
+- `VulkanRenderer::ResolveShaderDir()`; `VulkanPipeline` ve
+  `VulkanTexturedPipeline` `Init()` imzalarından `shader_dir` parametresi.
+
 ## [1.1.0] - 2026-08-08
 
 ### Eklendi

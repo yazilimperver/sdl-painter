@@ -5,11 +5,11 @@ if(NOT DOXYGEN_FOUND)
     return()
 endif()
 
-set(DOXYGEN_OUTPUT_DIR "${CMAKE_BINARY_DIR}/docs/public")
+set(DOXYGEN_OUTPUT_DIR "${PROJECT_BINARY_DIR}/docs/public")
 
 # doxygen-awesome-css submodule'ü varsa kullan, yoksa tema olmadan devam et.
 set(DOXYGEN_AWESOME_CSS "")
-set(_AWESOME "${CMAKE_SOURCE_DIR}/third_party/doxygen-awesome-css/doxygen-awesome.css")
+set(_AWESOME "${PROJECT_SOURCE_DIR}/third_party/doxygen-awesome-css/doxygen-awesome.css")
 if(EXISTS "${_AWESOME}")
     set(DOXYGEN_AWESOME_CSS "${_AWESOME}")
 else()
@@ -24,15 +24,15 @@ else()
 endif()
 
 configure_file(
-    "${CMAKE_SOURCE_DIR}/cmake/Doxyfile.in"
-    "${CMAKE_BINARY_DIR}/Doxyfile"
+    "${PROJECT_SOURCE_DIR}/cmake/Doxyfile.in"
+    "${PROJECT_BINARY_DIR}/Doxyfile"
     @ONLY
 )
 
 add_custom_target(sdlpainter_docs
     COMMAND ${CMAKE_COMMAND} -E make_directory "${DOXYGEN_OUTPUT_DIR}"
-    COMMAND ${DOXYGEN_EXECUTABLE} "${CMAKE_BINARY_DIR}/Doxyfile"
-    WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+    COMMAND ${DOXYGEN_EXECUTABLE} "${PROJECT_BINARY_DIR}/Doxyfile"
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
     COMMENT "Doxygen ile API dokümantasyonu oluşturuluyor..."
     VERBATIM
 )

@@ -1,26 +1,21 @@
 add_executable(phase0_demo phase0_demo.cpp)
 target_link_libraries(phase0_demo PRIVATE sdl_painter spdlog::spdlog_header_only)
-sdlpainter_copy_shaders(phase0_demo)
 sdlpainter_copy_runtime_dlls(phase0_demo)
 
 add_executable(phase1_demo phase1_demo.cpp)
 target_link_libraries(phase1_demo PRIVATE sdl_painter spdlog::spdlog_header_only)
-sdlpainter_copy_shaders(phase1_demo)
 sdlpainter_copy_runtime_dlls(phase1_demo)
 
 add_executable(phase2_demo phase2_demo.cpp)
 target_link_libraries(phase2_demo PRIVATE sdl_painter spdlog::spdlog_header_only)
-sdlpainter_copy_shaders(phase2_demo)
 sdlpainter_copy_runtime_dlls(phase2_demo)
 
 add_executable(phase2b_demo phase2b_demo.cpp)
 target_link_libraries(phase2b_demo PRIVATE sdl_painter spdlog::spdlog_header_only)
-sdlpainter_copy_shaders(phase2b_demo)
 sdlpainter_copy_runtime_dlls(phase2b_demo)
 
 add_executable(phase3_demo phase3_demo.cpp)
 target_link_libraries(phase3_demo PRIVATE sdl_painter spdlog::spdlog_header_only)
-sdlpainter_copy_shaders(phase3_demo)
 sdlpainter_copy_runtime_dlls(phase3_demo)
 
 add_executable(phase4_demo phase4_demo.cpp)
@@ -29,19 +24,16 @@ if(TARGET SDL3_ttf::SDL3_ttf-static)
 else()
     target_link_libraries(phase4_demo PRIVATE sdl_painter SDL3_ttf::SDL3_ttf spdlog::spdlog_header_only)
 endif()
-sdlpainter_copy_shaders(phase4_demo)
 sdlpainter_copy_runtime_dlls(phase4_demo)
 
 # Application çatısı demosu — SDL boilerplate'i olmadan animasyonlu çizim.
 add_executable(phase6_app_demo phase6_app_demo.cpp)
 target_link_libraries(phase6_app_demo PRIVATE sdl_painter_app spdlog::spdlog_header_only)
-sdlpainter_copy_shaders(phase6_app_demo)
 sdlpainter_copy_runtime_dlls(phase6_app_demo)
 
 # Sabit adımlı (fixed-timestep) oyun döngüsü + interpolasyon demosu.
 add_executable(phase7_game_demo phase7_game_demo.cpp)
 target_link_libraries(phase7_game_demo PRIVATE sdl_painter_app spdlog::spdlog_header_only)
-sdlpainter_copy_shaders(phase7_game_demo)
 sdlpainter_copy_runtime_dlls(phase7_game_demo)
 
 # Fare girdisi + durum makinesi + duyarlı yerleşim: eksiksiz uygulama örneği.
@@ -54,7 +46,6 @@ else()
     target_link_libraries(phase8_tictactoe
         PRIVATE sdl_painter_app SDL3_ttf::SDL3_ttf spdlog::spdlog_header_only)
 endif()
-sdlpainter_copy_shaders(phase8_tictactoe)
 sdlpainter_copy_runtime_dlls(phase8_tictactoe)
 
 if(SDLPAINTER_WITH_VULKAN)
@@ -66,7 +57,6 @@ if(SDLPAINTER_WITH_VULKAN)
         target_link_libraries(phase5e_vulkan_text
             PRIVATE sdl_painter SDL3_ttf::SDL3_ttf spdlog::spdlog_header_only)
     endif()
-    sdlpainter_copy_vulkan_shaders(phase5e_vulkan_text)
     sdlpainter_copy_runtime_dlls(phase5e_vulkan_text)
 endif()
 
@@ -74,24 +64,20 @@ if(SDLPAINTER_WITH_VULKAN)
     add_executable(phase5a_vulkan_clear phase5a_vulkan_clear.cpp)
     target_link_libraries(phase5a_vulkan_clear
         PRIVATE sdl_painter spdlog::spdlog_header_only)
-    sdlpainter_copy_vulkan_shaders(phase5a_vulkan_clear)
     sdlpainter_copy_runtime_dlls(phase5a_vulkan_clear)
 
     add_executable(phase5b_vulkan_triangles phase5b_vulkan_triangles.cpp)
     target_link_libraries(phase5b_vulkan_triangles
         PRIVATE sdl_painter spdlog::spdlog_header_only)
-    sdlpainter_copy_vulkan_shaders(phase5b_vulkan_triangles)
     sdlpainter_copy_runtime_dlls(phase5b_vulkan_triangles)
 
     add_executable(phase5c_vulkan_textured phase5c_vulkan_textured.cpp)
     target_link_libraries(phase5c_vulkan_textured
         PRIVATE sdl_painter spdlog::spdlog_header_only)
-    sdlpainter_copy_vulkan_shaders(phase5c_vulkan_textured)
     sdlpainter_copy_runtime_dlls(phase5c_vulkan_textured)
 
     add_executable(phase5d_vulkan_demo phase5d_vulkan_demo.cpp)
     target_link_libraries(phase5d_vulkan_demo
         PRIVATE sdl_painter spdlog::spdlog_header_only)
-    sdlpainter_copy_vulkan_shaders(phase5d_vulkan_demo)
     sdlpainter_copy_runtime_dlls(phase5d_vulkan_demo)
 endif()

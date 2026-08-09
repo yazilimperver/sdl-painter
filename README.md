@@ -128,7 +128,9 @@ Details: [Architecture Overview](doc/mimari-genel-bakis.md) · [Backend Internal
 | Ninja | Any version (Linux) |
 
 **Optional:**
-- Vulkan SDK (for `glslc`) — if you use the Vulkan backend
+- Vulkan SDK (for `glslc`) — only if you **modify** the Vulkan shader sources.
+  Building and using the Vulkan backend does not need it: the compiled SPIR-V is
+  checked into the repository and embedded into the library.
 - `clang-format-18`, `clang-tidy-18` — for quality checks
 - `doxygen` — to generate the API reference
 
@@ -460,6 +462,7 @@ Major design decisions are documented as [Architecture Decision Records](adr/) *
 | [ADR-006](adr/ADR-006-ear-clipping-triangulation.md) | Polygon Triangulation — Choosing Ear Clipping |
 | [ADR-007](adr/ADR-007-glm-transform-matrix.md) | Using GLM for the Transform Matrix |
 | [ADR-008](adr/ADR-008-application-framework-layer.md) | Application Framework Layer |
+| [ADR-009](adr/ADR-009-embedded-shaders.md) | Embedding Shaders into the Binary |
 
 ## License
 

@@ -124,7 +124,9 @@ Detay: [Mimari Genel Bakış](doc/mimari-genel-bakis.md) · [Backend İç Yapıs
 | Ninja | Herhangi bir sürüm (Linux) |
 
 **Opsiyonel:**
-- Vulkan SDK (`glslc` için) — Vulkan backend kullanılacaksa
+- Vulkan SDK (`glslc` için) — yalnızca Vulkan shader **kaynaklarını
+  değiştirecekseniz**. Vulkan backend'ini derlemek ve kullanmak için gerekmez:
+  derlenmiş SPIR-V repo'da tutulur ve kütüphaneye gömülür.
 - `clang-format-18`, `clang-tidy-18` — Kalite kontrolü için
 - `doxygen` — API referans dokümantasyonu üretmek için
 
@@ -453,6 +455,7 @@ Büyük tasarım kararları [Architecture Decision Records](adr/) formatında be
 | [ADR-006](adr/ADR-006-ear-clipping-triangulation.md) | Poligon Triangulation — Ear Clipping Seçimi |
 | [ADR-007](adr/ADR-007-glm-transform-matrix.md) | Transform Matrisi için GLM Kullanımı |
 | [ADR-008](adr/ADR-008-application-framework-layer.md) | Application Çatısı Katmanı |
+| [ADR-009](adr/ADR-009-embedded-shaders.md) | Shader'ların Binary'ye Gömülmesi |
 
 ## Lisans
 

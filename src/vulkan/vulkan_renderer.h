@@ -102,16 +102,12 @@ class VulkanRenderer final : public IRenderer {
   std::unique_ptr<VulkanPipeline> mPipeline;
   std::unique_ptr<VulkanBuffer> mVertexRing;
   PushConstants mPushConstants{};
-  std::string mShaderDir;
 
   // Phase 5c: textured pipeline + texture registry
   std::unique_ptr<VulkanTexturedPipeline> mTexturedPipeline;
   std::unique_ptr<VulkanBuffer> mTexturedVertexRing;
   std::unordered_map<TextureHandle, std::unique_ptr<VulkanTexture>> mTextures;
   TextureHandle mNextTextureHandle{1};  // 0 = kInvalidTexture
-
-  /// @brief Shader dizinini build ortamından veya executable yanından çıkarır.
-  static std::string ResolveShaderDir();
 
   /// @brief Ring buffer'daki mevcut frame için viewport + scissor dinamik state'ini ayarla.
   void ApplyDynamicViewportScissor(VkCommandBuffer cmd) const;

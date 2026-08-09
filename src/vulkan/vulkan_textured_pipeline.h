@@ -32,12 +32,12 @@ class VulkanTexturedPipeline {
   VulkanTexturedPipeline& operator=(const VulkanTexturedPipeline&) = delete;
 
   /// @brief Pipeline, layout ve descriptor pool'u oluştur.
+  ///
+  /// SPIR-V modülleri binary'ye gömülüdür; çalışma zamanında dosya okunmaz.
   /// @param device Logical device.
   /// @param render_pass Pipeline'ın bağlanacağı render pass.
-  /// @param shader_dir SPIR-V .spv dosyalarının dizini.
   /// @return Başarı durumunda true.
-  bool Init(VkDevice device, VkRenderPass render_pass,
-            const std::string& shader_dir);
+  bool Init(VkDevice device, VkRenderPass render_pass);
 
   /// @brief Tüm kaynakları serbest bırak. Idempotent; destructor da çağırır.
   void Destroy(VkDevice device);
@@ -56,7 +56,12 @@ class VulkanTexturedPipeline {
   }
 
  private:
-  static VkShaderModule LoadSpv(VkDevice device, const std::string& path);
+  /// @brief Gömülü SPIR-V kelime dizisinden VkShaderModule oluştur.
+  /// @param code SPIR-V kelime dizisi (uint32 hizalı).
+  /// @param byte_size Dizinin bayt cinsinden boyutu.
+  static VkShaderModule CreateShaderModule(VkDevice device,
+                                           const uint32_t* code,
+                                           std::size_t byte_size);
 
   VkDevice mDevice{VK_NULL_HANDLE};  // RAII için Init'te saklanır
   VkPipeline mPipeline{VK_NULL_HANDLE};

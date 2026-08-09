@@ -8,11 +8,11 @@ PROJECT_BRIEF           = "QPainter benzeri SDL3 + OpenGL/Vulkan 2D çizim küt�
 PROJECT_LOGO            =
 
 # --- Girdi ---
-INPUT                   = "@CMAKE_SOURCE_DIR@/include/sdl_painter" \
-                          "@CMAKE_SOURCE_DIR@/doc"
+INPUT                   = "@PROJECT_SOURCE_DIR@/include/sdl_painter" \
+                          "@PROJECT_SOURCE_DIR@/doc"
 FILE_PATTERNS           = *.h *.md
 RECURSIVE               = YES
-USE_MDFILE_AS_MAINPAGE  = "@CMAKE_SOURCE_DIR@/doc/README.md"
+USE_MDFILE_AS_MAINPAGE  = "@PROJECT_SOURCE_DIR@/doc/README.md"
 
 # Sadece public API; src/ gizli tutulur.
 EXCLUDE_PATTERNS        = */src/* \

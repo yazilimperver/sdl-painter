@@ -27,14 +27,28 @@ class SDLPainterConan(ConanFile):
         header = load(self, os.path.join(
             self.recipe_folder, "include", "sdl_painter", "version.h"))
         parts = []
-        for component in ("MAJOR", "MINOR", "PATCH"):
+        for component in ("Major", "Minor", "Patch"):
             match = re.search(
-                r"#define\s+SDLPAINTER_VERSION_%s\s+(\d+)" % component, header)
+                r"constexpr\s+int32_t\s+kVersion%s\s*=\s*(\d+)" % component, header)
             if not match:
                 raise RuntimeError(
-                    "version.h icinde SDLPAINTER_VERSION_%s bulunamadi" % component)
+                    "version.h icinde kVersion%s bulunamadi" % component)
             parts.append(match.group(1))
-        self.version = ".".join(parts)
+        version = ".".join(parts)
+
+        # kVersionString ile sayisal sabitler ayrisamaz — CMake de ayni kontrolu
+        # yapiyor, ama conan create CMake'ten once set_version cagiriyor.
+        match = re.search(
+            r"constexpr\s+std::string_view\s+kVersionString\s*=\s*\"([^\"]+)\"",
+            header)
+        if not match:
+            raise RuntimeError("version.h icinde kVersionString bulunamadi")
+        if match.group(1) != version:
+            raise RuntimeError(
+                "version.h tutarsiz: kVersionString=%r ancak sayisal sabitler "
+                "%s diyor" % (match.group(1), version))
+
+        self.version = version
 
     def configure(self):
         if self.settings.os == "Windows":

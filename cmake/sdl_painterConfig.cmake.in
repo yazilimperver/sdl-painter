@@ -1,0 +1,33 @@
+@PACKAGE_INIT@
+
+# SDLPainter paket yapılandırması.
+#
+# Kullanım:
+#   find_package(sdl_painter CONFIG REQUIRED)
+#   target_link_libraries(my_app PRIVATE sdl_painter::sdl_painter)
+#   # opsiyonel uygulama çatısı:
+#   target_link_libraries(my_app PRIVATE sdl_painter::app)
+
+include(CMakeFindDependencyMacro)
+
+# PUBLIC bağımlılıklar — tüketicinin başlıklarında/linkinde görünür.
+find_dependency(SDL3)
+find_dependency(glm)
+find_dependency(OpenGL)
+
+# PRIVATE bağımlılıklar. Statik kütüphanede bunlar da export'a
+# $<LINK_ONLY:...> olarak girer; hedeflerinin tüketici tarafında var olması
+# gerekir, aksi halde link aşamasında "target not found" alınır.
+find_dependency(glad)
+find_dependency(stb)
+find_dependency(spdlog)
+find_dependency(SDL3_ttf)
+
+if(@SDLPAINTER_WITH_VULKAN@)
+    find_dependency(VulkanLoader)
+    find_dependency(VulkanHeaders)
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/sdl_painterTargets.cmake")
+
+check_required_components(sdl_painter)

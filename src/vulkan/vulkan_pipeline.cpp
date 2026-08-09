@@ -1,8 +1,9 @@
 #include "vulkan_pipeline.h"
 
+#include "sdl_painter/embedded_vk_shaders.h"
+
 #include <array>
 #include <cstddef>
-#include <fstream>
 #include <spdlog/spdlog.h>
 #include <stdexcept>
 
@@ -17,25 +18,15 @@ VulkanPipeline::~VulkanPipeline() {
 }
 
 // ---------------------------------------------------------------------------
-// Yardımcı: .spv dosyasını yükle
+// Yardımcı: gömülü SPIR-V'den shader modülü oluştur
 // ---------------------------------------------------------------------------
-VkShaderModule VulkanPipeline::LoadSpv(VkDevice device,
-                                       const std::string& path) {
-  std::ifstream file(path, std::ios::ate | std::ios::binary);
-  if (!file.is_open()) {
-    spdlog::error("VulkanPipeline: cannot open shader file: {}", path);
-    return VK_NULL_HANDLE;
-  }
-  const std::size_t kFileSize = static_cast<std::size_t>(file.tellg());
-  std::vector<char> code(kFileSize);
-  file.seekg(0);
-  file.read(code.data(), static_cast<std::streamsize>(kFileSize));
-
+VkShaderModule VulkanPipeline::CreateShaderModule(VkDevice device,
+                                                  const uint32_t* code,
+                                                  std::size_t byte_size) {
   VkShaderModuleCreateInfo ci{};
   ci.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-  ci.codeSize = kFileSize;
-  // NOLINT: reinterpret_cast Vulkan API'sinin gerektirdiği dönüşüm.
-  ci.pCode = reinterpret_cast<const uint32_t*>(code.data());  // NOLINT
+  ci.codeSize = byte_size;
+  ci.pCode = code;
 
   VkShaderModule mod = VK_NULL_HANDLE;
   VK_CHECK_HANDLE(vkCreateShaderModule(device, &ci, nullptr, &mod));
@@ -45,14 +36,12 @@ VkShaderModule VulkanPipeline::LoadSpv(VkDevice device,
 // ---------------------------------------------------------------------------
 // Init
 // ---------------------------------------------------------------------------
-bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass,
-                          const std::string& shader_dir) {
-  // --- Shader modülleri ---
-  const std::string kVertPath = shader_dir + "/untextured.vert.spv";
-  const std::string kFragPath = shader_dir + "/untextured.frag.spv";
-
-  VkShaderModule vert_mod = LoadSpv(device, kVertPath);
-  VkShaderModule frag_mod = LoadSpv(device, kFragPath);
+bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass) {
+  // --- Shader modülleri (binary'ye gömülü SPIR-V) ---
+  VkShaderModule vert_mod = CreateShaderModule(device, detail::kUntexturedVert,
+                                               sizeof(detail::kUntexturedVert));
+  VkShaderModule frag_mod = CreateShaderModule(device, detail::kUntexturedFrag,
+                                               sizeof(detail::kUntexturedFrag));
 
   if (vert_mod == VK_NULL_HANDLE || frag_mod == VK_NULL_HANDLE) {
     if (vert_mod != VK_NULL_HANDLE) {

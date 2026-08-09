@@ -1,6 +1,7 @@
 #include "opengl_renderer.h"
 
 #include "sdl_painter/color.h"
+#include "sdl_painter/embedded_gl_shaders.h"
 #include "sdl_painter/vertex.h"
 
 #include <SDL3/SDL.h>
@@ -44,29 +45,14 @@ bool OpenGLRenderer::Initialize(SDL_Window* window) {
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-  // Shader dizinini öncelikle build sisteminin tanımladığı makrodan al;
-  // bu sayede development binary'leri kaynak dizinden okuyabilir. Makro yoksa
-  // fallback olarak executable yanındaki shaders/ dizini (install/runtime).
-  std::string shader_dir;
-#ifdef SDLPAINTER_OPENGL_SHADER_DIR
-  shader_dir = std::string(SDLPAINTER_OPENGL_SHADER_DIR) + "/";
-#else
-  const char* base_raw = SDL_GetBasePath();
-  if (base_raw == nullptr) {
-    spdlog::error("[OpenGLRenderer] SDL_GetBasePath() returned null");
-    return false;
-  }
-  shader_dir = std::string(base_raw) + "shaders/";
-#endif
-
-  if (!mBasicShader.BuildFromFile(shader_dir + "basic.vert",
-                                  shader_dir + "basic.frag")) {
+  // Shader kaynakları binary'ye gömülüdür (bkz. cmake/EmbedShaders.cmake);
+  // çalışma zamanında hiçbir dosya aranmaz.
+  if (!mBasicShader.Build(detail::kBasicVert, detail::kBasicFrag)) {
     spdlog::error("[OpenGLRenderer] Failed to build basic shader");
     return false;
   }
 
-  if (!mTexturedShader.BuildFromFile(shader_dir + "textured.vert",
-                                     shader_dir + "textured.frag")) {
+  if (!mTexturedShader.Build(detail::kTexturedVert, detail::kTexturedFrag)) {
     spdlog::error("[OpenGLRenderer] Failed to build textured shader");
     return false;
   }

@@ -15,7 +15,7 @@ Bu belge `IRenderer` arayüzünün arkasındaki **iki somut implementasyonu**
 | Frame yapısı | Begin/End trivial | Begin/End: acquire + submit + present |
 | Komut gönderimi | Anında (immediate) | Command buffer'a kaydedilir |
 | Vertex upload | `glBufferData` her draw | Ring buffer + persistent map |
-| Shader | GLSL 330 (runtime compile) | SPIR-V (offline glslc) |
+| Shader | GLSL 330 kaynağı binary'ye gömülü, runtime derlenir | SPIR-V binary'ye gömülü (offline `glslc` ile önceden üretilmiş) |
 | Uniform | `glUniform*` | Push constants |
 | Pencere boyutu | Otomatik | Swapchain recreate gerekir |
 | Sync | Sürücüye bırakılır | Manuel (semaphore + fence) |
