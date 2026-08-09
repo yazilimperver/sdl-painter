@@ -96,7 +96,7 @@ jobs:
           pip install "conan>=2.0"
           conan profile detect --force
       - name: Cache Conan packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ env.CONAN_HOME }}
           key: conan-windows-debug-${{ hashFiles('conanfile.py', 'conanfile.txt') }}
@@ -135,7 +135,7 @@ jobs:
           pip install "conan>=2.0"
           conan profile detect --force
       - name: Cache Conan packages
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ${{ env.CONAN_HOME }}
           key: conan-windows-release-${{ hashFiles('conanfile.py', 'conanfile.txt') }}
