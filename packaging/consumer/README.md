@@ -41,5 +41,3 @@ CI'da `build:standalone-cmake` job'ı 1. ve 2. adımı otomatik koşar.
 ## Neden `packaging/` altında
 
 Bu proje CI tarafından kullanıldığı için **repoda takip edilmek zorunda**.
-Önce geçici bir çalışma dizinine konmuştu; orası `.gitignore`'da olduğu için
-CI "source directory does not exist" ile düştü.

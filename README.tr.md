@@ -28,19 +28,19 @@
 SDL3 size pencereyi, girdiyi ve üçgen seviyesinde yetenekli bir renderer'ı
 verir. SDLPainter bunun üzerine bir katman ekler — kalın çizgi geometrisi,
 poligon triangulation'ı, adaptif tessellation, transform stack ve batching —
-böylece vertex yerine **şekil** düşünürsünüz.
+böylece vertex yerine **şekil** düşünebilirsiniz.
 
 - **Tek API, iki backend** — Aynı kod OpenGL 3.3 ve Vulkan 1.1'de aynı sonucu
   üretir; backend değiştirmek tek satır, üçüncüsünü eklemek yalnızca `IRenderer`
-  implemente etmek demek.
+  implemente etmek anlamına geliyor.
 - **Doğru geometri** — Kalın çizgiler `glLineWidth` yerine quad tabanlı
-  (platformlar arası tutarlı), konkav çokgenler ear clipping ile doğru
-  dolduruluyor, daire segment sayısı yarıçapa göre uyarlanıyor.
+  (platformlar arası tutarlı), konkav çokgenler "ear clipping" ile doğru
+  dolduruluyor, daire segment sayısı yarıçapa göre uyarlanabiliyor.
 - **Draw call'ları biriktirir** — `RenderBatcher` aynı mod/texture/opacity'deki
-  çizimleri birleştirir; binlerce küçük şekil ucuzlar.
+  çizimleri birleştirir; binlerce küçük şekili çizmek daha maliyet etkin olur.
 - **İsteğe bağlı uygulama çatısı** — `sdl_painter_app` ile pencere, olay döngüsü
-  ve zamanlama da hazır gelir; istemezseniz hiç kullanmayın.
-- **Tanıdık API** — QPainter kullandıysanız çoğu şey tanıdık gelecek:
+  ve zamanlamaya yönelik hazır bir takım altyapılar sunulmakta; istenirse kullanılabilir.
+- **Tanıdık API** — QT ya da QPainter kullandıysanız çoğu API sizlere tanıdık gelecektir. Kullanmadıysanız da isimlendirmeler sizlere bir fikir verecektir (elbette API dokümantasyonu da mevcut):
   `DrawRect`, `FillCircle`, `Save`/`Restore`.
 
 ## Kurulum
@@ -76,21 +76,21 @@ FetchContent_MakeAvailable(sdl_painter)
 target_link_libraries(my_app PRIVATE sdl_painter::sdl_painter)
 ```
 
-Her iki yol da **aynı hedef isimlerini** sunar; parçalar birbirinin yerine
+Her iki yol da **aynı hedef isimlerini** sunar; target'lar birbirinin yerine
 kullanılabilir. Opsiyonel pencere / olay döngüsü / zamanlama katmanı ayrı bir
-hedeftir ([ADR-008](adr/ADR-008-application-framework-layer.md)):
+hedef olarak sunulur ([ADR-008](adr/ADR-008-application-framework-layer.md)):
 
 ```cmake
 target_link_libraries(my_app PRIVATE sdl_painter::app)
 ```
 
-**Windows'ta** SDL3 ve bağımlılıkları shared kütüphanedir; executable'ınızın
-yanında olmazlarsa program `0xC0000135` ile kapanır — bkz.
+**Windows'ta** SDL3 ve bağımlılıkları shared kütüphane olarak sunulmakta; executable'ınızın
+yanında olmazlarsa program `0xC0000135` ile kapanabilir — bkz.
 [Çalışma zamanı DLL'leri](doc/building.md#deploying-runtime-dlls-windows)
-*(İngilizce)*.
+*(İngilizce)*. Mevcut, cmake betiği bu dll'leri otomatik kopyalamakta, benzer bir yaklaşımı uygulamalarınızda izleyebilirsiniz.
 
 SDLPainter **henüz Conan Center'da değil** — Conan şu an yalnızca SDLPainter'ın
-*kendi* bağımlılıklarını çözmek için kullanılıyor.
+*kendi* bağımlılıklarını çözmek için kullanılıyor. Bununla birlikte inşallah yakın zamanda conan-center'a da eklenecek :)
 
 ## Kısa örnek
 
@@ -147,10 +147,6 @@ Her biri tek bir yeteneği izole eden on altı çalışan demo:
 | **Metin** | SDL_ttf 3.x, glyph cache, left/center/right hizalama |
 | **Backend** | OpenGL 3.3 Core ve Vulkan 1.1 — `IRenderer` ile değiştirilebilir |
 
-v1 kapsamı dışında: path ve bezier, gradient, analitik anti-aliasing (yalnızca
-MSAA var), path tabanlı clipping. Ayrıntılı liste:
-[Özellik Listesi](doc/sdl-painter-ozellikler.md).
-
 ## SDLPainter size uygun mu?
 
 **Uygun:** SDL3 uygulamanız varsa, üçgen birleştirmek yerine şekil çizmek
@@ -197,9 +193,8 @@ Painter kodu değişmez. Bu katmanları şekillendiren her karar bir
 | Windows | MSVC (VS 2022) | ✅ | ✅ |
 | Windows | Linux'ta MinGW cross-compile | ✅ | ❌ |
 | macOS | — | ❌ | ❌ |
+| Android | — | ❌ | ❌ |
 
-macOS şimdilik bilinçli olarak kapsam dışı; `conanfile.py` derlemenin ilerleyen
-adımlarında patlamak yerine `validate()` içinde açıkça reddediyor.
 
 ## Dokümantasyon
 

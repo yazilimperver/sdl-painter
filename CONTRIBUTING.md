@@ -57,8 +57,7 @@ Daha ayrıntılı kurulum için [doc/hizli-baslangic.md](doc/hizli-baslangic.md)
 | Branch | Amaç |
 |--------|------|
 | `main` | Stabil, yayınlanmış sürüm. Doğrudan push yapılmaz; yalnızca PR ile değişir. |
-| `develop` | Aktif geliştirme dalı. Yeni özellikler buraya birleştirilir. |
-| `feature/<kısa-ad>` | Yeni özellik geliştirme. `develop`'tan açılır, `develop`'a birleşir. |
+| `feature/<kısa-ad>` | Yeni özellik geliştirme. |
 | `fix/<kısa-ad>` | Hata düzeltme dalı. |
 | `chore/<kısa-ad>` | Bakım, refactor, doküman vs. |
 

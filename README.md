@@ -85,7 +85,7 @@ target_link_libraries(my_app PRIVATE sdl_painter::app)
 
 On **Windows**, SDL3 and its dependencies are shared libraries and must sit next
 to your executable or the program exits with `0xC0000135` — see
-[Deploying runtime DLLs](doc/building.md#deploying-runtime-dlls-windows).
+[Deploying runtime DLLs](doc/building.md#deploying-runtime-dlls-windows). By the way, cmake script already copies given files.
 
 SDLPainter is **not on Conan Center yet** — Conan is currently used only to
 resolve SDLPainter's own dependencies when building from source.
@@ -115,6 +115,7 @@ To build the repository itself and run your first demo:
 
 ```bash
 conan install . --output-folder=build/linux-debug/generators --build=missing -s build_type=Debug
+
 cmake --preset linux-debug && cmake --build --preset linux-debug
 ./build/linux-debug/examples/primitives
 ```
@@ -130,7 +131,7 @@ Full instructions: [Building from source](doc/building.md).
 | ![Text](doc/screenshots/metin.png) | ![Application](doc/screenshots/uygulama.png) |
 | **Text** — SDL_ttf, alignment, layout inside a rect (`text`) | **Application framework** — tic-tac-toe via `sdl_painter_app` (`tictactoe`) |
 
-Sixteen runnable demos, one capability each:
+Sixteen runnable demos (for the time being), one capability each:
 [examples/README.md](examples/README.md).
 
 ## Features
@@ -144,10 +145,6 @@ Sixteen runnable demos, one capability each:
 | **Image** | PNG / JPG loading (stb_image), source→destination scaling, alpha blending |
 | **Text** | SDL_ttf 3.x, glyph cache, left/center/right alignment |
 | **Backend** | OpenGL 3.3 Core and Vulkan 1.1 — interchangeable through `IRenderer` |
-
-Not in v1: paths and béziers, gradients, analytic anti-aliasing (MSAA only),
-path-based clipping. Detailed list:
-[Feature List](doc/sdl-painter-ozellikler.md) *(in Turkish)*.
 
 ## Is SDLPainter for you?
 
@@ -173,7 +170,7 @@ picks a backend per platform. SDLPainter takes on the shape-level work you would
 
 ## Architecture
 
-![SDLPainter architecture](doc/sdl-painter-architecture.png)
+![SDLPainter architecture](doc/sdl-painter-architecture-en.png)
 
 Five layers, each with a single responsibility:
 
@@ -194,10 +191,8 @@ untouched. Every decision that shaped these layers is recorded as an
 | Linux | GCC / Clang | ✅ | ✅ |
 | Windows | MSVC (VS 2022) | ✅ | ✅ |
 | Windows | MinGW cross-compile from Linux | ✅ | ❌ |
+| Android | — | ❌ | ❌ |
 | macOS | — | ❌ | ❌ |
-
-macOS is explicitly out of scope for now; `conanfile.py` rejects it in
-`validate()` rather than failing later in the build.
 
 ## Documentation
 
@@ -211,9 +206,9 @@ macOS is explicitly out of scope for now; `conanfile.py` rejects it in
 | [Getting Started](doc/getting-started.md) | Setup, presets, first application, troubleshooting |
 | [Architecture Overview](doc/architecture.md) | Layers, dependencies, data flow, invariants |
 | [Architecture Decision Records](adr/README.md) | Why the design is what it is |
-| [Overview infographic](doc/sdl-painter-general-overview.png) | One-page visual summary of the library *(in Turkish)* |
+| [Overview infographic](doc/sdl-painter-general-overview-english.png) | One-page visual summary of the library |
 
-Design documents still only in **Turkish**, as are the diagrams:
+Design documents are currently only in **Turkish**, as are the diagrams:
 [Feature List](doc/sdl-painter-ozellikler.md) ·
 [Examples Guide](doc/sdl-painter-ornekler.md) ·
 [Class Diagrams](doc/sinif-diyagrami.md) · [Flow Diagrams](doc/akislar.md) ·
@@ -222,6 +217,8 @@ Design documents still only in **Turkish**, as are the diagrams:
 [Documentation Guide](doc/dokumantasyon-rehberi.md) ·
 [Docker Guide](doc/docker.md) ·
 [Publishing to Docker Hub](doc/docker-hub-deployment.md)
+
+I will translate them as soon as possible.
 
 ## Contributing
 
