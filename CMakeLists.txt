@@ -136,11 +136,7 @@ sdlpainter_embed_glsl(
 set(SDLPAINTER_SOURCES
     src/painter.cpp
     src/renderer.cpp
-    src/color.cpp
-    src/pen.cpp
-    src/brush.cpp
     src/image.cpp
-    src/geometry.cpp
     src/tessellator.cpp
     src/render_batcher.cpp
     src/font.cpp
