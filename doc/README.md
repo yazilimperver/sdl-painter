@@ -1,7 +1,7 @@
 # SDLPainter — Dokümantasyon
 
-QPainter benzeri, SDL3 + OpenGL/Vulkan dual backend destekli C++ 2B
-çizim kütüphanesinin teknik dokümantasyonu.
+SDL3 + OpenGL/Vulkan dual backend destekli C++ 2B çizim kütüphanesinin teknik dokümantasyonu.
+Bu teknik dokümanlar genel olarak Türkçe, vakit oldukça bunları da İngilizce'ye çeviriyor olabiliriz (desteğe hayır demem).
 
 ---
 
@@ -97,16 +97,21 @@ Tüm Painter API çağrıları aynı şekilde çalışır. Detay:
 [backend-ic-yapisi.md → §4](backend-ic-yapisi.md#4-iki-backendin-aynı-painter-çağrısına-verdiği-yanıt).
 
 **3. Yeni bir backend eklemek istiyorum (örn. DirectX, Metal).**
-→ Sadece `IRenderer` arayüzünü implemente etmek yeterli. Detay:
+→ Sadece `IRenderer` arayüzünü implemente etmek yeterli. Elbette böyle bir yola girecekseniz beni de bir dürterseniz sevinirim :)
+
+ Detay:
 [backend-ic-yapisi.md → §5](backend-ic-yapisi.md#5-backend-eklemek).
 
 **4. Performans nasıl?**
 → `RenderBatcher` aynı state ile gelen draw call'ları **tek bir GPU
 çağrısına** birleştirir. 100 aynı renkli `FillRect` = 1 draw call.
+
+**TODO**: Buna yönelik detaylı bir test ve çıktısını ekleyelim.
+
 Detay: [akislar.md → §3](akislar.md#3-render-batcher-akışı).
 
 **5. Path / Bezier / Gradient destekleniyor mu?**
-→ Hayır, v1 kapsam dışı. Gerekçeler:
+→ Hayır (şimdilik). Gerekçeler:
 [sdl-painter-yazilim-muhendisligi.md → Kapsam Yönetimi](sdl-painter-yazilim-muhendisligi.md#kapsam-yönetimi).
 
 ---

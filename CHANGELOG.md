@@ -9,11 +9,11 @@
   `phase5a–5e_vulkan_*` → `vulkan_clear` / `vulkan_triangles` /
   `vulkan_textured` / `vulkan_demo` / `vulkan_text`,
   `phase6_app_demo` → `app_basics`, `phase7_game_demo` → `game_loop`,
-  `phase8_tictactoe` → `tictactoe`. Faz numaraları projeyi içeriden bilmeyene
-  hiçbir şey anlatmıyordu. Demoları adıyla çalıştıran veya `--target` ile
+  `phase8_tictactoe` → `tictactoe`. Faz numaraları projeyi içeriden bilmeyenler için pek bir şey 
+  ifade etmiyordu. Demoları adıyla çalıştıran veya `--target` ile
   derleyen herkesi etkiler; kütüphane API'si değişmedi.
   Eski→yeni eşleme tablosu `examples/README.md` içinde ve her örneğin dosya
-  başı yorumunda korunuyor. Pencere başlıkları da yeni adı öne alacak şekilde
+  başı yorumunda korunuyor (özellikle yazılarımda değindiğim için bu şekilde bıraktım). Pencere başlıkları da yeni adı öne alacak şekilde
   güncellendi, faz numarası parantez içinde duruyor
   (ör. `SDLPainter — vulkan_triangles (Phase 5b)`).
 - **README yeniden yapılandırıldı:** `README.md` 550 → 242 satır. Derleme,
