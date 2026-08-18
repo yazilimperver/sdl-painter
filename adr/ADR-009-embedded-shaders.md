@@ -5,7 +5,7 @@
 
 ## Bağlam
 
-Shader'lar çalışma zamanında diskten okunuyordu. İki backend'de de aynı desen
+Bu zamana kadar shader'lar, çalışma zamanında diskten okunuyordu. İki backend'de de aynı desen
 vardı:
 
 - **OpenGL:** `SDLPAINTER_OPENGL_SHADER_DIR` makrosu build sırasında
@@ -27,11 +27,9 @@ Sorun, kütüphane **repo dışından** kullanıldığında ortaya çıkıyor:
 1. Gömülü mutlak yol başka makinede mevcut değil.
 2. `SDL_GetBasePath()` **tüketicinin executable'ının** dizinini döndürür. Yani
    SDLPainter'ı Conan/vcpkg/sistem kurulumu ile alan herkesin, kütüphanenin
-   shader dosyalarını kendi çıktı dizinine elle kopyalaması gerekiyordu. Bu
-   gereksinim hiçbir yerde belgelenmemişti; kullanıcı sebebi anlaşılmayan bir
-   "Failed to build basic shader" hatasıyla karşılaşıyordu.
+   shader dosyalarını kendi çıktı dizinine elle kopyalaması gerekiyordu. Bu durum bazı koşullar "Failed to build basic shader" hatasına sebebiyet verebilmektedir.
 3. Build makinesinin yolunun pakete sızması, Conan Center'ın relocatable paket
-   kuralını ihlal ediyor.
+   kuralını ihlal ediyor. En önemli konularda birisi de bu. Bu kütüphanenin conan ile dağıtılmasını hedefliyoruz.
 4. Vulkan tarafında `glslc` build-time bağımlılığıydı; Vulkan SDK kurulu
    olmayan bir ortamda (ör. Conan Center derleyicileri) SPIR-V hiç üretilemiyordu.
 
@@ -127,9 +125,9 @@ aramak değil, `Painter` API'sinden shader kaynağı geçirmektir.
 
 - Binary bayt taraması: `src/opengl/shaders` ve `src/vulkan/shaders` yolları
   **0** eşleşme; gömülü GLSL ve SPIR-V magic (`0x07230203`) mevcut.
-- OpenGL örneği (`phase1_demo`) yanında `shaders/` dizini **olmayan** izole bir
+- OpenGL örneği yanında `shaders/` dizini **olmayan** izole bir
   dizinde sorunsuz çalıştı.
-- Vulkan örneği (`phase5d_vulkan_demo`) yanında `vulkan_shaders/` dizini
+- Vulkan örneği yanında `vulkan_shaders/` dizini
   **olmayan** izole bir dizinde, **validation layer'lar açıkken hatasız**
   çalıştı; her iki pipeline da başarıyla kuruldu.
 - `PATH`'ten Vulkan SDK çıkarılmış ve `VULKAN_SDK` tanımsız bir ortamda,
@@ -137,16 +135,3 @@ aramak değil, `Painter` API'sinden shader kaynağı geçirmektir.
 - `tests/test_renderer_smoke.cpp` gerçek bir backend ayağa kaldırarak gömülü
   shader'ları doğruluyor. Mutasyon testiyle sınandı: `basic.frag` kasıtlı
   bozulduğunda test doğru mesajla başarısız oldu.
-
-### Savunulamayan bir senaryo (bilinçli kabul)
-
-Gövdesi bozulmuş (ama başlığı geçerli) bir `.spv`, NVIDIA sürücüsünde
-`vkCreateShaderModule` **içinde segfault'a** yol açıyor — validation layer hatayı
-bildiriyor ama çağrı dönmeden süreç düşüyor, yani dönüş değerini kontrol eden
-kodumuz hiç çalışmıyor. Bu, kütüphane tarafında savunulabilir bir durum değil.
-
-Pratikte bu senaryo yalnızca repo'daki `.spv` dosyası bozulursa oluşur; `glslc`
-böyle bir çıktı üretmez. Gerçekçi risk, dosyanın **bozulması değil bayatlaması**
-— ve bunun karşılığı önerilen CI kontrolüdür (yeniden üret +
-`git diff --exit-code`). `SpirvEmbedTest` ise gömme boru hattının kendi hatalarını
-(bayt sırası, kırpılma, yanlış dosya) yakalar.

@@ -5,9 +5,9 @@
 
 ## Bağlam
 
-2D çizim kütüphanesi kalınlığı ayarlanabilir çizgiler çizme ihtiyacı olabilmektedir. OpenGL'in `glLineWidth` API'si var; neden kullanılmasın?
+2B çizim kütüphanesi kalınlığı ayarlanabilir çizgiler çizme ihtiyacı olabilmektedir. OpenGL'in `glLineWidth` API'si var; neden kullanmıyoruz peki?
 
-### `glLineWidth` Sorunları
+### `glLineWidth` Yönelik Hususlar
 
 - OpenGL Core Profile'da `glLineWidth(x > 1.0f)` **deprecated**, yani artık kullanılmıyor; sadece 1.0 garantili.
 - Desteklenen maksimum kalınlık sürücüye göre değişir: bazı GPU'larda yalnızca 1px.
@@ -15,7 +15,7 @@
 
 ## Karar
 
-Kalın çizgiler **geometry-based quad** olarak tessellate edilir; `glLineWidth` hiçbir koşulda kullanılmaz.
+Kalın çizgiler **geometry-based quad** olarak tessellate edilir; `glLineWidth` hiçbir koşulda kullanılmaz. Bir diğer ifade ile kanlı canlı geometrilerdir.
 
 ## Gerekçe
 
@@ -26,6 +26,8 @@ Geometry quad yaklaşımı:
 - Tessellator bu dönüşümü yapar; renderer sadece üçgen alır.
 
 ## Uygulama
+
+Temel yaklaşımı aşağıdaki gibi özetleyebiliriz:
 
 ```
 A ──────────────── B   (orijinal çizgi)

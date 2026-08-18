@@ -53,7 +53,7 @@ void InitLogger() {
   spdlog::set_default_logger(logger);
 }
 
-/// @brief 2D n-gen düzenli poligon noktaları üretir.
+/// @brief 2B n-gen düzenli poligon noktaları üretir.
 std::vector<sdl_painter::Point> RegularPolygon(float cx, float cy, float r,
                                                 int32_t sides,
                                                 float offset_deg = 0.0f) {

@@ -5,7 +5,7 @@
 
 ## Bağlam
 
-SDLPainter, 2D çizim için bir GPU backend'e ihtiyaç duyuyor. Seçenekler:
+SDLPainter, 2B çizim için bir GPU backend'e ihtiyaç duymaktadır. Seçenekler:
 
 | Seçenek | Artılar | Eksiler |
 |---------|---------|---------|
@@ -21,10 +21,10 @@ SDLPainter, 2D çizim için bir GPU backend'e ihtiyaç duyuyor. Seçenekler:
 
 ## Gerekçe
 
-- 2012 sonrası tüm masaüstü GPU'larda desteklenir — hedef kitle için yeterli taban.
-- VAO, VBO, UBO, GLSL 330 — 2D kütüphane için gereken her şey mevcut.
-- Core Profile: fixed-function pipeline kaldırılmış → daha temiz, tahmin edilebilir davranış.
-- Vulkan desteği de `IRenderer` arayüzü sayesinde sunulacak.
+- 2012 sonrası tüm masaüstü GPU'larda desteklenir — hedef kitlemiz için yeterli.
+- VAO, VBO, UBO, GLSL 330 — 2B kütüphane için gereken her şey mevcut.
+- Core Profile: fixed-function pipeline kaldırılmış → daha temiz, tahmin edilebilir davranışlar tercih sebebimiz.
+- Vulkan desteği de `IRenderer` arayüzü sayesinde sunulabilmekte.
 
 ## Sonuçlar
 

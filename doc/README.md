@@ -1,6 +1,6 @@
 # SDLPainter — Dokümantasyon
 
-QPainter benzeri, SDL3 + OpenGL/Vulkan dual backend destekli C++ 2D
+QPainter benzeri, SDL3 + OpenGL/Vulkan dual backend destekli C++ 2B
 çizim kütüphanesinin teknik dokümantasyonu.
 
 ---

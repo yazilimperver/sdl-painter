@@ -16,7 +16,7 @@ namespace sdl_painter {
 struct alignas(4) PushConstants {
   float projection[16]{};  ///< mat4 ortografik projeksiyon (column-major)
   float model
-      [16]{};  ///< mat4 2D affine transform (3x3 → 4x4 padded, column-major)
+      [16]{};  ///< mat4 2B affine transform (3x3 → 4x4 padded, column-major)
   float tint_color[4]{};  ///< vec4 tint rengi [0,1]
   float opacity{1.0f};    ///< Global opaklık [0,1]
 };

@@ -5,14 +5,14 @@
 
 ## Bağlam
 
-2B şekillerin (daire, poligon, çizgi) GPU'ya gönderilmesi için vertex üretimi gerekmektedir, daha önceki painter örneklerinde bunlar her bir şekil için ayrı ayrı yapılmaktaydı. Hem vulkan hem de modern opengl geçişi ile alternatif yönteme bakılmıştır.
+2B şekillerin (daire, poligon, çizgi) GPU'ya gönderilmesi için vertex üretimi gerekmektedir, daha önceki painter örneklerinde bunlar her bir şekil için ayrı ayrı yapılmaktaydı (uEngine'de de). Hem vulkan hem de modern opengl geçişi ile alternatif bir yöntem değerlendirilecektir.
 
 ### Alternatifler
 
 | Yaklaşım | Açıklama | Sorun |
 |----------|----------|-------|
 | Rendererlar içinde tessellate | Her backend kendi vertex'ini üretir | Kod tekrarı; OpenGL ve Vulkan aynı geometriyi iki kez yazar |
-| **Ayrı Tessellator** | Backend-agnostic vertex üretimi | **Seçilen yol** |
+| -> **Ayrı Tessellator** | Backend-agnostic vertex üretimi | <- **Seçilen yol** |
 | GPU tessellation shader | OpenGL 4.0+ tessellation shader | 3.3'te yok; Vulkan'da karmaşık |
 
 ## Karar

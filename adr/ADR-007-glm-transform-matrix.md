@@ -5,20 +5,20 @@
 
 ## Bağlam
 
-SDLPainter başlangıçta 2D affine dönüşümler için kendi 3x3 matris sınıfını
+SDLPainter başlangıçta 2B affine dönüşümler için kendi 3x3 matris sınıfını
 (`sdl_painter::Transform`, ~188 satır, **row-major** `float[3][3]`) kullanıyordu
-(bkz. eski ADR notları ve proje talimatları). Bu, minimal 2D affine ihtiyacı için
+(bkz. eski ADR notları). Bu, minimal 2B affine ihtiyacı için
 yeterliydi ve harici bağımlılık gerektirmiyordu.
 
-Ancak yol haritasında **3D / karmaşık matematik** hedefleniyor: perspektif projeksiyon,
+Ancak uzun vadede **3B / karmaşık matematik** hesaplamalarda bu kütüphaneyi kullanmayı hedefliyoruz: perspektif projeksiyon,
 ters dönüşüm (inverse), hit-testing, yoğun vektör matematiği. Bu ihtiyaçlar için kendi
-matris kodunu genişletmek, olgun ve test edilmiş bir kütüphaneyi yeniden icat etmek olur.
+matris kodunu genişletmek, olgun ve test edilmiş bir kütüphaneyi yeniden icat etmek olacağı değerlendirildi.
 
 | Kriter | Kendi `Transform` | GLM |
 |--------|-------------------|-----|
 | Kurulum | Sıfır bağımlılık, ~188 satır | Header-only, `glm/1.0.3` (Conan) |
-| 2D affine | Yeterli | Yeterli (`glm::mat3`) |
-| 3D / perspektif / inverse | Elle yazılmalı | Hazır, test edilmiş |
+| 2B affine | Yeterli | Yeterli (`glm::mat3`) |
+| 3B / perspektif / inverse | Elle yazılmalı | Hazır, test edilmiş |
 | Bellek düzeni | Row-major | **Column-major** (GPU standardı) |
 | API sızıntısı | Yok | Public header'da `glm::mat3` |
 | Bakım | Bize ait | Topluluk |
@@ -32,10 +32,10 @@ kabul edildi.
 
 ## Gerekçe
 
-- 3D/karmaşık matematik yatırımı: `glm::mat4`, `glm::inverse`, `glm::ortho`, quaternion vb.
+- 3B/karmaşık matematik yatırımı: `glm::mat4`, `glm::inverse`, `glm::ortho`, quaternion vb.
   ihtiyaç doğduğunda hazır. Sınıfı ileride `glm::mat4`'e evriltmek kolaylaşır.
 - GLM column-major düzeni GPU'nun (OpenGL/Vulkan) beklediği düzenle birebir uyumlu —
-  eskiden gereken elle transpoze/repack işleri sadeleşir.
+  eskiden gereken elle transpoze/repack işleri sadeleşiyor.
 - Header-only: derleme/dağıtım maliyeti düşük.
 
 ## Sonuçlar
@@ -54,5 +54,3 @@ kabul edildi.
   içeriyor (`glm::ortho` bu ayrımı tek çağrıyla veremez).
 - `tests/test_transform.cpp`, `glm::mat3` davranışını ve column-major byte düzenini
   (`glm::value_ptr`) doğrulayan testlere dönüştürüldü.
-- Proje talimatları (`.claude/CLAUDE.md`, `.claude/rules/algorithms.md`) "GLM kullanmıyoruz"
-  ifadeleri bu kararla güncellendi.

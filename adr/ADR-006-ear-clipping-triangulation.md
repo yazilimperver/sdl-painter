@@ -12,7 +12,7 @@
 | Algoritma | Karmaşıklık | Konkav | Delik | Uygulama |
 |-----------|-------------|--------|-------|----------|
 | Triangle Fan | O(n) | Hayır | Hayır | Trivial |
-| **Ear Clipping** | O(n²) | Evet | Hayır | Orta |
+| -> **Ear Clipping** | O(n²) | Evet | Hayır | Orta  <- **Seçilen**|
 | Monotone Partition | O(n log n) | Evet | Hayır | Karmaşık |
 | Delaunay (CDT) | O(n log n) | Evet | Evet | Çok karmaşık / kütüphane gerekir |
 | Tessellation shader | GPU | Evet | Evet | OpenGL 4.0+, Vulkan pipeline state |
@@ -23,10 +23,10 @@
 
 ## Gerekçe
 
-- 2D arayüz çiziminde poligon nokta sayısı tipik olarak < 200; O(n²) kabul edilebilir.
+- 2B arayüz çiziminde poligon nokta sayısı tipik olarak < 200; O(n²) kabul edilebilir.
 - Sıfır dış bağımlılık — sadece kendi implementasyonumuz.
 - Algoritma sade: linked list üzerinde kulak (ear) bul → kes → tekrarla.
-- Delik (hole) desteği v1 kapsamı dışında; ear clipping bunu desteklemez ama bu sınır belgelenmiş.
+- Delik (hole) desteği şimdilik yok.
 - Daha hızlı algoritmalar (monotone partition, CDT) gerektiğinde Tessellator arayüzü değişmeden içi değiştirilebilir.
 
 ## Uygulama Özeti
@@ -41,7 +41,7 @@
 
 ## Sınırlar
 
-- Delik (hole) içeren poligonlar desteklenmez (v1 kapsam dışı).
+- Delik (hole) içeren poligonlar desteklenmez.
 - Self-intersecting (kendisiyle kesişen) poligonlar tanımsız davranış üretir.
 - Konveks poligonlarda Triangle Fan optimizasyonu `Tessellator` tarafından otomatik seçilir.
 

@@ -239,7 +239,7 @@ void DrawScene(sp::Painter& painter, const sp::Image& texture,
     painter.SetFont(font_sm);
     painter.SetPen(sp::Pen(kMuted, 0.0F));
     painter.DrawText(sp::Rect{280.0F, 410.0F, 480.0F, 24.0F},
-                     "2D drawing for SDL3  ·  OpenGL + Vulkan",
+                     "2B drawing for SDL3  ·  OpenGL + Vulkan",
                      sp::Alignment::kRight);
   }
 }

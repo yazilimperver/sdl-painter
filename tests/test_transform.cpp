@@ -42,7 +42,7 @@ glm::mat3 MakeScale(float sx, float sy) {
   return sc;
 }
 
-// 2D noktayı homojen koordinatta dönüştür: p' = M * (x, y, 1).
+// 2B noktayı homojen koordinatta dönüştür: p' = M * (x, y, 1).
 void Map(const glm::mat3& m, float x, float y, float* out_x, float* out_y) {
   const glm::vec3 p = m * glm::vec3(x, y, 1.0f);
   *out_x = p.x;

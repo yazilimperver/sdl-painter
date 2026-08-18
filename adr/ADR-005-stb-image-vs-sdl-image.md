@@ -33,3 +33,7 @@ SDLPainter için PNG/JPG benzeri dokuların yüklenmesi gerekmektedir. İki aday
 - `Image::Load()` içinde `stbi_load()` kullanılır; sonuç `uint8_t*` olarak renderer'a iletilir.
 - `stbi_image_free()` RAII wrapper ile yönetilir.
 - SDL_image bağımlılığı `conanfile.py`'e eklenmez.
+
+## Not
+
+Kullanım yaygınlaştıktan sonra SDL_image kullanımı opsiyonel olarak (Vulkan gibi) sunulması değerlendirilebilir.

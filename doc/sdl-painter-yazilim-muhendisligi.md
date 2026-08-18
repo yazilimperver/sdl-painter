@@ -122,7 +122,7 @@ Sabit segment sayısı seçmek bu dengeyi kuramaz.
 
 `TessellateFilledPolygon` önce konvekslik kontrolü yapar. Konveks
 poligonlar O(n) triangle fan ile işlenir; konkav olanlar O(n²)
-ear clipping'e yönlendirilir. 2D arayüz çiziminde tipik poligon
+ear clipping'e yönlendirilir. 2B arayüz çiziminde tipik poligon
 boyutları (n < 200) için bu fark ihmal edilebilir düzeydedir.
 
 ---

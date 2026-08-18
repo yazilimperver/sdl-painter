@@ -5,14 +5,11 @@
 
 ## Bağlam
 
-ADR-001 ile OpenGL 3.3 Core Profile temel backend olarak seçildi. Ancak
-SDLPainter'ın orta vadeli hedefleri arasında modern düşük seviyeli GPU
-API'lerinin gerektirdiği bilinçli kaynak yönetimini (explicit synchronization,
-memory ownership, pipeline state objects) çalışma fırsatı sağlamak da var.
-Ayrıca bazı platformlarda OpenGL sürücü kalitesi düşmüş durumda (örn. Windows
-güncel sürücüler Vulkan'a açıkça öncelik veriyor; macOS Apple Silicon'da
+ADR-001 ile OpenGL 3.3 Core Profile temel backend olarak seçildi. Bununla birlikte
+SDLPainter'ın orta vadeli hedefleri arasında modern düşük seviyeli Vulkan tarzı GPU
+API'lerini kullanma hedefi de mevcut. Ayrıca bazı platformlarda OpenGL sürücü kalitesi düşmüş durumda (örn. Windows güncel sürücüler Vulkan'a öncelik veriyor; macOS Apple Silicon'da
 OpenGL deprecate edildi). Bu nedenle **tek bir backend'e bağımlı kalmak**
-projeyi hem öğrenme hem de uzun ömür açısından kısıtlardı.
+projeyi hem öğrenme hem de uzun ömür açısından kısıtlayabileceğini değerlendirdim. 
 
 Karar noktası: Tek backend mi, çok backend mi? Çoksa hangileri?
 
@@ -47,9 +44,9 @@ bilmez.
 
 ## Gerekçe
 
-- **Soyutlama uygulaması:** `IRenderer` arayüzünün gerçek bir testidir —
+- **Soyutlama uygulaması:** `IRenderer` arayüzünün gerçek bir kullanım testi —
   birden fazla bağımsız implementasyon olmadan arayüz "tek implementasyona
-  şekillenir" tuzağına düşer. Vulkan'ın açıkça yapmak zorunda olduğu
+  şekillenir" tuzağına düşebilir. Vulkan'ın açıkça yapmak zorunda olduğu
   şeyler (sync, memory, pipeline) OpenGL'in örtük yaptığı işlerdir; ikisini
   desteklemek soyutlamayı disipline eder.
 - **Cross-platform yelpaze:** Linux/Windows'ta her ikisi de birinci sınıf
@@ -62,7 +59,7 @@ bilmez.
   arayüz iki bağımsız implementasyon ile zaten "test edilmiş" durumdadır.
 - **Vulkan'ı opsiyonel tutmak:** Vulkan SDK ve loader bağımlılıkları
   istemeyen kullanıcı için (`with_vulkan=False`) varsayılan yapıdır;
-  ekstra ağırlık yalnızca isteyen taşır.
+  ekstra ağırlık yalnızca isteyen taşır. Ayrıca ileride 1.4 gibi sürümlere geçişte değerlendirilecektir.
 
 ## Sonuçlar
 
@@ -109,7 +106,7 @@ src/vulkan/   ← Vulkan 1.1 implementasyonu (opsiyonel)
   yeni geliştirici için giriş eşiği yüksektir → mimari dokümantasyonu
   (`doc/backend-ic-yapisi.md`) bu yüzden gereklidir.
 
-### Reddedilen seçenekler
+### Reddedilen seçenekler (şimdilik)
 
 - **WebGPU:** Native runtime (Dawn, wgpu-native) henüz olgunlaşma sürecinde;
   v2 değerlendirmesi için açık tutulmuştur.

@@ -6,17 +6,14 @@
 ## Bağlam
 
 SDLPainter yalnızca çizim API'sini (`Painter`) sunar; pencere oluşturma, SDL
-init, GL context, olay döngüsü ve yıkım kullanıcının sorumluluğundadır. Sonuç
-olarak her uygulama ~40–50 satır aynı boilerplate'i tekrar eder: `InitLogger`,
+init, GL context, olay döngüsü ve yıkım kullanıcının sorumluluğunda olduğu kabulüyle hep ilerledik. Bunun sonucunda, her uygulama ~40–50 satır aynı boilerplate'i tekrar ettiğini gördük: `InitLogger`,
 `SDL_Init`, 5 GL attribute (3.3 core + MSAA), backend'e göre pencere flag'i,
 Painter'ın pencereden önce yıkılması için scope dansı, `SDL_PollEvent` döngüsü,
-`SDL_DestroyWindow` + `SDL_Quit`. Bu tekrar repo'daki 11 örnekte ve dış
-uygulamalarda (ör. `uforces_viewer`) birebir görülüyor.
+`SDL_DestroyWindow` + `SDL_Quit`. Bu tekrar repo'daki örneklerde de görülebilir.
 
-Kütüphaneyi kullananların SDL başlıkları ve ayarlarıyla uğraşmaması hedefleniyor.
-Referans olarak uEngine4'teki `SdlApplication` (SDL2) incelendi; ancak o çatı
-asset service, gamepad, touch, JSON config ve fixed-timestep ticker içeren ağır
-bir yapı. Bu proje için çok daha ince bir soyutlama isteniyor.
+Kütüphaneyi kullananların SDL başlıkları ve ayarlarıyla uğraşmaması hedeflediğimizden ötürü, bu konuya el atmak istedim.
+
+Referans olarak da, uEngine4'teki `SdlApplication` (SDL2)'dan esinlendik; ancak o, asset service, gamepad, touch, JSON config ve fixed-timestep ticker içeren nispeten ağır bir altyapı. Bu proje için çok daha ince bir soyutlamanın işimizi göreceğini değerlendirdim.
 
 | Kriter | Çatı yok (mevcut) | uEngine4 (listener + ticker) | İnce kalıtım (seçilen) |
 |--------|-------------------|------------------------------|------------------------|
@@ -30,7 +27,7 @@ bir yapı. Bu proje için çok daha ince bir soyutlama isteniyor.
 
 `sdl_painter_app` adında **ayrı bir static kütüphane** eklenir. Core
 `sdl_painter` saf çizim API'si olarak dokunulmadan kalır; kendi döngüsünü isteyen
-uygulamalar (ör. `uforces_viewer`) yalnızca core'a link etmeye devam eder.
+uygulamalar yalnızca core'a link etmeye devam eder.
 
 - **Kalıtım tabanlı API:** Kullanıcı `sdl_painter::Application`'dan türeyip
   korumalı sanal metotları (`OnRender` zorunlu; `OnInit`/`OnUpdate`/`OnKeyDown`/
@@ -72,11 +69,6 @@ uygulamalar (ör. `uforces_viewer`) yalnızca core'a link etmeye devam eder.
 - SDL keycode → `Key` çevirisi internal `event_translator` içinde; düz tam sayı
   imzasıyla pencere/context olmadan headless test edilebilir
   (`tests/test_event_translator.cpp`, `tests/test_app_config.cpp`).
-- `examples/phase6_app_demo.cpp` kVariable modu (~70 satır, phase2'nin ~250
-  satırlık boilerplate'i olmadan), `examples/phase7_game_demo.cpp` ise kFixed
-  modu + interpolasyonu (yerçekimiyle seken top) gösterir. Mevcut phase0–phase5
-  örnekleri **kasıtlı olarak** ham SDL+Painter kullanımını belgelemeye devam eder;
-  migrasyon yapılmadı.
 - `OnRender(Painter&)` artık pure değil (boş varsayılan); interpolasyon için
   `OnRender(Painter&, float alpha)` eklendi ve varsayılanı tek-argümanlıya delege
   eder. Mevcut tek-argümanlı override'lar değişmeden çalışır; oyun uygulamaları

@@ -4,7 +4,7 @@
 # --- Proje ---
 PROJECT_NAME            = "@PROJECT_NAME@"
 PROJECT_NUMBER          = "@PROJECT_VERSION@"
-PROJECT_BRIEF           = "QPainter benzeri SDL3 + OpenGL/Vulkan 2D çizim kütüphanesi"
+PROJECT_BRIEF           = "QPainter benzeri SDL3 + OpenGL/Vulkan 2B çizim kütüphanesi"
 PROJECT_LOGO            =
 
 # --- Girdi ---

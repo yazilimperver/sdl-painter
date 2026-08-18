@@ -4,7 +4,7 @@
 
 namespace sdl_painter {
 
-/// @brief 2D nokta — float koordinatlar.
+/// @brief 2B nokta — float koordinatlar.
 struct Point {
   float x{0.0F};
   float y{0.0F};
@@ -30,7 +30,7 @@ struct Point {
   }
 };
 
-/// @brief 2D dikdörtgen — sol üst köşe + genişlik/yükseklik.
+/// @brief 2B dikdörtgen — sol üst köşe + genişlik/yükseklik.
 struct Rect {
   float x{0.0F};
   float y{0.0F};
@@ -65,7 +65,7 @@ struct Rect {
   }
 };
 
-/// @brief 2D boyut — genişlik ve yükseklik.
+/// @brief 2B boyut — genişlik ve yükseklik.
 struct Size {
   float w{0.0F};
   float h{0.0F};

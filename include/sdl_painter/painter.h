@@ -39,7 +39,7 @@ struct RenderState {
 
 /// @brief Ana çizim sınıfı — QPainter'a benzer API.
 ///
-/// Painter, SDL penceresi üzerinde 2D çizim yapar. Backend (OpenGL/Vulkan)
+/// Painter, SDL penceresi üzerinde 2B çizim yapar. Backend (OpenGL/Vulkan)
 /// IRenderer arayüzü üzerinden soyutlanır.
 ///
 /// @warning **Yaşam döngüsü sözleşmesi:** Painter'a texture yükleyen tüm
