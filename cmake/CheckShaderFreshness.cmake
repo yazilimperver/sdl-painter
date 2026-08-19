@@ -12,7 +12,7 @@
 # hesaplanıp karşılaştırılır. glslc veya Vulkan SDK GEREKTİRMEZ, bu yüzden
 # CI'da ek araç kurulumu olmadan çalışır.
 
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.21)
 
 get_filename_component(_repo_root "${CMAKE_CURRENT_LIST_DIR}/.." ABSOLUTE)
 set(_shader_dir "${_repo_root}/src/vulkan/shaders")

@@ -1,3 +1,13 @@
+
+"""SDLPainter'ın repo içi Conan recipe'ı.
+
+NOT: Bu dosya Conan Center'a gönderilecek recipe DEĞİLDİR. CCI recipe'i
+`conan-io/conan-center-index` deposunda `recipes/sdl_painter/all/` altında
+yaşar, kaynağı `conandata.yml` üzerinden tarball'dan indirir ve
+`build_examples`/`build_tests` gibi seçenekleri barındıramaz.
+Bu dosya geliştiricinin bağımlılıkları çekmesi ve yerel `conan create`  denemesi içindir (bkz. roadmap/03-conan-center-plani.md).
+"""
+
 from conan import ConanFile
 from conan.errors import ConanInvalidConfiguration
 from conan.tools.build import check_min_cppstd
@@ -9,16 +19,6 @@ import re
 
 
 class SDLPainterConan(ConanFile):
-    """SDLPainter'ın repo içi Conan recipe'ı.
-
-    NOT: Bu dosya Conan Center'a gönderilecek recipe DEĞİLDİR. CCI recipe'i
-    `conan-io/conan-center-index` deposunda `recipes/sdl_painter/all/` altında
-    yaşar, kaynağı `conandata.yml` üzerinden tarball'dan indirir ve
-    `build_examples`/`build_tests` gibi seçenekleri barındıramaz.
-    Bu dosya geliştiricinin bağımlılıkları çekmesi ve yerel `conan create`
-    denemesi içindir (bkz. roadmap/03-conan-center-plani.md).
-    """
-
     author = "yazilimperver"
     name = "sdl_painter"
     description = ("Modern C++17 2D drawing library for SDL3 with "
@@ -31,12 +31,7 @@ class SDLPainterConan(ConanFile):
     package_type = "library"
     settings = "os", "compiler", "build_type", "arch"
     exports_sources = (
-        "CMakeLists.txt", "cmake/*", "include/*", "src/*",
-        # conan create sırasında CMake bu dizinlere de giriyor (secenekler
-        # varsayilan olarak acik); export edilmezlerse configure duser.
-        "examples/*", "tests/*",
-        # package() lisansi pakete kopyaliyor.
-        "LICENSE",
+        "CMakeLists.txt", "cmake/*", "include/*", "src/*", "examples/*", "tests/*", "LICENSE",
     )
 
     options = {
@@ -101,7 +96,8 @@ class SDLPainterConan(ConanFile):
     def validate(self):
         if self.settings.os not in ("Linux", "Windows", "FreeBSD"):
             raise ConanInvalidConfiguration(
-                "%s henuz %s desteklemiyor (macOS v1.1 hedefinde)."
+                "%s henuz %s desteklemiyor. macOS destegi roadmap "
+                "Faz 4'te planli (roadmap/00-ilerleme.md)."
                 % (self.ref, self.settings.os))
 
         if self.settings.compiler.get_safe("cppstd"):
@@ -134,8 +130,7 @@ class SDLPainterConan(ConanFile):
                     "native MSVC build kullanın.")
                 self.options.with_vulkan = False
 
-            # SDL ve SDL3_ttf shared olmak zorunda (recipe validation aynı
-            # shared değeri gerektiriyor).
+            # SDL ve SDL3_ttf shared olmak zorunda (recipe validation aynı shared değeri gerektiriyor).
             self.options["sdl"].shared = True
             self.options["sdl_ttf"].shared = True
             # SDL3_ttf'nin transitive bağımlılıkları MinGW cross-compile'da
@@ -172,11 +167,6 @@ class SDLPainterConan(ConanFile):
         # `requires` olsaydi tuketicinin bagimlilik grafigine sizardi.
         if self.options.build_tests:
             self.test_requires("gtest/1.15.0")
-
-    # NOT: Eskiden burada `tool_requires("shaderc")` vardi (Vulkan shader'larini
-    # glslc ile derlemek icin). SPIR-V ciktilari artik repo'da tutulup binary'ye
-    # gomuldugu icin gerekmiyor — bkz. ADR-009. glslc yalnizca
-    # -DSDLPAINTER_REGENERATE_SHADERS=ON ile aranir.
 
     def layout(self):
         cmake_layout(self)
@@ -227,9 +217,8 @@ class SDLPainterConan(ConanFile):
              src=self.source_folder,
              dst=os.path.join(self.package_folder, "licenses"))
 
-        # Binary glob'lamak yerine projenin kendi install kurallarini kullan
-        # (Faz 1.2 ile eklendi). Boylece paket icerigi ile `cmake --install`
-        # ciktisi ayrisamaz ve test binary'leri yanlislikla pakete girmez.
+        # Binary glob'lamak yerine projenin kendi install kurallarini kullan. 
+        # Boylece paket icerigi ile `cmake --install` ciktisi ayrisamaz ve test binary'leri yanlislikla pakete girmez.
         cmake = CMake(self)
         cmake.install()
 

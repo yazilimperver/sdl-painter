@@ -1,11 +1,10 @@
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.21)
 project(sdl_painter_consumer LANGUAGES CXX)
 
-# Bu proje SDLPainter'i DISARIDAN tuketen bir kullaniciyi taklit eder.
-# Repo'nun kendi CMake'ine hicbir sekilde bagli degildir.
+# Bu proje SDLPainter'i DISARIDAN tuketen bir kullaniciyi taklit ederek test eder.
+# Repo'nun kendi CMake'ine bagli degildir.
 #
 # Iki yol da ayni hedef ismini kullanabilmeli: sdl_painter::sdl_painter
-#
 #   -DCONSUMER_MODE=find_package  -> kurulmus paketi bul
 #   -DCONSUMER_MODE=subdirectory  -> kaynagi alt proje olarak ekle
 

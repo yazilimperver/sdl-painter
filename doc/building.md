@@ -13,7 +13,7 @@ troubleshooting) is in [Getting Started](getting-started.md).
 
 | Tool | Minimum version |
 |------|-----------------|
-| CMake | 3.20 |
+| CMake | 3.21 |
 | Conan | 2.x |
 | GCC / Clang | C++17 support |
 | MSVC | VS 2022 (v143) |

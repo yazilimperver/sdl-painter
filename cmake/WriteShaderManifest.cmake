@@ -5,7 +5,7 @@
 # `regenerate_shaders` hedefi tarafından çağrılır. Manifest,
 # cmake/CheckShaderFreshness.cmake'in karşılaştırdığı referanstır.
 
-cmake_minimum_required(VERSION 3.20)
+cmake_minimum_required(VERSION 3.21)
 
 if(NOT DEFINED SDLPAINTER_SHADER_DIR)
     message(FATAL_ERROR "SDLPAINTER_SHADER_DIR tanimlanmali")

@@ -15,7 +15,7 @@ mimarisi ve diğer üst seviye hususlar için [Mimari Genel Bakış](mimari-gene
 | Araç | Minimum Sürüm | Notlar |
 |------|---------------|--------|
 | C++ derleyicisi | C++17 destekleyen GCC 11+, Clang 14+, MSVC 2022 | |
-| CMake | 3.20 | Presets desteği için |
+| CMake | 3.21 | `PROJECT_IS_TOP_LEVEL`, `$<TARGET_RUNTIME_DLLS>`, presets v3 için |
 | Conan | 2.x | `pip install conan` |
 | Git | — | repoyu klonlamak için |
 | OpenGL sürücüsü | 3.3 Core | Çoğu sistemde mevcut |

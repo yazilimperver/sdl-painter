@@ -13,7 +13,7 @@ the design, see the [Architecture Overview](architecture.md) please.
 | Tool | Minimum version | Notes |
 |------|-----------------|-------|
 | C++ compiler | GCC 11+, Clang 14+ or MSVC 2022 with C++17 | |
-| CMake | 3.20 | for preset support |
+| CMake | 3.21 | `PROJECT_IS_TOP_LEVEL`, `$<TARGET_RUNTIME_DLLS>`, presets v3 |
 | Conan | 2.x | `pip install conan` |
 | Git | — | to clone the repository |
 | OpenGL driver | 3.3 Core | present on most systems |
