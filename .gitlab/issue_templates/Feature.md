@@ -10,7 +10,7 @@ bezier) bilinçli olarak v2 için ertelenmiştir.
 
 ## Önerilen API
 
-<!-- Mümkün olduğunca somut. QPainter'da nasıldı? -->
+<!-- Mümkün olduğunca somut. -->
 
 ```cpp
 // Önerilen kullanım örneği
@@ -35,6 +35,6 @@ sdl_painter::Painter p(window, RendererBackend::kOpenGL);
 
 ## Ek Kaynaklar
 
-<!-- QPainter dokümantasyonu, benzer kütüphanelerin yaklaşımı, vb. -->
+<!-- Benzer kütüphanelerin yaklaşımı, vb. -->
 
 /label ~enhancement

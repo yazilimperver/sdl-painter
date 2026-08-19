@@ -533,7 +533,7 @@ void Painter::Translate(float dx, float dy) {
   if (mBatcher != nullptr) {
     mBatcher->Flush();
   }
-  // Sağdan çarp (post-multiply): QPainter / HTML Canvas semantiği.
+  // Sağdan çarp (post-multiply)
   // glm::mat3 column-major → çeviri sütun 2'de: t[2][0]=dx, t[2][1]=dy.
   glm::mat3 t(1.0F);
   t[2][0] = dx;

@@ -6,7 +6,7 @@
 // Transform sınıfı kaldırıldı; artık doğrudan glm::mat3 (column-major) kullanılır.
 // Bu testler, Painter'ın transform metodlarının dayandığı iki sözleşmeyi kilitler:
 //   1) affine matrislerin column-major kuruluşu (mat[col][row]),
-//   2) post-multiply (sağdan çarp) QPainter/Canvas semantiği: M = M * op.
+//   2) post-multiply (sağdan çarp) M = M * op.
 // Ayrıca glm::value_ptr'ın GPU'ya giden column-major byte düzenini doğrular.
 
 namespace sdl_painter {
@@ -146,7 +146,7 @@ TEST(TransformTest, ChainedOperations) {
 }
 
 TEST(TransformTest, TranslateThenRotateRotatesAroundLocalOrigin) {
-  // QPainter senaryosu: Translate(cx,cy) sonra Rotate(90), FillRect(-1,-1,2,2)
+  //  Translate(cx,cy) sonra Rotate(90), FillRect(-1,-1,2,2)
   // → dikdörtgenin merkezi (cx,cy)'de kalır, kendi etrafında döner.
   glm::mat3 t(1.0f);
   t = t * MakeTranslate(100.0f, 50.0f);

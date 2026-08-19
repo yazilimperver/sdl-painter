@@ -44,44 +44,44 @@ flowchart LR
 
 | Doküman | İçerik |
 |---------|--------|
-| 🚀 [Hızlı Başlangıç](hizli-baslangic.md) · [Getting Started](getting-started.md) | Önkoşullar, kurulum, ilk uygulama, sık sorunlar |
-| 📝 [Özellik Listesi](sdl-painter-ozellikler.md) | Desteklenen primitifler, stiller, backend'ler |
-| 💡 [Örnekler](sdl-painter-ornekler.md) · [examples/README.md](../examples/README.md) | Kullanım örnekleri ve kod parçaları |
-| 🔧 [Building](building.md) · [Scripts](scripts.md) · [Development](development.md) | Derleme, Docker, script referansı, kalite kontrolleri, CI/CD *(İngilizce)* |
+| [Hızlı Başlangıç](hizli-baslangic.md) · [Getting Started](getting-started.md) | Önkoşullar, kurulum, ilk uygulama, sık sorunlar |
+| [Özellik Listesi](sdl-painter-ozellikler.md) | Desteklenen primitifler, stiller, backend'ler |
+| [Örnekler](sdl-painter-ornekler.md) · [examples/README.md](../examples/README.md) | Kullanım örnekleri ve kod parçaları |
+| [Building](building.md) · [Scripts](scripts.md) · [Development](development.md) | Derleme, Docker, script referansı, kalite kontrolleri, CI/CD *(İngilizce)* |
 
 ### Mimari
 
 | Doküman | İçerik |
 |---------|--------|
-| 🏗️ [Mimari Genel Bakış](mimari-genel-bakis.md) · [Architecture](architecture.md) | Katmanlar, bileşen bağımlılıkları, kaynak ağacı, sözleşmeler |
-| 🧩 [Sınıf Diyagramı](sinif-diyagrami.md) | UML class diagram (Mermaid) — Painter, render hattı, görseller, backend'ler |
-| 🔄 [Akış Diyagramları](akislar.md) | Frame yaşam döngüsü, draw call, batch flush, transform stack, texture upload, Vulkan frame |
-| 🏛️ [Yazılım Mühendisliği Perspektifi](sdl-painter-yazilim-muhendisligi.md) | Tasarım kararlarının gerekçeleri, SOLID, kapsam yönetimi |
+| [Mimari Genel Bakış](mimari-genel-bakis.md) · [Architecture](architecture.md) | Katmanlar, bileşen bağımlılıkları, kaynak ağacı, sözleşmeler |
+| [Sınıf Diyagramı](sinif-diyagrami.md) | UML class diagram (Mermaid) — Painter, render hattı, görseller, backend'ler |
+| [Akış Diyagramları](akislar.md) | Frame yaşam döngüsü, draw call, batch flush, transform stack, texture upload, Vulkan frame |
+| [Yazılım Mühendisliği Perspektifi](sdl-painter-yazilim-muhendisligi.md) | Tasarım kararlarının gerekçeleri, SOLID, kapsam yönetimi |
 
 ### Backend Detayı
 
 | Doküman | İçerik |
 |---------|--------|
-| ⚙️ [Backend İç Yapısı](backend-ic-yapisi.md) | OpenGL 3.3 ve Vulkan 1.1 implementasyonu, karşılaştırma, yeni backend ekleme |
+| [Backend İç Yapısı](backend-ic-yapisi.md) | OpenGL 3.3 ve Vulkan 1.1 implementasyonu, karşılaştırma, yeni backend ekleme |
 
 ### Docker ve Dağıtım
 
 | Doküman | İçerik |
 |---------|--------|
-| 🐳 [Docker Kullanım Kılavuzu](docker.md) | İmaj hiyerarşisi, builder/ci/windows-cross aşamaları, GitLab CI entegrasyonu, Dockerfile.windows |
-| 📦 [Docker Hub'a Dağıtım](docker-hub-deployment.md) | İmaj build, etiketleme, Hub/GitLab Registry'ye push, otomatik CI/CD akışı |
+| [Docker Kullanım Kılavuzu](docker.md) | İmaj hiyerarşisi, builder/ci/windows-cross aşamaları, GitLab CI entegrasyonu, Dockerfile.windows |
+| [Docker Hub'a Dağıtım](docker-hub-deployment.md) | İmaj build, etiketleme, Hub/GitLab Registry'ye push, otomatik CI/CD akışı |
 
 ### Katkı ve Dokümantasyon
 
 | Doküman | İçerik |
 |---------|--------|
-| 📝 [Dokümantasyon Rehberi](dokumantasyon-rehberi.md) | Doxygen yorum standardı, etiket kullanımı, yerel build, GitLab Pages |
+| [Dokümantasyon Rehberi](dokumantasyon-rehberi.md) | Doxygen yorum standardı, etiket kullanımı, yerel build, GitLab Pages |
 
 ### Karar Kayıtları
 
 | Doküman | İçerik |
 |---------|--------|
-| 📜 [ADR Dizini](../adr/) | Architecture Decision Records — neden böyle yapıldı? |
+| [ADR Dizini](../adr/) | Architecture Decision Records — neden böyle yapıldı? |
 
 ---
 

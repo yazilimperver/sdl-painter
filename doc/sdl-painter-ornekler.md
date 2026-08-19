@@ -1,7 +1,7 @@
 # SDLPainter — Örnekler Rehberi
 
 Her demo bir öncekinin üzerine inşa edilir. Örnekler fazlandırma usulü geliştirildi.
-Her biri, bir diğerinin üzerine bir ekleme yaparak gider. Bu belge her örneğin **neyi doğruladığını**, **hangi API
+Her biri, bir diğerinin üzerine bir ekleme yaparak gider. Bu doküman her örneğin **neyi doğruladığını**, **hangi API
 yeteneklerini kullandığını** ve **mühendislik açısından neden önemli
 olduğunu** açıklar.
 

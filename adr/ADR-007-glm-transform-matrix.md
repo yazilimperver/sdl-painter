@@ -47,7 +47,7 @@ kabul edildi.
   - Vulkan `SetModelMatrix` repack indeksleri column-major girdiye göre yeniden yazıldı
     (`src/vulkan/vulkan_renderer.cpp`): tx=`mat3[6]`, ty=`mat3[7]`.
   - `IRenderer::SetModelMatrix` dokümanı "column-major" olarak güncellendi.
-- `Painter::Translate/Rotate/Scale` post-multiply (QPainter/Canvas) semantiğini korur:
+- `Painter::Translate/Rotate/Scale` post-multiply semantiğini korur:
   `M = M * op`. Affine matrisler gtx/experimental'a bağlanmadan elle kurulur
   (public header'a `GLM_ENABLE_EXPERIMENTAL` sızmasını önlemek için).
 - `Painter::UpdateProjection` değişmedi — zaten column-major ve backend Y-flip mantığını

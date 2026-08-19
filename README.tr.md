@@ -141,7 +141,7 @@ Her biri tek bir yeteneği izole eden on altı çalışan demo:
 |------|-------------|
 | **Primitifler** | Çizgi, dikdörtgen, daire, elips, çokgen, polyline — hepsi stroke + fill |
 | **Stiller** | Pen (renk, kalınlık, outline), Brush (dolgu rengi), global opacity |
-| **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` yığını — QPainter semantiği |
+| **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` yığını |
 | **Clipping** | Scissor tabanlı dikdörtgen kırpma |
 | **Image** | PNG / JPG yükleme (stb_image), kaynak→hedef ölçekleme, alpha blending |
 | **Metin** | SDL_ttf 3.x, glyph cache, left/center/right hizalama |

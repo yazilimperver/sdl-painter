@@ -1,6 +1,6 @@
 # SDLPainter — Yazılım Mühendisliği Perspektifi
 
-Bu belge SDLPainter'ın teknik özellik listesi değil; kütüphanenin
+Bu doküman SDLPainter'ın teknik özellik listesi değil; kütüphanenin
 **neden böyle tasarlandığını** ele alır. Mimari kararlar, tasarım desenleri,
 performans tercihleri ve kapsam yönetimi yazılım mühendisliği perspektifinden
 incelenmektedir.
@@ -45,7 +45,7 @@ ibarettir — mevcut hiçbir kodu değiştirmek gerekmez (Açık/Kapalı Prensib
 `Save()` / `Restore()` çifti `std::vector<RenderState>` üzerinde push/pop
 semantiğiyle çalışır. `RenderState` transform matrisi, pen, brush, opacity ve
 clip rect'i birlikte taşır; bu sayede iç içe transform bloklarında durum
-tutarlılığı garanti altındadır. QPainter kullanıcıları bu semantiği zaten bilir.
+tutarlılığı garanti altındadır.
 
 ### Command Buffer — RenderBatcher
 

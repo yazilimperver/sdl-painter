@@ -2,9 +2,11 @@
 
 # SDLPainter — Hızlı Başlangıç
 
-Bu rehber SDLPainter'ı **ilk defa kullananlar** içindir. Beş dakikada
-çalışan bir pencere ve birkaç şekil çizdirmek hedef. Kütüphanenin
-mimari arka planı için [Mimari Genel Bakış](mimari-genel-bakis.md).
+Bu rehber SDLPainter'ı **ilk defa kullananlar** içindir. 
+
+Beş dakikada
+çalışan bir pencere ve birkaç şekil çizdirmek için doğru yerdesiniz. Kütüphanenin
+mimarisi ve diğer üst seviye hususlar için [Mimari Genel Bakış](mimari-genel-bakis.md) sayfasına göz atabilirsiniz.
 
 ---
 
@@ -40,27 +42,29 @@ cmake --build --preset linux-debug
 ./build/linux-debug/examples/primitives
 ```
 
-> Preset adı `--output-folder` ile eşleşmek zorundadır: projenin
+> Preset adı `--output-folder` ile eşleşmek zorunda: projenin
 > `CMakePresets.json` dosyası her preset için toolchain yolunu
-> `build/<preset>/generators/...` altında arar.
+> `build/<preset>/generators/...` altında arıyor.
 >
 > Windows / MSVC için preset adları `windows-debug` ve `windows-release`
 > şeklindedir (`--output-folder=build/windows-debug/generators`).
 > Cross-compile için Dockerfile içindeki `windows-cross` stage'i ve
 > `windows-mingw-debug` / `windows-mingw-release` presetleri kullanılır.
 
+**NOT:** Conan install ve benzeri çağrıları, CMake presetleri içerisine de alacak bir takım çözümler mevcut, bununla birlikte şu an için bu şekilde durmasının daha iyi olduğunu düşünüyorum ileride belki bu opsiyonu da değerlendirebiliriz.
+
 ### 2.1 Windows (Visual Studio 2022) — Manuel
 
 ```powershell
-# 0. VS 2022 ortam değişkenlerini yükle
+# 0. VS 2022 ortam değişkenlerini yüklüyoruz
 $vsInstallPath = & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -property installationPath
 Import-Module "$vsInstallPath\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
 Enter-VsDevShell -VsInstallPath $vsInstallPath -DevCmdArguments "-arch=x64"
 
-# 1. Conan profili oluştur (ilk seferde)
+# 1. Conan profili oluşturuyoruz (ilk seferde). Ileride bunlari da sağlıyor olacağım
 conan profile detect
 
-# 2. Bağımlılıkları yükle
+# 2. Bağımlılıkları yüklüyoruz
 conan install . --output-folder=build/windows-debug/generators --build=missing -s build_type=Debug
 
 # 3. Derle
@@ -70,7 +74,7 @@ cmake --build --preset windows-debug
 
 ### 2.2 Script ile Derleme
 
-Tüm scriptler proje kökünden çalıştırılmalıdır. Bayrakların tam listesi için
+Tüm scriptler projenin root dizininden çalıştırılmalıdır. Argümanların tam listesi için
 [Script Referansı](scripts.md) *(İngilizce)*.
 
 ```bash
@@ -95,8 +99,8 @@ chmod +x scripts/*.sh
 
 | Preset | Platform | Build Type | Notlar |
 |--------|----------|------------|--------|
-| `linux-debug` | Linux | Debug | CI'da kullanılır |
-| `linux-release` | Linux | Release | CI'da kullanılır |
+| `linux-debug` | Linux | Debug | CI'da da kullanılır |
+| `linux-release` | Linux | Release | CI'da da kullanılır |
 | `linux-debug-asan` | Linux | Debug | ASan + UBSan aktif |
 | `windows-debug` | Windows | Debug | MSVC, Visual Studio 17 2022 |
 | `windows-release` | Windows | Release | MSVC, Visual Studio 17 2022 |
@@ -125,7 +129,7 @@ cmake --build --preset linux-debug
 
 ## 3. İlk Uygulama — "Hello, Rectangle"
 
-Yeni bir CMake projesi varsayalım. Aşağıdaki dosyayı `main.cpp` olarak
+Basit bir uygulama oluşturmak için, aşağıdaki dosyayı `main.cpp` olarak
 kaydedin:
 
 ```cpp
@@ -229,7 +233,7 @@ painter.FillRect(-50.0f, -50.0f, 100.0f, 100.0f);
 painter.Restore();                       // önceki state geri yüklenir
 ```
 
-`Save`/`Restore` sayısı dengeli olmalı. QPainter ile birebir aynı semantik.
+`Save`/`Restore` sayısı dengeli olmalı.
 
 ### 4.4 Image (Phase 3)
 
@@ -265,7 +269,7 @@ painter.FillCircle(500, 250, 200);  // bir kısmı kırpılır
 painter.ClearClip();
 ```
 
-Scissor tabanlı, eksen-hizalı dikdörtgen. Path-based clip yok (v1 dışı).
+Scissor tabanlı, eksen-hizalı dikdörtgen.
 
 ---
 

@@ -1,9 +1,9 @@
 # SDLPainter — Akış Diyagramları
 
-Bu belge SDLPainter'ın **çalışma zamanı davranışını** sequence ve flow
-diyagramlarıyla anlatır. Statik yapı için
+Bu dokümanda SDLPainter'ın **çalışma zamanı davranışını** sequence ve flow
+diyagramlarıyla anlatmaya çalıştım. Statik yapı için
 [Sınıf Diyagramı](sinif-diyagrami.md), katman bağlamı için
-[Mimari Genel Bakış](mimari-genel-bakis.md) a başvurabilirsiniz.
+[Mimari Genel Bakış](mimari-genel-bakis.md) dokümanlarına başvurabilirsiniz.
 
 ---
 
@@ -195,7 +195,7 @@ sequenceDiagram
 
 **RenderState ne taşır?** → `transform`, `pen`, `brush`, `opacity`,
 `clip_rect`, `has_clip`. `Save()` bunların **tamamının kopyasını** alır;
-`Restore()` hepsini geri yükler. QPainter ile birebir aynı semantik.
+`Restore()` hepsini geri yükler.
 
 ### İç İçe Save/Restore
 

@@ -1,6 +1,6 @@
 # SDLPainter — Dokümantasyon Rehberi
 
-Bu belge kütüphaneye katkıda bulunanlar için **Doxygen yorum standardını**,
+Bu doküman kütüphaneye katkıda bulunanlar için **Doxygen yorum standardını**,
 yerel build adımlarını ve GitLab Pages entegrasyonunu açıklar.
 
 ---

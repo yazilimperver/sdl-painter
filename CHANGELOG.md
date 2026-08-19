@@ -169,7 +169,7 @@
   yeniden düzenlendi; eksik dosyalar eklendi.
 - **CI/CD — Conan önbellek paylaşımı:** Pipeline aşamaları arasında Conan
   paket önbelleği artifact olarak aktarılıyor; tekrar indirme süresi azaldı.
-- **Painter API:** QPainter benzeri yüksek seviye 2B çizim arayüzü
+- **Painter API:** Yüksek seviye 2B çizim arayüzü
   (`SetPen`, `SetBrush`, `DrawLine`, `DrawRect`, `FillRect`, `DrawCircle`,
   `FillCircle`, `DrawEllipse`, `FillEllipse`, `DrawPolygon`, `FillPolygon`,
   `DrawPolyline`, `DrawImage`, `DrawText`).

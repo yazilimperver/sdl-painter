@@ -1,6 +1,6 @@
 # SDLPainter — Sınıf Diyagramları
 
-Bu belgede SDLPainter'ın **sınıf yapısı** Mermaid `classDiagram` notasyonuyla
+Bu dokümanda SDLPainter'ın **sınıf yapısı** Mermaid `classDiagram` notasyonuyla
 verilmiştir. Diyagramlar parçalara bölünmüştür çünkü tek bir grafik hızla
 okunamaz hale gelir; her parça farklı bir konsepte odaklanır.
 

@@ -2,9 +2,9 @@
 
 # SDLPainter — Getting Started
 
-This guide is for people using SDLPainter **for the first time**. The goal is a
+This guide is for people using SDLPainter **for the first time**. The goal is to provide a
 working window with a few shapes on it in five minutes. For the reasoning behind
-the design, see the [Architecture Overview](architecture.md).
+the design, see the [Architecture Overview](architecture.md) please.
 
 ---
 
@@ -94,8 +94,8 @@ chmod +x scripts/*.sh
 
 | Preset | Platform | Build type | Notes |
 |--------|----------|------------|-------|
-| `linux-debug` | Linux | Debug | used in CI |
-| `linux-release` | Linux | Release | used in CI |
+| `linux-debug` | Linux | Debug | used also in CI |
+| `linux-release` | Linux | Release | used also in CI |
 | `linux-debug-asan` | Linux | Debug | ASan + UBSan enabled |
 | `windows-debug` | Windows | Debug | MSVC, Visual Studio 17 2022 |
 | `windows-release` | Windows | Release | MSVC, Visual Studio 17 2022 |
@@ -124,7 +124,7 @@ cmake --build --preset linux-debug
 
 ## 3. Your first application — "Hello, Rectangle"
 
-Assume a fresh CMake project. Save the following as `main.cpp`:
+To develop a minimal application, please save the following as `main.cpp`:
 
 ```cpp
 #include <SDL3/SDL.h>
@@ -227,7 +227,7 @@ painter.FillRect(-50.0f, -50.0f, 100.0f, 100.0f);
 painter.Restore();                       // previous state is restored
 ```
 
-`Save` and `Restore` must be balanced. The semantics match QPainter exactly.
+`Save` and `Restore` must be balanced.
 
 ### 4.4 Images
 
@@ -263,8 +263,7 @@ painter.FillCircle(500, 250, 200);  // partially clipped
 painter.ClearClip();
 ```
 
-Scissor-based, axis-aligned rectangles. Path-based clipping is out of scope
-for v1.
+Scissor-based, axis-aligned rectangles.
 
 ---
 

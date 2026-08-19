@@ -1,9 +1,9 @@
 # SDLPainter — Backend İç Yapısı
 
-Bu belge `IRenderer` arayüzünün arkasındaki **iki somut implementasyonu**
-(OpenGL 3.3 ve Vulkan 1.1) detaylı inceler. Üst katman bağlamı için
+Bu dokümanda, `IRenderer` arayüzünün arkasındaki **iki somut implementasyonu**
+(OpenGL 3.3 ve Vulkan 1.1) detaylı anlatmaya çalışacağım. Üst katman bağlamı için
 [Mimari Genel Bakış](mimari-genel-bakis.md), arayüz tanımları için
-[Sınıf Diyagramı](sinif-diyagrami.md).
+[Sınıf Diyagramı](sinif-diyagrami.md) dokümanlarına başvurabilirsiniz.
 
 ---
 
@@ -369,14 +369,14 @@ flowchart TB
     style F fill:#2da44e,color:#fff
 ```
 
-Bu **Açık/Kapalı Prensibi**'nin somut karşılığıdır. IRenderer arayüzü
-genişlemez, mevcut backend'ler etkilenmez.
+Bu **Açık/Kapalı Prensibi**'nin somut karşılığıdır. Bu sayede IRenderer arayüzü
+genişlemez ve mevcut backend'ler bu değişiklikten etkilenmez.
 
 ---
 
 ## 6. İlgili Mimari Karar Kayıtları (ADR)
 
-| ADR | Karar | Bu belgedeki ilgili bölüm |
+| ADR | Karar | Bu dokümandaki ilgili bölüm |
 |-----|-------|---------------------------|
 | ADR-001 | OpenGL 3.3 Core (4.5/ES değil) | §2 |
 | ADR-003 | `glLineWidth` yerine geometry quad | Tessellator (akislar.md) |
@@ -388,6 +388,6 @@ genişlemez, mevcut backend'ler etkilenmez.
 
 ## 7. Sonraki Adımlar
 
-- 🧩 [Sınıf Diyagramı → Vulkan Bölümü](sinif-diyagrami.md#5-vulkan-backend-sınıfları)
-- 🔄 [Akış Diyagramları → Vulkan Frame](akislar.md#7-vulkan-frame-akışı-phase-5)
-- 🏗️ [Yazılım Mühendisliği Perspektifi](sdl-painter-yazilim-muhendisligi.md)
+- [Sınıf Diyagramı → Vulkan Bölümü](sinif-diyagrami.md#5-vulkan-backend-sınıfları)
+- [Akış Diyagramları → Vulkan Frame](akislar.md#7-vulkan-frame-akışı-phase-5)
+- [Yazılım Mühendisliği Perspektifi](sdl-painter-yazilim-muhendisligi.md)

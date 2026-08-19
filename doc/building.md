@@ -1,6 +1,8 @@
 # Building from Source
 
-How to build **the repository itself**. To consume SDLPainter from your own
+How to build **the repository itself**. 
+
+To consume SDLPainter from your own
 project instead, see the Installation section of the
 [README](../README.md#installation).
 

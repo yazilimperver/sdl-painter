@@ -2,10 +2,10 @@
 
 # SDLPainter — Mimari Genel Bakış
 
-Bu belge SDLPainter'ın **katmanlı mimarisini**, **bileşenler arasındaki bağımlılıkları**
+Bu doküman SDLPainter'ın **katmanlı mimarisini**, **bileşenler arasındaki bağımlılıkları**
 ve **veri akışını** üst seviyeden tarif eder. Sınıf detayları için
 [Sınıf Diyagramı](sinif-diyagrami.md), çalışma zamanı akışları için
-[Akış Diyagramları](akislar.md) belgelerine bakınız.
+[Akış Diyagramları](akislar.md) belgelerine bakabilirsiniz.
 
 ---
 
@@ -21,7 +21,7 @@ flowchart TB
     end
 
     subgraph api["1) Public API Katmanı"]
-        PAINTER["Painter<br/>(QPainter benzeri API)"]
+        PAINTER["Painter<br/>"]
         STYLE["Pen / Brush / Color<br/>Image / Font"]
     end
 
@@ -270,9 +270,6 @@ graph TB
 container imaj boyutu küçük kalır. Detaylar için `conanfile.py` ve
 [Derleme](building.md) *(İngilizce)*.
 
-> SDL_ttf bir dönem `with_text` opsiyonuna bağlıydı; artık **zorunlu**
-> bağımlılıktır ve o opsiyon kaldırılmıştır.
-
 ---
 
 ## 6. Sözleşmeler ve Değişmez Kurallar (Invariants)
@@ -296,8 +293,8 @@ backend değiştirilebilirliği, performans öngörülebilirliği) kaybolur.
 
 ## 7. Sonraki Adımlar
 
-- 🧩 [Sınıf Diyagramı](sinif-diyagrami.md) — UML class diagram, ilişki türleri
-- 🔄 [Akış Diyagramları](akislar.md) — Frame, draw call, transform stack, texture upload sequence'leri
-- ⚙️ [Backend İç Yapısı](backend-ic-yapisi.md) — OpenGL ve Vulkan implementasyon detayı
-- 🚀 [Hızlı Başlangıç](hizli-baslangic.md) — İlk Painter uygulaması
-- 📖 [Yazılım Mühendisliği Perspektifi](sdl-painter-yazilim-muhendisligi.md) — Tasarım kararlarının gerekçeleri
+- [Sınıf Diyagramı](sinif-diyagrami.md) — UML class diagram, ilişki türleri
+- [Akış Diyagramları](akislar.md) — Frame, draw call, transform stack, texture upload sequence'leri
+- [Backend İç Yapısı](backend-ic-yapisi.md) — OpenGL ve Vulkan implementasyon detayı
+- [Hızlı Başlangıç](hizli-baslangic.md) — İlk Painter uygulaması
+- [Yazılım Mühendisliği Perspektifi](sdl-painter-yazilim-muhendisligi.md) — Tasarım kararlarının gerekçeleri

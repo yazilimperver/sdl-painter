@@ -21,7 +21,7 @@ flowchart TB
     end
 
     subgraph api["1) Public API layer"]
-        PAINTER["Painter<br/>(QPainter-like API)"]
+        PAINTER["Painter<br/>"]
         STYLE["Pen / Brush / Color<br/>Image / Font"]
     end
 
@@ -269,9 +269,6 @@ With `with_vulkan=False` the Vulkan loader is never downloaded, which keeps CI
 time and container images small. See `conanfile.py` and
 [Building from source](building.md).
 
-> SDL_ttf used to sit behind a `with_text` option. It is now a **required**
-> dependency and that option has been removed.
-
 The Vulkan SDK is **not** a build requirement: the compiled SPIR-V lives in the
 repository and is embedded into the library, so `glslc` is only needed by people
 editing the shader sources ([ADR-009](../adr/ADR-009-embedded-shaders.md)).
@@ -299,9 +296,9 @@ interchangeability, predictable performance — go with them.
 
 ## 7. Where to go next
 
-- 🧩 [Class Diagram](sinif-diyagrami.md) — UML classes and relationship types *(in Turkish)*
-- 🔄 [Flow Diagrams](akislar.md) — frame, draw call, transform stack, texture upload *(in Turkish)*
-- ⚙️ [Backend Internals](backend-ic-yapisi.md) — OpenGL and Vulkan implementation detail *(in Turkish)*
-- 🚀 [Getting Started](getting-started.md) — your first Painter application
-- 📖 [Software Engineering Perspective](sdl-painter-yazilim-muhendisligi.md) — the reasoning behind the design *(in Turkish)*
-- 📋 [Architecture Decision Records](../adr/README.md) — the decisions themselves
+- [Class Diagram](sinif-diyagrami.md) — UML classes and relationship types *(in Turkish)*
+- [Flow Diagrams](akislar.md) — frame, draw call, transform stack, texture upload *(in Turkish)*
+- [Backend Internals](backend-ic-yapisi.md) — OpenGL and Vulkan implementation detail *(in Turkish)*
+- [Getting Started](getting-started.md) — your first Painter application
+- [Software Engineering Perspective](sdl-painter-yazilim-muhendisligi.md) — the reasoning behind the design *(in Turkish)*
+- [Architecture Decision Records](../adr/README.md) — the decisions themselves

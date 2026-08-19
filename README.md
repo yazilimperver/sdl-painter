@@ -140,7 +140,7 @@ Sixteen runnable demos (for the time being), one capability each:
 |------|-----------|
 | **Primitives** | Line, rectangle, circle, ellipse, polygon, polyline — all with stroke + fill |
 | **Styles** | Pen (color, width, outline), Brush (fill color), global opacity |
-| **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` stack — QPainter semantics |
+| **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` stack |
 | **Clipping** | Scissor-based rectangular clipping |
 | **Image** | PNG / JPG loading (stb_image), source→destination scaling, alpha blending |
 | **Text** | SDL_ttf 3.x, glyph cache, left/center/right alignment |

@@ -1,5 +1,7 @@
 # SDLPainter — Özellik Listesi
 
+Bu sayfa içerisinde SDLPainter kütüphanesine yönelik önce çıkan özellikler listelenecektir.
+
 ## Çizim Primitifleri
 
 - Çizgi (`DrawLine`)
@@ -18,7 +20,7 @@
 ## Transform Stack
 
 - `Translate`, `Rotate`, `Scale`
-- `Save` / `Restore` — QPainter ile birebir aynı semantik
+- `Save` / `Restore`
 - `ResetTransform`
 - 3×3 affine matris — `glm::mat3` (column-major), bkz. ADR-007
 
@@ -32,7 +34,7 @@
 - Tam kaynak rect → hedef rect ölçekleme
 - Alpha blending desteği
 
-## Metin (Phase 4)
+## Metin
 
 - SDL_ttf 3.x üzerinden font yükleme
 - Glyph cache

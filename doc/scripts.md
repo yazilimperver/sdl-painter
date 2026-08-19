@@ -3,8 +3,7 @@
 Every script has a `.sh` (Linux/macOS, bash) and a `.ps1` (Windows PowerShell)
 twin with the same behaviour. **Run them from the project root.**
 
-The scripts are a convenience layer over Conan and CMake presets — nothing you
-cannot do by hand (see [Building from source](building.md)).
+The scripts are a convenience layer over Conan and CMake presets (for build details see [Building from source](building.md)).
 
 ## build.sh / Build.ps1 — Build
 

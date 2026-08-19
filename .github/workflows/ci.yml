@@ -399,7 +399,7 @@ jobs:
           cat > _ci_doxyfile <<EOF
           PROJECT_NAME           = "SDLPainter"
           PROJECT_NUMBER         = "$(grep 'project(SDLPainter VERSION' CMakeLists.txt | grep -oP '\d+\.\d+\.\d+')"
-          PROJECT_BRIEF          = "QPainter benzeri SDL3 + OpenGL/Vulkan 2D çizim kütüphanesi"
+          PROJECT_BRIEF          = "SDL3 + OpenGL/Vulkan 2D çizim kütüphanesi"
           OUTPUT_DIRECTORY       = public
           HTML_OUTPUT            = .
           INPUT                  = include/sdl_painter doc

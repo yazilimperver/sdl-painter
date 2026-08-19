@@ -37,7 +37,7 @@ struct RenderState {
   bool has_clip{false};
 };
 
-/// @brief Ana çizim sınıfı — QPainter'a benzer API.
+/// @brief Ana çizim sınıfı
 ///
 /// Painter, SDL penceresi üzerinde 2B çizim yapar. Backend (OpenGL/Vulkan)
 /// IRenderer arayüzü üzerinden soyutlanır.
