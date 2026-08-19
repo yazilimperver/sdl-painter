@@ -347,7 +347,10 @@ jobs:
             --print-summary \
             --html-details coverage/index.html \
             --xml coverage/coverage.xml \
-            --txt coverage/summary.txt
+            --txt coverage/summary.txt >coverage/totals.txt
+          # gcovr cikis kodu KAYBOLMAMALI: pipe kullanilsaydi POSIX sh
+          # pipeline durumu tee'ninki olurdu ve gcovr hatasi yutulurdu.
+          cat coverage/totals.txt
           # Ozet KIRPILMAZ. Onceki surumde `tail -n 20` vardi; Vulkan
           # kaynaklari (alfabetik olarak en sonda) eklenince diger butun
           # dosyalar pencerenin disina tasti ve rapor yanlis okundu.
@@ -355,7 +358,7 @@ jobs:
             echo '## Kod kapsama'
             echo ''
             echo '```'
-            grep -E '^(lines|branches):' coverage/summary.txt
+            cat coverage/totals.txt
             echo '```'
             echo ''
             echo '<details><summary>Dosya bazinda tam tablo</summary>'
