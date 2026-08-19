@@ -348,10 +348,23 @@ jobs:
             --html-details coverage/index.html \
             --xml coverage/coverage.xml \
             --txt coverage/summary.txt
-          echo '## Kod kapsama' >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
-          tail -n 20 coverage/summary.txt >> "$GITHUB_STEP_SUMMARY"
-          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          # Ozet KIRPILMAZ. Onceki surumde `tail -n 20` vardi; Vulkan
+          # kaynaklari (alfabetik olarak en sonda) eklenince diger butun
+          # dosyalar pencerenin disina tasti ve rapor yanlis okundu.
+          {
+            echo '## Kod kapsama'
+            echo ''
+            echo '```'
+            grep -E '^(lines|branches):' coverage/summary.txt
+            echo '```'
+            echo ''
+            echo '<details><summary>Dosya bazinda tam tablo</summary>'
+            echo ''
+            echo '```'
+            cat coverage/summary.txt
+            echo '```'
+            echo '</details>'
+          } >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         with:
           name: coverage-report
