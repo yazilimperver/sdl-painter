@@ -6,6 +6,8 @@
 #include <gtest/gtest.h>
 #include <memory>
 
+#include "test_support.h"
+
 #ifdef SDLPAINTER_HAS_VULKAN
 #include "sdl_painter/embedded_vk_shaders.h"
 #endif
@@ -22,58 +24,6 @@
 
 namespace {
 
-/// @brief SDL video alt sistemi + gizli pencere icin RAII sarmalayici.
-///
-/// Gizli pencere (`SDL_WINDOW_HIDDEN`) kullanilir; test kosarken ekranda
-/// pencere belirmez ama gercek bir surucu context'i olusturulur.
-class HiddenWindow {
- public:
-  explicit HiddenWindow(sdl_painter::RendererBackend backend) {
-    if (!SDL_InitSubSystem(SDL_INIT_VIDEO)) {
-      mError = SDL_GetError();
-      return;
-    }
-    mVideoInitialized = true;
-
-    // Uygulama catisiyla ayni sira: GL attribute'lari pencereden ONCE.
-    if (backend == sdl_painter::RendererBackend::kOpenGL) {
-      SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-      SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
-      SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-                          SDL_GL_CONTEXT_PROFILE_CORE);
-    }
-
-    const SDL_WindowFlags kBackendFlag =
-        (backend == sdl_painter::RendererBackend::kVulkan) ? SDL_WINDOW_VULKAN
-                                                           : SDL_WINDOW_OPENGL;
-    mWindow = SDL_CreateWindow("sdl_painter smoke", 64, 64,
-                               kBackendFlag | SDL_WINDOW_HIDDEN);
-    if (mWindow == nullptr) {
-      mError = SDL_GetError();
-    }
-  }
-
-  ~HiddenWindow() {
-    if (mWindow != nullptr) {
-      SDL_DestroyWindow(mWindow);
-    }
-    if (mVideoInitialized) {
-      SDL_QuitSubSystem(SDL_INIT_VIDEO);
-    }
-  }
-
-  HiddenWindow(const HiddenWindow&) = delete;
-  HiddenWindow& operator=(const HiddenWindow&) = delete;
-
-  [[nodiscard]] SDL_Window* Get() const { return mWindow; }
-  [[nodiscard]] const char* Error() const { return mError; }
-
- private:
-  SDL_Window* mWindow{nullptr};
-  bool mVideoInitialized{false};
-  const char* mError{""};
-};
-
 // ---------------------------------------------------------------------------
 // OpenGL — gomulu GLSL gercekten derleniyor mu?
 // ---------------------------------------------------------------------------
@@ -82,7 +32,8 @@ class HiddenWindow {
 /// doner. Yani bu tek assert, gomulu GLSL'in surucu tarafindan kabul
 /// edildigini dogrudan kanitlar.
 TEST(RendererSmokeTest, OpenGLInitializeCompilesEmbeddedShaders) {
-  const HiddenWindow window(sdl_painter::RendererBackend::kOpenGL);
+  const sdl_painter::testing::HiddenWindow window(
+      sdl_painter::RendererBackend::kOpenGL);
   if (window.Get() == nullptr) {
     GTEST_SKIP() << "OpenGL penceresi olusturulamadi: " << window.Error();
   }
@@ -100,7 +51,8 @@ TEST(RendererSmokeTest, OpenGLInitializeCompilesEmbeddedShaders) {
 /// Ayni renderer iki kez kurulup yikilabilmeli; gomulu shader kaynagi
 /// tuketilen bir kaynak degil, salt-okunur veri.
 TEST(RendererSmokeTest, OpenGLInitializeIsRepeatable) {
-  const HiddenWindow window(sdl_painter::RendererBackend::kOpenGL);
+  const sdl_painter::testing::HiddenWindow window(
+      sdl_painter::RendererBackend::kOpenGL);
   if (window.Get() == nullptr) {
     GTEST_SKIP() << "OpenGL penceresi olusturulamadi: " << window.Error();
   }
@@ -175,7 +127,8 @@ TEST(SpirvEmbedTest, TexturedModulesAreValid) {
 /// SKIP'e dusuyor; SPIR-V dogrulugunun GPU'suz garantisini yukaridaki
 /// SpirvEmbedTest'ler veriyor.
 TEST(RendererSmokeTest, VulkanInitializeSucceeds) {
-  const HiddenWindow window(sdl_painter::RendererBackend::kVulkan);
+  const sdl_painter::testing::HiddenWindow window(
+      sdl_painter::RendererBackend::kVulkan);
   if (window.Get() == nullptr) {
     GTEST_SKIP() << "Vulkan penceresi olusturulamadi: " << window.Error();
   }
