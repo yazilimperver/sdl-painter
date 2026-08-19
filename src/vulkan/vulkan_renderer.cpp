@@ -6,6 +6,7 @@
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_vulkan.h>
 
+#include <algorithm>
 #include <array>
 #include <cstring>
 #include <spdlog/spdlog.h>
@@ -98,6 +99,8 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
 void VulkanRenderer::Shutdown() {
   if (mContext != nullptr && mContext->GetDevice() != VK_NULL_HANDLE) {
     vkDeviceWaitIdle(mContext->GetDevice());
+    // Silinmeyi bekleyenleri zorla temizle (device idle, güvenli).
+    ProcessPendingTextureDeletes(/*force=*/true);
     // Texture'ları önce sil (descriptor set pool mTexturedPipeline'da)
     for (auto& [handle, tex] : mTextures) {
       tex->Destroy(mContext->GetDevice());
@@ -135,38 +138,45 @@ void VulkanRenderer::QueryWindowDrawableSize(uint32_t& width,
   height = static_cast<uint32_t>(h > 0 ? h : 1);
 }
 
+void VulkanRenderer::RecreateSwapchainOrDefer() {
+  // Yüzey çizilemez durumdaysa (simge durumu) swapchain'i yeniden inşa etme;
+  // 0x0 extent Vulkan tarafından reddedilir. Bayrağı kaldır, pencere geri
+  // geldiğinde BeginFrame yeniden dener.
+  if (mSwapchain == nullptr || !mSwapchain->IsSurfaceRenderable()) {
+    mSwapchainNeedsRecreate = true;
+    return;
+  }
+  uint32_t w = 0;
+  uint32_t h = 0;
+  QueryWindowDrawableSize(w, h);
+  if (!mSwapchain->Recreate(w, h)) {
+    mSwapchainNeedsRecreate = true;
+    return;
+  }
+  mViewportW = static_cast<int32_t>(mSwapchain->GetExtent().width);
+  mViewportH = static_cast<int32_t>(mSwapchain->GetExtent().height);
+  mSwapchainNeedsRecreate = false;
+}
+
 bool VulkanRenderer::AcquireNextImage() {
   VkDevice device = mContext->GetDevice();
   VkFence fence = mFrameSync->GetInFlightFence(mCurrentFrame);
   vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX);
 
-  // Acquire için per-frame semaphore kullan (image index henüz bilinmiyor).
-  // Submit aşamasında mCurrentImageIndex ile per-image semaphore'a geçilir.
-  // Acquire için döngüsel semaphore seçimi: image_count kadar semaphore
-  // döngüsel olarak seçilir. fence beklendikten sonra mCurrentFrame slotu
-  // güvenli — ama swapchain 3 image, frames-in-flight 2 olunca yeterli değil.
-  // Bu yüzden mImageAvailable swapchain image count kadar oluşturuldu;
-  // acquire'a mCurrentFrame % image_count ile seçilir.
-  // Acquire semaphore'u: swapchain image sayısı kadar semaphore arasından
-  // döngüsel seçim yapılır. mAcquireSlot her frame'de ilerler ve submit'te
-  // wait için saklanır. Fence beklendikten sonra slot güvenle yeniden
-  // kullanılabilir çünkü bir önceki submit tamamlandı.
-  const uint32_t kImageCount = mSwapchain->GetImageCount();
-  mAcquireSlot = (mAcquireSlot + 1) % kImageCount;
+  // Acquire semaphore'u frame-in-flight slotu ile indekslenir. Hemen yukarıda
+  // beklenen fence, bu slotu kullanan önceki submit'in tamamlandığını garanti
+  // eder; dolayısıyla semaphore unsignaled ve yeniden kullanılabilir.
+  // (Signal semaphore'u ise image_index ile indekslenir — presentation engine
+  // onu image'a bağlar; bkz. SubmitAndPresent.)
   VkSemaphore acquire_sem =
-      mFrameSync->GetImageAvailableSemaphore(mAcquireSlot);
+      mFrameSync->GetImageAvailableSemaphore(mCurrentFrame);
 
   VkResult res =
       vkAcquireNextImageKHR(device, mSwapchain->GetSwapchain(), UINT64_MAX,
                             acquire_sem, VK_NULL_HANDLE, &mCurrentImageIndex);
   if (res == VK_ERROR_OUT_OF_DATE_KHR) {
-    uint32_t w = 0;
-    uint32_t h = 0;
-    QueryWindowDrawableSize(w, h);
-    mSwapchain->Recreate(w, h);
-    mViewportW = static_cast<int32_t>(mSwapchain->GetExtent().width);
-    mViewportH = static_cast<int32_t>(mSwapchain->GetExtent().height);
     mSwapchainOutOfDate = true;
+    RecreateSwapchainOrDefer();
     return false;
   }
   if (res != VK_SUCCESS && res != VK_SUBOPTIMAL_KHR) {
@@ -181,8 +191,31 @@ bool VulkanRenderer::AcquireNextImage() {
 
 void VulkanRenderer::BeginFrame() {
   mSwapchainOutOfDate = false;
+  mFrameActive = false;
+
+  // Pencere simge durumuna küçültüldüğünde yüzey 0x0 olur. Bu durumda
+  // swapchain/framebuffer oluşturmak ve render pass başlatmak Vulkan
+  // geçerlilik kurallarını ihlal eder (VUID-VkSwapchainCreateInfoKHR-
+  // imageExtent-01689 vb.). Kareyi tamamen atla; pencere geri geldiğinde
+  // mSwapchainNeedsRecreate ile swapchain yeniden inşa edilir.
+  if (mSwapchain == nullptr || !mSwapchain->IsSurfaceRenderable()) {
+    mSwapchainNeedsRecreate = true;
+    return;
+  }
+
+  if (mSwapchainNeedsRecreate) {
+    uint32_t w = 0;
+    uint32_t h = 0;
+    QueryWindowDrawableSize(w, h);
+    if (!mSwapchain->Recreate(w, h)) {
+      return;
+    }
+    mViewportW = static_cast<int32_t>(mSwapchain->GetExtent().width);
+    mViewportH = static_cast<int32_t>(mSwapchain->GetExtent().height);
+    mSwapchainNeedsRecreate = false;
+  }
+
   if (!AcquireNextImage()) {
-    mFrameActive = false;
     return;
   }
   mFrameActive = true;
@@ -229,14 +262,17 @@ void VulkanRenderer::EndFrame() {
   SubmitAndPresent();
 
   mCurrentFrame = (mCurrentFrame + 1) % VkFrameSync::kMaxFramesInFlight;
+  ++mFrameCounter;
   mFrameActive = false;
+
+  // Silinmeyi bekleyen texture'lardan süresi dolanları serbest bırak.
+  ProcessPendingTextureDeletes(/*force=*/false);
 }
 
 void VulkanRenderer::SubmitAndPresent() {
   VkCommandBuffer cmd = mFrameSync->GetCommandBuffer(mCurrentFrame);
-  // Acquire sırasında kaydedilen slot'tan semaphore'u al.
   VkSemaphore image_avail =
-      mFrameSync->GetImageAvailableSemaphore(mAcquireSlot);
+      mFrameSync->GetImageAvailableSemaphore(mCurrentFrame);
   // renderFinished image_index ile indekslenir — presentation engine
   // semaphore'u image'a bağlar, frame_index ile çakışma yaratır.
   VkSemaphore render_done =
@@ -269,13 +305,8 @@ void VulkanRenderer::SubmitAndPresent() {
 
   VkResult res = vkQueuePresentKHR(mContext->GetPresentQueue(), &pi);
   if (res == VK_ERROR_OUT_OF_DATE_KHR || res == VK_SUBOPTIMAL_KHR) {
-    uint32_t w = 0;
-    uint32_t h = 0;
-    QueryWindowDrawableSize(w, h);
-    mSwapchain->Recreate(w, h);
-    mViewportW = static_cast<int32_t>(mSwapchain->GetExtent().width);
-    mViewportH = static_cast<int32_t>(mSwapchain->GetExtent().height);
     mSwapchainOutOfDate = true;
+    RecreateSwapchainOrDefer();
   } else if (res != VK_SUCCESS) {
     spdlog::error("vkQueuePresentKHR failed: {}",
                   vk_detail::VkResultToString(res));
@@ -283,6 +314,11 @@ void VulkanRenderer::SubmitAndPresent() {
 }
 
 void VulkanRenderer::ApplyDynamicViewportScissor(VkCommandBuffer cmd) const {
+  ApplyDynamicViewport(cmd);
+  ApplyDynamicScissor(cmd);
+}
+
+void VulkanRenderer::ApplyDynamicViewport(VkCommandBuffer cmd) const {
   const VkExtent2D kExtent = mSwapchain->GetExtent();
 
   VkViewport vp{};
@@ -295,12 +331,24 @@ void VulkanRenderer::ApplyDynamicViewportScissor(VkCommandBuffer cmd) const {
   vp.minDepth = 0.0F;
   vp.maxDepth = 1.0F;
   vkCmdSetViewport(cmd, 0, 1, &vp);
+}
+
+void VulkanRenderer::ApplyDynamicScissor(VkCommandBuffer cmd) const {
+  const VkExtent2D kExtent = mSwapchain->GetExtent();
 
   VkRect2D scissor{};
   if (mScissorEnabled) {
-    scissor.offset = {mScissorX, mScissorY};
-    scissor.extent = {static_cast<uint32_t>(mScissorW),
-                      static_cast<uint32_t>(mScissorH)};
+    // Scissor, swapchain sınırlarını aşamaz (Vulkan geçerlilik kuralı):
+    // negatif offset ve taşan genişlik kırpılır.
+    const int32_t kX0 = std::max(0, mScissorX);
+    const int32_t kY0 = std::max(0, mScissorY);
+    const int32_t kX1 = std::min(static_cast<int32_t>(kExtent.width),
+                                 mScissorX + std::max(0, mScissorW));
+    const int32_t kY1 = std::min(static_cast<int32_t>(kExtent.height),
+                                 mScissorY + std::max(0, mScissorH));
+    scissor.offset = {kX0, kY0};
+    scissor.extent = {static_cast<uint32_t>(std::max(0, kX1 - kX0)),
+                      static_cast<uint32_t>(std::max(0, kY1 - kY0))};
   } else {
     scissor.offset = {0, 0};
     scissor.extent = kExtent;
@@ -314,6 +362,11 @@ void VulkanRenderer::SetViewport(int32_t x, int32_t y, int32_t width,
   mViewportY = y;
   mViewportW = width;
   mViewportH = height;
+  // Kare ortasında çağrıldıysa dinamik state'i hemen komut buffer'ına yaz;
+  // aksi halde değişiklik bir sonraki BeginFrame'e kadar etkisiz kalır.
+  if (mFrameActive) {
+    ApplyDynamicViewport(mFrameSync->GetCommandBuffer(mCurrentFrame));
+  }
 }
 
 void VulkanRenderer::SetScissor(int32_t x, int32_t y, int32_t width,
@@ -323,10 +376,16 @@ void VulkanRenderer::SetScissor(int32_t x, int32_t y, int32_t width,
   mScissorY = y;
   mScissorW = width;
   mScissorH = height;
+  if (mFrameActive) {
+    ApplyDynamicScissor(mFrameSync->GetCommandBuffer(mCurrentFrame));
+  }
 }
 
 void VulkanRenderer::ClearScissor() {
   mScissorEnabled = false;
+  if (mFrameActive) {
+    ApplyDynamicScissor(mFrameSync->GetCommandBuffer(mCurrentFrame));
+  }
 }
 
 void VulkanRenderer::Clear(const Color& color) {
@@ -364,6 +423,13 @@ void VulkanRenderer::SetOpacity(float alpha) {
 
 void VulkanRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
   if (!mFrameActive || vertices.empty()) {
+    return;
+  }
+  if (vertices.size() % 3 != 0) {
+    spdlog::error(
+        "VulkanRenderer::DrawTriangles: vertex sayisi ({}) 3'un kati degil; "
+        "cizim atlandi.",
+        vertices.size());
     return;
   }
   if (mPipeline == nullptr || mVertexRing == nullptr) {
@@ -428,19 +494,68 @@ TextureHandle VulkanRenderer::CreateTexture(const uint8_t* data, int32_t width,
   return kHandle;
 }
 
+void VulkanRenderer::UpdateTexture(TextureHandle handle, int32_t x, int32_t y,
+                                   int32_t width, int32_t height,
+                                   const uint8_t* data) {
+  auto it = mTextures.find(handle);
+  if (it == mTextures.end() || data == nullptr) {
+    return;
+  }
+  // Not: kare ortasında çağrılabilir. Kendi tek seferlik komut buffer'ını
+  // gönderip bekler; hâlâ kaydedilmekte olan frame komut buffer'ı henüz
+  // submit edilmediğinden çakışma olmaz. Aynı karede daha önce çizilmiş
+  // glyph'lerin bölgeleri asla üzerine yazılmaz (atlas yalnızca kullanılmamış
+  // alana ekler), dolayısıyla eski UV'ler geçerli kalır.
+  it->second->UpdateRegion(mContext.get(), mFrameSync->GetCommandPool(), x, y,
+                           width, height, data);
+}
+
 void VulkanRenderer::DestroyTexture(TextureHandle handle) {
   auto it = mTextures.find(handle);
   if (it == mTextures.end()) {
     return;
   }
 
-  vkDeviceWaitIdle(mContext->GetDevice());
-  if (mTexturedPipeline != nullptr) {
-    mTexturedPipeline->FreeDescriptorSet(mContext->GetDevice(),
-                                         it->second->GetDescriptorSet());
-  }
-  it->second->Destroy(mContext->GetDevice());
+  // Texture, hâlâ uçuşta olan karelerin komut buffer'larından referans
+  // ediliyor olabilir. Eskiden burada `vkDeviceWaitIdle` çağrılıyordu — bu,
+  // her texture yıkımında GPU'yu tamamen durduruyordu (bir font kapatılırken
+  // glyph sayısı kadar tam stall).
+  //
+  // Bunun yerine gecikmeli silme: texture, kMaxFramesInFlight kare boyunca
+  // bekletilir. O süre dolduğunda onu kullanmış olabilecek tüm submit'ler
+  // tamamlanmıştır (in-flight fence bekleme döngüsü bunu garanti eder).
+  mPendingTextureDeletes.push_back(
+      {std::move(it->second), mFrameCounter + VkFrameSync::kMaxFramesInFlight});
   mTextures.erase(it);
+}
+
+void VulkanRenderer::ProcessPendingTextureDeletes(bool force) {
+  if (mContext == nullptr || mContext->GetDevice() == VK_NULL_HANDLE) {
+    mPendingTextureDeletes.clear();
+    return;
+  }
+  VkDevice device = mContext->GetDevice();
+
+  auto ready = [&](const PendingTextureDelete& p) {
+    return force || mFrameCounter >= p.delete_after_frame;
+  };
+
+  for (auto& pending : mPendingTextureDeletes) {
+    if (!ready(pending) || pending.texture == nullptr) {
+      continue;
+    }
+    if (mTexturedPipeline != nullptr) {
+      mTexturedPipeline->FreeDescriptorSet(device,
+                                           pending.texture->GetDescriptorSet());
+    }
+    pending.texture->Destroy(device);
+    pending.texture.reset();
+  }
+  mPendingTextureDeletes.erase(
+      std::remove_if(
+          mPendingTextureDeletes.begin(), mPendingTextureDeletes.end(),
+          [](const PendingTextureDelete& p) { return p.texture == nullptr; }),
+      mPendingTextureDeletes.end());
 }
 
 void VulkanRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,

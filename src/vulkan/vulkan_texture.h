@@ -41,6 +41,19 @@ class VulkanTexture {
               VkDescriptorSet descriptor_set,
               VkDescriptorSetLayout descriptor_set_layout);
 
+  /// @brief Var olan image'ın bir alt bölgesini yeniden yükle.
+  ///
+  /// Glyph atlası gibi artımlı doldurulan texture'lar için. Staging buffer
+  /// üzerinden `vkCmdCopyBufferToImage` ile yalnızca verilen dikdörtgen
+  /// güncellenir; image yeniden yaratılmaz, dolayısıyla descriptor set ve
+  /// image view geçerli kalır.
+  ///
+  /// @param data Sıkı paketlenmiş RGBA8 veri (`width * height * 4` bayt).
+  /// @return Başarı durumunda true.
+  bool UpdateRegion(VkContext* context, VkCommandPool cmd_pool, int32_t x,
+                    int32_t y, int32_t width, int32_t height,
+                    const uint8_t* data);
+
   /// @brief Tüm Vulkan kaynaklarını serbest bırak. Idempotent; destructor da çağırır.
   void Destroy(VkDevice device);
 
@@ -65,8 +78,13 @@ class VulkanTexture {
   bool CreateSampler(VkDevice device);
 
   /// @brief Tek seferlik command buffer gönder (layout geçişi + copy).
-  bool RecordAndSubmitUpload(VkDevice device, VkQueue queue,
-                             VkCommandPool cmd_pool, VkBuffer staging_buf);
+  /// @param region Kopyalanacak image bölgesi.
+  /// @param from_undefined `true` ise eski layout UNDEFINED (ilk yükleme),
+  ///        `false` ise SHADER_READ_ONLY (bölge güncellemesi) kabul edilir.
+  bool RecordAndSubmitCopy(VkDevice device, VkQueue queue,
+                           VkCommandPool cmd_pool, VkBuffer staging_buf,
+                           const VkBufferImageCopy& region,
+                           bool from_undefined);
 
   /// @brief Image layout geçişi (barrier).
   static void TransitionImageLayout(VkCommandBuffer cmd, VkImage image,

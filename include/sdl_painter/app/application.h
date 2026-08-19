@@ -66,10 +66,12 @@ class Application {
   /// @brief Olay döngüsünden çıkışı iste (bir sonraki iterasyonda durur).
   void Quit() noexcept;
 
-  /// @brief Güncel pencere genişliği (piksel).
+  /// @brief Güncel çizim yüzeyi genişliği (framebuffer piksel).
+  /// @note @ref AppConfig::high_dpi açıkken bu değer, mantıksal pencere
+  ///       genişliğinden ekran ölçek faktörü kadar büyüktür.
   [[nodiscard]] int32_t Width() const noexcept { return mWidth; }
 
-  /// @brief Güncel pencere yüksekliği (piksel).
+  /// @brief Güncel çizim yüzeyi yüksekliği (framebuffer piksel).
   [[nodiscard]] int32_t Height() const noexcept { return mHeight; }
 
   /// @brief Pencere başlığını güncelle.
@@ -149,11 +151,15 @@ class Application {
   void Teardown() noexcept;
   void ProcessEvents();
 
+  /// @brief mWidth/mHeight'i pencerenin framebuffer (piksel) boyutuna eşitle.
+  void UpdateDrawableSize();
+
   AppConfig mConfig;
   SDL_Window* mWindow{nullptr};
   std::unique_ptr<Painter> mPainter;
   bool mRunning{false};
   bool mSdlInitialized{false};
+  bool mHasRun{false};  ///< Run() tek seferlik; ikinci cagri reddedilir.
   uint64_t mLastTickNs{0};
   int32_t mWidth{0};
   int32_t mHeight{0};

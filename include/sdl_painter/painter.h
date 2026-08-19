@@ -52,6 +52,23 @@ class Painter {
  public:
   /// @brief Belirtilen pencere ve backend ile Painter oluştur.
   Painter(SDL_Window* window, RendererBackend backend);
+
+  /// @brief Hazır bir renderer ile pencere olmadan Painter oluştur.
+  ///
+  /// Renderer'ın sahipliği devralınır; `Initialize()` çağrısı **yapılmaz**
+  /// (çağıranın sorumluluğu). Pencere olmadığı için @ref Begin her karede
+  /// yeniden boyutlandırma yoklaması yapmaz — viewport bu ctor'da verilen
+  /// değerde sabit kalır.
+  ///
+  /// Offscreen render ve birim testleri (sahte IRenderer enjeksiyonu) için.
+  ///
+  /// @param renderer Sahipliği devralınan renderer; `nullptr` ise Painter
+  ///        geçersiz durumda kalır (@ref IsValid `false`).
+  /// @param viewport_width  Viewport genişliği (piksel, > 0).
+  /// @param viewport_height Viewport yüksekliği (piksel, > 0).
+  Painter(std::unique_ptr<IRenderer> renderer, int32_t viewport_width,
+          int32_t viewport_height);
+
   ~Painter();
 
   // Non-copyable, movable
@@ -70,6 +87,18 @@ class Painter {
 
   /// @brief Frame sonu — her frame sonunda çağrılmalı, ekrana sunar.
   void End();
+
+  /// @brief Çizim yüzeyi boyutunu bildir (viewport + projeksiyon güncellenir).
+  ///
+  /// Boyut **framebuffer piksel** cinsindendir. @ref Application bunu
+  /// `SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED` olayında çağırır.
+  ///
+  /// @note Bu fonksiyon bir kez çağrıldığında Painter, boyutu artık her
+  ///       karede pencereden okumayı bırakır ve yalnızca bu çağrılara
+  ///       güvenir. Kendi olay döngüsünü yazan uygulamalar ya bu metodu
+  ///       yeniden boyutlandırmada çağırmalı ya da hiç çağırmamalıdır
+  ///       (o zaman otomatik yoklama sürer).
+  void SetDrawableSize(int32_t width, int32_t height);
 
   // --- Temizlik ---
 
@@ -172,6 +201,16 @@ class Painter {
   void ClearClip();
 
  private:
+  /// @brief Pencerenin framebuffer (piksel) boyutunu döndür.
+  ///
+  /// HiDPI ölçeklemede mantıksal pencere boyutu ile piksel boyutu ayrışır;
+  /// viewport, scissor ve projeksiyon daima **piksel** boyutunu kullanır.
+  /// Penceresiz Painter'da (0, 0) döner.
+  void QueryDrawableSize(int32_t& out_width, int32_t& out_height) const;
+
+  /// @brief Viewport + projeksiyonu verilen boyuta gore guncelle (degistiyse).
+  void ApplyDrawableSize(int32_t width, int32_t height);
+
   /// @brief Projeksiyon matrisini viewport boyutuna göre güncelle.
   void UpdateProjection();
 
@@ -200,6 +239,10 @@ class Painter {
 
   int32_t mViewportWidth{0};
   int32_t mViewportHeight{0};
+
+  /// @brief Boyut her karede pencereden okunsun mu?
+  /// @ref SetDrawableSize ilk çağrıldığında `false` olur.
+  bool mAutoDrawableSize{true};
 };
 
 }  // namespace sdl_painter

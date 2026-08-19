@@ -99,6 +99,24 @@ void VkSwapchain::Shutdown() {
   mContext = nullptr;
 }
 
+bool VkSwapchain::IsSurfaceRenderable() const {
+  if (mContext == nullptr) {
+    return false;
+  }
+  VkSurfaceCapabilitiesKHR caps{};
+  if (vkGetPhysicalDeviceSurfaceCapabilitiesKHR(mContext->GetPhysicalDevice(),
+                                                mContext->GetSurface(),
+                                                &caps) != VK_SUCCESS) {
+    return false;
+  }
+  // currentExtent == UINT32_MAX -> boyutu uygulama secer (Wayland vb.);
+  // bu durumda yuzey her zaman cizilebilir sayilir.
+  if (caps.currentExtent.width == UINT32_MAX) {
+    return true;
+  }
+  return caps.currentExtent.width > 0 && caps.currentExtent.height > 0;
+}
+
 bool VkSwapchain::Recreate(uint32_t width, uint32_t height) {
   VkDevice device = mContext->GetDevice();
   vkDeviceWaitIdle(device);

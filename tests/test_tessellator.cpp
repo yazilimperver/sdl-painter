@@ -170,12 +170,30 @@ TEST(TessellateThickPolyline, TwoPointsEqualsOneLine) {
   }
 }
 
-TEST(TessellateThickPolyline, NPointsProducesNMinus1Times6Vertices) {
+TEST(TessellateThickPolyline, ThinLineHasNoJoinsAndIsNMinus1Times6) {
   std::vector<Point> pts = {
       {0, 0}, {100, 0}, {100, 100}, {200, 100}};
-  auto v = Tessellator::TessellateThickPolyline(pts, 2.0f);
-  // 3 segment * 6 vertex = 18
-  EXPECT_EQ(v.size(), 18u);
+  // Kalinlik 1.5 pikselin altinda -> birlesim eklenmez.
+  auto v = Tessellator::TessellateThickPolyline(pts, 1.0f);
+  EXPECT_EQ(v.size(), 18u);  // 3 segment * 6 vertex
+}
+
+TEST(TessellateThickPolyline, ThickLineAddsRoundJoinsAtInteriorVertices) {
+  std::vector<Point> pts = {
+      {0, 0}, {100, 0}, {100, 100}, {200, 100}};
+  auto thin = Tessellator::TessellateThickPolyline(pts, 1.0f);
+  auto thick = Tessellator::TessellateThickPolyline(pts, 8.0f);
+  // 4 nokta -> 2 ic kose -> 2 birlesim diski eklenir.
+  EXPECT_GT(thick.size(), thin.size())
+      << "Ic koselere birlesim eklenmedi (kosede bosluk kalir).";
+  // Her disk ucgen fani oldugundan fark 3'un kati olmali.
+  EXPECT_EQ((thick.size() - thin.size()) % 3, 0u);
+}
+
+TEST(TessellateThickPolyline, TwoPointsHasNoInteriorVertexSoNoJoin) {
+  std::vector<Point> pts = {{0, 0}, {100, 0}};
+  auto v = Tessellator::TessellateThickPolyline(pts, 8.0f);
+  EXPECT_EQ(v.size(), 6u) << "Ic kose yokken birlesim eklenmemeli.";
 }
 
 TEST(TessellateThickPolyline, SinglePointReturnsEmpty) {
@@ -190,10 +208,23 @@ TEST(TessellateStrokedRect, ProducesNonEmptyResult) {
   EXPECT_FALSE(v.empty());
 }
 
-TEST(TessellateStrokedRect, VertexCountIsMultipleOfSix) {
-  // 4 kenar * 6 vertex = 24 (her kenar bir thick line quad)
+TEST(TessellateStrokedRect, ThinStrokeIsFourQuads) {
+  // Kalinlik 1.5'in altinda -> birlesim yok: 4 kenar * 6 vertex = 24.
+  auto v = Tessellator::TessellateStrokedRect(0, 0, 100, 50, 1.0f);
+  EXPECT_EQ(v.size(), 24u);
+}
+
+TEST(TessellateStrokedRect, ThickStrokeJoinsAllFourCorners) {
+  auto thin = Tessellator::TessellateStrokedRect(0, 0, 100, 50, 1.0f);
+  auto thick = Tessellator::TessellateStrokedRect(0, 0, 100, 50, 10.0f);
+  // Kapali poligon: 4 kosenin HEPSINE birlesim uygulanir.
+  EXPECT_GT(thick.size(), thin.size());
+  EXPECT_EQ((thick.size() - thin.size()) % 3, 0u);
+}
+
+TEST(TessellateStrokedRect, VertexCountIsMultipleOfThree) {
   auto v = Tessellator::TessellateStrokedRect(0, 0, 100, 50, 2.0f);
-  EXPECT_EQ(v.size() % 6, 0u);
+  EXPECT_EQ(v.size() % 3, 0u) << "Ucgen listesi 3'un kati olmali.";
 }
 
 // ─── TessellateStrokedCircle ─────────────────────────────────────────────────
@@ -203,9 +234,9 @@ TEST(TessellateStrokedCircle, ProducesNonEmptyResult) {
   EXPECT_FALSE(v.empty());
 }
 
-TEST(TessellateStrokedCircle, VertexCountIsMultipleOfSix) {
+TEST(TessellateStrokedCircle, VertexCountIsMultipleOfThree) {
   auto v = Tessellator::TessellateStrokedCircle(0, 0, 50.0f, 2.0f);
-  EXPECT_EQ(v.size() % 6, 0u);
+  EXPECT_EQ(v.size() % 3, 0u);
 }
 
 // ─── TessellateStrokedEllipse ────────────────────────────────────────────────
@@ -293,4 +324,79 @@ TEST(TessellateTexturedRect, PositionCoordinatesCorrect) {
   EXPECT_FLOAT_EQ(v[1].x, 90.0f);   EXPECT_FLOAT_EQ(v[1].y, 20.0f);
   EXPECT_FLOAT_EQ(v[2].x, 10.0f);   EXPECT_FLOAT_EQ(v[2].y, 80.0f);
   EXPECT_FLOAT_EQ(v[5].x, 90.0f);   EXPECT_FLOAT_EQ(v[5].y, 80.0f);
+}
+
+// ─── Dejenere poligon girdileri (K4 regresyonu) ─────────────────────────────
+//
+// EarClipping, kulak bulamadığında `break` ile çıkıp kalan poligonu SESSİZCE
+// atıyordu. Tekrarlı (duplicate) köşe içeren poligonlarda üçgenlerin çoğu
+// kayboluyor; kullanıcı verisinden gelen poligonlarda görünür veri kaybı.
+//
+// Beklenen: n köşeli basit bir poligon (n-2) üçgen = (n-2)*3 vertex üretir.
+// Tekrarlı köşeler mantıksal olarak elenir; sonuç eleme sonrası köşe
+// sayısına göre değerlendirilir.
+
+TEST(TessellateFilledPolygon, DuplicateVertexDoesNotDropTriangles) {
+  // Kare + ikinci köşenin birebir tekrarı → mantıksal olarak hâlâ bir kare.
+  const std::vector<Point> pts = {
+      {0.0f, 0.0f}, {10.0f, 0.0f}, {10.0f, 0.0f}, {10.0f, 10.0f}, {0.0f, 10.0f},
+  };
+  auto v = Tessellator::TessellateFilledPolygon(pts);
+  // Tekrar elendikten sonra 4 köşe kalır → 2 üçgen → 6 vertex.
+  EXPECT_EQ(v.size(), 6u)
+      << "Tekrarlı köşe üçgenlerin kaybolmasına yol açtı.";
+}
+
+TEST(TessellateFilledPolygon, MultipleDuplicateVerticesHandled) {
+  const std::vector<Point> pts = {
+      {0.0f, 0.0f},   {0.0f, 0.0f},  {10.0f, 0.0f},
+      {10.0f, 10.0f}, {10.0f, 10.0f}, {0.0f, 10.0f},
+  };
+  auto v = Tessellator::TessellateFilledPolygon(pts);
+  EXPECT_EQ(v.size(), 6u);
+}
+
+TEST(TessellateFilledPolygon, CollinearVertexDoesNotDropTriangles) {
+  // Üst kenarın ortasında fazladan (kolineer) bir nokta.
+  const std::vector<Point> pts = {
+      {0.0f, 0.0f}, {5.0f, 0.0f}, {10.0f, 0.0f}, {10.0f, 10.0f}, {0.0f, 10.0f},
+  };
+  auto v = Tessellator::TessellateFilledPolygon(pts);
+  EXPECT_EQ(v.size(), 9u) << "5 köşe → 3 üçgen beklenir.";
+}
+
+TEST(TessellateFilledPolygon, DegenerateInputCollapsingToLineReturnsEmpty) {
+  // Tüm noktalar aynı → geçerli hiçbir üçgen yok, ama çökmemeli.
+  const std::vector<Point> pts = {
+      {5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f},
+  };
+  auto v = Tessellator::TessellateFilledPolygon(pts);
+  EXPECT_TRUE(v.empty());
+}
+
+TEST(TessellateFilledPolygon, ConcaveWithDuplicateVertexKeepsAllTriangles) {
+  // Konkav L şekli + tekrarlı köşe → eleme sonrası 6 köşe = 4 üçgen.
+  const std::vector<Point> pts = {
+      {0.0f, 0.0f},  {10.0f, 0.0f}, {10.0f, 10.0f},
+      {5.0f, 10.0f}, {5.0f, 10.0f}, {5.0f, 5.0f}, {0.0f, 5.0f},
+  };
+  auto v = Tessellator::TessellateFilledPolygon(pts);
+  EXPECT_EQ(v.size(), 12u);
+}
+
+// ─── Adaptif segment üst sınırı (Y5 regresyonu) ─────────────────────────────
+
+TEST(TessellateFilledCircle, SegmentCountIsCapped) {
+  // Üst sınır olmadan yarıçap 100000 → 150.000 vertex (~1.7 MB) üretiliyordu.
+  auto v = Tessellator::TessellateFilledCircle(0.0f, 0.0f, 100000.0f);
+  EXPECT_LE(v.size(), 512u * 3u)
+      << "Segment sayısı sınırsız: " << v.size() << " vertex üretildi.";
+  EXPECT_GT(v.size(), 0u);
+}
+
+TEST(TessellateStrokedCircle, SegmentCountIsCapped) {
+  auto v = Tessellator::TessellateStrokedCircle(0.0f, 0.0f, 100000.0f, 2.0f);
+  // 512 segment * 6 vertex (quad) + 512 birlesim diski * en fazla 24 * 3.
+  EXPECT_LE(v.size(), 512u * 6u + 512u * 24u * 3u);
+  EXPECT_GT(v.size(), 0u);
 }

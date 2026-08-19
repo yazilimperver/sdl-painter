@@ -6,6 +6,9 @@ set(TEST_SOURCES
     test_pen_brush.cpp
     test_transform.cpp
     test_tessellator.cpp
+    test_painter.cpp
+    test_font.cpp
+    test_text_utf8.cpp
     test_image.cpp
     test_render_batcher.cpp
     test_texture_image_upload.cpp

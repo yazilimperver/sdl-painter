@@ -28,7 +28,19 @@ class VkSwapchain {
   void Shutdown();
 
   /// @brief Pencere boyutu değiştiğinde swapchain'i yeniden inşa et.
+  ///
+  /// @note Sıfır boyutlu (simge durumuna küçültülmüş) pencerede çağrılmamalı;
+  ///       Vulkan `imageExtent` bileşenlerinin sıfırdan büyük olmasını şart
+  ///       koşar. Çağırmadan önce @ref IsSurfaceRenderable ile kontrol edin.
   bool Recreate(uint32_t width, uint32_t height);
+
+  /// @brief Yüzey şu an çizilebilir bir alana sahip mi?
+  ///
+  /// Pencere simge durumuna küçültüldüğünde platform, yüzey yeteneklerinde
+  /// `currentExtent = {0, 0}` bildirir. Bu durumda swapchain oluşturmak,
+  /// framebuffer yaratmak veya render pass başlatmak Vulkan geçerlilik
+  /// kurallarını ihlal eder — kare tamamen atlanmalıdır.
+  [[nodiscard]] bool IsSurfaceRenderable() const;
 
   VkSwapchainKHR GetSwapchain() const { return mSwapchain; }
   VkRenderPass GetRenderPass() const { return mRenderPass; }

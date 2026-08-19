@@ -85,6 +85,28 @@ class IRenderer {
   virtual TextureHandle CreateTexture(const uint8_t* data, int32_t width,
                                       int32_t height, int32_t channels) = 0;
 
+  /// @brief Var olan bir texture'ın alt bölgesini güncelle (sub-image yükleme).
+  ///
+  /// Glyph atlası gibi artımlı doldurulan texture'lar için gereklidir:
+  /// her yeni glyph'te tüm sayfayı yeniden yaratmak yerine yalnızca ilgili
+  /// dikdörtgen yüklenir.
+  ///
+  /// @param handle Güncellenecek texture (@ref CreateTexture ile üretilmiş).
+  /// @param x Hedef bölgenin sol kenarı (piksel).
+  /// @param y Hedef bölgenin üst kenarı (piksel).
+  /// @param width Bölge genişliği (piksel, > 0).
+  /// @param height Bölge yüksekliği (piksel, > 0).
+  /// @param data Sıkı paketlenmiş **RGBA8** piksel verisi
+  ///        (`width * height * 4` bayt).
+  ///
+  /// @warning Kare ortasında çağrılabilir; ancak o kare içinde **daha önce**
+  ///          çizim komutu verilmiş bir bölgenin üzerine yazmak tanımsızdır.
+  ///          Yalnızca henüz kullanılmamış bölgeleri doldurun (glyph atlası
+  ///          bunu şerf paketlemesiyle garanti eder).
+  virtual void UpdateTexture(TextureHandle handle, int32_t x, int32_t y,
+                             int32_t width, int32_t height,
+                             const uint8_t* data) = 0;
+
   /// @brief Texture'ı sil.
   virtual void DestroyTexture(TextureHandle handle) = 0;
 

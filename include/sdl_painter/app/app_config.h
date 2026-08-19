@@ -42,6 +42,19 @@ struct AppConfig {
   /// @brief Pencere yeniden boyutlandırılabilir mi?
   bool resizable{true};
 
+  /// @brief Yüksek piksel yoğunluğu (HiDPI / Retina) desteği.
+  ///
+  /// `true` ise pencere `SDL_WINDOW_HIGH_PIXEL_DENSITY` ile oluşturulur ve
+  /// framebuffer, ekran ölçek faktörü kadar büyür (örn. 200% ölçekte
+  /// 800x600 pencere → 1600x1200 framebuffer). @ref Application::Width ve
+  /// @ref Application::Height daima **piksel** cinsindendir; @ref Painter
+  /// koordinat sistemi de piksel tabanlıdır. Dolayısıyla bu seçenek açıkken
+  /// çizim koordinatlarınızı @ref Application::Width / @ref Height üzerinden
+  /// hesaplamanız gerekir — sabit sayılar küçük görünür.
+  ///
+  /// Varsayılan `false`: framebuffer, mantıksal pencere boyutuyla aynıdır.
+  bool high_dpi{false};
+
   /// @brief Dikey senkronizasyon.
   /// @note Yalnızca OpenGL backend'de `SDL_GL_SetSwapInterval` ile uygulanır.
   ///       Vulkan'da yoksayılır — sunum modu swapchain tarafından seçilir.

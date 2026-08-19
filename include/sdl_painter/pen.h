@@ -51,7 +51,7 @@ class Pen {
   void SetColor(const Color& color) noexcept { mColor = color; }
 
   /// @brief Çizgi kalınlığını ayarla.
-  void SetWidth(float width) noexcept { mWidth = width; }
+  void SetWidth(float width) noexcept { mWidth = width > 0.0F ? width : 0.0F; }
 
   /// @brief Dış kontur rengini ayarla.
   void SetOutlineColor(const Color& color) noexcept { mOutlineColor = color; }

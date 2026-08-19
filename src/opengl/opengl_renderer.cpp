@@ -6,6 +6,7 @@
 
 #include <SDL3/SDL.h>
 
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <glad/glad.h>
@@ -172,6 +173,15 @@ void OpenGLRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
   if (vertices.empty()) {
     return;
   }
+  // Arayuz sozlesmesi: ucgen listesi 3'un kati olmali. Eksik bir ucgen
+  // sessizce atlanirdi; bunu gorunur kil.
+  if (vertices.size() % 3 != 0) {
+    spdlog::error(
+        "[OpenGLRenderer] DrawTriangles: vertex sayisi ({}) 3'un "
+        "kati degil; cizim atlandi.",
+        vertices.size());
+    return;
+  }
 
   mBasicShader.Use();
   mBasicShader.SetUniformMat4("u_projection", mProjection);
@@ -189,22 +199,85 @@ void OpenGLRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
 
 TextureHandle OpenGLRenderer::CreateTexture(const uint8_t* data, int32_t width,
                                             int32_t height, int32_t channels) {
-  if (data == nullptr) {
+  if (data == nullptr || width <= 0 || height <= 0) {
     return kInvalidTexture;
   }
 
-  GLenum format = (channels == 4) ? GL_RGBA : GL_RGB;
+  // Kanal sayısı → GL formatı. Eskiden 4 olmayan her değer GL_RGB'ye
+  // düşüyordu; 1 veya 2 kanallı veride GL, satır başına `width*3` bayt
+  // okuyup buffer'ın dışına taşıyordu.
+  GLenum format = GL_RGBA;
+  switch (channels) {
+    case 1:
+      format = GL_RED;
+      break;
+    case 2:
+      format = GL_RG;
+      break;
+    case 3:
+      format = GL_RGB;
+      break;
+    case 4:
+      format = GL_RGBA;
+      break;
+    default:
+      spdlog::error("[OpenGLRenderer] Desteklenmeyen kanal sayısı: {}",
+                    channels);
+      return kInvalidTexture;
+  }
+
   uint32_t tex_id = 0;
   glGenTextures(1, &tex_id);
   glBindTexture(GL_TEXTURE_2D, tex_id);
+
+  // GL varsayılan unpack hizalaması 4 bayttır. RGB (3 bayt/piksel) veride
+  // genişlik 4'ün katı değilse her satır 4'e hizalı okunur ve görüntü
+  // kademeli olarak kayar. Piksel verisi sıkı paketli geldiği için 1 yap.
+  GLint prev_alignment = 4;
+  glGetIntegerv(GL_UNPACK_ALIGNMENT, &prev_alignment);
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+  // Tek/çift kanallı texture'lar shader'da .rgb olarak örneklenebilsin diye
+  // swizzle uygula: R -> (R,R,R,1), RG -> (R,R,R,G) (gri tonlama + alfa).
+  if (channels == 1) {
+    const std::array<GLint, 4> kSwizzle = {GL_RED, GL_RED, GL_RED, GL_ONE};
+    glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, kSwizzle.data());
+  } else if (channels == 2) {
+    const std::array<GLint, 4> kSwizzle = {GL_RED, GL_RED, GL_RED, GL_GREEN};
+    glTexParameteriv(GL_TEXTURE_2D, GL_TEXTURE_SWIZZLE_RGBA, kSwizzle.data());
+  }
+
   glTexImage2D(GL_TEXTURE_2D, 0, static_cast<GLint>(format), width, height, 0,
                format, GL_UNSIGNED_BYTE, data);
+
+  glPixelStorei(GL_UNPACK_ALIGNMENT, prev_alignment);
   glBindTexture(GL_TEXTURE_2D, 0);
   return static_cast<TextureHandle>(tex_id);
+}
+
+void OpenGLRenderer::UpdateTexture(TextureHandle handle, int32_t x, int32_t y,
+                                   int32_t width, int32_t height,
+                                   const uint8_t* data) {
+  if (handle == kInvalidTexture || data == nullptr || width <= 0 ||
+      height <= 0) {
+    return;
+  }
+  glBindTexture(GL_TEXTURE_2D, static_cast<uint32_t>(handle));
+
+  GLint prev_alignment = 4;
+  glGetIntegerv(GL_UNPACK_ALIGNMENT, &prev_alignment);
+  glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+  glTexSubImage2D(GL_TEXTURE_2D, 0, x, y, width, height, GL_RGBA,
+                  GL_UNSIGNED_BYTE, data);
+
+  glPixelStorei(GL_UNPACK_ALIGNMENT, prev_alignment);
+  glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 void OpenGLRenderer::DestroyTexture(TextureHandle handle) {

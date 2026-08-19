@@ -37,6 +37,7 @@ find_package(OpenGL REQUIRED)
 # Compiler warnings + sanitizer seçenekleri
 include(CompilerWarnings)
 include(CompilerOptions)
+include(CodeCoverage)
 
 # Windows'ta bagimlilik DLL'lerini exe yaninda toplayan yardimci
 include(RuntimeDlls)
@@ -71,6 +72,7 @@ set(SDLPAINTER_SOURCES
     src/tessellator.cpp
     src/render_batcher.cpp
     src/font.cpp
+    src/glyph_atlas.cpp
     src/opengl/opengl_renderer.cpp
     src/opengl/shader_program.cpp
 )
@@ -123,7 +125,7 @@ target_include_directories(sdl_painter
 
 target_link_libraries(sdl_painter
     PUBLIC  SDL3::SDL3
-    PUBLIC  OpenGL::GL
+    PRIVATE OpenGL::GL
     PUBLIC  glm::glm
     PRIVATE glad::glad
     PRIVATE stb::stb
@@ -146,6 +148,7 @@ endif()
 
 set_target_warnings(sdl_painter)
 set_target_sanitizers(sdl_painter)
+set_target_coverage(sdl_painter)
 
 # --- Uygulama çatısı katmanı (opsiyonsuz — her zaman derlenir ve paketlenir) bağımlılık; static lib olduğundan kullanmayan tüketiciye maliyeti yoktur
 add_library(sdl_painter_app
@@ -164,6 +167,7 @@ target_link_libraries(sdl_painter_app
 )
 set_target_warnings(sdl_painter_app)
 set_target_sanitizers(sdl_painter_app)
+set_target_coverage(sdl_painter_app)
 
 # --- Namespace'li ALIAS hedefler ---
 # add_subdirectory()/FetchContent ile ekleyen tuketici de kurulmus paketle

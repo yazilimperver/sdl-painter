@@ -10,15 +10,35 @@
 namespace sdl_painter {
 
 class IRenderer;
+class GlyphAtlas;
 
-/// @brief Tek bir karakterin metrikleri ve dokusu.
+/// @brief Tek bir karakterin metrikleri ve atlas içindeki konumu.
+///
+/// @note v1.2.0'da değişti: glyph'ler artık **ortak bir atlas texture'ında**
+/// tutulur. Eskiden her glyph kendi `Texture` nesnesine sahipti ve bu, metin
+/// çiziminde karakter başına bir draw call'a yol açıyordu. Artık `texture`
+/// atlasın sayfa tanımlayıcısıdır (sahiplik atlastadır, Glyph'te değil) ve
+/// `u0/v0/u1/v1` glyph'in o sayfadaki bölgesini verir.
 struct Glyph {
-  Texture texture;
+  /// @brief Glyph'i içeren atlas sayfasının texture'ı (sahiplik atlasta).
+  TextureHandle texture{kInvalidTexture};
+
+  // Atlas içindeki normalize doku koordinatları.
+  float u0{0.0F};
+  float v0{0.0F};
+  float u1{0.0F};
+  float v1{0.0F};
+
   int32_t width{0};
   int32_t height{0};
   int32_t advance{0};
   int32_t bearing_x{0};
   int32_t bearing_y{0};
+
+  /// @brief Glyph çizilebilir bir görüntüye sahip mi?
+  [[nodiscard]] bool IsValid() const noexcept {
+    return texture != kInvalidTexture;
+  }
 };
 
 /// @brief Metin hizalama seçeneği.
@@ -80,12 +100,19 @@ class Font {
   /// @brief Karakter için Glyph al; yoksa oluşturur.
   const Glyph* GetGlyph(IRenderer& renderer, char32_t codepoint) const;
 
+  /// @brief Glyph atlasının açtığı sayfa sayısı (teşhis/test).
+  [[nodiscard]] std::size_t AtlasPageCount() const;
+
  private:
   void* mHandle{nullptr};
   int32_t mPointSize{0};
 
   // Karakter önbelleği (mutable çünkü mantıksal const'u bozmuyoruz)
   mutable std::unordered_map<char32_t, Glyph> mGlyphCache;
+
+  /// @brief Glyph görüntülerini toplayan ortak texture atlası.
+  /// İlk @ref GetGlyph çağrısında oluşturulur.
+  mutable std::unique_ptr<GlyphAtlas> mAtlas;
 };
 
 }  // namespace sdl_painter

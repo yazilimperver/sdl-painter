@@ -14,7 +14,7 @@ namespace sdl_painter {
 /// güçlendirilmesi planlanıyor.
 class Texture {
  public:
-  Texture(IRenderer* renderer = nullptr) : mRenderer(renderer) {}
+  explicit Texture(IRenderer* renderer = nullptr) : mRenderer(renderer) {}
   Texture(IRenderer* renderer, TextureHandle handle)
       : mRenderer(renderer), mHandle(handle) {}
 

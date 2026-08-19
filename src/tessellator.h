@@ -3,6 +3,8 @@
 #include "sdl_painter/geometry.h"
 #include "sdl_painter/vertex.h"
 
+#include <algorithm>
+#include <cstdint>
 #include <vector>
 
 namespace sdl_painter {
@@ -54,10 +56,18 @@ class Tessellator {
                                                  float y2, float line_width);
 
   /// @brief Çok noktalı polyline için kalın quad vertex üret.
+  ///
+  /// Segmentler bağımsız quad'lar olarak üretilir; iç köşelerde kalan kama
+  /// biçimli boşluklar **yuvarlak birleşim** (round join) diskleriyle
+  /// doldurulur. Bu nedenle vertex sayısı segment sayısının katı değildir.
+  /// Kalınlık 1.5 pikselin altındaysa birleşim eklenmez (görünmez, israf).
   static std::vector<Vertex> TessellateThickPolyline(
       const std::vector<Point>& points, float line_width);
 
   /// @brief Poligon çerçevesi için kalın quad vertex üret (kapalı polyline).
+  ///
+  /// @ref TessellateThickPolyline ile aynı birleşim davranışı; kapalı olduğu
+  /// için **tüm** köşelere birleşim uygulanır.
   static std::vector<Vertex> TessellateStrokedPolygon(
       const std::vector<Point>& points, float line_width);
 
@@ -71,13 +81,39 @@ class Tessellator {
 
  private:
   /// @brief Adaptif segment sayısı hesapla.
+  ///
+  /// Alt sınır görsel kalite, üst sınır ise bellek/CPU koruması içindir:
+  /// 512 segment zaten piksel altı hassasiyet demektir; sınırsız bırakmak
+  /// büyük yarıçaplarda tek çağrıda yüz binlerce vertex üretiyordu.
   static int32_t AdaptiveSegments(float radius) {
     constexpr int32_t kMinSegments = 16;
-    return std::max(kMinSegments, static_cast<int32_t>(radius * 0.5f));
+    constexpr int32_t kMaxSegments = 512;
+    if (!(radius > 0.0F)) {  // NaN ve negatif yarıçap koruması
+      return kMinSegments;
+    }
+    const float kScaled = radius * 0.5F;
+    if (kScaled >= static_cast<float>(kMaxSegments)) {
+      return kMaxSegments;
+    }
+    return std::max(kMinSegments, static_cast<int32_t>(kScaled));
   }
 
+  /// @brief Ardışık (ve kapanıştaki) çakışan noktaları eleyerek kopya döndür.
+  static std::vector<Point> RemoveDuplicatePoints(
+      const std::vector<Point>& points);
+
+  /// @brief Açık/kapalı polyline için ortak kalın çizgi + birleşim üretimi.
+  /// @param closed `true` ise son nokta ilkine bağlanır ve tüm köşelere
+  ///        birleşim uygulanır.
+  static std::vector<Vertex> TessellatePolyline(const std::vector<Point>& raw,
+                                                float line_width, bool closed);
+
+  /// @brief Köşeye yuvarlak birleşim diski ekle (merkez + çevre üçgen fanı).
+  static void AppendRoundJoin(std::vector<Vertex>& out, const Point& center,
+                              float radius);
+
   /// @brief Ear clipping iç implementasyonu.
-  static std::vector<Vertex> EarClipping(const std::vector<Point>& points);
+  static std::vector<Vertex> EarClipping(const std::vector<Point>& raw);
 
   /// @brief Üçgenin saat yönünde mi olduğunu kontrol et.
   static bool IsClockwise(const Point& a, const Point& b, const Point& c);

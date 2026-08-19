@@ -12,7 +12,8 @@ RenderBatcher::RenderBatcher(IRenderer& renderer) : mRenderer(renderer) {
 void RenderBatcher::PushTriangles(const std::vector<Vertex>& vertices,
                                   const Color& color, float opacity) {
   // State değişimi veya buffer taşması kontrolü
-  if (mCurrentMode != DrawMode::kBasic || mCurrentOpacity != opacity ||
+  if (mCurrentMode != DrawMode::kBasic ||
+      !SameOpacity(mCurrentOpacity, opacity) ||
       (mVertexBuffer.size() + vertices.size()) > kMaxVertices) {
     Flush();
   }
@@ -33,7 +34,7 @@ void RenderBatcher::PushTexturedTriangles(
     const std::vector<TexturedVertex>& vertices, TextureHandle texture,
     const Color& tint, float opacity) {
   if (mCurrentMode != DrawMode::kTextured || mCurrentTexture != texture ||
-      mCurrentOpacity != opacity ||
+      !SameOpacity(mCurrentOpacity, opacity) ||
       (mTexturedBuffer.size() + vertices.size()) > kMaxVertices) {
     Flush();
   }

@@ -5,6 +5,9 @@
 #include <SDL3_ttf/SDL_ttf.h>
 
 #include <spdlog/spdlog.h>
+#include <utility>
+
+#include "glyph_atlas.h"
 
 namespace sdl_painter {
 
@@ -48,6 +51,10 @@ Font::Font(const std::string& file_path, int32_t point_size)
 }
 
 Font::~Font() {
+  // Atlas sayfalarinin texture'lari IRenderer uzerinden yikilir; Font
+  // yasarken renderer da yasiyor olmali (bkz. sinif belgesindeki sozlesme).
+  mGlyphCache.clear();
+  mAtlas.reset();
   if (mHandle != nullptr) {
     TTF_CloseFont(static_cast<TTF_Font*>(mHandle));
     mHandle = nullptr;
@@ -56,21 +63,37 @@ Font::~Font() {
 }
 
 Font::Font(Font&& other) noexcept
-    : mHandle(other.mHandle), mPointSize(other.mPointSize) {
+    : mHandle(other.mHandle),
+      mPointSize(other.mPointSize),
+      mGlyphCache(std::move(other.mGlyphCache)),
+      mAtlas(std::move(other.mAtlas)) {
   other.mHandle = nullptr;
   other.mPointSize = 0;
+  // Taşınmış nesnede artık glyph kalmamalı: aksi halde `other` üzerinden
+  // yapılan GetGlyph çağrıları kapatılmış bir fonta ait texture döndürür.
+  other.mGlyphCache.clear();
 }
 
 Font& Font::operator=(Font&& other) noexcept {
   if (this != &other) {
+    // Hedefin ESKİ glyph önbelleği, eski fonta aittir ve mutlaka atılmalıdır.
+    // Aksi halde yeni fontun kod noktaları için eski fontun (farklı punto /
+    // farklı yüz) texture'ları döndürülür — ekranda yanlış karakterler.
+    // Texture yıkımı IRenderer'ı kullandığından bu, renderer hâlâ hayattayken
+    // yapılmalıdır (bkz. sınıf belgesindeki yaşam döngüsü sözleşmesi).
+    mGlyphCache.clear();
+    mAtlas.reset();
     if (mHandle != nullptr) {
       TTF_CloseFont(static_cast<TTF_Font*>(mHandle));
       ReleaseTTF();
     }
     mHandle = other.mHandle;
     mPointSize = other.mPointSize;
+    mGlyphCache = std::move(other.mGlyphCache);
+    mAtlas = std::move(other.mAtlas);
     other.mHandle = nullptr;
     other.mPointSize = 0;
+    other.mGlyphCache.clear();
   }
   return *this;
 }
@@ -126,11 +149,6 @@ const Glyph* Font::GetGlyph(IRenderer& renderer, char32_t codepoint) const {
     return nullptr;
   }
 
-  // Texture olustur
-  TextureHandle handle =
-      renderer.CreateTexture(static_cast<const uint8_t*>(rgba_surface->pixels),
-                             rgba_surface->w, rgba_surface->h, 4);
-
   // Metrikleri al
   int minx = 0;
   int maxx = 0;
@@ -143,9 +161,41 @@ const Glyph* Font::GetGlyph(IRenderer& renderer, char32_t codepoint) const {
     return nullptr;
   }
 
-  // Önbelleğe ekle
+  // Gorunmez glyph (bosluk, kontrol karakteri): atlasa yer ayirma, yalnizca
+  // metrikleri onbellege al. Cagiran `IsValid()` false gorup imleci `advance`
+  // kadar ilerletir.
+  if (rgba_surface->w <= 0 || rgba_surface->h <= 0) {
+    Glyph blank;
+    blank.advance = advance;
+    blank.bearing_x = minx;
+    blank.bearing_y = TTF_GetFontAscent(font);
+    SDL_DestroySurface(rgba_surface);
+    return &mGlyphCache.emplace(codepoint, std::move(blank)).first->second;
+  }
+
+  // Glyph'i ortak atlasa yerlestir. Ayri texture yerine atlas kullanmak,
+  // ayni fonttan cizilen tum karakterlerin tek draw call'da toplanmasini
+  // saglar (bkz. GlyphAtlas).
+  if (mAtlas == nullptr) {
+    mAtlas = std::make_unique<GlyphAtlas>();
+  }
+
   Glyph glyph;
-  glyph.texture = Texture(&renderer, handle);
+  GlyphAtlas::Region region;
+  if (!mAtlas->Add(renderer, static_cast<const uint8_t*>(rgba_surface->pixels),
+                   rgba_surface->w, rgba_surface->h, region)) {
+    spdlog::warn("Font: U+{:04X} atlasa yerlestirilemedi ({}x{}).",
+                 static_cast<uint32_t>(codepoint), rgba_surface->w,
+                 rgba_surface->h);
+    SDL_DestroySurface(rgba_surface);
+    return nullptr;
+  }
+  glyph.texture = region.texture;
+  glyph.u0 = region.u0;
+  glyph.v0 = region.v0;
+  glyph.u1 = region.u1;
+  glyph.v1 = region.v1;
+
   glyph.width = rgba_surface->w;
   glyph.height = rgba_surface->h;
   glyph.advance = advance;
@@ -160,8 +210,12 @@ const Glyph* Font::GetGlyph(IRenderer& renderer, char32_t codepoint) const {
 
   SDL_DestroySurface(rgba_surface);
 
-  mGlyphCache[codepoint] = std::move(glyph);
-  return &mGlyphCache[codepoint];
+  // Tek ekleme + tek arama: emplace, eklenen ogeye iterator dondurur.
+  return &mGlyphCache.emplace(codepoint, std::move(glyph)).first->second;
+}
+
+std::size_t Font::AtlasPageCount() const {
+  return mAtlas ? mAtlas->PageCount() : 0;
 }
 
 }  // namespace sdl_painter

@@ -31,11 +31,23 @@ class RenderBatcher {
   void Flush();
 
  private:
+  /// @brief İki opaklık değeri aynı batch'te birleştirilebilir mi?
+  ///
+  /// Doğrudan `!=` yerine tolerans kullanılır: opaklık kullanıcıdan gelen bir
+  /// float'tır ve hesaplanmış değerlerde (örn. `1.0F / 3.0F * 3.0F`) bit
+  /// düzeyinde eşitlik beklemek gereksiz flush'a yol açar. 1/512, 8-bit alfa
+  /// çözünürlüğünün (1/255) altındadır — görsel fark üretmez.
+  [[nodiscard]] static bool SameOpacity(float a, float b) noexcept {
+    constexpr float kEpsilon = 1.0F / 512.0F;
+    const float diff = a - b;
+    return (diff < 0.0F ? -diff : diff) < kEpsilon;
+  }
+
   IRenderer& mRenderer;
 
   DrawMode mCurrentMode{DrawMode::kNone};
   TextureHandle mCurrentTexture{kInvalidTexture};
-  float mCurrentOpacity{1.0f};
+  float mCurrentOpacity{1.0F};
 
   std::vector<Vertex> mVertexBuffer;
   std::vector<TexturedVertex> mTexturedBuffer;

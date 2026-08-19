@@ -121,6 +121,45 @@ test:unit:asan:
 #     - ctest --preset windows-mingw-debug --output-on-failure
 #     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+# Kod kapsama olcumu. Esik ZORLANMAZ (allow_failure): amac kapsami gorunur
+# kilmak. gcovr'in "coverage: N%" ciktisi GitLab'in kapsam rozetini besler.
+quality:coverage:
+  stage: quality
+  image: $CI_REGISTRY_IMAGE
+  needs: []
+  variables:
+    SDL_VIDEODRIVER: "offscreen"
+  script:
+    - pip3 install --break-system-packages gcovr || pip3 install gcovr
+    - export VK_ICD_FILENAMES=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json 2>/dev/null | head -1)
+    - |
+      conan install . --output-folder=build/linux-debug-coverage/generators --build=missing \
+        -s build_type=Debug \
+        -c tools.system.package_manager:mode=install \
+        -c tools.system.package_manager:sudo=False
+    - cmake --preset linux-debug-coverage
+    - cmake --build --preset linux-debug-coverage
+    - ctest --preset linux-debug-coverage --output-on-failure
+    - mkdir -p coverage
+    # Yalnizca kutuphane kodu olculur; testler/ornekler kapsam disi.
+    - |
+      gcovr --root . \
+        --filter 'src/' --filter 'include/sdl_painter/' \
+        --exclude 'tests/' --exclude 'examples/' --exclude 'third_party/' \
+        --print-summary \
+        --html-details coverage/index.html \
+        --xml coverage/coverage.xml
+  coverage: '/^lines:\s+(\d+\.\d+)\%/'
+  artifacts:
+    paths:
+      - coverage/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/coverage.xml
+    expire_in: 1 week
+  allow_failure: true
+
 quality:clang-format:
   stage: quality
   image: $CI_REGISTRY_IMAGE
@@ -174,12 +213,21 @@ pages:
     - apt-get update -qq && apt-get install -y doxygen graphviz
   script:
     - mkdir -p public
+    # Surumun TEK kaynagi include/sdl_painter/version.h (bkz. build-deps.md).
+    # Daha once bu deger CMakeLists.txt'ten grep'leniyordu; project() satiri
+    # ${SDLPAINTER_VERSION} degiskenine gecince grep sessizce bosa dustu.
     - |
+      SDLPAINTER_VERSION="$(grep -oP 'kVersionString\s*=\s*"\K[0-9]+\.[0-9]+\.[0-9]+' include/sdl_painter/version.h)"
+      if [ -z "$SDLPAINTER_VERSION" ]; then
+        echo "HATA: version.h icinden surum okunamadi." >&2
+        exit 1
+      fi
+      echo "SDLPainter surumu: $SDLPAINTER_VERSION"
       AWESOME="third_party/doxygen-awesome-css/doxygen-awesome.css"
       [ -f "$AWESOME" ] || AWESOME=""
       cat > _ci_doxyfile <<EOF
       PROJECT_NAME           = "SDLPainter"
-      PROJECT_NUMBER         = "$(grep 'project(SDLPainter VERSION' CMakeLists.txt | grep -oP '\d+\.\d+\.\d+')"
+      PROJECT_NUMBER         = "${SDLPAINTER_VERSION}"
       PROJECT_BRIEF          = "SDL3 + OpenGL/Vulkan 2B çizim kütüphanesi"
       OUTPUT_DIRECTORY       = public
       HTML_OUTPUT            = .

@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <numeric>
+#include <spdlog/spdlog.h>
 
 namespace sdl_painter {
 
@@ -135,31 +136,80 @@ std::vector<Vertex> Tessellator::TessellateThickLine(float x1, float y1,
   // clang-format on
 }
 
+void Tessellator::AppendRoundJoin(std::vector<Vertex>& out, const Point& center,
+                                  float radius) {
+  // Yuvarlak birleşim (round join): köşeye kalınlığın yarısı yarıçapında bir
+  // disk yerleştirilir. Miter'a göre avantajı, keskin açılarda sivri uç
+  // (spike) üretmemesi ve miter limit ayarı gerektirmemesi.
+  //
+  // Segment sayısı yarıçapla ölçeklenir; ince çizgilerde 6 segment yeterli.
+  constexpr int32_t kMinJoinSegments = 6;
+  constexpr int32_t kMaxJoinSegments = 24;
+  const int32_t kSegments = std::clamp(static_cast<int32_t>(radius * 2.0F),
+                                       kMinJoinSegments, kMaxJoinSegments);
+
+  for (int32_t i = 0; i < kSegments; ++i) {
+    const float a0 =
+        kTwoPi * static_cast<float>(i) / static_cast<float>(kSegments);
+    const float a1 =
+        kTwoPi * static_cast<float>(i + 1) / static_cast<float>(kSegments);
+    out.emplace_back(center.x, center.y);
+    out.emplace_back(center.x + std::cos(a0) * radius,
+                     center.y + std::sin(a0) * radius);
+    out.emplace_back(center.x + std::cos(a1) * radius,
+                     center.y + std::sin(a1) * radius);
+  }
+}
+
 std::vector<Vertex> Tessellator::TessellateThickPolyline(
     const std::vector<Point>& points, float line_width) {
-  std::vector<Vertex> result;
-  if (points.size() < 2) {
-    return result;
-  }
-
-  for (std::size_t i = 0; i + 1 < points.size(); ++i) {
-    auto seg = TessellateThickLine(points[i].x, points[i].y, points[i + 1].x,
-                                   points[i + 1].y, line_width);
-    result.insert(result.end(), seg.begin(), seg.end());
-  }
-  return result;
+  return TessellatePolyline(points, line_width, /*closed=*/false);
 }
 
 std::vector<Vertex> Tessellator::TessellateStrokedPolygon(
     const std::vector<Point>& points, float line_width) {
+  return TessellatePolyline(points, line_width, /*closed=*/true);
+}
+
+std::vector<Vertex> Tessellator::TessellatePolyline(
+    const std::vector<Point>& raw, float line_width, bool closed) {
+  // Çakışan ardışık noktalar sıfır uzunluklu segment üretir; hem quad hem de
+  // birleşim hesabını bozar.
+  const std::vector<Point> points = RemoveDuplicatePoints(raw);
   if (points.size() < 2) {
     return {};
   }
+  if (!(line_width > 0.0F)) {
+    return {};
+  }
 
-  // Kapalı polyline — son noktayı başa bağla
-  std::vector<Point> closed = points;
-  closed.push_back(points[0]);
-  return TessellateThickPolyline(closed, line_width);
+  std::vector<Vertex> result;
+  const std::size_t kSegmentCount = closed ? points.size() : points.size() - 1;
+  result.reserve(kSegmentCount * 6);
+
+  for (std::size_t i = 0; i < kSegmentCount; ++i) {
+    const Point& a = points[i];
+    const Point& b = points[(i + 1) % points.size()];
+    auto seg = TessellateThickLine(a.x, a.y, b.x, b.y, line_width);
+    result.insert(result.end(), seg.begin(), seg.end());
+  }
+
+  // Birleşimler: segmentler bağımsız quad'lar olduğundan köşelerde kama
+  // biçiminde boşluk kalır. Kalınlık 1 pikselin altındayken boşluk görünmez,
+  // disk eklemek yalnızca vertex israfı olur.
+  constexpr float kMinJoinWidth = 1.5F;
+  if (line_width >= kMinJoinWidth) {
+    const float kRadius = line_width * 0.5F;
+    // Açık polyline'da yalnızca iç köşeler; kapalı poligonda tüm köşeler
+    // (ilk köşe de son segmentin bitişidir).
+    const std::size_t kFirst = closed ? 0 : 1;
+    const std::size_t kLast = closed ? points.size() : points.size() - 1;
+    for (std::size_t i = kFirst; i < kLast; ++i) {
+      AppendRoundJoin(result, points[i], kRadius);
+    }
+  }
+
+  return result;
 }
 
 std::vector<TexturedVertex> Tessellator::TessellateTexturedRect(
@@ -189,16 +239,49 @@ bool Tessellator::PointInTriangle(const Point& p, const Point& a,
   auto sign = [](const Point& p1, const Point& p2, const Point& p3) {
     return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
   };
-  float d1 = sign(p, a, b);
-  float d2 = sign(p, b, c);
-  float d3 = sign(p, c, a);
-  bool has_neg = (d1 < 0) || (d2 < 0) || (d3 < 0);
-  bool has_pos = (d1 > 0) || (d2 > 0) || (d3 > 0);
-  return !(has_neg && has_pos);
+  // Kesin (strict) iç test: kenar üzerindeki noktalar "dışarıda" sayılır.
+  // Kulak testinde sınır noktalarını içeride saymak, geçerli kulakları
+  // reddedip triangulation'ı erken durduruyordu (bkz. K4).
+  const float d1 = sign(p, a, b);
+  const float d2 = sign(p, b, c);
+  const float d3 = sign(p, c, a);
+  constexpr float kEps = 1e-6F;
+  const bool has_neg = (d1 < -kEps) || (d2 < -kEps) || (d3 < -kEps);
+  const bool has_pos = (d1 > kEps) || (d2 > kEps) || (d3 > kEps);
+  return !(has_neg && has_pos) &&
+         !(std::fabs(d1) <= kEps || std::fabs(d2) <= kEps ||
+           std::fabs(d3) <= kEps);
+}
+
+std::vector<Point> Tessellator::RemoveDuplicatePoints(
+    const std::vector<Point>& points) {
+  auto same = [](const Point& a, const Point& b) {
+    constexpr float kEpsSq = 1e-12F;
+    const float dx = a.x - b.x;
+    const float dy = a.y - b.y;
+    return (dx * dx + dy * dy) <= kEpsSq;
+  };
+
+  std::vector<Point> result;
+  result.reserve(points.size());
+  for (const Point& p : points) {
+    if (result.empty() || !same(result.back(), p)) {
+      result.push_back(p);
+    }
+  }
+  // Kapalı poligonda son nokta ilkiyle çakışıyorsa o da tekrardır.
+  while (result.size() > 1 && same(result.front(), result.back())) {
+    result.pop_back();
+  }
+  return result;
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& points) {
+std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& raw) {
+  // Tekrarlı (çakışan) köşeleri ele: sıfır uzunluklu kenarlar kulak testini
+  // bozup triangulation'ın sessizce yarıda kesilmesine yol açıyordu (K4).
+  const std::vector<Point> points = RemoveDuplicatePoints(raw);
+
   if (points.size() < 3) {
     return {};
   }
@@ -270,8 +353,15 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& points) {
       }
     }
 
-    // Dejenere poligon koruması
+    // Dejenere poligon koruması. Buraya düşmek, girdinin basit bir poligon
+    // olmadığı (kendini kesen kenarlar, sıfır alanlı bölgeler) anlamına
+    // gelir. Sessizce yarıda kesmek yerine kullanıcıyı uyar: aksi halde
+    // şeklin büyük kısmı hiçbir iz bırakmadan kaybolur.
     if (!found_ear) {
+      spdlog::warn(
+          "Tessellator: poligon tam üçgenlenemedi — {} köşe atlandı "
+          "(kendini kesen veya dejenere poligon?).",
+          indices.size() - 3);
       break;
     }
   }

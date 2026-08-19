@@ -14,7 +14,6 @@
 /// ESC veya pencere kapat → çıkış.
 
 #include <SDL3/SDL.h>
-#include <SDL3_ttf/SDL_ttf.h>
 #include <spdlog/sinks/ansicolor_sink.h>
 #include <spdlog/spdlog.h>
 

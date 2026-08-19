@@ -32,23 +32,35 @@ bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
   mHeight_u = static_cast<uint32_t>(height);
   mDescriptorSet = descriptor_set;
 
-  // 3 kanallı veriyi RGBA'ya dönüştür.
+  // Vulkan tarafında tek format kullanılır (R8G8B8A8); 1/2/3 kanallı veri
+  // RGBA'ya genişletilir. Çarpımlar size_t üzerinde yapılır: int32 aritmetiği
+  // büyük görüntülerde (örn. 16384x16384) taşıyordu.
+  const std::size_t kPixelCount =
+      static_cast<std::size_t>(width) * static_cast<std::size_t>(height);
   std::vector<uint8_t> rgba_storage;
   const uint8_t* rgba_data = data;
-  if (channels == 3) {
-    rgba_storage.resize(static_cast<size_t>(width * height * 4));
-    for (int32_t i = 0; i < width * height; ++i) {
-      rgba_storage[static_cast<size_t>(i * 4 + 0)] = data[i * 3 + 0];
-      rgba_storage[static_cast<size_t>(i * 4 + 1)] = data[i * 3 + 1];
-      rgba_storage[static_cast<size_t>(i * 4 + 2)] = data[i * 3 + 2];
-      rgba_storage[static_cast<size_t>(i * 4 + 3)] = 255;
+  if (channels != 4) {
+    if (channels < 1 || channels > 4) {
+      spdlog::error("VulkanTexture: desteklenmeyen kanal sayısı: {}", channels);
+      return false;
+    }
+    const auto kCh = static_cast<std::size_t>(channels);
+    rgba_storage.resize(kPixelCount * 4);
+    for (std::size_t i = 0; i < kPixelCount; ++i) {
+      const uint8_t* src = data + i * kCh;
+      uint8_t* dst = rgba_storage.data() + i * 4;
+      // 1 kanal: gri tonlama -> (v,v,v,255)
+      // 2 kanal: gri + alfa  -> (v,v,v,a)
+      // 3 kanal: RGB         -> (r,g,b,255)
+      dst[0] = src[0];
+      dst[1] = (kCh >= 3) ? src[1] : src[0];
+      dst[2] = (kCh >= 3) ? src[2] : src[0];
+      dst[3] = (kCh == 2) ? src[1] : ((kCh == 4) ? src[3] : 255);
     }
     rgba_data = rgba_storage.data();
   }
 
-  // NOLINTNEXTLINE(modernize-use-auto)
-  const VkDeviceSize kImageSize =
-      static_cast<VkDeviceSize>(mWidth_u * mHeight_u * 4);
+  const auto kImageSize = static_cast<VkDeviceSize>(kPixelCount * 4);
 
   // 1. Staging buffer
   VkBuffer staging_buf = VK_NULL_HANDLE;
@@ -65,9 +77,21 @@ bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
     return false;
   }
 
+  // Bu noktadan itibaren nesne Vulkan kaynagi sahipleniyor. mDevice'i HEMEN
+  // ata ki bundan sonraki her hata yolunda destructor Destroy() cagirsin;
+  // aksi halde (mDevice fonksiyon sonunda atanirsa) CreateSampler veya
+  // sonraki bir adim basarisiz oldugunda image + memory + view sizardi.
+  mDevice = device;
+
   // 3. Upload: layout geçişi + copy + son layout
-  if (!RecordAndSubmitUpload(device, context->GetGraphicsQueue(), cmd_pool,
-                             staging_buf)) {
+  VkBufferImageCopy full_region{};
+  full_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  full_region.imageSubresource.layerCount = 1;
+  full_region.imageOffset = {0, 0, 0};
+  full_region.imageExtent = {mWidth_u, mHeight_u, 1};
+  if (!RecordAndSubmitCopy(device, context->GetGraphicsQueue(), cmd_pool,
+                           staging_buf, full_region,
+                           /*from_undefined=*/true)) {
     vkDestroyBuffer(device, staging_buf, nullptr);
     vkFreeMemory(device, staging_mem, nullptr);
     return false;
@@ -85,9 +109,54 @@ bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
   UpdateDescriptorSet(device, descriptor_set_layout);
 
   spdlog::debug("VulkanTexture: {}x{} yuklendi.", width, height);
-  // RAII için device'i sakla.
-  mDevice = device;
   return true;
+}
+
+// ---------------------------------------------------------------------------
+// UpdateRegion — var olan image'ın bir dikdörtgenini yeniden yükle
+// ---------------------------------------------------------------------------
+bool VulkanTexture::UpdateRegion(VkContext* context, VkCommandPool cmd_pool,
+                                 int32_t x, int32_t y, int32_t width,
+                                 int32_t height, const uint8_t* data) {
+  if (!IsValid() || data == nullptr || width <= 0 || height <= 0) {
+    return false;
+  }
+  if (x < 0 || y < 0 || x + width > mWidth || y + height > mHeight) {
+    spdlog::error("VulkanTexture::UpdateRegion: bölge sınır dışı.");
+    return false;
+  }
+
+  VkDevice device = context->GetDevice();
+  const auto kSize = static_cast<VkDeviceSize>(
+      static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4);
+
+  VkBuffer staging_buf = VK_NULL_HANDLE;
+  VkDeviceMemory staging_mem = VK_NULL_HANDLE;
+  if (!CreateStagingBuffer(device, context->GetPhysicalDevice(), data, kSize,
+                           staging_buf, staging_mem)) {
+    return false;
+  }
+
+  VkBufferImageCopy region{};
+  region.bufferOffset = 0;
+  // Staging sıkı paketli olduğundan satır uzunluğu bölge genişliğidir.
+  region.bufferRowLength = 0;
+  region.bufferImageHeight = 0;
+  region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  region.imageSubresource.mipLevel = 0;
+  region.imageSubresource.baseArrayLayer = 0;
+  region.imageSubresource.layerCount = 1;
+  region.imageOffset = {x, y, 0};
+  region.imageExtent = {static_cast<uint32_t>(width),
+                        static_cast<uint32_t>(height), 1};
+
+  const bool kOk =
+      RecordAndSubmitCopy(device, context->GetGraphicsQueue(), cmd_pool,
+                          staging_buf, region, /*from_undefined=*/false);
+
+  vkDestroyBuffer(device, staging_buf, nullptr);
+  vkFreeMemory(device, staging_mem, nullptr);
+  return kOk;
 }
 
 // ---------------------------------------------------------------------------
@@ -287,9 +356,11 @@ void VulkanTexture::TransitionImageLayout(VkCommandBuffer cmd, VkImage image,
                        &barrier);
 }
 
-bool VulkanTexture::RecordAndSubmitUpload(VkDevice device, VkQueue queue,
-                                          VkCommandPool cmd_pool,
-                                          VkBuffer staging_buf) {
+bool VulkanTexture::RecordAndSubmitCopy(VkDevice device, VkQueue queue,
+                                        VkCommandPool cmd_pool,
+                                        VkBuffer staging_buf,
+                                        const VkBufferImageCopy& region,
+                                        bool from_undefined) {
   VkCommandBufferAllocateInfo alloc_info{};
   alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
   alloc_info.commandPool = cmd_pool;
@@ -299,25 +370,33 @@ bool VulkanTexture::RecordAndSubmitUpload(VkDevice device, VkQueue queue,
   VkCommandBuffer cmd = VK_NULL_HANDLE;
   VK_CHECK(vkAllocateCommandBuffers(device, &alloc_info, &cmd));
 
+  // Tek cikisli temizlik: bu noktadan sonraki her hata yolunda cmd (ve
+  // olusturulmussa fence) mutlaka serbest birakilir.
+  VkFence fence = VK_NULL_HANDLE;
+  auto cleanup = [&](bool ok) {
+    if (fence != VK_NULL_HANDLE) {
+      vkDestroyFence(device, fence, nullptr);
+    }
+    vkFreeCommandBuffers(device, cmd_pool, 1, &cmd);
+    return ok;
+  };
+
   VkCommandBufferBeginInfo begin_info{};
   begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-  VK_CHECK(vkBeginCommandBuffer(cmd, &begin_info));
+  if (vkBeginCommandBuffer(cmd, &begin_info) != VK_SUCCESS) {
+    spdlog::error("VulkanTexture: vkBeginCommandBuffer başarısız.");
+    return cleanup(false);
+  }
 
-  // UNDEFINED → TRANSFER_DST
-  TransitionImageLayout(cmd, mImage, VK_IMAGE_LAYOUT_UNDEFINED,
+  // Ilk yuklemede eski layout UNDEFINED; bolge guncellemesinde image zaten
+  // SHADER_READ_ONLY durumundadir ve icerigi korunmalidir.
+  TransitionImageLayout(cmd, mImage,
+                        from_undefined
+                            ? VK_IMAGE_LAYOUT_UNDEFINED
+                            : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-  VkBufferImageCopy region{};
-  region.bufferOffset = 0;
-  region.bufferRowLength = 0;
-  region.bufferImageHeight = 0;
-  region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-  region.imageSubresource.mipLevel = 0;
-  region.imageSubresource.baseArrayLayer = 0;
-  region.imageSubresource.layerCount = 1;
-  region.imageOffset = {0, 0, 0};
-  region.imageExtent = {mWidth_u, mHeight_u, 1};
   vkCmdCopyBufferToImage(cmd, staging_buf, mImage,
                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
@@ -325,24 +404,33 @@ bool VulkanTexture::RecordAndSubmitUpload(VkDevice device, VkQueue queue,
   TransitionImageLayout(cmd, mImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-  VK_CHECK(vkEndCommandBuffer(cmd));
+  if (vkEndCommandBuffer(cmd) != VK_SUCCESS) {
+    spdlog::error("VulkanTexture: vkEndCommandBuffer başarısız.");
+    return cleanup(false);
+  }
 
   VkSubmitInfo submit_info{};
   submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
   submit_info.commandBufferCount = 1;
   submit_info.pCommandBuffers = &cmd;
 
-  VkFence fence = VK_NULL_HANDLE;
   VkFenceCreateInfo fence_ci{};
   fence_ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-  VK_CHECK(vkCreateFence(device, &fence_ci, nullptr, &fence));
+  if (vkCreateFence(device, &fence_ci, nullptr, &fence) != VK_SUCCESS) {
+    spdlog::error("VulkanTexture: vkCreateFence başarısız.");
+    return cleanup(false);
+  }
 
-  VK_CHECK(vkQueueSubmit(queue, 1, &submit_info, fence));
-  VK_CHECK(vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX));
+  if (vkQueueSubmit(queue, 1, &submit_info, fence) != VK_SUCCESS) {
+    spdlog::error("VulkanTexture: vkQueueSubmit başarısız.");
+    return cleanup(false);
+  }
+  if (vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
+    spdlog::error("VulkanTexture: vkWaitForFences başarısız.");
+    return cleanup(false);
+  }
 
-  vkDestroyFence(device, fence, nullptr);
-  vkFreeCommandBuffers(device, cmd_pool, 1, &cmd);
-  return true;
+  return cleanup(true);
 }
 
 // ---------------------------------------------------------------------------

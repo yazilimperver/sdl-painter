@@ -240,6 +240,52 @@ jobs:
           cmake --build --preset linux-debug-asan
           ctest --preset linux-debug-asan --output-on-failure
 
+  # Kod kapsama olcumu. Esik ZORLANMAZ (allow-fail): amac, kapsami gorunur
+  # kilmak ve regresyonu fark edilebilir yapmak. Ozet is akisi ozetine yazilir,
+  # HTML raporu artifact olarak yuklenir.
+  coverage:
+    name: quality:coverage
+    runs-on: ubuntu-latest
+    needs: []
+    container:
+      image: yazilimperver/sdl-painter:ci-v1.0
+    env:
+      CONAN_HOME: /root/.conan2
+      SDL_VIDEODRIVER: offscreen
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - name: gcovr kurulumu
+        run: pip3 install --break-system-packages gcovr || pip3 install gcovr
+      - name: Resolve lavapipe ICD
+        run: |
+          ICD=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json 2>/dev/null | head -1 || true)
+          echo "VK_ICD_FILENAMES=$ICD" >> "$GITHUB_ENV"
+      - name: conan install (Debug, coverage)
+        run: |
+          conan install . --output-folder=build/linux-debug-coverage/generators --build=missing             -s build_type=Debug             -c tools.system.package_manager:mode=install             -c tools.system.package_manager:sudo=False
+      - name: build & ctest
+        run: |
+          cmake --preset linux-debug-coverage
+          cmake --build --preset linux-debug-coverage
+          ctest --preset linux-debug-coverage --output-on-failure
+      - name: gcovr raporu
+        run: |
+          mkdir -p coverage
+          # Yalnizca kutuphane kodu olculur: testler, ornekler ve ucuncu
+          # taraf basliklari kapsam disi.
+          gcovr --root .             --filter 'src/' --filter 'include/sdl_painter/'             --exclude 'tests/' --exclude 'examples/' --exclude 'third_party/'             --print-summary             --html-details coverage/index.html             --xml coverage/coverage.xml             --txt coverage/summary.txt
+          echo '## Kod kapsama' >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          tail -n 20 coverage/summary.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
   # Faz 1.3 — Conan Center CMake'i preset kullanmadan surer. Preset'ler Conan
   # toolchain yolunu hardcode ettigi icin bu yol ayrica dogrulanmali; kirilirsa
   # paketleme kirilir ama normal build yesil kalir.
@@ -394,11 +440,20 @@ jobs:
       - name: Generate docs
         run: |
           mkdir -p public
+          # Surumun TEK kaynagi include/sdl_painter/version.h (bkz. build-deps.md).
+          # Daha once bu deger CMakeLists.txt'ten grep'leniyordu; project() satiri
+          # ${SDLPAINTER_VERSION} degiskenine gecince grep sessizce bosa dustu.
+          SDLPAINTER_VERSION="$(grep -oP 'kVersionString\s*=\s*"\K[0-9]+\.[0-9]+\.[0-9]+' include/sdl_painter/version.h)"
+          if [ -z "$SDLPAINTER_VERSION" ]; then
+            echo "HATA: version.h icinden surum okunamadi." >&2
+            exit 1
+          fi
+          echo "SDLPainter surumu: $SDLPAINTER_VERSION"
           AWESOME="third_party/doxygen-awesome-css/doxygen-awesome.css"
           [ -f "$AWESOME" ] || AWESOME=""
           cat > _ci_doxyfile <<EOF
           PROJECT_NAME           = "SDLPainter"
-          PROJECT_NUMBER         = "$(grep 'project(SDLPainter VERSION' CMakeLists.txt | grep -oP '\d+\.\d+\.\d+')"
+          PROJECT_NUMBER         = "${SDLPAINTER_VERSION}"
           PROJECT_BRIEF          = "SDL3 + OpenGL/Vulkan 2D çizim kütüphanesi"
           OUTPUT_DIRECTORY       = public
           HTML_OUTPUT            = .

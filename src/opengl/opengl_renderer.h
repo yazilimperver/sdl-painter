@@ -37,6 +37,8 @@ class OpenGLRenderer final : public IRenderer {
 
   TextureHandle CreateTexture(const uint8_t* data, int32_t width,
                               int32_t height, int32_t channels) override;
+  void UpdateTexture(TextureHandle handle, int32_t x, int32_t y, int32_t width,
+                     int32_t height, const uint8_t* data) override;
   void DestroyTexture(TextureHandle handle) override;
   void DrawTextured(const std::vector<TexturedVertex>& vertices,
                     TextureHandle texture) override;
@@ -69,7 +71,7 @@ class OpenGLRenderer final : public IRenderer {
   // Aktif projeksiyon ve model matrisleri
   float mProjection[16]{};
   float mModel[9]{};
-  float mOpacity{1.0f};
+  float mOpacity{1.0F};
 };
 
 }  // namespace sdl_painter

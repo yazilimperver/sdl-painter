@@ -110,9 +110,19 @@ bool VkFrameSync::AllocateCommandBuffers() {
 bool VkFrameSync::CreateSyncObjects() {
   VkDevice device = mContext->GetDevice();
 
-  // imageAvailable: swapchain image sayısı kadar — acquire slot ile indekslenir.
-  // Her image için ayrı semaphore tutarak presentation engine çakışması önlenir.
-  mImageAvailable.resize(mSwapchainImageCount, VK_NULL_HANDLE);
+  // imageAvailable: frames-in-flight sayısı kadar — frame_index ile indekslenir.
+  //
+  // Güvenlik gerekçesi: frame N'in başında `mInFlight[N % kMaxFramesInFlight]`
+  // fence'i beklenir. O fence, frame N-kMaxFramesInFlight submit'i tamamlandığı
+  // için signal olmuştur; o submit de `mImageAvailable[N % kMaxFramesInFlight]`
+  // semaphore'unu beklemişti. Submit bittiğine göre bekleme gerçekleşmiş,
+  // semaphore unsignaled duruma dönmüştür — güvenle yeniden kullanılabilir.
+  //
+  // Eskiden burada swapchain image sayısı kadar semaphore tutulup bağımsız
+  // bir sayaçla (mAcquireSlot) döngüsel seçim yapılıyordu; bu seçim fence
+  // beklemesiyle ilişkili olmadığından yeniden kullanım güvenliği garanti
+  // değildi (3 image / 2 frame-in-flight kombinasyonunda çakışabiliyordu).
+  mImageAvailable.resize(kMaxFramesInFlight, VK_NULL_HANDLE);
   // renderFinished: swapchain image sayısı kadar — image_index ile indekslenir.
   // Presentation engine signal semaphore'u image'a bağlar; image başına ayrı
   // semaphore olmadan validation "semaphore may still be in use" uyarısı verir.
@@ -128,11 +138,6 @@ bool VkFrameSync::CreateSyncObjects() {
   fence_ci.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
   for (uint32_t i = 0; i < mSwapchainImageCount; ++i) {
-    if (vkCreateSemaphore(device, &sem_ci, nullptr, &mImageAvailable[i]) !=
-        VK_SUCCESS) {
-      spdlog::error("imageAvailable semaphore creation failed at image {}.", i);
-      return false;
-    }
     if (vkCreateSemaphore(device, &sem_ci, nullptr, &mRenderFinished[i]) !=
         VK_SUCCESS) {
       spdlog::error("renderFinished semaphore creation failed at image {}.", i);
@@ -140,6 +145,11 @@ bool VkFrameSync::CreateSyncObjects() {
     }
   }
   for (uint32_t i = 0; i < kMaxFramesInFlight; ++i) {
+    if (vkCreateSemaphore(device, &sem_ci, nullptr, &mImageAvailable[i]) !=
+        VK_SUCCESS) {
+      spdlog::error("imageAvailable semaphore creation failed at frame {}.", i);
+      return false;
+    }
     if (vkCreateFence(device, &fence_ci, nullptr, &mInFlight[i]) !=
         VK_SUCCESS) {
       spdlog::error("inFlight fence creation failed at frame {}.", i);

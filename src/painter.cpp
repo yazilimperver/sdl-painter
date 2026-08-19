@@ -6,7 +6,6 @@
 #include "sdl_painter/vertex.h"
 
 #include <SDL3/SDL.h>
-#include <SDL3_ttf/SDL_ttf.h>
 
 #include <array>
 #include <glm/gtc/type_ptr.hpp>
@@ -14,6 +13,7 @@
 
 #include "render_batcher.h"
 #include "tessellator.h"
+#include "text_utf8.h"
 
 // spdlog (Windows'ta) Windows.h çeker ve `DrawText → DrawTextA` makrosunu
 // geri tanımlar. Painter::DrawText üye tanımı doğru çözünsün diye burada
@@ -23,82 +23,6 @@
 #endif
 
 namespace sdl_painter {
-
-namespace {
-/// @brief UTF-8 dizisinden tek bir Unicode kod noktasını okur.
-///
-/// UTF-8, Unicode kod noktalarını 1-4 bayta kodlayan değişken uzunluklu bir
-/// karakter kodlamasıdır. İlk baytın yüksek bitleri sequence uzunluğunu
-/// belirler, sonraki continuation byte'lar `10xxxxxx` formatındadır.
-///
-/// Kodlama tablosu:
-/// | Uzunluk | İlk bayt    | Continuation    | Kod noktası aralığı |
-/// |---------|-------------|-----------------|---------------------|
-/// | 1 bayt  | `0xxxxxxx`  | —               | U+0000..U+007F      |
-/// | 2 bayt  | `110xxxxx`  | `10xxxxxx`      | U+0080..U+07FF      |
-/// | 3 bayt  | `1110xxxx`  | `10xxxxxx` x2   | U+0800..U+FFFF      |
-/// | 4 bayt  | `11110xxx`  | `10xxxxxx` x3   | U+10000..U+10FFFF   |
-///
-/// Kod noktası; ilk bayttan kalan payload bitleri ile her continuation
-/// byte'ın alt 6 bitinin sola kaydırmalı birleşimi sonucu elde edilir.
-///
-/// @param str Okunacak baytların başlangıç adresi.
-/// @param remaining Okunabilecek maksimum bayt sayısı (string'in kalan boyutu).
-/// @param advance [out] Tüketilen bayt sayısı (geçerli → 1..4; geçersiz → 1).
-/// @return Unicode kod noktası; geçersiz sequence → U+FFFD (replacement character).
-char32_t DecodeUTF8(const char* str, std::size_t remaining,
-                    std::size_t& advance) {
-  // Continuation byte kontrolü: `10xxxxxx` pattern'ı.
-  auto is_cont = [](uint8_t byte) { return (byte & 0xC0) == 0x80; };
-
-  const auto kB0 = static_cast<uint8_t>(str[0]);
-
-  // 1-bayt sequence: 0xxxxxxx → ASCII (U+0000..U+007F)
-  if (kB0 < 0x80) {
-    advance = 1;
-    return static_cast<char32_t>(kB0);
-  }
-
-  // 2-bayt sequence: 110xxxxx 10xxxxxx → U+0080..U+07FF
-  if ((kB0 & 0xE0) == 0xC0 && remaining >= 2) {
-    const auto kB1 = static_cast<uint8_t>(str[1]);
-    if (is_cont(kB1)) {
-      advance = 2;
-      return static_cast<char32_t>(((kB0 & 0x1F) << 6) | (kB1 & 0x3F));
-    }
-  }
-
-  // 3-bayt sequence: 1110xxxx 10xxxxxx 10xxxxxx → U+0800..U+FFFF (BMP)
-  if ((kB0 & 0xF0) == 0xE0 && remaining >= 3) {
-    const auto kB1 = static_cast<uint8_t>(str[1]);
-    const auto kB2 = static_cast<uint8_t>(str[2]);
-    if (is_cont(kB1) && is_cont(kB2)) {
-      advance = 3;
-      return static_cast<char32_t>(((kB0 & 0x0F) << 12) | ((kB1 & 0x3F) << 6) |
-                                   (kB2 & 0x3F));
-    }
-  }
-
-  // 4-bayt sequence: 11110xxx 10xxxxxx 10xxxxxx 10xxxxxx → U+10000..U+10FFFF
-  // (supplementary planes — emoji, nadir CJK karakterleri, vs.)
-  if ((kB0 & 0xF8) == 0xF0 && remaining >= 4) {
-    const auto kB1 = static_cast<uint8_t>(str[1]);
-    const auto kB2 = static_cast<uint8_t>(str[2]);
-    const auto kB3 = static_cast<uint8_t>(str[3]);
-    if (is_cont(kB1) && is_cont(kB2) && is_cont(kB3)) {
-      advance = 4;
-      return static_cast<char32_t>(((kB0 & 0x07) << 18) | ((kB1 & 0x3F) << 12) |
-                                   ((kB2 & 0x3F) << 6) | (kB3 & 0x3F));
-    }
-  }
-
-  // Geçersiz sequence (malformed, kesik veya overlong) — tek bayt atla,
-  // replacement character döndür. Çağıran döngü sonraki byte'a geçer.
-  advance = 1;
-  return U'\uFFFD';
-}
-
-}  // namespace
 
 Painter::Painter(SDL_Window* window, RendererBackend backend)
     : mWindow(window), mRenderer(CreateRenderer(backend)) {
@@ -118,11 +42,22 @@ Painter::Painter(SDL_Window* window, RendererBackend backend)
     return;
   }
   mBatcher = std::make_unique<RenderBatcher>(*mRenderer);
-  int w = 0;
-  int h = 0;
-  SDL_GetWindowSize(window, &w, &h);
-  mViewportWidth = w;
-  mViewportHeight = h;
+  QueryDrawableSize(mViewportWidth, mViewportHeight);
+  mRenderer->SetViewport(0, 0, mViewportWidth, mViewportHeight);
+  UpdateProjection();
+}
+
+Painter::Painter(std::unique_ptr<IRenderer> renderer, int32_t viewport_width,
+                 int32_t viewport_height)
+    : mRenderer(std::move(renderer)),
+      mViewportWidth(viewport_width),
+      mViewportHeight(viewport_height) {
+  if (mRenderer == nullptr) {
+    spdlog::error("Painter: renderer null, Painter geçersiz durumda.");
+    return;
+  }
+  mBatcher = std::make_unique<RenderBatcher>(*mRenderer);
+  mRenderer->SetViewport(0, 0, mViewportWidth, mViewportHeight);
   UpdateProjection();
 }
 
@@ -163,18 +98,18 @@ Painter& Painter::operator=(Painter&& other) noexcept {
 }
 
 void Painter::Begin() {
-  if (mRenderer == nullptr || mWindow == nullptr) {
+  if (mRenderer == nullptr) {
     return;
   }
-  // Pencere yeniden boyutlandirildiysa viewport ve projeksiyon matrisini guncelle.
-  int w = 0;
-  int h = 0;
-  SDL_GetWindowSize(mWindow, &w, &h);
-  if (w != mViewportWidth || h != mViewportHeight) {
-    mViewportWidth = w;
-    mViewportHeight = h;
-    mRenderer->SetViewport(0, 0, w, h);
-    UpdateProjection();
+  // Boyut degisimini yoklama: yalnizca uygulama SetDrawableSize ile acik bir
+  // bildirim yapmiyorsa. Olay tabanli bildirim hem daha ucuz hem de dogru
+  // zamanda gelir; yoklama, kendi olay dongusunu yazan basit uygulamalar
+  // icin geriye donuk uyumlu bir emniyet agi olarak duruyor.
+  if (mAutoDrawableSize && mWindow != nullptr) {
+    int32_t w = 0;
+    int32_t h = 0;
+    QueryDrawableSize(w, h);
+    ApplyDrawableSize(w, h);
   }
   mRenderer->BeginFrame();
   FlushTransform();
@@ -414,25 +349,29 @@ void Painter::DrawText(float x, float y, const std::string& text) {
     return;
   }
 
+  // Metin de diğer primitifler gibi güncel transform ile çizilir; aksi halde
+  // Translate/Rotate/Scale sonrası glyph'ler eski matrisle gönderilir.
+  FlushTransform();
+
   const Color& tint = mCurrentState.pen.GetColor();
   float current_x = x;
 
-  auto* font = static_cast<TTF_Font*>(mCurrentFont->Handle());
   const float kBaselineY = y;
 
   for (size_t i = 0; i < text.size();) {
     std::size_t advance = 0;
-    char32_t c = DecodeUTF8(text.c_str() + i, text.size() - i, advance);
+    char32_t c = detail::DecodeUTF8(text.c_str() + i, text.size() - i, advance);
     i += advance;
 
     const Glyph* glyph = mCurrentFont->GetGlyph(*mRenderer, c);
-    if (!glyph || !glyph->texture.IsValid()) {
-      if (c == ' ') {
-        int w = 0;
-        int h = 0;
-        TTF_GetStringSize(font, " ", 1, &w, &h);
-        current_x += static_cast<float>(w);
-      }
+    if (glyph == nullptr) {
+      continue;
+    }
+    // Bosluk gibi gorunmez glyph'lerin texture'i yoktur; yalnizca imleci
+    // ilerletiriz. advance metrigi zaten Glyph icinde, her karakterde
+    // TTF_GetStringSize cagirmaya gerek yok.
+    if (!glyph->IsValid()) {
+      current_x += static_cast<float>(glyph->advance);
       continue;
     }
 
@@ -443,13 +382,20 @@ void Painter::DrawText(float x, float y, const std::string& text) {
     const float kGx1 = kGx0 + static_cast<float>(glyph->width);
     const float kGy1 = kGy0 + static_cast<float>(glyph->height);
 
+    // UV'ler artık glyph'in atlas sayfasındaki bölgesidir (bkz. GlyphAtlas);
+    // aynı fonttan çizilen tüm karakterler aynı texture'ı paylaştığı için
+    // batcher metni tek draw call'a toplar.
+    const float kU0 = glyph->u0;
+    const float kV0 = glyph->v0;
+    const float kU1 = glyph->u1;
+    const float kV1 = glyph->v1;
+
     const std::vector<TexturedVertex> kVerts = {
-        {kGx0, kGy0, 0.0F, 0.0F}, {kGx1, kGy0, 1.0F, 0.0F},
-        {kGx1, kGy1, 1.0F, 1.0F}, {kGx0, kGy0, 0.0F, 0.0F},
-        {kGx1, kGy1, 1.0F, 1.0F}, {kGx0, kGy1, 0.0F, 1.0F},
+        {kGx0, kGy0, kU0, kV0}, {kGx1, kGy0, kU1, kV0}, {kGx1, kGy1, kU1, kV1},
+        {kGx0, kGy0, kU0, kV0}, {kGx1, kGy1, kU1, kV1}, {kGx0, kGy1, kU0, kV1},
     };
 
-    mBatcher->PushTexturedTriangles(kVerts, glyph->texture.Handle(), tint,
+    mBatcher->PushTexturedTriangles(kVerts, glyph->texture, tint,
                                     mCurrentState.opacity);
 
     current_x += static_cast<float>(glyph->advance);
@@ -597,8 +543,48 @@ void Painter::ClearClip() {
   mRenderer->ClearScissor();
 }
 
+void Painter::SetDrawableSize(int32_t width, int32_t height) {
+  // Ilk acik bildirimden sonra otomatik yoklamayi kapat.
+  mAutoDrawableSize = false;
+  ApplyDrawableSize(width, height);
+}
+
+void Painter::ApplyDrawableSize(int32_t width, int32_t height) {
+  if (mRenderer == nullptr) {
+    return;
+  }
+  if (width == mViewportWidth && height == mViewportHeight) {
+    return;
+  }
+  mViewportWidth = width;
+  mViewportHeight = height;
+  mRenderer->SetViewport(0, 0, width, height);
+  UpdateProjection();
+}
+
+void Painter::QueryDrawableSize(int32_t& out_width, int32_t& out_height) const {
+  out_width = 0;
+  out_height = 0;
+  if (mWindow == nullptr) {
+    return;
+  }
+  // Framebuffer (piksel) boyutu — mantıksal pencere boyutu DEĞİL. glViewport
+  // ve vkCmdSetViewport ikisi de piksel bekler; HiDPI ölçeklemede bu ikisi
+  // ayrışır ve mantıksal boyut kullanmak çizimi ekranın bir köşesine sıkıştırır.
+  int w = 0;
+  int h = 0;
+  SDL_GetWindowSizeInPixels(mWindow, &w, &h);
+  out_width = w;
+  out_height = h;
+}
+
 void Painter::UpdateProjection() {
   if (mRenderer == nullptr) {
+    return;
+  }
+  // Sıfır boyutlu viewport (simge durumu) projeksiyonu NaN yapar; bu durumda
+  // matrisi olduğu gibi bırak — kare zaten çizilmeyecek.
+  if (mViewportWidth <= 0 || mViewportHeight <= 0) {
     return;
   }
   if (mBatcher != nullptr) {

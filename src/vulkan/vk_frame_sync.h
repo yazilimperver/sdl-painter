@@ -32,13 +32,14 @@ class VkFrameSync {
   }
   VkCommandPool GetCommandPool() const { return mCommandPool; }
 
-  /// @brief Acquire semaphore'u — image_index ile indekslenir.
+  /// @brief Acquire semaphore'u — **frame_index** ile indekslenir.
   ///
-  /// Her swapchain image'ı için ayrı bir semaphore tutulur. Bu sayede
-  /// presentation engine'in hâlâ kullandığı bir semaphore yeniden
-  /// kullanılmaz ve validation hatası oluşmaz.
-  VkSemaphore GetImageAvailableSemaphore(uint32_t image_index) const {
-    return mImageAvailable[image_index];
+  /// Yeniden kullanım güvenliği in-flight fence beklemesinden gelir: frame N
+  /// başında `mInFlight[N % kMaxFramesInFlight]` beklendiğinde, aynı slotu
+  /// kullanan önceki submit tamamlanmış ve semaphore beklemesi gerçekleşmiş
+  /// olur; semaphore unsignaled duruma dönmüştür.
+  VkSemaphore GetImageAvailableSemaphore(uint32_t frame_index) const {
+    return mImageAvailable[frame_index];
   }
   /// @brief Render finished semaphore'u — image_index ile indekslenir.
   ///
@@ -62,7 +63,7 @@ class VkFrameSync {
   VkCommandPool mCommandPool{VK_NULL_HANDLE};
   std::vector<VkCommandBuffer> mCommandBuffers;
   std::vector<VkSemaphore>
-      mImageAvailable;  ///< acquire slot ile indekslenir (swapchain image count kadar)
+      mImageAvailable;  ///< frame_index ile indekslenir (kMaxFramesInFlight kadar)
   std::vector<VkSemaphore>
       mRenderFinished;  ///< image_index ile indekslenir (swapchain image count kadar)
   std::vector<VkFence> mInFlight;  ///< frame_index ile indekslenir

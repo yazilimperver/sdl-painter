@@ -1,3 +1,8 @@
+# SDL3_ttf'e acik link, yalnizca SDL_ttf API'sini DOGRUDAN cagiran orneklerde
+# yapilir. sdl_painter'a PRIVATE bagli oldugundan link-zamani bagimliligi
+# statik kutuphanede $<LINK_ONLY:...> ile zaten yayilir; yalnizca SDL_ttf
+# BASLIGINI dahil eden hedeflerin include yoluna ihtiyaci vardir.
+
 add_executable(hello_window hello_window.cpp)
 target_link_libraries(hello_window PRIVATE sdl_painter spdlog::spdlog_header_only)
 sdlpainter_copy_runtime_dlls(hello_window)
@@ -19,11 +24,7 @@ target_link_libraries(images PRIVATE sdl_painter spdlog::spdlog_header_only)
 sdlpainter_copy_runtime_dlls(images)
 
 add_executable(text text.cpp)
-if(TARGET SDL3_ttf::SDL3_ttf-static)
-    target_link_libraries(text PRIVATE sdl_painter SDL3_ttf::SDL3_ttf-static spdlog::spdlog_header_only)
-else()
-    target_link_libraries(text PRIVATE sdl_painter SDL3_ttf::SDL3_ttf spdlog::spdlog_header_only)
-endif()
+target_link_libraries(text PRIVATE sdl_painter spdlog::spdlog_header_only)
 sdlpainter_copy_runtime_dlls(text)
 
 # Application çatısı demosu — SDL boilerplate'i olmadan animasyonlu çizim.
@@ -39,26 +40,18 @@ sdlpainter_copy_runtime_dlls(game_loop)
 # Fare girdisi + durum makinesi + duyarlı yerleşim: eksiksiz uygulama örneği.
 # Metin çizdiği için text gibi SDL3_ttf'e de bağlanır.
 add_executable(tictactoe tictactoe.cpp)
-if(TARGET SDL3_ttf::SDL3_ttf-static)
-    target_link_libraries(tictactoe
-        PRIVATE sdl_painter_app SDL3_ttf::SDL3_ttf-static spdlog::spdlog_header_only)
-else()
-    target_link_libraries(tictactoe
-        PRIVATE sdl_painter_app SDL3_ttf::SDL3_ttf spdlog::spdlog_header_only)
-endif()
+target_link_libraries(tictactoe PRIVATE sdl_painter_app spdlog::spdlog_header_only)
 sdlpainter_copy_runtime_dlls(tictactoe)
 
 # README tanıtım GIF'ini üreten koreografili sahne. Metin çizdiği için
 # text/tictactoe gibi SDL3_ttf'e de bağlanır.
 add_executable(hero hero.cpp)
-if(TARGET SDL3_ttf::SDL3_ttf-static)
-    target_link_libraries(hero PRIVATE sdl_painter SDL3_ttf::SDL3_ttf-static spdlog::spdlog_header_only)
-else()
-    target_link_libraries(hero PRIVATE sdl_painter SDL3_ttf::SDL3_ttf spdlog::spdlog_header_only)
-endif()
+target_link_libraries(hero PRIVATE sdl_painter spdlog::spdlog_header_only)
 sdlpainter_copy_runtime_dlls(hero)
 
 if(SDLPAINTER_WITH_VULKAN)
+    # Tek istisna: vulkan_text.cpp SDL_ttf'i DOGRUDAN kullaniyor
+    # (TTF_Init/TTF_Quit), bu yuzden acik link ve baslik yolu gerekli.
     add_executable(vulkan_text vulkan_text.cpp)
     if(TARGET SDL3_ttf::SDL3_ttf-static)
         target_link_libraries(vulkan_text

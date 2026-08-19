@@ -18,7 +18,7 @@ struct alignas(4) PushConstants {
   float model
       [16]{};  ///< mat4 2B affine transform (3x3 → 4x4 padded, column-major)
   float tint_color[4]{};  ///< vec4 tint rengi [0,1]
-  float opacity{1.0f};    ///< Global opaklık [0,1]
+  float opacity{1.0F};    ///< Global opaklık [0,1]
 };
 
 /// @brief Untextured (düz renk) çizim için Vulkan graphics pipeline yönetimi.

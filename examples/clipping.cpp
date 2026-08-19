@@ -87,9 +87,11 @@ int main() {
       if (angle >= 360.0f)
         angle -= 360.0f;
 
-      // Pencere boyutunu her karede oku — boyut degisirse merkez de tasinir.
+      // Cizim yuzeyinin piksel boyutunu her karede oku — boyut degisirse
+      // merkez de tasinir. Painter koordinat sistemi piksel tabanlidir, bu
+      // yuzden mantiksal boyut (SDL_GetWindowSize) DEGIL bu kullanilmali.
       int win_w = 0, win_h = 0;
-      SDL_GetWindowSize(window, &win_w, &win_h);
+      SDL_GetWindowSizeInPixels(window, &win_w, &win_h);
       const float cx = win_w * 0.5f;
       const float cy = win_h * 0.5f;
 

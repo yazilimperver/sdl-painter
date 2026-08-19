@@ -64,6 +64,18 @@
     },
 
     {
+      "name": "linux-debug-coverage",
+      "displayName": "Linux Debug + kod kapsama",
+      "description": "Debug build with gcov instrumentation. Requires: conan install --output-folder=build/linux-debug-coverage/generators -s build_type=Debug",
+      "inherits": "linux-debug",
+      "binaryDir": "${sourceDir}/build/linux-debug-coverage",
+      "toolchainFile": "${sourceDir}/build/linux-debug-coverage/generators/build/Debug/generators/conan_toolchain.cmake",
+      "cacheVariables": {
+        "ENABLE_COVERAGE": "ON"
+      }
+    },
+
+    {
       "name": "linux-debug-asan",
       "displayName": "Linux Debug + ASan/UBSan",
       "description": "Debug build with AddressSanitizer and UBSan enabled.",
@@ -126,6 +138,11 @@
       "configurePreset": "linux-release"
     },
     {
+      "name": "linux-debug-coverage",
+      "displayName": "Build Linux Debug + kod kapsama",
+      "configurePreset": "linux-debug-coverage"
+    },
+    {
       "name": "linux-debug-asan",
       "displayName": "Build Linux Debug + ASan",
       "configurePreset": "linux-debug-asan"
@@ -167,6 +184,12 @@
       "name": "linux-release",
       "displayName": "Test Linux Release",
       "configurePreset": "linux-release",
+      "output": { "outputOnFailure": true }
+    },
+    {
+      "name": "linux-debug-coverage",
+      "displayName": "Test Linux Debug + kod kapsama",
+      "configurePreset": "linux-debug-coverage",
       "output": { "outputOnFailure": true }
     },
     {

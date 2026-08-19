@@ -81,6 +81,9 @@ bool Application::Initialize() {
   if (mConfig.resizable) {
     flags |= SDL_WINDOW_RESIZABLE;
   }
+  if (mConfig.high_dpi) {
+    flags |= SDL_WINDOW_HIGH_PIXEL_DENSITY;
+  }
 
   mWindow = SDL_CreateWindow(mConfig.title.c_str(), mConfig.width,
                              mConfig.height, flags);
@@ -104,8 +107,24 @@ bool Application::Initialize() {
         "(sunum modu swapchain tarafından seçilir).");
   }
 
-  SDL_GetWindowSize(mWindow, &mWidth, &mHeight);
+  // Width()/Height() daima framebuffer (piksel) boyutunu bildirir; Painter
+  // koordinat sistemi de piksel tabanlıdır (bkz. AppConfig::high_dpi).
+  UpdateDrawableSize();
+  // Boyut yonetimini olay tabanli yola devret; Painter artik her karede
+  // pencereyi yoklamaz.
+  mPainter->SetDrawableSize(mWidth, mHeight);
   return true;
+}
+
+void Application::UpdateDrawableSize() {
+  if (mWindow == nullptr) {
+    return;
+  }
+  int w = 0;
+  int h = 0;
+  SDL_GetWindowSizeInPixels(mWindow, &w, &h);
+  mWidth = w;
+  mHeight = h;
 }
 
 void Application::Teardown() noexcept {
@@ -166,9 +185,17 @@ void Application::ProcessEvents() {
                                      event.wheel.mouse_x, event.wheel.mouse_y});
         break;
 
-      case SDL_EVENT_WINDOW_RESIZED:
+      // Piksel boyutu değişimi hem yeniden boyutlandırmada hem de pencere
+      // farklı ölçek faktörlü bir ekrana taşındığında tetiklenir. Mantıksal
+      // SDL_EVENT_WINDOW_RESIZED yerine bunu dinlemek, HiDPI'da doğru olan.
+      case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
         mWidth = event.window.data1;
         mHeight = event.window.data2;
+        // Painter'a acikca bildir: boylece kare basina pencere boyutu
+        // yoklamasi yapmasina gerek kalmaz (bkz. Painter::SetDrawableSize).
+        if (mPainter != nullptr) {
+          mPainter->SetDrawableSize(mWidth, mHeight);
+        }
         OnResize(ResizeEvent{mWidth, mHeight});
         break;
 
@@ -179,6 +206,14 @@ void Application::ProcessEvents() {
 }
 
 int Application::Run() {
+  // Run tek seferliktir: ikinci cagri SDL_Init ve pencere olusturmayi
+  // tekrarlayip oncekini sizdirirdi.
+  if (mHasRun) {
+    spdlog::error("Application::Run() birden fazla kez cagrildi; yoksayildi.");
+    return 1;
+  }
+  mHasRun = true;
+
   if (!Initialize()) {
     Teardown();
     return 1;
