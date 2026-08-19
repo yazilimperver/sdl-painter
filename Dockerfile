@@ -107,6 +107,11 @@ FROM builder AS ci
 RUN apt-get update && apt-get install -y --no-install-recommends \
     lcov \
     gcovr \
+    # Metin testleri (Font, GlyphAtlas, Painter::DrawText) gerçek bir TTF
+    # dosyası ister. Font paketi olmadan bu testler GTEST_SKIP ile sessizce
+    # atlanıyordu; ilk kapsama ölçümünde glyph_atlas.cpp %0 çıkmasının sebebi
+    # buydu. tests/test_support.h bu yolu arar.
+    fonts-dejavu-core \
     # Vulkan ICD: Mesa lavapipe (CPU software renderer, headless test için).
     # Fiziksel GPU olmadan Vulkan API'sini sunar — CI runner'larında zorunlu.
     mesa-vulkan-drivers \

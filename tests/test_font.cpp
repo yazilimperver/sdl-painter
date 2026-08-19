@@ -17,22 +17,10 @@ using sdl_painter::Font;
 using sdl_painter::Glyph;
 using sdl_painter::MockRenderer;
 
-namespace {
-
-/// @brief Font yolu yoksa testi atlar; varsa yolu döndürür.
-#define REQUIRE_FONT(var)                                         \
-  const std::string var = sdl_painter::testing::FindSystemFont(); \
-  if ((var).empty()) {                                            \
-    GTEST_SKIP() << "Sistemde TTF font bulunamadı.";              \
-  }                                                               \
-  static_assert(true, "")
-
-}  // namespace
-
 // ─── Temel yükleme ──────────────────────────────────────────────────────────
 
 TEST(FontBasics, LoadsValidFont) {
-  REQUIRE_FONT(path);
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
   Font f(path, 24);
   EXPECT_TRUE(f.IsValid());
   EXPECT_EQ(f.PointSize(), 24);
@@ -46,7 +34,7 @@ TEST(FontBasics, InvalidPathYieldsInvalidFont) {
 }
 
 TEST(FontBasics, MeasureTextReturnsPositiveSize) {
-  REQUIRE_FONT(path);
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
   Font f(path, 24);
   ASSERT_TRUE(f.IsValid());
   int32_t w = 0;
@@ -59,7 +47,7 @@ TEST(FontBasics, MeasureTextReturnsPositiveSize) {
 // ─── Glyph önbelleği ────────────────────────────────────────────────────────
 
 TEST(FontGlyphCache, SameCodepointIsCachedNotReuploaded) {
-  REQUIRE_FONT(path);
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
   MockRenderer r;
   Font f(path, 24);
   ASSERT_TRUE(f.IsValid());
@@ -76,7 +64,7 @@ TEST(FontGlyphCache, SameCodepointIsCachedNotReuploaded) {
 }
 
 TEST(FontGlyphCache, GlyphsShareASingleAtlasTexture) {
-  REQUIRE_FONT(path);
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
   MockRenderer r;
   Font f(path, 24);
   ASSERT_TRUE(f.IsValid());
@@ -96,7 +84,7 @@ TEST(FontGlyphCache, GlyphsShareASingleAtlasTexture) {
 }
 
 TEST(FontGlyphCache, GlyphsGetDistinctAtlasRegions) {
-  REQUIRE_FONT(path);
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
   MockRenderer r;
   Font f(path, 24);
   ASSERT_TRUE(f.IsValid());
@@ -115,7 +103,7 @@ TEST(FontGlyphCache, GlyphsGetDistinctAtlasRegions) {
 }
 
 TEST(FontGlyphCache, DestructorReleasesAtlasTextures) {
-  REQUIRE_FONT(path);
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
   MockRenderer r;
   {
     Font f(path, 24);
@@ -135,7 +123,7 @@ TEST(FontGlyphCache, DestructorReleasesAtlasTextures) {
 /// Önbellek taşınmadığında hedef nesne boş başlar ve tüm glyph'ler yeniden
 /// GPU'ya yüklenir — sessiz performans kaybı.
 TEST(FontMove, MoveConstructorTransfersGlyphCache) {
-  REQUIRE_FONT(path);
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
   MockRenderer r;
   Font src(path, 24);
   ASSERT_TRUE(src.IsValid());
@@ -155,7 +143,7 @@ TEST(FontMove, MoveConstructorTransfersGlyphCache) {
 /// En ciddi belirti: eski fontun texture'ları önbellekte kalıp yeni font
 /// adına döndürülüyor → ekranda **yanlış karakterler** çiziliyor.
 TEST(FontMove, MoveAssignmentDropsDestinationOldGlyphCache) {
-  REQUIRE_FONT(path);
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
   MockRenderer r;
 
   Font dst(path, 12);  // küçük punto
@@ -184,7 +172,7 @@ TEST(FontMove, MoveAssignmentDropsDestinationOldGlyphCache) {
 
 /// @brief Move sonrası kaynak nesne güvenle yıkılabilmeli (çift serbest yok).
 TEST(FontMove, MovedFromFontIsSafeToDestroy) {
-  REQUIRE_FONT(path);
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
   MockRenderer r;
   Font src(path, 24);
   ASSERT_TRUE(src.IsValid());

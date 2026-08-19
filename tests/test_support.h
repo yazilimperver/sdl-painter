@@ -2,16 +2,28 @@
 
 #include <SDL3/SDL.h>
 
+#include <cstdlib>
 #include <string>
 
 namespace sdl_painter::testing {
 
+/// @brief Font bulunamadığında test atlanmak yerine başarısız mı olmalı?
+///
+/// Metin testleri sistemde bir TTF fontu yoksa `GTEST_SKIP()` eder. Bu,
+/// geliştiricinin çıplak makinesinde makul; **CI'da ise tehlikeli**: testler
+/// yeşil görünürken hiç koşmaz. Nitekim ilk kapsama ölçümünde
+/// `glyph_atlas.cpp` %0 çıktı — CI imajında font paketi yoktu ve 28 test
+/// sessizce atlanıyordu.
+///
+/// `SDLPAINTER_REQUIRE_FONT=1` ayarlandığında (CI bunu yapar) font yokluğu
+/// artık atlama değil **hata**dır; sorun ilk çalıştırmada görünür olur.
+inline bool FontIsRequired() {
+  const char* env = std::getenv("SDLPAINTER_REQUIRE_FONT");
+  return env != nullptr && env[0] != '\0' && env[0] != '0';
+}
+
 /// @brief Sistemde kullanılabilir bir TTF fontu arar.
 /// @return Bulunan fontun yolu; hiçbiri yoksa boş string.
-///
-/// Metin yolunu (Font / Painter::DrawText) doğrulayan testler gerçek bir
-/// font dosyasına ihtiyaç duyar. Repoda font tutulmadığı için sistem
-/// fontlarına başvurulur; bulunamazsa test `GTEST_SKIP()` ile atlanır.
 inline std::string FindSystemFont() {
   const char* kCandidates[] = {
 #ifdef _WIN32
@@ -38,3 +50,20 @@ inline std::string FindSystemFont() {
 }
 
 }  // namespace sdl_painter::testing
+
+/// @brief Font gerektiren testin başına konur: yolu `var` içine alır.
+///
+/// Font yoksa `SDLPAINTER_REQUIRE_FONT` ayarlıysa testi **düşürür**, değilse
+/// atlar. Böylece CI'da sessiz atlama olmaz, yerelde geliştirici engellenmez.
+#define SDLPAINTER_REQUIRE_FONT_OR_SKIP(var)                               \
+  const std::string var = sdl_painter::testing::FindSystemFont();          \
+  if ((var).empty()) {                                                     \
+    if (sdl_painter::testing::FontIsRequired()) {                          \
+      FAIL() << "Sistemde TTF font bulunamadı, ancak "                     \
+                "SDLPAINTER_REQUIRE_FONT ayarlı. Metin testleri sessizce " \
+                "atlanamaz — ortama bir font paketi kurun "                \
+                "(örn. fonts-dejavu-core).";                               \
+    }                                                                      \
+    GTEST_SKIP() << "Sistemde TTF font bulunamadı.";                       \
+  }                                                                        \
+  static_assert(true, "")

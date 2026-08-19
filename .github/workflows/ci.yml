@@ -162,6 +162,8 @@ jobs:
     env:
       CONAN_HOME: /root/.conan2
       SDL_VIDEODRIVER: offscreen
+      # Font yoksa metin testleri sessizce atlanmasin, HATA versin.
+      SDLPAINTER_REQUIRE_FONT: "1"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -191,6 +193,17 @@ jobs:
             -o "&:with_vulkan=True" \
             -c tools.system.package_manager:mode=install \
             -c tools.system.package_manager:sudo=False
+      # Metin testleri gercek bir TTF ister. Font paketi imaja eklendi
+      # (Dockerfile, ci stage); imaj yeniden derlenip yayinlanana kadar
+      # burada da kuruluyor. Imaj guncellenince bu adim silinebilir.
+      - name: Test fontu hazirla
+        run: |
+          FONT=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
+          if [ ! -f "$FONT" ]; then
+            apt-get update -qq
+            apt-get install -y --no-install-recommends fonts-dejavu-core
+          fi
+          ls -l "$FONT"
       - name: build & ctest
         run: |
           cmake --preset linux-debug
@@ -206,6 +219,8 @@ jobs:
     env:
       CONAN_HOME: /root/.conan2
       SDL_VIDEODRIVER: offscreen
+      # Font yoksa metin testleri sessizce atlanmasin, HATA versin.
+      SDLPAINTER_REQUIRE_FONT: "1"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -234,6 +249,17 @@ jobs:
             -s build_type=Debug \
             -c tools.system.package_manager:mode=install \
             -c tools.system.package_manager:sudo=False
+      # Metin testleri gercek bir TTF ister. Font paketi imaja eklendi
+      # (Dockerfile, ci stage); imaj yeniden derlenip yayinlanana kadar
+      # burada da kuruluyor. Imaj guncellenince bu adim silinebilir.
+      - name: Test fontu hazirla
+        run: |
+          FONT=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
+          if [ ! -f "$FONT" ]; then
+            apt-get update -qq
+            apt-get install -y --no-install-recommends fonts-dejavu-core
+          fi
+          ls -l "$FONT"
       - name: build & ctest (ASan/UBSan)
         run: |
           cmake --preset linux-debug-asan
@@ -255,6 +281,8 @@ jobs:
     env:
       CONAN_HOME: /root/.conan2
       SDL_VIDEODRIVER: offscreen
+      # Font yoksa metin testleri sessizce atlanmasin, HATA versin.
+      SDLPAINTER_REQUIRE_FONT: "1"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -267,8 +295,20 @@ jobs:
         run: |
           conan install . --output-folder=build/linux-debug-coverage/generators --build=missing \
             -s build_type=Debug \
+            -o "&:with_vulkan=True" \
             -c tools.system.package_manager:mode=install \
             -c tools.system.package_manager:sudo=False
+      # Metin testleri gercek bir TTF ister. Font paketi imaja eklendi
+      # (Dockerfile, ci stage); imaj yeniden derlenip yayinlanana kadar
+      # burada da kuruluyor. Imaj guncellenince bu adim silinebilir.
+      - name: Test fontu hazirla
+        run: |
+          FONT=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
+          if [ ! -f "$FONT" ]; then
+            apt-get update -qq
+            apt-get install -y --no-install-recommends fonts-dejavu-core
+          fi
+          ls -l "$FONT"
       - name: build & ctest
         run: |
           cmake --preset linux-debug-coverage

@@ -109,10 +109,7 @@ TEST(PainterTransform, SaveRestoreBalancesTransform) {
 /// içindeki "Dönen metin!" bölümü ekranda hiç görünmüyordu (metin ekran
 /// dışına, ham koordinatlara çiziliyordu).
 TEST(PainterTransform, TranslateIsAppliedToTextDrawCall) {
-  const std::string font_path = sdl_painter::testing::FindSystemFont();
-  if (font_path.empty()) {
-    GTEST_SKIP() << "Sistemde TTF font bulunamadı.";
-  }
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
 
   Harness h;
   auto font = std::make_shared<Font>(font_path, 16);
@@ -135,10 +132,7 @@ TEST(PainterTransform, TranslateIsAppliedToTextDrawCall) {
 
 /// @brief REGRESYON (K5): Rect aşırı yüklemesi de aynı hatayı taşıyordu.
 TEST(PainterTransform, TranslateIsAppliedToAlignedTextDrawCall) {
-  const std::string font_path = sdl_painter::testing::FindSystemFont();
-  if (font_path.empty()) {
-    GTEST_SKIP() << "Sistemde TTF font bulunamadı.";
-  }
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
 
   Harness h;
   auto font = std::make_shared<Font>(font_path, 16);
@@ -291,10 +285,7 @@ TEST(PainterLifecycle, UnbalancedRestoreIsSafe) {
 // Glyph atlası ile aynı fontun tüm karakterleri tek sayfayı paylaşır.
 
 TEST(PainterText, MultiCharacterTextIsASingleDrawCall) {
-  const std::string font_path = sdl_painter::testing::FindSystemFont();
-  if (font_path.empty()) {
-    GTEST_SKIP() << "Sistemde TTF font bulunamadı.";
-  }
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
 
   Harness h;
   auto font = std::make_shared<Font>(font_path, 20);
@@ -311,10 +302,7 @@ TEST(PainterText, MultiCharacterTextIsASingleDrawCall) {
 }
 
 TEST(PainterText, TextVertexCountMatchesGlyphCount) {
-  const std::string font_path = sdl_painter::testing::FindSystemFont();
-  if (font_path.empty()) {
-    GTEST_SKIP() << "Sistemde TTF font bulunamadı.";
-  }
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
 
   Harness h;
   auto font = std::make_shared<Font>(font_path, 20);
@@ -331,10 +319,7 @@ TEST(PainterText, TextVertexCountMatchesGlyphCount) {
 }
 
 TEST(PainterText, TurkishTextRendersAllGlyphs) {
-  const std::string font_path = sdl_painter::testing::FindSystemFont();
-  if (font_path.empty()) {
-    GTEST_SKIP() << "Sistemde TTF font bulunamadı.";
-  }
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
 
   Harness h;
   auto font = std::make_shared<Font>(font_path, 20);
@@ -354,10 +339,7 @@ TEST(PainterText, TurkishTextRendersAllGlyphs) {
 }
 
 TEST(PainterText, GlyphUVsStayWithinAtlasRange) {
-  const std::string font_path = sdl_painter::testing::FindSystemFont();
-  if (font_path.empty()) {
-    GTEST_SKIP() << "Sistemde TTF font bulunamadı.";
-  }
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
 
   Harness h;
   auto font = std::make_shared<Font>(font_path, 20);

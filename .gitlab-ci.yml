@@ -79,7 +79,16 @@ test:unit:
   needs: ["build:linux:debug"]
   variables:
     SDL_VIDEODRIVER: "offscreen"
+    # Font yoksa metin testleri sessizce atlanmasin, HATA versin.
+    SDLPAINTER_REQUIRE_FONT: "1"
   script:
+    - |
+      # Metin testleri gercek bir TTF ister; imaj yeniden derlenene kadar burada kurulur.
+      FONT=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
+      if [ ! -f "$FONT" ]; then
+        apt-get update -qq && apt-get install -y --no-install-recommends fonts-dejavu-core
+      fi
+      ls -l "$FONT"
     # lavapipe ICD dosya adi mesa surumune gore degisiyor
     # (lvp_icd.json / lvp_icd.x86_64.json). Sabit yol yanlissa loader
     # HIC surucu yuklemiyor ve Vulkan testleri sessizce SKIP oluyor.
@@ -96,7 +105,16 @@ test:unit:asan:
   needs: []
   variables:
     SDL_VIDEODRIVER: "offscreen"
+    # Font yoksa metin testleri sessizce atlanmasin, HATA versin.
+    SDLPAINTER_REQUIRE_FONT: "1"
   script:
+    - |
+      # Metin testleri gercek bir TTF ister; imaj yeniden derlenene kadar burada kurulur.
+      FONT=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
+      if [ ! -f "$FONT" ]; then
+        apt-get update -qq && apt-get install -y --no-install-recommends fonts-dejavu-core
+      fi
+      ls -l "$FONT"
     # lavapipe ICD dosya adi mesa surumune gore degisiyor
     # (lvp_icd.json / lvp_icd.x86_64.json). Sabit yol yanlissa loader
     # HIC surucu yuklemiyor ve Vulkan testleri sessizce SKIP oluyor.
@@ -130,11 +148,21 @@ quality:coverage:
   needs: []
   variables:
     SDL_VIDEODRIVER: "offscreen"
+    # Font yoksa metin testleri sessizce atlanmasin, HATA versin.
+    SDLPAINTER_REQUIRE_FONT: "1"
   script:
+    - |
+      # Metin testleri gercek bir TTF ister; imaj yeniden derlenene kadar burada kurulur.
+      FONT=/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf
+      if [ ! -f "$FONT" ]; then
+        apt-get update -qq && apt-get install -y --no-install-recommends fonts-dejavu-core
+      fi
+      ls -l "$FONT"
     - export VK_ICD_FILENAMES=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json 2>/dev/null | head -1)
     - |
       conan install . --output-folder=build/linux-debug-coverage/generators --build=missing \
         -s build_type=Debug \
+        -o "&:with_vulkan=True" \
         -c tools.system.package_manager:mode=install \
         -c tools.system.package_manager:sudo=False
     - cmake --preset linux-debug-coverage
