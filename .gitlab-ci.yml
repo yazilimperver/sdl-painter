@@ -122,7 +122,8 @@ test:unit:asan:
 #     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # Kod kapsama olcumu. Esik ZORLANMAZ (allow_failure): amac kapsami gorunur
-# kilmak. gcovr'in "coverage: N%" ciktisi GitLab'in kapsam rozetini besler.
+# kilmak. gcovr'in "lines: N%" ciktisi GitLab'in kapsam rozetini besler.
+# NOT: gcovr imajda apt ile zaten kurulu (bkz. Dockerfile ci stage).
 quality:coverage:
   stage: quality
   image: $CI_REGISTRY_IMAGE
@@ -130,7 +131,6 @@ quality:coverage:
   variables:
     SDL_VIDEODRIVER: "offscreen"
   script:
-    - pip3 install --break-system-packages gcovr || pip3 install gcovr
     - export VK_ICD_FILENAMES=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json 2>/dev/null | head -1)
     - |
       conan install . --output-folder=build/linux-debug-coverage/generators --build=missing \
@@ -140,12 +140,31 @@ quality:coverage:
     - cmake --preset linux-debug-coverage
     - cmake --build --preset linux-debug-coverage
     - ctest --preset linux-debug-coverage --output-on-failure
-    - mkdir -p coverage
-    # Yalnizca kutuphane kodu olculur; testler/ornekler kapsam disi.
+    # gcov, .gcda dosyalarini ureten derleyiciyle AYNI ana surumden olmali.
+    # Imaj Debian 13 tabanli: build-essential GCC 14 getiriyor ve /usr/bin/gcov
+    # gcov-14 oluyor; ancak Dockerfile gcc/g++'i 13'e sabitliyor (gcov'u
+    # sabitlemiyor). Uyusmazlikta gcov cikis kodu 3 veriyor ve gcovr
+    # "could not infer a working directory" hatasiyla duser.
     - |
+      CACHE=build/linux-debug-coverage/CMakeCache.txt
+      CXX=$(sed -n 's/^CMAKE_CXX_COMPILER:[^=]*=//p' "$CACHE")
+      echo "CMake derleyicisi: $CXX"
+      "$CXX" --version | head -1
+      MAJOR=$("$CXX" -dumpfullversion -dumpversion 2>/dev/null | cut -d. -f1)
+      if command -v "gcov-$MAJOR" >/dev/null 2>&1; then
+        GCOV_EXECUTABLE="gcov-$MAJOR"
+      else
+        GCOV_EXECUTABLE=gcov
+      fi
+      export GCOV_EXECUTABLE
+      echo "Secilen gcov: $GCOV_EXECUTABLE"
+      mkdir -p coverage
+      # Yalnizca kutuphane kodu olculur; testler/ornekler kapsam disi.
       gcovr --root . \
+        --gcov-executable "$GCOV_EXECUTABLE" \
         --filter 'src/' --filter 'include/sdl_painter/' \
         --exclude 'tests/' --exclude 'examples/' --exclude 'third_party/' \
+        --exclude-unreachable-branches \
         --print-summary \
         --html-details coverage/index.html \
         --xml coverage/coverage.xml

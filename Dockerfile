@@ -26,9 +26,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     xvfb \
     && rm -rf /var/lib/apt/lists/*
 
-# GCC 13'ü varsayılan yap
+# GCC 13'ü varsayılan yap.
+#
+# gcov DA eşlenmeli: taban imaj Debian 13 ve build-essential GCC 14 getiriyor,
+# yani /usr/bin/gcov gcov-14 oluyor. Derleme g++-13 ile yapıldığından .gcda
+# dosyaları 13 formatındadır; gcov-14 bunları okuyamaz (çıkış kodu 3) ve
+# kod kapsama job'ı "gcovr could not infer a working directory" ile düşer.
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100 \
-    && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+    && update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100 \
+    && update-alternatives --install /usr/bin/gcov gcov /usr/bin/gcov-13 100
 
 # Conan 2
 RUN pip3 install --break-system-packages "conan>=2.0,<3.0"

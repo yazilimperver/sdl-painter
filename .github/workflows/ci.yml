@@ -247,6 +247,9 @@ jobs:
     name: quality:coverage
     runs-on: ubuntu-latest
     needs: []
+    # Kapsama bir KAPI degil, gorunurluk aracidir: basarisizligi pipeline'i
+    # kirmiz yapmamali (GitLab tarafindaki allow_failure ile ayni davranis).
+    continue-on-error: true
     container:
       image: yazilimperver/sdl-painter:ci-v1.0
     env:
@@ -256,26 +259,55 @@ jobs:
       - uses: actions/checkout@v7
         with:
           submodules: recursive
-      - name: gcovr kurulumu
-        run: pip3 install --break-system-packages gcovr || pip3 install gcovr
       - name: Resolve lavapipe ICD
         run: |
           ICD=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json 2>/dev/null | head -1 || true)
           echo "VK_ICD_FILENAMES=$ICD" >> "$GITHUB_ENV"
       - name: conan install (Debug, coverage)
         run: |
-          conan install . --output-folder=build/linux-debug-coverage/generators --build=missing             -s build_type=Debug             -c tools.system.package_manager:mode=install             -c tools.system.package_manager:sudo=False
+          conan install . --output-folder=build/linux-debug-coverage/generators --build=missing \
+            -s build_type=Debug \
+            -c tools.system.package_manager:mode=install \
+            -c tools.system.package_manager:sudo=False
       - name: build & ctest
         run: |
           cmake --preset linux-debug-coverage
           cmake --build --preset linux-debug-coverage
           ctest --preset linux-debug-coverage --output-on-failure
+      # gcov, .gcda dosyalarini ureten derleyiciyle AYNI ana surumden olmali.
+      # CI imaji Debian 13 tabanli: build-essential GCC 14 getiriyor ve
+      # /usr/bin/gcov gcov-14 oluyor; ancak Dockerfile gcc/g++'i 13'e
+      # sabitliyor (gcov'u sabitlemiyor). Uyusmazlikta gcov cikis kodu 3
+      # veriyor ve gcovr "could not infer a working directory" diyor.
+      # Bu yuzden gcov'u CMake'in gercekten kullandigi derleyiciden turetiyoruz.
+      - name: gcov surumunu derleyiciyle esle
+        run: |
+          CACHE=build/linux-debug-coverage/CMakeCache.txt
+          CXX=$(sed -n 's/^CMAKE_CXX_COMPILER:[^=]*=//p' "$CACHE")
+          echo "CMake derleyicisi: $CXX"
+          "$CXX" --version | head -1
+          MAJOR=$("$CXX" -dumpfullversion -dumpversion 2>/dev/null | cut -d. -f1)
+          if command -v "gcov-$MAJOR" >/dev/null 2>&1; then
+            GCOV="gcov-$MAJOR"
+          else
+            GCOV=gcov
+          fi
+          echo "Secilen gcov: $GCOV ($($GCOV --version | head -1))"
+          echo "GCOV_EXECUTABLE=$GCOV" >> "$GITHUB_ENV"
       - name: gcovr raporu
         run: |
           mkdir -p coverage
           # Yalnizca kutuphane kodu olculur: testler, ornekler ve ucuncu
           # taraf basliklari kapsam disi.
-          gcovr --root .             --filter 'src/' --filter 'include/sdl_painter/'             --exclude 'tests/' --exclude 'examples/' --exclude 'third_party/'             --print-summary             --html-details coverage/index.html             --xml coverage/coverage.xml             --txt coverage/summary.txt
+          gcovr --root . \
+            --gcov-executable "$GCOV_EXECUTABLE" \
+            --filter 'src/' --filter 'include/sdl_painter/' \
+            --exclude 'tests/' --exclude 'examples/' --exclude 'third_party/' \
+            --exclude-unreachable-branches \
+            --print-summary \
+            --html-details coverage/index.html \
+            --xml coverage/coverage.xml \
+            --txt coverage/summary.txt
           echo '## Kod kapsama' >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
           tail -n 20 coverage/summary.txt >> "$GITHUB_STEP_SUMMARY"
