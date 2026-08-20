@@ -34,7 +34,7 @@ namespace sdl_painter {
 inline constexpr int32_t kVersionMajor = 1;
 
 /// @brief Alt sürüm numarası. Geriye dönük uyumlu eklemelerde artar.
-inline constexpr int32_t kVersionMinor = 1;
+inline constexpr int32_t kVersionMinor = 2;
 
 /// @brief Yama sürüm numarası. Yalnızca hata düzeltmelerinde artar.
 inline constexpr int32_t kVersionPatch = 0;
@@ -43,6 +43,6 @@ inline constexpr int32_t kVersionPatch = 0;
 ///
 /// Sayısal bileşenlerle tutarlılığı CMake configure aşamasında ve
 /// `tests/test_version.cpp` içinde doğrulanır.
-inline constexpr std::string_view kVersionString = "1.1.0";
+inline constexpr std::string_view kVersionString = "1.2.0";
 
 }  // namespace sdl_painter

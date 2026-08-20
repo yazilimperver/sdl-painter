@@ -19,11 +19,7 @@
 
 namespace sdl_painter {
 
-/// @brief Vulkan 1.1 IRenderer implementasyonu — Phase 5c.
-///
-/// Phase 5a: Initialize/Shutdown, BeginFrame/EndFrame, Clear(color).
-/// Phase 5b: DrawTriangles, SetProjectionMatrix, SetModelMatrix (untextured).
-/// Phase 5c: CreateTexture, DestroyTexture, DrawTextured (textured pipeline).
+/// @brief Vulkan 1.1 IRenderer implementasyonu
 class VulkanRenderer final : public IRenderer {
  public:
   VulkanRenderer() = default;
@@ -95,7 +91,7 @@ class VulkanRenderer final : public IRenderer {
   // Aktif frame clear değeri — Clear() çağrısından EndFrame'e taşınır.
   VkClearValue mClearValue{};
 
-  // Viewport/scissor (Phase 5b'de pipeline dinamik state olarak kullanacak)
+  // Viewport/scissor
   int32_t mViewportX{0};
   int32_t mViewportY{0};
   int32_t mViewportW{0};

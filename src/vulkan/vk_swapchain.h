@@ -11,8 +11,6 @@ class VkContext;
 /// @brief Swapchain, render pass ve framebuffer sahipliği.
 ///
 /// Pencere resize edildiğinde `Recreate(w, h)` ile yeniden inşa edilir.
-/// Phase 5a için tek bir render pass (renk attachment, load=CLEAR, store=STORE)
-/// kullanılır. Phase 5b'den itibaren pipeline bu render pass'a bağlanır.
 class VkSwapchain {
  public:
   VkSwapchain() = default;

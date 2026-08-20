@@ -80,7 +80,7 @@ Font& Font::operator=(Font&& other) noexcept {
     // Aksi halde yeni fontun kod noktaları için eski fontun (farklı punto /
     // farklı yüz) texture'ları döndürülür — ekranda yanlış karakterler.
     // Texture yıkımı IRenderer'ı kullandığından bu, renderer hâlâ hayattayken
-    // yapılmalıdır (bkz. sınıf belgesindeki yaşam döngüsü sözleşmesi).
+    // yapılmalıdır
     mGlyphCache.clear();
     mAtlas.reset();
     if (mHandle != nullptr) {

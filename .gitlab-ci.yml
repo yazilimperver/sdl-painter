@@ -46,7 +46,7 @@ build:linux:release:
     - cmake --build --preset linux-release
   artifacts:
     paths:
-      - build/linux-debug/libsdl_painter.a
+      - build/linux-release/libsdl_painter.a
       - build/linux-release/tests/sdl_painter_tests
       - build/linux-release/examples/*
     exclude:

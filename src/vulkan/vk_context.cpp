@@ -368,7 +368,7 @@ bool VkContext::CreateLogicalDevice() {
     queue_cis.push_back(qci);
   }
 
-  VkPhysicalDeviceFeatures features{};  // Phase 5a için özellik gerekmez.
+  VkPhysicalDeviceFeatures features{};
 
   std::vector<const char*> device_exts = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
 

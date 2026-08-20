@@ -1,8 +1,68 @@
 # Changelog
 
-## [Yayınlanmadı]
+## [1.2.0] - 2026-08-20
+
+### ⚠️ Kırıcı değişiklikler
+
+Bu sürüm, `v1.1.0`'a göre iki noktada public API'yi kırıyor. İkisi de metin
+çiziminin glyph atlasına geçişinden kaynaklanıyor.
+
+- **`Glyph` artık texture'ın sahibi değil.** Eskiden her glyph kendi `Texture`
+  nesnesini tutuyordu; artık glyph'ler ortak bir atlas sayfasında toplanıyor ve
+  `Glyph`, o sayfaya bir `TextureHandle` ile atlas içindeki normalize UV bölgesini
+  (`u0`, `v0`, `u1`, `v1`) tutuyor. Texture sahipliği atlasta.
+
+  ```cpp
+  // Eskiden
+  struct Glyph { Texture texture; int32_t width, height, advance, bearing_x, bearing_y; };
+
+  // Şimdi
+  struct Glyph {
+    TextureHandle texture{kInvalidTexture};
+    float u0, v0, u1, v1;
+    int32_t width, height, advance, bearing_x, bearing_y;
+  };
+  ```
+
+  **Ne yapılmalı:** `Glyph::texture`'ı `Texture` gibi kullanan kod derlenmez.
+  Glyph'i kendiniz çiziyorsanız, texture'ı handle üzerinden bağlayıp UV
+  bölgesini kullanın; tüm atlas sayfası yerine yalnızca o dikdörtgen çizilmeli.
+
+- **`IRenderer`'a saf sanal `UpdateTexture` eklendi.**
+
+  ```cpp
+  virtual void UpdateTexture(TextureHandle handle, int32_t x, int32_t y,
+                             int32_t width, int32_t height,
+                             const uint8_t* data) = 0;
+  ```
+
+  **Ne yapılmalı:** Kendi backend'ini yazan herkes, bu metodu implemente etmeden
+  derleyemez. Sıkı paketlenmiş **RGBA8** veri (`width * height * 4` bayt) bekler
+  ve var olan bir texture'ın alt bölgesini günceller. Atlas, sayfayı her yeni
+  glyph'te yeniden yaratmak yerine bunu kullanıyor.
 
 ### Değişti
+- **`DrawText` artık transform stack'i uyguluyor.** Döndürülmüş veya ötelenmiş
+  metin ekran dışına düşüyor, yani hiç görünmüyordu. Metin de artık diğer
+  şekillerle aynı `Save`/`Restore`/`Translate`/`Rotate`/`Scale` semantiğine tabi.
+- **`Application::Width()` / `Height()` artık framebuffer piksel döndürüyor**,
+  mantıksal pencere boyutunu değil. `AppConfig::high_dpi` kapalıyken (varsayılan)
+  ikisi aynı; açıkken framebuffer, ekran ölçek faktörü kadar büyüktür. Çizim
+  koordinatları piksel tabanlı olduğundan, HiDPI açıkken sabit sayılar yerine bu
+  değerler üzerinden hesap yapılmalı.
+- **Metin tek draw call ile çiziliyor.** Glyph'ler karakter başına ayrı texture
+  yerine ortak bir atlas sayfasında toplanıyor.
+- **CMake ve Conan dosyaları sadeleştirildi.** Kök `CMakeLists.txt` 266 satır
+  küçüldü; tek seferlik kurulum işleri `cmake/` altındaki modüllere taşındı:
+  `ProjectVersion.cmake`, `InstallRules.cmake`, `RuntimeDlls.cmake`,
+  `RegenerateShaders.cmake`, `CodeCoverage.cmake`. Kök dosya artık yalnızca
+  hedefleri tanımlıyor.
+- **`OpenGL::GL` artık `PRIVATE`.** GL bir implementasyon detayı (glad zaten
+  private linkliydi); `PUBLIC` olması Vulkan-only tüketiciyi de GL'e link etmeye
+  zorluyordu.
+- **Boş derleme birimi stub'ları kaldırıldı:** `src/brush.cpp`, `src/color.cpp`,
+  `src/geometry.cpp`, `src/pen.cpp`. Dördü de hiçbir tanım içermiyordu; ilgili
+  tipler tamamen header'da.
 - **Örnek uygulamalar anlamlı isimler aldı:** `phase0_demo` → `hello_window`,
   `phase1_demo` → `primitives`, `phase2_demo` → `transforms`,
   `phase2b_demo` → `clipping`, `phase3_demo` → `images`, `phase4_demo` → `text`,
@@ -24,6 +84,31 @@
   "SDL_Renderer vs SDLPainter".
 
 ### Eklendi
+- **Glyph atlası** (`src/glyph_atlas.{h,cpp}`, dahili): glyph'ler şerit
+  paketlemesiyle ortak texture sayfalarına yerleştiriliyor. Metin artık karakter
+  başına değil tek draw call ile çiziliyor.
+- **`IRenderer::UpdateTexture(...)`:** var olan bir texture'ın alt bölgesini
+  güncelleme (sub-image yükleme). Atlas gibi artımlı doldurulan texture'lar için
+  gerekli. Her iki backend'de implemente edildi.
+- **HiDPI desteği:** `AppConfig::high_dpi` (varsayılan `false`) penceyi
+  `SDL_WINDOW_HIGH_PIXEL_DENSITY` ile açıyor; `Painter::SetDrawableSize(w, h)`
+  ile çizim yüzeyi boyutu açıkça bildirilebiliyor. `Application`,
+  `SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED` olayında bunu çağırıyor; ilk açık
+  bildirimden sonra `Painter` kare başına pencere yoklamasını bırakıyor. Kendi
+  olay döngüsünü yazan uygulamalar için otomatik yoklama emniyet ağı olarak
+  duruyor (geriye dönük uyumlu).
+- **Kalın çizgilerde yuvarlak birleşim (round join):** poligon ve polyline
+  köşelerinde kalan boşluklar kapandı.
+- **`Painter(std::unique_ptr<IRenderer>, int32_t, int32_t)` ctor'u:** renderer
+  dışarıdan enjekte edilebiliyor. `Painter` artık sahte renderer ile, pencere
+  açmadan test edilebiliyor — bu sınıfın daha önce hiç birim testi yoktu.
+- **Kod kapsama ölçümü:** `cmake/CodeCoverage.cmake` (`ENABLE_COVERAGE`, gcov
+  enstrümantasyonu), `linux-debug-coverage` preset üçlüsü ve her iki pipeline'da
+  `quality:coverage` job'ı. Eşik **zorlanmıyor**; amaç görünürlük. Yalnızca
+  `src/` + `include/sdl_painter/` ölçülüyor.
+- **`SDLPAINTER_REQUIRE_FONT` sözleşmesi:** ortam değişkeni `1` iken font
+  bulunamazsa metin testleri atlanmak (SKIP) yerine **düşüyor**. CI'da açık, ki
+  font eksikliği sessizce kapsam kaybına dönüşmesin.
 - **`examples/README.md`:** Her demonun ne gösterdiği, gerektirdiği bağımlılık
   (Vulkan / SDL_ttf), çalıştırma satırı ve faz eşleme tablosu.
 - **`hero` örneği + GIF üretim script'leri:** README tanıtım görseli için
@@ -40,6 +125,37 @@
   CMake derlemesi, CI'ın shader tazelik ve paketleme job'ları).
 
 ### Düzeltildi
+- **Vulkan'da kırpma hiç çalışmıyordu.** `Painter::SetClipRect` kare ortasında
+  çağrıldığında Vulkan tarafında hiçbir `vkCmdSetScissor` üretilmiyordu; scissor
+  ve viewport artık kare ortasında da komut buffer'ına yazılıyor.
+- **Pencere simge durumuna küçültüldüğünde her karede validation hatası:** 0x0
+  swapchain ile çizim deneniyordu. Artık kare atlanıyor ve geri dönüşte swapchain
+  yeniden oluşturuluyor.
+- **Vulkan acquire semaphore'u** artık frame-in-flight indeksiyle seçiliyor.
+  Bağımsız sayaç fence beklemesiyle ilişkisiz olduğu için yeniden kullanım
+  güvenliği garanti değildi.
+- **`DestroyTexture` başına tam GPU stall:** `vkDeviceWaitIdle` yerine gecikmeli
+  silme kuyruğu. Bir font kapatılırken atlas sayfası başına stall yaşanmıyor.
+- **Vulkan texture yükleme hata yolundaki kaynak sızıntıları** kapatıldı.
+- **OpenGL texture yüklemede buffer taşması:** unpack hizalaması
+  (`GL_UNPACK_ALIGNMENT`) ayarlanmıyordu ve 1/2 kanallı görüntülerde kanal
+  eşlemesi yanlıştı.
+- **`Font` taşıma işlemleri glyph önbelleğini bırakmıyordu.** Move-assign
+  sonrasında eski fontun karakterleri çizilebiliyordu.
+- **Ear clipping tekrarlı köşe içeren poligonu sessizce yutuyordu** (ölçüldü:
+  beklenen 9 vertex yerine 3). Girişte dejenere/tekrarlı nokta temizliği eklendi.
+- **Daire ve elips segment sayısına üst sınır kondu.** Çok büyük yarıçapta segment
+  sayısı sınırsız büyüyordu.
+- **UTF-8 çözümleyici ayrıştırıldı ve sıkılaştırıldı** (`src/text_utf8.h`):
+  overlong kodlamalar, surrogate aralığı ve aralık dışı kod noktaları artık
+  reddediliyor.
+- **Görüntü yüklemede boyut sınırı ve hata raporlaması:** `Image(file_path)` artık
+  piksel verisini ayırmadan önce başlığı okuyup boyutu doğruluyor; yükleme
+  hataları loglanıyor (eskiden sessizce geçersiz `Image` dönüyordu).
+- **Kapsama job'ında gcov sürüm uyuşmazlığı** ve **özetin kırpılması** giderildi
+  (`quality:coverage`, her iki pipeline).
+- **GitLab `build:linux:release` job'ı yanlış artifact yolu veriyordu:**
+  `build/linux-debug/libsdl_painter.a` → `build/linux-release/...`.
 - **CI artifact glob'ları sessizce boş artifact üretecekti:** `examples/phase*`
   deseni yeni adlarla eşleşmiyordu ve GitHub tarafında `if-no-files-found: warn`
   olduğu için pipeline yeşil kalırdı. `examples/*` + `CMakeFiles`/`*.cmake`
@@ -57,6 +173,21 @@
 - **`doc/mimari-genel-bakis.md` var olmayan `transform.h`'yi listeliyordu**
   (ADR-007 ile `glm::mat3`'e geçilmişti). Bağımlılık grafiğinde SDL_ttf hâlâ
   opsiyonel görünüyordu ve GLM hiç yoktu — ikisi de zorunlu listeye alındı.
+
+### Test
+- Test takımı **187'den 286 teste**, 16'dan 18 test dosyasına çıktı (286/286
+  geçiyor).
+- **`Painter` ilk kez test kapsamında.** Kütüphanenin tüm public yüzeyini taşıyan
+  bu sınıfın hiç birim testi yoktu; ctor'u renderer'ı kendi içinde yarattığı için
+  sahte renderer enjekte edilemiyordu. Yeni ctor bunu açtı
+  (`tests/test_painter.cpp`, 44 test): transform stack, scissor Y-flip, UTF-8
+  çözümleme, hizalama ve opacity yayılımı artık doğrulanıyor.
+- **`tests/test_frame_render.cpp`:** gerçek `OpenGLRenderer`/`VulkanRenderer`
+  örnekleyip offscreen kare çiziyor. Daha önce test takımında gerçek renderer
+  ayağa kaldıran hiçbir test yoktu.
+- Vulkan tarafı için `tests/test_vk_check.cpp`; `tests/test_font.cpp`,
+  `test_tessellator.cpp` ve yeni `test_text_utf8.cpp` genişletildi.
+- Ölçülen satır kapsaması: **%76** (`src/` + `include/sdl_painter/`).
 
 ## [1.1.0] - 2026-08-09
 

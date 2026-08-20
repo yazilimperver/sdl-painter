@@ -46,7 +46,6 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
   mViewportW = static_cast<int32_t>(width);
   mViewportH = static_cast<int32_t>(height);
 
-  // Phase 5b: vertex ring buffer — per-slot 4 MB, frames-in-flight kadar slot
   // (CPU/GPU paralelliği için RAW hazard'ı önler; bkz. K1).
   constexpr VkDeviceSize kPerSlotSize = 4 * 1024 * 1024;  // 4 MB / slot
   constexpr VkDeviceSize kRingSize =
@@ -60,7 +59,6 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
   }
 
   // Phase 5b: untextured graphics pipeline
-  //
   // Pipeline kurulumu başarısız olursa sert hata veriyoruz. Eskiden burada
   // uyarı loglanıp devam ediliyordu; gerekçe, .spv dosyalarının çalışma
   // zamanında eksik olabilmesiydi. Shader'lar artık binary'ye gömülü olduğu

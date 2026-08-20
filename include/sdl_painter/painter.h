@@ -113,7 +113,7 @@ class Painter {
   /// @brief Aktif fırçayı ayarla (dolgu rengi).
   void SetBrush(const Brush& brush);
 
-  /// @brief Aktif fontu ayarla (Phase 4).
+  /// @brief Aktif fontu ayarla
   void SetFont(std::shared_ptr<Font> font);
 
   /// @brief Global opaklığı ayarla [0.0, 1.0].
@@ -163,7 +163,7 @@ class Painter {
   void DrawImage(const Image& image, const Rect& src_rect,
                  const Rect& dest_rect);
 
-  // --- Metin (Phase 4) ---
+  // --- Metin
 
   /// @brief Noktaya metin çiz.
   void DrawText(float x, float y, const std::string& text);

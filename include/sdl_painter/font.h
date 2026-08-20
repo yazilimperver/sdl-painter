@@ -48,10 +48,7 @@ enum class Alignment : uint8_t {
   kRight,
 };
 
-/// @brief Font sarmalayıcı — SDL_ttf üzerinden (Phase 4).
-///
-/// Phase 4'e kadar bu sınıf yalnızca bir stub'dır.
-///
+/// @brief Font sarmalayıcı — SDL_ttf üzerinden
 /// @warning **Yaşam döngüsü sözleşmesi:** Font, glyph önbelleğindeki
 /// texture'ları yükleyen Painter (ve dolayısıyla IRenderer) yaşıyorken
 /// yıkılmalıdır. Painter yok olduktan sonra Font yıkılırsa, glyph
@@ -59,7 +56,7 @@ enum class Alignment : uint8_t {
 /// davranış tanımsızdır. Painter `std::shared_ptr<Font>` ile tuttuğu için
 /// genelde sözleşme kendiliğinden sağlanır; ancak kullanıcı font'u
 /// Painter'dan bağımsız olarak `static` veya global tutarsa bu garanti
-/// kaybolur. v0.2.0'da bu daha sağlam bir mekanizmayla zorunlu kılınacaktır.
+/// kaybolur.
 class Font {
  public:
   Font() = default;

@@ -13,7 +13,7 @@ body:
     attributes:
       label: SDLPainter version
       description: Release tag, or commit SHA if you built from `main`.
-      placeholder: "v1.1.0"
+      placeholder: "v1.2.0"
     validations:
       required: true
 
