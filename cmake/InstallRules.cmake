@@ -19,6 +19,12 @@ install(TARGETS sdl_painter sdl_painter_app
 
 install(DIRECTORY include/ DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
 
+# Uretilen export basliklari (sdl_painter/export.h, sdl_painter/app/export.h).
+# Kaynak agacinda yoklar ama public basliklardan include ediliyorlar; kurulmazsa
+# tuketici derleyemez. Kaynak include/ ile ayni koke kopyalanirlar.
+install(DIRECTORY "${SDLPAINTER_EXPORTS_DIR}/"
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
 install(EXPORT sdl_painterTargets
         FILE        sdl_painterTargets.cmake
         NAMESPACE   sdl_painter::

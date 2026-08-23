@@ -115,6 +115,7 @@ stateDiagram-v2
 
     Basic: kBasic
     Basic --> Basic: aynı opacity & buffer ≤ 8192
+    Basic --> Basic: renk / transform DEĞİŞTİ (kırmaz)
     Basic --> FlushBasic: opacity DEĞİŞTİ
     Basic --> FlushBasic: buffer doldu (>8192)
     Basic --> FlushBasic_Tex: PushTexturedTriangles geldi
@@ -146,13 +147,31 @@ stateDiagram-v2
 | kBasic → kBasic | Buffer >8192 vertex olur | **Flush** + yeni batch |
 | kBasic → kTextured | Çizim modu değişti | **Flush** + textured batch başlar |
 | kTextured → kTextured | Texture değişti | **Flush** + yeni texture batch |
+| Painter.SetClipRect / ClearClip | Scissor GPU durumu değişti | **Flush** + yeni scissor |
+| Painter.Restore() | Clip durumu **gerçekten** değiştiyse | **Flush** + scissor geri yüklenir |
 | Painter.End() | Frame sonu | **Flush** (kalan ne varsa) |
 | Painter.Clear() | Ekran temizleme | **Flush** önce, sonra Clear |
 
-**Pratik etki:** 100 tane aynı renkli `FillRect` → **1 draw call**.
-100 tane farklı renkte `FillRect` → **yine 1 draw call** (renk vertex'te
-taşındığı için pen değişimi flush tetiklemez; sadece **opacity** ve **mode**
-tetikler).
+**Flush TETİKLEMEYENLER** (sık karıştırılır):
+
+| İşlem | Neden batch'i kırmaz |
+|-------|----------------------|
+| `SetPen` / `SetBrush` | Renk `Vertex` içinde taşınır, uniform değil |
+| `Translate` / `Rotate` / `Scale` / `ResetTransform` | Transform, `RenderBatcher` içinde CPU'da vertex'e uygulanır; model matrisi daima birim |
+| `Save()` | Kaydedilen hiçbir şey GPU durumu değil |
+| `Restore()` — clip aynıysa | Yalnızca clip değişimi flush gerektirir |
+| `SetOpacity` — aynı değere | `SameOpacity()` toleransı (1/512) |
+
+**Pratik etki:** 2000 farklı renkte, her biri kendi `Translate`/`Rotate`'i
+olan `FillRect` → **2 draw call** (12 000 vertex, yalnızca 8192 tavanı
+yüzünden ikiye bölünür).
+
+Bu tablo tahmin değil, ölçüm sonucudur: senaryo bazlı draw call ve süre
+verileri için bkz. **[`examples/benchmarks/README.md`](../examples/benchmarks/README.md)**.
+Aynı sayaçlar çalışma zamanında `Painter::GetFrameStats()` ile, `Application`
+tabanlı uygulamalarda ise **F1** ile açılan ekran üstü göstergede okunabilir.
+
+![İstatistik göstergesi](images/stats-overlay.png)
 
 ---
 

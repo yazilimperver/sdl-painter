@@ -59,6 +59,7 @@ bool OpenGLRenderer::Initialize(SDL_Window* window) {
   }
 
   SetupBuffers();
+  SetupTimerQueries();
   return true;
 }
 
@@ -118,6 +119,14 @@ void OpenGLRenderer::Shutdown() {
   mBasicShader = ShaderProgram{};
   mTexturedShader = ShaderProgram{};
 
+  if (mTimerQueries[0] != 0U) {
+    if (mTimerQueryActive) {
+      glEndQuery(GL_TIME_ELAPSED);
+      mTimerQueryActive = false;
+    }
+    glDeleteQueries(kTimerQueryCount, mTimerQueries);
+    mTimerQueries[0] = 0;
+  }
   if (mVao != 0U) {
     glDeleteVertexArrays(1, &mVao);
     mVao = 0;
@@ -139,9 +148,58 @@ void OpenGLRenderer::Shutdown() {
   mGLContext = nullptr;
 }
 
-void OpenGLRenderer::BeginFrame() {}
+void OpenGLRenderer::SetupTimerQueries() {
+  glGenQueries(kTimerQueryCount, mTimerQueries);
+  for (bool& pending : mTimerQueryPending) {
+    pending = false;
+  }
+  mTimerQueryIndex = 0;
+  mTimerQueryActive = false;
+  mLastGpuFrameMs = 0.0;
+}
+
+void OpenGLRenderer::CollectGpuTime() {
+  // Bu karenin sorgusunu DEGIL, siradaki (yani en eski) sorguyu yokla.
+  // Cift tamponda "siradaki" bir onceki karenin sorgusudur ve sonucu
+  // muhtemelen hazirdir; hazir degilse beklemeden geciyoruz.
+  const int32_t oldest = (mTimerQueryIndex + 1) % kTimerQueryCount;
+  if (!mTimerQueryPending[oldest]) {
+    return;
+  }
+  GLint available = 0;
+  glGetQueryObjectiv(mTimerQueries[oldest], GL_QUERY_RESULT_AVAILABLE,
+                     &available);
+  if (available == GL_FALSE) {
+    return;
+  }
+  GLuint64 elapsed_ns = 0;
+  glGetQueryObjectui64v(mTimerQueries[oldest], GL_QUERY_RESULT, &elapsed_ns);
+  mLastGpuFrameMs = static_cast<double>(elapsed_ns) / 1.0e6;
+  mTimerQueryPending[oldest] = false;
+}
+
+void OpenGLRenderer::BeginFrame() {
+  if (mTimerQueries[0] == 0) {
+    return;
+  }
+  CollectGpuTime();
+
+  // Bu slotun onceki sonucu hala toplanmadiysa uzerine yazmak sorguyu
+  // kaybettirir; o kareyi olcmeden gec.
+  if (mTimerQueryPending[mTimerQueryIndex]) {
+    return;
+  }
+  glBeginQuery(GL_TIME_ELAPSED, mTimerQueries[mTimerQueryIndex]);
+  mTimerQueryActive = true;
+}
 
 void OpenGLRenderer::EndFrame() {
+  if (mTimerQueryActive) {
+    glEndQuery(GL_TIME_ELAPSED);
+    mTimerQueryPending[mTimerQueryIndex] = true;
+    mTimerQueryActive = false;
+    mTimerQueryIndex = (mTimerQueryIndex + 1) % kTimerQueryCount;
+  }
   SDL_GL_SwapWindow(mWindow);
 }
 

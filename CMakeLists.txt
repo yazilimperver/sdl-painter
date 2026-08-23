@@ -34,6 +34,24 @@ find_package(spdlog REQUIRED)
 find_package(glm REQUIRED)
 find_package(OpenGL REQUIRED)
 
+# spdlog hedef adi `header_only` secenegine gore DEGISIYOR ve iki adtan yalnizca
+# BIRI tanimli oluyor:
+#   header_only=True  -> spdlog::spdlog_header_only  (spdlog::spdlog YOK)
+#   header_only=False -> spdlog::spdlog              (header_only YOK)
+# Conan Center'da bagimlilik secenegi zorlamak yasak oldugundan sabit bir ada
+# baglanamayiz; hangisi varsa o kullanilir. (vcpkg/upstream spdlog ikisini de
+# tanimlar; orada header-only dal secilir.)
+if(TARGET spdlog::spdlog_header_only)
+    set(SDLPAINTER_SPDLOG_TARGET spdlog::spdlog_header_only)
+elseif(TARGET spdlog::spdlog)
+    set(SDLPAINTER_SPDLOG_TARGET spdlog::spdlog)
+else()
+    message(FATAL_ERROR
+        "spdlog bulundu ama ne spdlog::spdlog_header_only ne de spdlog::spdlog "
+        "hedefi tanimli. Beklenmeyen bir spdlog paketi kullaniliyor.")
+endif()
+message(STATUS "spdlog hedefi: ${SDLPAINTER_SPDLOG_TARGET}")
+
 # Compiler warnings + sanitizer seçenekleri
 include(CompilerWarnings)
 include(CompilerOptions)
@@ -112,11 +130,42 @@ include(RegenerateShaders)
 
 add_library(sdl_painter ${SDLPAINTER_SOURCES})
 
+# --- Sembol export makrolari ---
+#
+# Windows/MSVC bir DLL'den hicbir sembolu varsayilan olarak disari vermez.
+# Export isaretlemesi olmadan `BUILD_SHARED_LIBS=ON` derlemesi .dll uretir ama
+# .lib (import library) URETMEZ; yani hicbir tuketici link edemez. Olculdu:
+# isaretleme oncesi sdl_painter.dll olusuyor, sdl_painter.lib olusmuyordu.
+# Conan Center shared derlemeyi zorunlu olarak test ettiginden bu bir paketleme
+# engeliydi.
+#
+# `SDLPAINTER_EXPORTS_DIR` ayri tutuluyor: `generated/` icinde gomulu shader
+# basliklari var ve onlar DAHILI. Export basligi public include yolunda olmak
+# zorunda oldugundan ikisi karistirilmiyor.
+include(GenerateExportHeader)
+
+set(SDLPAINTER_EXPORTS_DIR "${CMAKE_CURRENT_BINARY_DIR}/exports")
+
+generate_export_header(sdl_painter
+    BASE_NAME SDLPAINTER
+    EXPORT_MACRO_NAME SDLPAINTER_API
+    NO_EXPORT_MACRO_NAME SDLPAINTER_NO_EXPORT
+    EXPORT_FILE_NAME "${SDLPAINTER_EXPORTS_DIR}/sdl_painter/export.h")
+
+# Static derlemede makrolar bos olmali; uretilen baslik bunu
+# SDLPAINTER_STATIC_DEFINE ile anliyor. PUBLIC: tuketici de ayni tanimi gormeli.
+if(NOT BUILD_SHARED_LIBS)
+    target_compile_definitions(sdl_painter PUBLIC SDLPAINTER_STATIC_DEFINE)
+endif()
+
 target_include_directories(sdl_painter
     PUBLIC
         # Build agacinda kaynak include/, kurulumda CMAKE_INSTALL_INCLUDEDIR.
         # Goreli yol export edilemez; generator expression sart.
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        # Uretilen export basligi (sdl_painter/export.h) — kurulumda ayni
+        # include koku altina kopyalanir, bkz. InstallRules.cmake.
+        $<BUILD_INTERFACE:${SDLPAINTER_EXPORTS_DIR}>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     PRIVATE src
     # Gomulu shader basliklari (embedded_gl_shaders.h / embedded_vk_shaders.h)
@@ -129,7 +178,7 @@ target_link_libraries(sdl_painter
     PUBLIC  glm::glm
     PRIVATE glad::glad
     PRIVATE stb::stb
-    PRIVATE spdlog::spdlog_header_only
+    PRIVATE ${SDLPAINTER_SPDLOG_TARGET}
 )
 
 if(SDLPAINTER_WITH_VULKAN)
@@ -154,16 +203,30 @@ set_target_coverage(sdl_painter)
 add_library(sdl_painter_app
     src/app/application.cpp
     src/app/event_translator.cpp
+    src/app/stats_overlay.cpp
 )
+
+# Ayri bir kutuphane, yani ayri bir DLL: kendi export makrosu olmali.
+generate_export_header(sdl_painter_app
+    BASE_NAME SDLPAINTER_APP
+    EXPORT_MACRO_NAME SDLPAINTER_APP_API
+    NO_EXPORT_MACRO_NAME SDLPAINTER_APP_NO_EXPORT
+    EXPORT_FILE_NAME "${SDLPAINTER_EXPORTS_DIR}/sdl_painter/app/export.h")
+
+if(NOT BUILD_SHARED_LIBS)
+    target_compile_definitions(sdl_painter_app PUBLIC SDLPAINTER_APP_STATIC_DEFINE)
+endif()
+
 target_include_directories(sdl_painter_app
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<BUILD_INTERFACE:${SDLPAINTER_EXPORTS_DIR}>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
     PRIVATE src
 )
 target_link_libraries(sdl_painter_app
     PUBLIC  sdl_painter
-    PRIVATE spdlog::spdlog_header_only
+    PRIVATE ${SDLPAINTER_SPDLOG_TARGET}
 )
 set_target_warnings(sdl_painter_app)
 set_target_sanitizers(sdl_painter_app)

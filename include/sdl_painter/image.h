@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sdl_painter/export.h"
 #include "sdl_painter/renderer.h"
 #include "sdl_painter/texture.h"
 
@@ -22,7 +23,7 @@ class IRenderer;
 /// scope'una göre dar tutun, asla `static` veya `Painter`'dan daha uzun
 /// yaşayan bir konuma koymayın. v0.2.0'da `weak_ptr<IRenderer>` veya
 /// `Painter::EvictImage` ile bu sözleşme zorunlu kılınacaktır.
-class Image {
+class SDLPAINTER_API Image {
  public:
   Image() = default;
 

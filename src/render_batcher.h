@@ -5,6 +5,7 @@
 #include "sdl_painter/vertex.h"
 
 #include <cstdint>
+#include <glm/glm.hpp>
 #include <vector>
 
 namespace sdl_painter {
@@ -12,6 +13,15 @@ namespace sdl_painter {
 class IRenderer;
 
 /// @brief Çizim komutlarını biriktirip topluca renderer'a gönderen sınıf.
+///
+/// @note Transform **burada** uygulanır. Önceden model matrisi
+/// `IRenderer::SetModelMatrix` ile bir uniform olarak gönderiliyordu; bu,
+/// her `Translate/Rotate/Scale` çağrısının batch'i kırması demekti — ölçüm
+/// (bkz. `examples/benchmarks/`) aynı 2000 şeklin transform'suz 2, şekil
+/// başına transform ile 2000 draw call ürettiğini gösterdi. Artık vertex'ler
+/// CPU'da dönüştürülür ve model matrisi daima birimdir; transform değişimi
+/// batch'i kırmaz. Dönüşüm, rengin yazıldığı kopyalama döngüsünde yapılır —
+/// ek geçiş veya tahsis yoktur.
 class RenderBatcher {
  public:
   enum class DrawMode { kNone, kBasic, kTextured };
@@ -19,16 +29,31 @@ class RenderBatcher {
   explicit RenderBatcher(IRenderer& renderer);
 
   /// @brief Standart (düz renk) üçgenleri ekle.
-  void PushTriangles(const std::vector<Vertex>& vertices, const Color& color,
+  /// @param transform Vertex pozisyonlarına uygulanacak 3x3 affine matris.
+  void PushTriangles(const std::vector<Vertex>& vertices,
+                     const glm::mat3& transform, const Color& color,
                      float opacity);
 
   /// @brief Textured üçgenleri ekle.
+  /// @param transform Vertex pozisyonlarına uygulanacak 3x3 affine matris.
   void PushTexturedTriangles(const std::vector<TexturedVertex>& vertices,
-                             TextureHandle texture, const Color& tint,
-                             float opacity);
+                             const glm::mat3& transform, TextureHandle texture,
+                             const Color& tint, float opacity);
 
   /// @brief Birikmiş tüm verileri renderer'a gönder.
   void Flush();
+
+  /// @brief Bu batcher'ın ürettiği draw call sayısı.
+  [[nodiscard]] uint32_t DrawCallCount() const noexcept { return mDrawCalls; }
+
+  /// @brief Gönderilen toplam vertex sayısı.
+  [[nodiscard]] uint32_t VertexCount() const noexcept { return mVertexCount; }
+
+  /// @brief Sayaçları sıfırla (kare başında).
+  void ResetCounters() noexcept {
+    mDrawCalls = 0;
+    mVertexCount = 0;
+  }
 
  private:
   /// @brief İki opaklık değeri aynı batch'te birleştirilebilir mi?
@@ -51,6 +76,9 @@ class RenderBatcher {
 
   std::vector<Vertex> mVertexBuffer;
   std::vector<TexturedVertex> mTexturedBuffer;
+
+  uint32_t mDrawCalls{0};
+  uint32_t mVertexCount{0};
 
   static constexpr std::size_t kMaxVertices = 8192;
 };

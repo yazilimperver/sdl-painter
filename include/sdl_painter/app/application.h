@@ -2,6 +2,7 @@
 
 #include "sdl_painter/app/app_config.h"
 #include "sdl_painter/app/events.h"
+#include "sdl_painter/app/export.h"
 #include "sdl_painter/painter.h"
 
 #include <cstdint>
@@ -13,6 +14,10 @@ struct SDL_Window;
 union SDL_Event;  // SDL3'te SDL_Event bir union'dır (typedef ile aynı etiket).
 
 namespace sdl_painter {
+
+namespace app_detail {
+class StatsOverlay;
+}  // namespace app_detail
 
 /// @brief SDL pencere/olay-döngüsü boilerplate'ini soyutlayan uygulama çatısı.
 ///
@@ -46,7 +51,7 @@ namespace sdl_painter {
 /// temel sınıf yıkıcısı çalışmadan **önce** (yani içteki Painter yıkılmadan
 /// önce) yok edilir. Bu sıralama kasıtlıdır ve @ref Painter yaşam sözleşmesini
 /// otomatik olarak sağlar — kaynakları düz üye olarak tutmak güvenlidir.
-class Application {
+class SDLPAINTER_APP_API Application {
  public:
   /// @brief Verilen yapılandırma ile uygulamayı oluştur (init @ref Run içinde).
   explicit Application(AppConfig config = {});
@@ -79,6 +84,25 @@ class Application {
 
   /// @brief Alttaki SDL penceresi — belgelenmiş kaçış kapısı (ileri kullanım).
   [[nodiscard]] SDL_Window* GetWindow() const noexcept { return mWindow; }
+
+  // --- Kare hızı ve istatistik göstergesi ---
+
+  /// @brief Yumuşatılmış kare hızı (kare/saniye).
+  ///
+  /// Çeyrek saniyelik pencerede ortalanır; ham `1/dt` değerinden çok daha
+  /// okunabilirdir. @ref AppConfig::stats_overlay kapalı olsa da hesaplanır.
+  [[nodiscard]] double Fps() const noexcept;
+
+  /// @brief Son tamamlanan karenin çizim istatistikleri.
+  [[nodiscard]] const FrameStats& GetFrameStats() const noexcept;
+
+  /// @brief Ekran üstü gösterge modunu değiştir.
+  void SetStatsOverlay(StatsOverlayMode mode) noexcept { mStatsMode = mode; }
+
+  /// @brief Güncel gösterge modu.
+  [[nodiscard]] StatsOverlayMode GetStatsOverlay() const noexcept {
+    return mStatsMode;
+  }
 
  protected:
   /// @brief Aktif Painter — yalnızca @ref Run çalışırken (OnInit dahil) geçerli.
@@ -154,6 +178,9 @@ class Application {
   /// @brief mWidth/mHeight'i pencerenin framebuffer (piksel) boyutuna eşitle.
   void UpdateDrawableSize();
 
+  /// @brief Pencere başlığındaki FPS'i (gerekiyorsa) güncelle.
+  void UpdateTitleFps(uint64_t frame_ns);
+
   AppConfig mConfig;
   SDL_Window* mWindow{nullptr};
   std::unique_ptr<Painter> mPainter;
@@ -163,6 +190,11 @@ class Application {
   uint64_t mLastTickNs{0};
   int32_t mWidth{0};
   int32_t mHeight{0};
+
+  // --- Istatistik gostergesi ---
+  std::unique_ptr<app_detail::StatsOverlay> mStatsOverlay;
+  StatsOverlayMode mStatsMode{StatsOverlayMode::kNone};
+  uint64_t mTitleUpdateNs{0};
 };
 
 }  // namespace sdl_painter

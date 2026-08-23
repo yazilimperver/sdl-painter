@@ -45,9 +45,25 @@ target (`sdl_painter::app` — see
 | [`app_basics`](app_basics.cpp) | The same visual output as `transforms`, without its ~250 lines of SDL boilerplate. | — |
 | [`game_loop`](game_loop.cpp) | Fixed-timestep simulation with render interpolation — a bouncing ball stays smooth even at a low `fixed_update_hz`. | — |
 | [`tictactoe`](tictactoe.cpp) | A complete application: mouse hit testing, hover highlighting, responsive layout on resize, and an app state machine. | SDL_ttf |
+| [`stats_overlay`](stats_overlay.cpp) | The on-screen FPS / frame-stats overlay: `AppConfig::stats_overlay`, `show_fps_in_title`, **F1** to cycle modes, and `SPACE` to switch between a batch-friendly and a batch-breaking draw pattern so the draw-call difference is visible live. | SDL_ttf |
 
 The pure game logic of `tictactoe` sits in [`tictactoe_logic.h`](tictactoe_logic.h)
 so it can be unit tested without a window (`tests/test_tictactoe_logic.cpp`).
+
+The overlay is available in **every** `Application` — F1 turns it on, no code
+change needed:
+
+| Batch-friendly | Per-shape opacity |
+|---|---|
+| ![](../doc/images/stats-overlay.png) | ![](../doc/images/stats-overlay-opacity.png) |
+| 3 draw calls · 3735 FPS · GPU 0.02 ms | 894 draw calls · 271 FPS · GPU 3.74 ms |
+
+## Benchmarks
+
+[`benchmarks/`](benchmarks/) is not a demo but a measurement rig: it reports
+how many draw calls each drawing pattern costs, writes CSV results and can
+dump a PNG per scenario. See [benchmarks/README.md](benchmarks/README.md) —
+the numbers there are what drove the CPU-side transform change.
 
 ## Vulkan backend
 

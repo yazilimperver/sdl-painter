@@ -2,10 +2,13 @@
 
 #include <SDL3/SDL.h>
 
+#include <array>
+#include <cstdio>
 #include <spdlog/sinks/ansicolor_sink.h>
 #include <spdlog/spdlog.h>
 
 #include "app/event_translator.h"
+#include "app/stats_overlay.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -44,10 +47,37 @@ constexpr uint64_t kNsPerSecond = 1'000'000'000ULL;
 
 }  // namespace
 
-Application::Application(AppConfig config) : mConfig(std::move(config)) {}
+namespace {
+
+/// @brief Gosterge modunu dongusel olarak ilerlet.
+StatsOverlayMode NextOverlayMode(StatsOverlayMode mode) noexcept {
+  switch (mode) {
+    case StatsOverlayMode::kNone:
+      return StatsOverlayMode::kFps;
+    case StatsOverlayMode::kFps:
+      return StatsOverlayMode::kDetailed;
+    case StatsOverlayMode::kDetailed:
+    default:
+      return StatsOverlayMode::kNone;
+  }
+}
+
+}  // namespace
+
+Application::Application(AppConfig config)
+    : mConfig(std::move(config)), mStatsMode(mConfig.stats_overlay) {}
 
 Application::~Application() {
   Teardown();
+}
+
+double Application::Fps() const noexcept {
+  return mStatsOverlay ? mStatsOverlay->Fps() : 0.0;
+}
+
+const FrameStats& Application::GetFrameStats() const noexcept {
+  static const FrameStats kEmpty{};
+  return mPainter ? mPainter->GetFrameStats() : kEmpty;
 }
 
 bool Application::Initialize() {
@@ -113,6 +143,11 @@ bool Application::Initialize() {
   // Boyut yonetimini olay tabanli yola devret; Painter artik her karede
   // pencereyi yoklamaz.
   mPainter->SetDrawableSize(mWidth, mHeight);
+
+  // Gosterge her zaman olusturulur: FPS hesabi ve baslik gostergesi mod
+  // kapaliyken de calisir, kullanici F1 ile aciyor olabilir.
+  mStatsOverlay = std::make_unique<app_detail::StatsOverlay>(
+      mConfig.stats_overlay_font, mConfig.stats_overlay_font_size);
   return true;
 }
 
@@ -128,6 +163,9 @@ void Application::UpdateDrawableSize() {
 }
 
 void Application::Teardown() noexcept {
+  // Yasam dongusu sozlesmesi: gosterge bir Font tutuyor, Font ise Painter'in
+  // IRenderer'ina bagli texture'lara. Once gosterge, sonra Painter.
+  mStatsOverlay.reset();
   mPainter.reset();
   if (mWindow != nullptr) {
     SDL_DestroyWindow(mWindow);
@@ -151,11 +189,18 @@ void Application::ProcessEvents() {
         Quit();
         break;
 
-      case SDL_EVENT_KEY_DOWN:
-        OnKeyDown(KeyEvent{internal::TranslateKey(event.key.key),
-                           internal::TranslateModifiers(event.key.mod),
+      case SDL_EVENT_KEY_DOWN: {
+        const Key key = internal::TranslateKey(event.key.key);
+        // Cati tusu olayi TUKETMEZ: uygulama ayni tusu kendi amaciyla da
+        // kullaniyor olabilir, ikisi birlikte calisir.
+        if (!event.key.repeat && key != Key::kUnknown &&
+            key == mConfig.stats_overlay_key) {
+          mStatsMode = NextOverlayMode(mStatsMode);
+        }
+        OnKeyDown(KeyEvent{key, internal::TranslateModifiers(event.key.mod),
                            event.key.repeat});
         break;
+      }
 
       case SDL_EVENT_KEY_UP:
         OnKeyUp(KeyEvent{internal::TranslateKey(event.key.key),
@@ -274,6 +319,12 @@ int Application::Run() {
 
     mPainter->Begin();
     OnRender(*mPainter, alpha);
+    // Gosterge uygulamanin cizimi UZERINE gelir ve Painter durumunu bozmaz.
+    // Kendi maliyeti de o karenin istatistiklerine dahildir; gosterdigi
+    // sayilar bir onceki kareye ait oldugu icin bu bir dongu yaratmaz.
+    if (mStatsOverlay && mStatsMode != StatsOverlayMode::kNone) {
+      mStatsOverlay->Draw(*mPainter, mStatsMode, mPainter->GetFrameStats());
+    }
     mPainter->End();
 
     // Hedef FPS freni (vsync yoksa/kapalıysa etkin).
@@ -283,6 +334,14 @@ int Application::Run() {
         SDL_DelayNS(frame_min_ns - frame_ns);
       }
     }
+
+    // FPS orneklemesi fren SONRASI yapilir: olculen sey gercek kare hizidir,
+    // frenin kirptigi teorik hiz degil.
+    const uint64_t total_frame_ns = SDL_GetTicksNS() - frame_start_ns;
+    if (mStatsOverlay) {
+      mStatsOverlay->Sample(total_frame_ns);
+    }
+    UpdateTitleFps(total_frame_ns);
   }
 
   OnShutdown();
@@ -292,6 +351,26 @@ int Application::Run() {
 
 void Application::Quit() noexcept {
   mRunning = false;
+}
+
+void Application::UpdateTitleFps(uint64_t frame_ns) {
+  if (!mConfig.show_fps_in_title || mWindow == nullptr ||
+      mStatsOverlay == nullptr) {
+    return;
+  }
+  // Basligi her karede yazmak pahali bir pencere yoneticisi cagrisi; saniyede
+  // ~4 kez yeterli.
+  constexpr uint64_t kTitleIntervalNs = 250'000'000ULL;
+  mTitleUpdateNs += frame_ns;
+  if (mTitleUpdateNs < kTitleIntervalNs) {
+    return;
+  }
+  mTitleUpdateNs = 0;
+
+  std::array<char, 32> fps_text{};
+  std::snprintf(fps_text.data(), fps_text.size(), "%.0f", mStatsOverlay->Fps());
+  SDL_SetWindowTitle(
+      mWindow, (mConfig.title + " — " + fps_text.data() + " FPS").c_str());
 }
 
 void Application::SetTitle(const std::string& title) {

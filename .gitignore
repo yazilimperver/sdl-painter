@@ -56,3 +56,10 @@ lcov.info
 # Test raporları
 TestResult.xml
 LastTest.log
+packaging/conan-center/config.yml
+packaging/conan-center/README.md
+packaging/conan-center/all/conandata.yml
+packaging/conan-center/all/conanfile.py
+packaging/conan-center/all/test_package/CMakeLists.txt
+packaging/conan-center/all/test_package/conanfile.py
+packaging/conan-center/all/test_package/test_package.cpp

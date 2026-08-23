@@ -38,6 +38,8 @@ static void ReleaseTTF() {
   }
 }
 
+Font::Font() = default;
+
 Font::Font(const std::string& file_path, int32_t point_size)
     : mPointSize(point_size) {
   if (!EnsureTTFInit()) {

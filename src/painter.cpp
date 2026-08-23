@@ -24,6 +24,25 @@
 
 namespace sdl_painter {
 
+namespace {
+
+/// @brief Iki durumun kirpma (clip) ayari ayni mi?
+///
+/// Scissor box, batcher'in tasiyamadigi tek GPU durumu; Restore yalnizca
+/// gercekten degistiginde flush etsin diye karsilastirilir.
+bool ClipEquals(const RenderState& a, const RenderState& b) noexcept {
+  if (a.has_clip != b.has_clip) {
+    return false;
+  }
+  if (!a.has_clip) {
+    return true;
+  }
+  return a.clip_rect.x == b.clip_rect.x && a.clip_rect.y == b.clip_rect.y &&
+         a.clip_rect.w == b.clip_rect.w && a.clip_rect.h == b.clip_rect.h;
+}
+
+}  // namespace
+
 Painter::Painter(SDL_Window* window, RendererBackend backend)
     : mWindow(window), mRenderer(CreateRenderer(backend)) {
   if (window == nullptr) {
@@ -111,8 +130,20 @@ void Painter::Begin() {
     QueryDrawableSize(w, h);
     ApplyDrawableSize(w, h);
   }
+  mStats = FrameStats{};
+  if (mBatcher != nullptr) {
+    mBatcher->ResetCounters();
+  }
+  mFrameStartNs = SDL_GetTicksNS();
+
   mRenderer->BeginFrame();
-  FlushTransform();
+
+  // Model matrisi artik CPU'da vertex'lere gomuluyor (bkz. RenderBatcher);
+  // uniform daima birim kalir. Kare basina bir kez yazmak, ozel bir IRenderer
+  // implementasyonunun eski bir matrisle kalmamasini garanti eder.
+  static constexpr glm::mat3 kIdentity(1.0F);
+  mRenderer->SetModelMatrix(glm::value_ptr(kIdentity));
+  ++mStats.state_changes;
 }
 
 void Painter::End() {
@@ -121,8 +152,21 @@ void Painter::End() {
   }
   if (mBatcher != nullptr) {
     mBatcher->Flush();
+    mStats.draw_calls = mBatcher->DrawCallCount();
+    mStats.batches = mBatcher->DrawCallCount();
+    mStats.vertices = mBatcher->VertexCount();
   }
+
+  // CPU suresi sunumdan ONCE olculur: SDL_GL_SwapWindow vsync'te bloklar ve
+  // o bekleme cizim maliyeti degildir.
+  mStats.cpu_frame_ms =
+      static_cast<double>(SDL_GetTicksNS() - mFrameStartNs) / 1.0e6;
+
   mRenderer->EndFrame();
+
+  // Timer query sonucu bir kare gecikmeli gelir (bkz. IRenderer).
+  mStats.gpu_frame_ms = mRenderer->GetLastGpuFrameMs();
+  mLastStats = mStats;
 }
 
 void Painter::Clear(const Color& color) {
@@ -145,51 +189,51 @@ void Painter::SetFont(std::shared_ptr<Font> font) {
   mCurrentFont = std::move(font);
 }
 void Painter::SetOpacity(float alpha) {
+  // Opaklik uniform'unun tek sahibi RenderBatcher'dir: her Flush oncesi
+  // o batch'in opakligini yazar. Burada ayrica yazmak, degeri bir sonraki
+  // flush'ta nasil olsa ezilecek gereksiz bir GPU cagrisi olurdu.
   mCurrentState.opacity = alpha;
-  if (mRenderer != nullptr) {
-    mRenderer->SetOpacity(alpha);
-  }
 }
 
 void Painter::DrawLine(float x1, float y1, float x2, float y2) {
   if (!CanDrawPen()) {
     return;
   }
-  FlushTransform();
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
     auto outline_verts = Tessellator::TessellateThickLine(
         x1, y1, x2, y2, pen.GetWidth() + 2.0F * pen.GetOutlineWidth());
-    mBatcher->PushTriangles(outline_verts, pen.GetOutlineColor(),
-                            mCurrentState.opacity);
+    mBatcher->PushTriangles(outline_verts, mCurrentState.transform,
+                            pen.GetOutlineColor(), mCurrentState.opacity);
   }
   auto verts = Tessellator::TessellateThickLine(x1, y1, x2, y2, pen.GetWidth());
-  mBatcher->PushTriangles(verts, pen.GetColor(), mCurrentState.opacity);
+  mBatcher->PushTriangles(verts, mCurrentState.transform, pen.GetColor(),
+                          mCurrentState.opacity);
 }
 
 void Painter::DrawRect(float x, float y, float w, float h) {
   if (!CanDrawPen()) {
     return;
   }
-  FlushTransform();
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
     auto outline_verts = Tessellator::TessellateStrokedRect(
         x, y, w, h, pen.GetWidth() + 2.0F * pen.GetOutlineWidth());
-    mBatcher->PushTriangles(outline_verts, pen.GetOutlineColor(),
-                            mCurrentState.opacity);
+    mBatcher->PushTriangles(outline_verts, mCurrentState.transform,
+                            pen.GetOutlineColor(), mCurrentState.opacity);
   }
   auto verts = Tessellator::TessellateStrokedRect(x, y, w, h, pen.GetWidth());
-  mBatcher->PushTriangles(verts, pen.GetColor(), mCurrentState.opacity);
+  mBatcher->PushTriangles(verts, mCurrentState.transform, pen.GetColor(),
+                          mCurrentState.opacity);
 }
 
 void Painter::FillRect(float x, float y, float w, float h) {
   if (!CanDrawBrush()) {
     return;
   }
-  FlushTransform();
   auto verts = Tessellator::TessellateFilledRect(x, y, w, h);
-  mBatcher->PushTriangles(verts, mCurrentState.brush.GetColor(),
+  mBatcher->PushTriangles(verts, mCurrentState.transform,
+                          mCurrentState.brush.GetColor(),
                           mCurrentState.opacity);
 }
 
@@ -197,26 +241,26 @@ void Painter::DrawCircle(float cx, float cy, float radius) {
   if (!CanDrawPen()) {
     return;
   }
-  FlushTransform();
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
     auto outline_verts = Tessellator::TessellateStrokedCircle(
         cx, cy, radius, pen.GetWidth() + 2.0F * pen.GetOutlineWidth());
-    mBatcher->PushTriangles(outline_verts, pen.GetOutlineColor(),
-                            mCurrentState.opacity);
+    mBatcher->PushTriangles(outline_verts, mCurrentState.transform,
+                            pen.GetOutlineColor(), mCurrentState.opacity);
   }
   auto verts =
       Tessellator::TessellateStrokedCircle(cx, cy, radius, pen.GetWidth());
-  mBatcher->PushTriangles(verts, pen.GetColor(), mCurrentState.opacity);
+  mBatcher->PushTriangles(verts, mCurrentState.transform, pen.GetColor(),
+                          mCurrentState.opacity);
 }
 
 void Painter::FillCircle(float cx, float cy, float radius) {
   if (!CanDrawBrush()) {
     return;
   }
-  FlushTransform();
   auto verts = Tessellator::TessellateFilledCircle(cx, cy, radius);
-  mBatcher->PushTriangles(verts, mCurrentState.brush.GetColor(),
+  mBatcher->PushTriangles(verts, mCurrentState.transform,
+                          mCurrentState.brush.GetColor(),
                           mCurrentState.opacity);
 }
 
@@ -224,26 +268,26 @@ void Painter::DrawEllipse(float cx, float cy, float rx, float ry) {
   if (!CanDrawPen()) {
     return;
   }
-  FlushTransform();
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
     auto outline_verts = Tessellator::TessellateStrokedEllipse(
         cx, cy, rx, ry, pen.GetWidth() + 2.0F * pen.GetOutlineWidth());
-    mBatcher->PushTriangles(outline_verts, pen.GetOutlineColor(),
-                            mCurrentState.opacity);
+    mBatcher->PushTriangles(outline_verts, mCurrentState.transform,
+                            pen.GetOutlineColor(), mCurrentState.opacity);
   }
   auto verts =
       Tessellator::TessellateStrokedEllipse(cx, cy, rx, ry, pen.GetWidth());
-  mBatcher->PushTriangles(verts, pen.GetColor(), mCurrentState.opacity);
+  mBatcher->PushTriangles(verts, mCurrentState.transform, pen.GetColor(),
+                          mCurrentState.opacity);
 }
 
 void Painter::FillEllipse(float cx, float cy, float rx, float ry) {
   if (!CanDrawBrush()) {
     return;
   }
-  FlushTransform();
   auto verts = Tessellator::TessellateFilledEllipse(cx, cy, rx, ry);
-  mBatcher->PushTriangles(verts, mCurrentState.brush.GetColor(),
+  mBatcher->PushTriangles(verts, mCurrentState.transform,
+                          mCurrentState.brush.GetColor(),
                           mCurrentState.opacity);
 }
 
@@ -251,25 +295,25 @@ void Painter::DrawPolygon(const std::vector<Point>& points) {
   if (!CanDrawPen()) {
     return;
   }
-  FlushTransform();
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
     auto outline_verts = Tessellator::TessellateStrokedPolygon(
         points, pen.GetWidth() + 2.0F * pen.GetOutlineWidth());
-    mBatcher->PushTriangles(outline_verts, pen.GetOutlineColor(),
-                            mCurrentState.opacity);
+    mBatcher->PushTriangles(outline_verts, mCurrentState.transform,
+                            pen.GetOutlineColor(), mCurrentState.opacity);
   }
   auto verts = Tessellator::TessellateStrokedPolygon(points, pen.GetWidth());
-  mBatcher->PushTriangles(verts, pen.GetColor(), mCurrentState.opacity);
+  mBatcher->PushTriangles(verts, mCurrentState.transform, pen.GetColor(),
+                          mCurrentState.opacity);
 }
 
 void Painter::FillPolygon(const std::vector<Point>& points) {
   if (!CanDrawBrush()) {
     return;
   }
-  FlushTransform();
   auto verts = Tessellator::TessellateFilledPolygon(points);
-  mBatcher->PushTriangles(verts, mCurrentState.brush.GetColor(),
+  mBatcher->PushTriangles(verts, mCurrentState.transform,
+                          mCurrentState.brush.GetColor(),
                           mCurrentState.opacity);
 }
 
@@ -277,16 +321,16 @@ void Painter::DrawPolyline(const std::vector<Point>& points) {
   if (!CanDrawPen()) {
     return;
   }
-  FlushTransform();
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
     auto outline_verts = Tessellator::TessellateThickPolyline(
         points, pen.GetWidth() + 2.0F * pen.GetOutlineWidth());
-    mBatcher->PushTriangles(outline_verts, pen.GetOutlineColor(),
-                            mCurrentState.opacity);
+    mBatcher->PushTriangles(outline_verts, mCurrentState.transform,
+                            pen.GetOutlineColor(), mCurrentState.opacity);
   }
   auto verts = Tessellator::TessellateThickPolyline(points, pen.GetWidth());
-  mBatcher->PushTriangles(verts, pen.GetColor(), mCurrentState.opacity);
+  mBatcher->PushTriangles(verts, mCurrentState.transform, pen.GetColor(),
+                          mCurrentState.opacity);
 }
 
 void Painter::DrawImage(const Image& image, float x, float y) {
@@ -335,8 +379,8 @@ void Painter::DrawImage(const Image& image, const Rect& src_rect,
       {kX0, kY0, kU0, kV0}, {kX1, kY1, kU1, kV1}, {kX0, kY1, kU0, kV1},
   };
 
-  FlushTransform();
-  mBatcher->PushTexturedTriangles(kVerts, handle, Color{255, 255, 255, 255},
+  mBatcher->PushTexturedTriangles(kVerts, mCurrentState.transform, handle,
+                                  Color{255, 255, 255, 255},
                                   mCurrentState.opacity);
 }
 
@@ -351,7 +395,6 @@ void Painter::DrawText(float x, float y, const std::string& text) {
 
   // Metin de diğer primitifler gibi güncel transform ile çizilir; aksi halde
   // Translate/Rotate/Scale sonrası glyph'ler eski matrisle gönderilir.
-  FlushTransform();
 
   const Color& tint = mCurrentState.pen.GetColor();
   float current_x = x;
@@ -395,7 +438,8 @@ void Painter::DrawText(float x, float y, const std::string& text) {
         {kGx0, kGy0, kU0, kV0}, {kGx1, kGy1, kU1, kV1}, {kGx0, kGy1, kU0, kV1},
     };
 
-    mBatcher->PushTexturedTriangles(kVerts, glyph->texture, tint,
+    mBatcher->PushTexturedTriangles(kVerts, mCurrentState.transform,
+                                    glyph->texture, tint,
                                     mCurrentState.opacity);
 
     current_x += static_cast<float>(glyph->advance);
@@ -439,9 +483,8 @@ void Painter::DrawText(const Rect& rect, const std::string& text,
 }
 
 void Painter::Save() {
-  if (mBatcher != nullptr) {
-    mBatcher->Flush();
-  }
+  // Flush yok: kaydedilen hicbir sey GPU durumu degil. Transform vertex'e
+  // gomuluyor, opaklik ve renk batcher'da tasiniyor; clip zaten degismiyor.
   mStateStack.push_back(mCurrentState);
 }
 
@@ -453,32 +496,26 @@ void Painter::Restore() {
         "(unbalanced Save/Restore).");
     return;
   }
-  if (mBatcher != nullptr) {
-    mBatcher->Flush();
-  }
+  const RenderState previous = mCurrentState;
   mCurrentState = mStateStack.back();
   mStateStack.pop_back();
-  FlushTransform();
 
-  // Opaklik durumunu renderer'a yeniden uygula.
-  if (mRenderer != nullptr) {
-    mRenderer->SetOpacity(mCurrentState.opacity);
-  }
-
-  // Kaydedilen clip durumunu renderer'a yeniden uygula.
-  if (mCurrentState.has_clip) {
-    ApplyScissor(mCurrentState.clip_rect);
-  } else {
-    if (mRenderer != nullptr) {
-      mRenderer->ClearScissor();
+  // Yalnizca clip GPU durumudur (scissor box) ve yalnizca gercekten
+  // degistiyse flush + yeniden uygulama gerektirir. Opaklik ve transform
+  // batcher tarafindan tasiniyor, burada bir sey yapmaya gerek yok.
+  if (!ClipEquals(previous, mCurrentState)) {
+    if (mBatcher != nullptr) {
+      mBatcher->Flush();
+    }
+    if (mCurrentState.has_clip) {
+      ApplyScissor(mCurrentState.clip_rect);
+    } else {
+      ClearScissorCounted();
     }
   }
 }
 
 void Painter::Translate(float dx, float dy) {
-  if (mBatcher != nullptr) {
-    mBatcher->Flush();
-  }
   // Sağdan çarp (post-multiply)
   // glm::mat3 column-major → çeviri sütun 2'de: t[2][0]=dx, t[2][1]=dy.
   glm::mat3 t(1.0F);
@@ -488,9 +525,6 @@ void Painter::Translate(float dx, float dy) {
 }
 
 void Painter::Rotate(float angle_degrees) {
-  if (mBatcher != nullptr) {
-    mBatcher->Flush();
-  }
   const float r = glm::radians(angle_degrees);
   const float c = std::cos(r);
   const float s = std::sin(r);
@@ -504,9 +538,6 @@ void Painter::Rotate(float angle_degrees) {
 }
 
 void Painter::Scale(float sx, float sy) {
-  if (mBatcher != nullptr) {
-    mBatcher->Flush();
-  }
   glm::mat3 sc(1.0F);
   sc[0][0] = sx;
   sc[1][1] = sy;
@@ -514,9 +545,6 @@ void Painter::Scale(float sx, float sy) {
 }
 
 void Painter::ResetTransform() {
-  if (mBatcher != nullptr) {
-    mBatcher->Flush();
-  }
   mCurrentState.transform = glm::mat3(1.0F);
 }
 
@@ -540,7 +568,7 @@ void Painter::ClearClip() {
     mBatcher->Flush();
   }
   mCurrentState.has_clip = false;
-  mRenderer->ClearScissor();
+  ClearScissorCounted();
 }
 
 void Painter::SetDrawableSize(int32_t width, int32_t height) {
@@ -610,13 +638,15 @@ void Painter::UpdateProjection() {
   };
   // clang-format on
   mRenderer->SetProjectionMatrix(mat.data());
+  ++mStats.state_changes;
 }
 
-void Painter::FlushTransform() {
+void Painter::ClearScissorCounted() {
   if (mRenderer == nullptr) {
     return;
   }
-  mRenderer->SetModelMatrix(glm::value_ptr(mCurrentState.transform));
+  mRenderer->ClearScissor();
+  ++mStats.state_changes;
 }
 
 void Painter::ApplyScissor(const Rect& rect) {
@@ -626,6 +656,7 @@ void Painter::ApplyScissor(const Rect& rect) {
       kIsVulkan ? static_cast<int32_t>(rect.y)
                 : (mViewportHeight - static_cast<int32_t>(rect.y) -
                    static_cast<int32_t>(rect.h));
+  ++mStats.state_changes;
   mRenderer->SetScissor(static_cast<int32_t>(rect.x), kScissorY,
                         static_cast<int32_t>(rect.w),
                         static_cast<int32_t>(rect.h));

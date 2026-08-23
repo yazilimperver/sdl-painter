@@ -419,6 +419,61 @@ jobs:
           cmake --build build/standalone/consumer
           ./build/standalone/consumer/consumer
 
+  # Paylasimli (shared) kutuphane yolu. Bu job olmadan sessizce bozuluyordu:
+  # Windows/MSVC export isaretlemesi olmadan .dll uretip .lib URETMIYOR, yani
+  # hicbir tuketici link edemiyor. Linux'ta varsayilan sembol gorunurlugu bunu
+  # gizledigi icin fark edilmemisti. Conan Center shared derlemeyi zorunlu
+  # olarak test ediyor.
+  #
+  # sdl_painter_tests bu modda bilincli olarak ATLANIR (dahili sembollere
+  # eriser); public yuzeyi sdl_painter_abi_tests dogrular.
+  build-shared:
+    name: build:shared
+    runs-on: ubuntu-latest
+    needs: [build-linux-debug]
+    container:
+      image: yazilimperver/sdl-painter:ci-v1.0
+    env:
+      CONAN_HOME: /root/.conan2
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: recursive
+      - name: conan install
+        run: |
+          conan install . --output-folder=build/shared/generators --build=missing \
+            -s build_type=Release \
+            -o "&:with_vulkan=True" \
+            -c tools.system.package_manager:mode=install \
+            -c tools.system.package_manager:sudo=False
+      - name: configure & build (BUILD_SHARED_LIBS=ON)
+        run: |
+          TC=$(find build/shared/generators -name conan_toolchain.cmake | head -1)
+          cmake -S . -B build/shared/out \
+            -DCMAKE_TOOLCHAIN_FILE="$PWD/$TC" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DBUILD_SHARED_LIBS=ON \
+            -DSDLPAINTER_WITH_VULKAN=ON \
+            -DSDLPAINTER_BUILD_EXAMPLES=OFF \
+            -DSDLPAINTER_BUILD_TESTS=ON
+          cmake --build build/shared/out
+      - name: ABI testleri (public yuzey, DLL/so uzerinden)
+        env:
+          SDL_VIDEODRIVER: offscreen
+        run: ctest --test-dir build/shared/out --output-on-failure
+      - name: install + tuketici dogrulamasi (shared)
+        run: |
+          cmake --install build/shared/out --prefix "$PWD/build/shared/prefix"
+          TC=$(find build/shared/generators -name conan_toolchain.cmake | head -1)
+          cmake -S packaging/consumer -B build/shared/consumer \
+            -DCMAKE_TOOLCHAIN_FILE="$PWD/$TC" \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="$PWD/build/shared/prefix" \
+            -DCONSUMER_MODE=find_package
+          cmake --build build/shared/consumer
+          LD_LIBRARY_PATH="$PWD/build/shared/prefix/lib:$LD_LIBRARY_PATH" \
+            ./build/shared/consumer/consumer
+
   # Faz 1.5 — SPIR-V ciktilarinin GLSL kaynagiyla senkron oldugunu dogrular.
   # glslc GEREKTIRMEZ: karsilastirma sources.sha256 manifesti uzerinden yapilir.
   quality-shader-freshness:

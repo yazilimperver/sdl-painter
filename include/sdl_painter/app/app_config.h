@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sdl_painter/app/events.h"
 #include "sdl_painter/renderer.h"
 
 #include <cstdint>
@@ -18,6 +19,16 @@ enum class TimingMode : uint8_t {
   /// biriken artık zamanı [0,1] interpolasyon faktörü olarak alır. Fizik/oyun
   /// mantığı için deterministik.
   kFixed,
+};
+
+/// @brief Ekran üstü istatistik göstergesinin modu.
+enum class StatsOverlayMode : uint8_t {
+  /// @brief Kapalı (varsayılan).
+  kNone,
+  /// @brief Yalnızca FPS.
+  kFps,
+  /// @brief FPS + CPU/GPU süresi + draw call / batch / vertex / durum sayacı.
+  kDetailed,
 };
 
 /// @brief Application penceresi ve backend yapılandırması.
@@ -83,6 +94,37 @@ struct AppConfig {
   /// @brief spdlog varsayılan logger'ını kur (renkli konsol + Win32 VT).
   /// @note Host uygulama kendi logger'ını kullanacaksa `false` yapın.
   bool init_logger{true};
+
+  // --- Ekran üstü istatistik göstergesi ---
+
+  /// @brief Başlangıçtaki gösterge modu.
+  ///
+  /// Çalışma zamanında @ref AppConfig::stats_overlay_key ile döngüsel olarak
+  /// değiştirilebilir (varsayılan: F1). Sahnenin sol üstüne çizilir ve
+  /// uygulamanın kendi çizim durumunu (transform, clip, opaklık) bozmaz.
+  StatsOverlayMode stats_overlay{StatsOverlayMode::kNone};
+
+  /// @brief Gösterge modunu döngüleyen tuş; @ref Key::kUnknown = devre dışı.
+  ///
+  /// Sıralama: kapalı → FPS → detaylı → kapalı. Tuş, uygulamanın
+  /// `OnKeyDown` metoduna da iletilir (çatı olayı tüketmez).
+  Key stats_overlay_key{Key::kF1};
+
+  /// @brief FPS'i pencere başlığında da göster (`"<başlık> — 142 FPS"`).
+  ///
+  /// Font gerektirmez; sistemde TTF bulunamasa bile çalışır. Başlık saniyede
+  /// birkaç kez güncellenir.
+  bool show_fps_in_title{false};
+
+  /// @brief Gösterge yazı tipi; boşsa sistem fontları aranır.
+  ///
+  /// Kütüphane font gömmez. Boş bırakıldığında yaygın Windows/Linux/macOS
+  /// yolları denenir; hiçbiri bulunamazsa ekran üstü gösterge sessizce
+  /// devre dışı kalır (başlık göstergesi çalışmaya devam eder).
+  std::string stats_overlay_font;
+
+  /// @brief Gösterge yazı boyutu (punto).
+  int32_t stats_overlay_font_size{14};
 };
 
 }  // namespace sdl_painter

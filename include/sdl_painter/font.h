@@ -1,5 +1,6 @@
 #pragma once
 
+#include "sdl_painter/export.h"
 #include "sdl_painter/texture.h"
 
 #include <cstdint>
@@ -57,9 +58,12 @@ enum class Alignment : uint8_t {
 /// genelde sözleşme kendiliğinden sağlanır; ancak kullanıcı font'u
 /// Painter'dan bağımsız olarak `static` veya global tutarsa bu garanti
 /// kaybolur.
-class Font {
+class SDLPAINTER_API Font {
  public:
-  Font() = default;
+  // Govde .cpp'de: sinif dllexport edildiginde derleyici bu ctor'u her
+  // TU'da emit eder ve temizlik yolu icin unique_ptr<GlyphAtlas>'in
+  // yikicisini ornekler — GlyphAtlas burada eksik tip.
+  Font();
 
   /// @brief TTF dosyasından font yükle.
   /// @param file_path Font dosyasının yolu.

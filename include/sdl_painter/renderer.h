@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sdl_painter/export.h"
+
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -124,10 +126,30 @@ class IRenderer {
 
   /// @brief Model dönüşüm matrisini ayarla
   /// (3x3, sütun-major — glm::mat3 / glm::value_ptr düzeni).
+  ///
+  /// @note @ref Painter bu matrisi kare başına bir kez ve daima **birim**
+  ///       olarak yazar: transform CPU'da vertex'lere gömülüyor
+  ///       (bkz. `examples/benchmarks/README.md`). Arayüzde
+  ///       kalmasının sebebi, kendi backend'ini yazanların matris yolunu
+  ///       hâlâ kullanabilmesi ve mevcut shader'ların değişmemesidir.
   virtual void SetModelMatrix(const float* mat3) = 0;
+
+  // --- Profilleme (isteğe bağlı) ---
+
+  /// @brief Son tamamlanan karenin GPU süresi (milisaniye).
+  ///
+  /// Saf sanal **değildir**: ölçüm desteklemeyen backend'ler ve tüketici
+  /// tarafındaki basit implementasyonlar bunu görmezden gelebilir.
+  /// Varsayılan 0.0 = "ölçülmüyor".
+  ///
+  /// Sonuç bir kare gecikmeli olabilir; implementasyon, sorgu sonucunu
+  /// beklemek yerine hazır olan en son değeri döndürmelidir (bekleme,
+  /// ölçtüğü şeyi bozan bir CPU–GPU senkronizasyonu yaratır).
+  [[nodiscard]] virtual double GetLastGpuFrameMs() const { return 0.0; }
 };
 
 /// @brief Seçilen backend için IRenderer örneği oluştur.
-std::unique_ptr<IRenderer> CreateRenderer(RendererBackend backend);
+SDLPAINTER_API std::unique_ptr<IRenderer> CreateRenderer(
+    RendererBackend backend);
 
 }  // namespace sdl_painter

@@ -1,5 +1,110 @@
 # Changelog
 
+## [Yayınlanmadı]
+
+### Performans
+- **Transform artık batch'i kırmıyor (2000 → 2 draw call).** Model matrisi bir
+  shader uniform'u olduğu için her `Translate`/`Rotate`/`Scale` çağrısı
+  `RenderBatcher::Flush()` tetikliyordu; şekil başına transform kullanan tipik
+  kod batch'lemeden hiç fayda görmüyordu. Dönüşüm artık `RenderBatcher` içinde,
+  rengin yazıldığı **aynı kopyalama döngüsünde** CPU'da uygulanıyor (ek geçiş
+  veya tahsis yok) ve `u_model` daima birim gönderiliyor. Ölçüm (Windows,
+  MSVC Release, 2000 şekil): şekil başına `Save`+`Translate`+`Restore` ile
+  **9.44 ms → 0.30 ms (31×)**; `Rotate` ekli hâlinde **9.37 ms → 0.37 ms**.
+  Kare başına `SetModelMatrix` yüklemesi 2001 → 1.
+  Ölçüm düzeneği ve tüm senaryolar: `examples/benchmarks/`.
+- **`Save()` artık flush etmiyor**, `Restore()` ise yalnızca kırpma (clip)
+  durumu **gerçekten** değiştiyse flush ediyor. Önceden her `Restore` gereksiz
+  bir `ClearScissor` çağrısı da üretiyordu (2000 şekilde kare başına 2000 adet).
+- **`Painter::SetOpacity` artık renderer'a doğrudan yazmıyor.** Opaklık
+  uniform'unun tek sahibi `RenderBatcher`; her flush öncesi o batch'in değerini
+  yazıyor. Öncekiler bir sonraki flush'ta nasıl olsa eziliyordu.
+
+### Düzeltildi
+- **Windows'ta paylaşımlı (shared) kütüphane derlenemiyordu.** Projede hiçbir
+  sembol export mekanizması yoktu; `BUILD_SHARED_LIBS=ON` ile MSVC
+  `sdl_painter.dll` üretiyor ama **import library (`.lib`) üretmiyordu**, yani
+  hiçbir tüketici link edemiyordu. Linux/GCC'de varsayılan sembol görünürlüğü
+  bunu gizlediği için fark edilmemişti. Artık `generate_export_header` ile
+  `SDLPAINTER_API` / `SDLPAINTER_APP_API` makroları üretiliyor ve dışa açık
+  tipler (`Painter`, `Image`, `Font`, `CreateRenderer`, `Application`) bunlarla
+  işaretli. Doğrulandı: shared derleme → `cmake --install` → `find_package` →
+  tüketici derlenip **çalışıyor**.
+- **spdlog hedef adına sıkı bağımlılık.** `CMakeLists.txt` doğrudan
+  `spdlog::spdlog_header_only` hedefine link ediyordu; bu hedef yalnızca
+  `header_only=True` iken tanımlı. `header_only=False` (Conan varsayılanı) ile
+  configure aşaması `target was not found` ile düşüyordu. Artık hangi hedef
+  tanımlıysa o seçiliyor, ikisi de yoksa açık bir hata veriliyor. Bu, paket
+  yöneticisi tarafında bağımlılık seçeneği zorlama ihtiyacını ortadan kaldırıyor
+  (Conan Center bunu yasaklıyor).
+
+### Eklendi
+- **`sdl_painter/export.h` ve `sdl_painter/app/export.h`:** derleme sırasında
+  üretilen, kurulan public başlıklar. Static derlemede makrolar boş
+  (`SDLPAINTER_STATIC_DEFINE`).
+- **`packaging/conan-center/`:** Conan Center'a gönderilecek recipe'in repo
+  içindeki kopyası (`config.yml`, `conandata.yml`, `conanfile.py`,
+  `test_package/`) ve gönderim öncesi doğrulama adımları.
+- **Public ABI testleri (`sdl_painter_abi_tests`, 14 test).** Yalnızca public
+  başlıkları kullanan, `src/` include yoluna **sahip olmayan** ayrı bir hedef;
+  kütüphaneye tüketicinin gördüğü yüzeyden bağlanır. Bir public sembol
+  `SDLPAINTER_API` ile işaretlenmeyi unutulursa paylaşımlı derlemede link
+  hatasıyla düşer — doğrulandı: `Image`'ten makro kaldırıldığında `LNK2019`
+  veriyor. `IRenderer`'ın tüketici tarafında implemente edilip kütüphane
+  içinden çağrılabildiğini de sınar (README'nin "yeni backend = yalnızca
+  `IRenderer`" vaadi). Toplam test sayısı 286 → **300**.
+- **`FrameStats` ve `Painter::GetFrameStats()`** (`sdl_painter/frame_stats.h`).
+  Kare başına CPU/GPU süresi, draw call, batch, vertex ve GPU durum değişikliği
+  sayacı. GPU süresi OpenGL backend'de `GL_TIME_ELAPSED` timer query ile,
+  **çift tamponlu** olarak ölçülür (sonuç bir kare gecikmeli gelir; beklemek
+  ölçtüğü şeyi bozan bir CPU–GPU senkronizasyonu yaratırdı). Vulkan'da 0.
+- **Ekran üstü FPS / istatistik göstergesi (`Application`).**
+  `AppConfig::stats_overlay` ile açılır, çalışma zamanında **F1** ile
+  döngülenir (kapalı → FPS → detaylı). `AppConfig::show_fps_in_title` FPS'i
+  pencere başlığında gösterir ve font gerektirmez. Gösterge, uygulamanın çizim
+  durumunu (transform, clip, opaklık, font) bozmaz. Yazı tipi
+  `AppConfig::stats_overlay_font` ile verilebilir; boşsa sistem fontları
+  aranır, hiçbiri yoksa yalnızca ekran üstü kısım sessizce devre dışı kalır.
+  `Application::Fps()` ve `Application::GetFrameStats()` değerleri programatik
+  olarak da sunar. Demo: `examples/stats_overlay.cpp`.
+- **`Painter::GetFont()`** — `Save`/`Restore` font'u kapsamaz (font bir çizim
+  durumu değil, paylaşılan kaynaktır); geçici olarak başka fontla çizen kodun
+  öncekini geri koyabilmesi için gerekli.
+- **`examples/benchmarks/` — batch verimliliği ölçüm düzeneği.** 10 senaryo,
+  CSV çıktısı, senaryo başına PNG ekran görüntüsü ve `--null` (GPU'suz) modu.
+  Kütüphaneye sayaç eklenmeden, `Painter`'ın renderer enjekte eden ctor'u ve
+  bir `CountingRenderer` sarmalayıcısıyla ölçer. Yukarıdaki transform
+  değişikliği bu ölçümün sonucudur.
+- **`build:shared` CI job'ı:** `BUILD_SHARED_LIBS=ON` ile derleme, ABI
+  testlerinin koşturulması, kurulum ve `find_package` ile tüketici doğrulaması.
+  Paylaşımlı yol daha önce hiç CI'da derlenmiyordu; kırık olduğu bu yüzden
+  fark edilmemişti.
+
+### Değişti
+- **`IRenderer`'a `GetLastGpuFrameMs()` eklendi** (saf sanal değil, varsayılan
+  `0.0` döner). Kaynak düzeyinde geriye dönük uyumludur — mevcut
+  implementasyonlar değişmeden derlenir — ancak **vtable büyüdüğü için ABI
+  kırıcıdır**: kendi `IRenderer` implementasyonunu ayrı derlenmiş bir ikilikte
+  taşıyan tüketicilerin yeniden derlemesi gerekir.
+- **`RenderBatcher::PushTriangles` / `PushTexturedTriangles` artık bir
+  `glm::mat3` transform parametresi alıyor.** Dahili başlık; public ABI'ye
+  dokunmaz.
+- `Font`'un varsayılan kurucusu satır içinden `.cpp`'ye taşındı. Sınıf dışa
+  açık işaretlendiğinde derleyici bu kurucuyu her çeviri biriminde üretiyor ve
+  temizlik yolu için `unique_ptr<GlyphAtlas>` yıkıcısını örneklemeye
+  çalışıyordu — `GlyphAtlas` başlıkta eksik tip.
+- **`sdl_painter_tests` paylaşımlı derlemede atlanıyor.** Bu takım beyaz kutu:
+  `src/` altındaki dahili başlıkları include edip export edilmeyen sembolleri
+  (`Tessellator`, `RenderBatcher`, `vk_detail::VkResultToString` …) doğrudan
+  çağırıyor, dolayısıyla DLL üzerinden link edilemez — ve edilmemeli, dahili
+  detaylar ABI yüzeyine çıkmamalı. CMake artık bunu bir link hatası duvarı
+  yerine açık bir mesajla bildiriyor; public yüzeyi `sdl_painter_abi_tests`
+  doğruluyor.
+- MSVC uyarısı **C4251** susturuldu (`/wd4251`). Standart kütüphane üyesi taşıyan
+  bir sınıfı dışa açarken kaçınılmaz; DLL ile tüketici aynı derleyici ve runtime
+  ile derlendiğinde (paket yöneticisi bunu garanti eder) zararsız. Gerekçe
+  `cmake/CompilerWarnings.cmake` içinde yazılı.
+
 ## [1.2.0] - 2026-08-20
 
 ### ⚠️ Kırıcı değişiklikler

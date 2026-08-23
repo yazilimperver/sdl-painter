@@ -11,6 +11,7 @@
 #include "sdl_painter/painter.h"
 #include "sdl_painter/pen.h"
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdint>
@@ -49,12 +50,33 @@ struct Harness {
       : mock(m.get()), painter(std::move(m), kViewportW, kViewportH) {}
 };
 
-/// @brief 3x3 sütun-major matrisin öteleme bileşenleri (tx, ty).
-float Tx(const std::array<float, 9>& m) {
-  return m[6];
-}
-float Ty(const std::array<float, 9>& m) {
-  return m[7];
+/// @brief Bir vertex aralığının eksen hizalı sınır kutusu.
+///
+/// v1.3.0'dan itibaren transform CPU'da vertex'lere gömülüyor (model matrisi
+/// daima birim). Dolayısıyla "transform uygulandı mı?" sorusu artık matrise
+/// değil, renderer'a giden **gerçek koordinatlara** bakılarak sınanır.
+struct Bounds {
+  float min_x{0.0F};
+  float min_y{0.0F};
+  float max_x{0.0F};
+  float max_y{0.0F};
+};
+
+/// @param first Aralığın ilk vertex indeksi.
+/// @param count Vertex sayısı; 0 ise `first`'ten sona kadar.
+template <typename V>
+Bounds BoundsOf(const std::vector<V>& verts, std::size_t first = 0,
+                std::size_t count = 0) {
+  const std::size_t last = (count == 0) ? verts.size() : (first + count);
+  Bounds b{verts.at(first).x, verts.at(first).y, verts.at(first).x,
+           verts.at(first).y};
+  for (std::size_t i = first; i < last; ++i) {
+    b.min_x = std::min(b.min_x, verts[i].x);
+    b.min_y = std::min(b.min_y, verts[i].y);
+    b.max_x = std::max(b.max_x, verts[i].x);
+    b.max_y = std::max(b.max_y, verts[i].y);
+  }
+  return b;
 }
 
 /// @brief Matris birim mi?
@@ -80,10 +102,29 @@ TEST(PainterTransform, TranslateIsAppliedToShapeDrawCall) {
   h.painter.FillRect(0.0F, 0.0F, 10.0F, 10.0F);
   h.painter.End();
 
-  ASSERT_FALSE(h.mock->model_at_draw.empty()) << "Hiç çizim komutu üretilmedi.";
-  const auto& m = h.mock->model_at_draw.front();
-  EXPECT_FLOAT_EQ(Tx(m), 100.0F);
-  EXPECT_FLOAT_EQ(Ty(m), 50.0F);
+  ASSERT_EQ(h.mock->last_vertices.size(), 6u) << "Hiç çizim komutu üretilmedi.";
+  const Bounds b = BoundsOf(h.mock->last_vertices);
+  EXPECT_FLOAT_EQ(b.min_x, 100.0F);
+  EXPECT_FLOAT_EQ(b.min_y, 50.0F);
+  EXPECT_FLOAT_EQ(b.max_x, 110.0F);
+  EXPECT_FLOAT_EQ(b.max_y, 60.0F);
+}
+
+/// @brief Yeni sözleşme: transform vertex'e gömüldüğü için model matrisi
+///        çizim anında daima birimdir.
+TEST(PainterTransform, ModelMatrixStaysIdentity) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.Translate(100.0F, 50.0F);
+  h.painter.Rotate(30.0F);
+  h.painter.Scale(2.0F, 2.0F);
+  h.painter.FillRect(0.0F, 0.0F, 10.0F, 10.0F);
+  h.painter.End();
+
+  ASSERT_FALSE(h.mock->model_at_draw.empty());
+  EXPECT_TRUE(IsIdentity(h.mock->model_at_draw.front()))
+      << "Model matrisi artık kullanılmıyor; birim kalmalı.";
 }
 
 TEST(PainterTransform, SaveRestoreBalancesTransform) {
@@ -99,10 +140,16 @@ TEST(PainterTransform, SaveRestoreBalancesTransform) {
   h.painter.FillRect(0.0F, 0.0F, 10.0F, 10.0F);
   h.painter.End();
 
-  ASSERT_EQ(h.mock->model_at_draw.size(), 2u);
-  EXPECT_FLOAT_EQ(Tx(h.mock->model_at_draw[0]), 200.0F);
-  EXPECT_TRUE(IsIdentity(h.mock->model_at_draw[1]))
+  // Transform artık batch'i kırmıyor: iki dikdörtgen tek draw call'a girer.
+  ASSERT_EQ(h.mock->CountCalls("DrawTriangles"), 1);
+  ASSERT_EQ(h.mock->last_vertices.size(), 12u);
+  const Bounds inside = BoundsOf(h.mock->last_vertices, 0, 6);
+  const Bounds outside = BoundsOf(h.mock->last_vertices, 6, 6);
+  EXPECT_FLOAT_EQ(inside.min_x, 200.0F);
+  EXPECT_FLOAT_EQ(inside.min_y, 300.0F);
+  EXPECT_FLOAT_EQ(outside.min_x, 0.0F)
       << "Restore sonrası transform birime dönmeliydi.";
+  EXPECT_FLOAT_EQ(outside.min_y, 0.0F);
 }
 
 /// @brief REGRESYON (K5): DrawText transform stack'ini yok sayıyordu.
@@ -126,12 +173,24 @@ TEST(PainterTransform, TranslateIsAppliedToTextDrawCall) {
   h.painter.DrawText(0.0F, 0.0F, "A");
   h.painter.End();
 
-  ASSERT_FALSE(h.mock->model_at_draw.empty())
+  ASSERT_FALSE(h.mock->last_textured_vertices.empty())
       << "DrawText hiç çizim komutu üretmedi.";
-  const auto& m = h.mock->model_at_draw.front();
-  EXPECT_FLOAT_EQ(Tx(m), 100.0F)
-      << "DrawText, güncel transform'u renderer'a göndermiyor.";
-  EXPECT_FLOAT_EQ(Ty(m), 50.0F);
+  const Bounds moved = BoundsOf(h.mock->last_textured_vertices);
+
+  // Referans: aynı metin, transform'suz.
+  Harness ref;
+  auto ref_font = std::make_shared<Font>(font_path, 16);
+  ref.painter.Begin();
+  ref.painter.SetFont(ref_font);
+  ref.painter.SetPen(Pen(Color::White(), 1.0F));
+  ref.painter.DrawText(0.0F, 0.0F, "A");
+  ref.painter.End();
+  ASSERT_FALSE(ref.mock->last_textured_vertices.empty());
+  const Bounds base = BoundsOf(ref.mock->last_textured_vertices);
+
+  EXPECT_FLOAT_EQ(moved.min_x - base.min_x, 100.0F)
+      << "DrawText, güncel transform'u vertex'lere uygulamıyor.";
+  EXPECT_FLOAT_EQ(moved.min_y - base.min_y, 50.0F);
 }
 
 /// @brief REGRESYON (K5): Rect aşırı yüklemesi de aynı hatayı taşıyordu.
@@ -149,9 +208,22 @@ TEST(PainterTransform, TranslateIsAppliedToAlignedTextDrawCall) {
   h.painter.DrawText(Rect{0.0F, 0.0F, 200.0F, 40.0F}, "A", Alignment::kCenter);
   h.painter.End();
 
-  ASSERT_FALSE(h.mock->model_at_draw.empty());
-  EXPECT_FLOAT_EQ(Tx(h.mock->model_at_draw.front()), 70.0F);
-  EXPECT_FLOAT_EQ(Ty(h.mock->model_at_draw.front()), 20.0F);
+  ASSERT_FALSE(h.mock->last_textured_vertices.empty());
+  const Bounds moved = BoundsOf(h.mock->last_textured_vertices);
+
+  Harness ref;
+  auto ref_font = std::make_shared<Font>(font_path, 16);
+  ref.painter.Begin();
+  ref.painter.SetFont(ref_font);
+  ref.painter.SetPen(Pen(Color::White(), 1.0F));
+  ref.painter.DrawText(Rect{0.0F, 0.0F, 200.0F, 40.0F}, "A",
+                       Alignment::kCenter);
+  ref.painter.End();
+  ASSERT_FALSE(ref.mock->last_textured_vertices.empty());
+  const Bounds base = BoundsOf(ref.mock->last_textured_vertices);
+
+  EXPECT_FLOAT_EQ(moved.min_x - base.min_x, 70.0F);
+  EXPECT_FLOAT_EQ(moved.min_y - base.min_y, 20.0F);
 }
 
 // ─── Kırpma (clip) koordinat dönüşümü ───────────────────────────────────────
@@ -487,15 +559,27 @@ TEST(PainterPrimitives, TransformReachesEveryPrimitive) {
     c.draw(h.painter);
     h.painter.End();
 
-    ASSERT_FALSE(h.mock->model_at_draw.empty()) << "hic cizim uretilmedi";
-    EXPECT_FLOAT_EQ(Tx(h.mock->model_at_draw.front()), 123.0F);
-    EXPECT_FLOAT_EQ(Ty(h.mock->model_at_draw.front()), 45.0F);
+    ASSERT_FALSE(h.mock->last_vertices.empty()) << "hic cizim uretilmedi";
+    const Bounds moved = BoundsOf(h.mock->last_vertices);
+
+    // Ayni primitif, transform'suz — fark tam olarak oteleme kadar olmali.
+    Harness ref;
+    ref.painter.Begin();
+    ref.painter.SetPen(Pen(Color::White(), 2.0F));
+    ref.painter.SetBrush(Brush(Color::Red()));
+    c.draw(ref.painter);
+    ref.painter.End();
+    ASSERT_FALSE(ref.mock->last_vertices.empty());
+    const Bounds base = BoundsOf(ref.mock->last_vertices);
+
+    EXPECT_FLOAT_EQ(moved.min_x - base.min_x, 123.0F);
+    EXPECT_FLOAT_EQ(moved.min_y - base.min_y, 45.0F);
   }
 }
 
 // ─── Transform işlemleri ────────────────────────────────────────────────────
 
-TEST(PainterTransform, RotateProducesRotationMatrix) {
+TEST(PainterTransform, RotateIsAppliedToVertices) {
   Harness h;
   h.painter.Begin();
   h.painter.SetBrush(Brush(Color::Red()));
@@ -503,16 +587,16 @@ TEST(PainterTransform, RotateProducesRotationMatrix) {
   h.painter.FillRect(0.0F, 0.0F, 10.0F, 10.0F);
   h.painter.End();
 
-  ASSERT_FALSE(h.mock->model_at_draw.empty());
-  const auto& m = h.mock->model_at_draw.front();
-  // 90 derece donuste sutun-major mat3: [0,1,0 | -1,0,0 | 0,0,1]
-  EXPECT_NEAR(m[0], 0.0F, 1e-5F);
-  EXPECT_NEAR(m[1], 1.0F, 1e-5F);
-  EXPECT_NEAR(m[3], -1.0F, 1e-5F);
-  EXPECT_NEAR(m[4], 0.0F, 1e-5F);
+  // 90 derece donuste (x, y) -> (-y, x): kare sol yariya gecer.
+  ASSERT_EQ(h.mock->last_vertices.size(), 6u);
+  const Bounds b = BoundsOf(h.mock->last_vertices);
+  EXPECT_NEAR(b.min_x, -10.0F, 1e-4F);
+  EXPECT_NEAR(b.max_x, 0.0F, 1e-4F);
+  EXPECT_NEAR(b.min_y, 0.0F, 1e-4F);
+  EXPECT_NEAR(b.max_y, 10.0F, 1e-4F);
 }
 
-TEST(PainterTransform, ScaleProducesScaleMatrix) {
+TEST(PainterTransform, ScaleIsAppliedToVertices) {
   Harness h;
   h.painter.Begin();
   h.painter.SetBrush(Brush(Color::Red()));
@@ -520,10 +604,10 @@ TEST(PainterTransform, ScaleProducesScaleMatrix) {
   h.painter.FillRect(0.0F, 0.0F, 10.0F, 10.0F);
   h.painter.End();
 
-  ASSERT_FALSE(h.mock->model_at_draw.empty());
-  const auto& m = h.mock->model_at_draw.front();
-  EXPECT_FLOAT_EQ(m[0], 2.0F);
-  EXPECT_FLOAT_EQ(m[4], 3.0F);
+  ASSERT_EQ(h.mock->last_vertices.size(), 6u);
+  const Bounds b = BoundsOf(h.mock->last_vertices);
+  EXPECT_FLOAT_EQ(b.max_x, 20.0F);
+  EXPECT_FLOAT_EQ(b.max_y, 30.0F);
 }
 
 TEST(PainterTransform, ResetTransformClearsAccumulatedTransform) {
@@ -536,8 +620,12 @@ TEST(PainterTransform, ResetTransformClearsAccumulatedTransform) {
   h.painter.FillRect(0.0F, 0.0F, 10.0F, 10.0F);
   h.painter.End();
 
-  ASSERT_FALSE(h.mock->model_at_draw.empty());
-  EXPECT_TRUE(IsIdentity(h.mock->model_at_draw.front()));
+  ASSERT_EQ(h.mock->last_vertices.size(), 6u);
+  const Bounds b = BoundsOf(h.mock->last_vertices);
+  EXPECT_FLOAT_EQ(b.min_x, 0.0F);
+  EXPECT_FLOAT_EQ(b.min_y, 0.0F);
+  EXPECT_FLOAT_EQ(b.max_x, 10.0F);
+  EXPECT_FLOAT_EQ(b.max_y, 10.0F);
 }
 
 /// Transform'lar birikmeli (post-multiply, QPainter semantigi).
@@ -550,9 +638,10 @@ TEST(PainterTransform, TranslationsAccumulate) {
   h.painter.FillRect(0.0F, 0.0F, 10.0F, 10.0F);
   h.painter.End();
 
-  ASSERT_FALSE(h.mock->model_at_draw.empty());
-  EXPECT_FLOAT_EQ(Tx(h.mock->model_at_draw.front()), 15.0F);
-  EXPECT_FLOAT_EQ(Ty(h.mock->model_at_draw.front()), 27.0F);
+  ASSERT_EQ(h.mock->last_vertices.size(), 6u);
+  const Bounds b = BoundsOf(h.mock->last_vertices);
+  EXPECT_FLOAT_EQ(b.min_x, 15.0F);
+  EXPECT_FLOAT_EQ(b.min_y, 27.0F);
 }
 
 /// Ic ice Save/Restore dogru sirada geri sarmali.
@@ -572,10 +661,97 @@ TEST(PainterTransform, NestedSaveRestoreUnwindsInOrder) {
   h.painter.FillRect(0, 0, 1, 1);  // 0
   h.painter.End();
 
-  ASSERT_EQ(h.mock->model_at_draw.size(), 3u);
-  EXPECT_FLOAT_EQ(Tx(h.mock->model_at_draw[0]), 110.0F);
-  EXPECT_FLOAT_EQ(Tx(h.mock->model_at_draw[1]), 100.0F);
-  EXPECT_FLOAT_EQ(Tx(h.mock->model_at_draw[2]), 0.0F);
+  // Uc dikdortgen de tek batch'e girer; sirasiyla 6'sar vertex.
+  ASSERT_EQ(h.mock->CountCalls("DrawTriangles"), 1);
+  ASSERT_EQ(h.mock->last_vertices.size(), 18u);
+  EXPECT_FLOAT_EQ(BoundsOf(h.mock->last_vertices, 0, 6).min_x, 110.0F);
+  EXPECT_FLOAT_EQ(BoundsOf(h.mock->last_vertices, 6, 6).min_x, 100.0F);
+  EXPECT_FLOAT_EQ(BoundsOf(h.mock->last_vertices, 12, 6).min_x, 0.0F);
+}
+
+// ─── Kare istatistikleri ────────────────────────────────────────────────────
+
+TEST(PainterFrameStats, CountsDrawCallsAndVertices) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetBrush(Brush(Color::Red()));
+  for (int32_t i = 0; i < 10; ++i) {
+    h.painter.FillRect(static_cast<float>(i), 0.0F, 5.0F, 5.0F);
+  }
+  h.painter.End();
+
+  const auto& stats = h.painter.GetFrameStats();
+  // Hepsi tek batch'e girer: renk vertex'te tasindigi icin batch kirilmaz.
+  EXPECT_EQ(stats.draw_calls, 1u);
+  EXPECT_EQ(stats.batches, stats.draw_calls);
+  EXPECT_EQ(stats.vertices, 60u);  // 10 dikdortgen x 6 vertex
+}
+
+/// @brief Ana kazanc: transform artik batch'i kirmiyor (bkz. benchmarks/).
+TEST(PainterFrameStats, TransformDoesNotBreakBatch) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetBrush(Brush(Color::Red()));
+  for (int32_t i = 0; i < 10; ++i) {
+    h.painter.Save();
+    h.painter.Translate(static_cast<float>(i) * 10.0F, 0.0F);
+    h.painter.Rotate(static_cast<float>(i));
+    h.painter.FillRect(0.0F, 0.0F, 5.0F, 5.0F);
+    h.painter.Restore();
+  }
+  h.painter.End();
+
+  EXPECT_EQ(h.painter.GetFrameStats().draw_calls, 1u);
+}
+
+/// @brief Opaklik hala bir uniform: degisimi batch'i kirar (bilincli sinir).
+TEST(PainterFrameStats, OpacityChangeBreaksBatch) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.SetOpacity(1.0F);
+  h.painter.FillRect(0.0F, 0.0F, 5.0F, 5.0F);
+  h.painter.SetOpacity(0.5F);
+  h.painter.FillRect(0.0F, 0.0F, 5.0F, 5.0F);
+  h.painter.End();
+
+  EXPECT_EQ(h.painter.GetFrameStats().draw_calls, 2u);
+}
+
+TEST(PainterFrameStats, ClipCountsAsStateChange) {
+  Harness h;
+  h.painter.Begin();
+  const uint32_t before = h.painter.GetFrameStats().state_changes;
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.SetClipRect(Rect{0.0F, 0.0F, 10.0F, 10.0F});
+  h.painter.FillRect(0.0F, 0.0F, 5.0F, 5.0F);
+  h.painter.ClearClip();
+  h.painter.End();
+
+  // SetClipRect + ClearClip = 2 durum degisikligi (Begin'inkine ek olarak).
+  EXPECT_GE(h.painter.GetFrameStats().state_changes, before + 2u);
+}
+
+TEST(PainterFrameStats, ResetsEachFrame) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.FillRect(0.0F, 0.0F, 5.0F, 5.0F);
+  h.painter.End();
+  ASSERT_EQ(h.painter.GetFrameStats().draw_calls, 1u);
+
+  h.painter.Begin();
+  h.painter.End();
+  EXPECT_EQ(h.painter.GetFrameStats().draw_calls, 0u);
+  EXPECT_EQ(h.painter.GetFrameStats().vertices, 0u);
+}
+
+/// @brief MockRenderer GPU olcumu desteklemiyor; varsayilan 0 gelmeli.
+TEST(PainterFrameStats, GpuTimeIsZeroWhenUnsupported) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.End();
+  EXPECT_DOUBLE_EQ(h.painter.GetFrameStats().gpu_frame_ms, 0.0);
 }
 
 // ─── Görüntü çizimi ─────────────────────────────────────────────────────────
@@ -671,9 +847,12 @@ TEST(PainterImage, TransformIsAppliedToImageDrawCall) {
   h.painter.DrawImage(image, 0.0F, 0.0F);
   h.painter.End();
 
-  ASSERT_FALSE(h.mock->model_at_draw.empty());
-  EXPECT_FLOAT_EQ(Tx(h.mock->model_at_draw.front()), 64.0F);
-  EXPECT_FLOAT_EQ(Ty(h.mock->model_at_draw.front()), 32.0F);
+  ASSERT_EQ(h.mock->last_textured_vertices.size(), 6u);
+  const Bounds b = BoundsOf(h.mock->last_textured_vertices);
+  EXPECT_FLOAT_EQ(b.min_x, 64.0F);
+  EXPECT_FLOAT_EQ(b.min_y, 32.0F);
+  EXPECT_FLOAT_EQ(b.max_x, 68.0F);  // 4x4 goruntu
+  EXPECT_FLOAT_EQ(b.max_y, 36.0F);
 }
 
 // ─── Taşıma (move) semantiği ────────────────────────────────────────────────

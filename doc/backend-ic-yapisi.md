@@ -116,7 +116,15 @@ flowchart LR
 
 > Renk vertex'te taşındığı için aynı pen/brush dışında bile **tek bir
 > draw call** içinde farklı renkli üçgenler çizilebilir. Bu RenderBatcher
-> verimliliğinin temelidir.
+> verimliliğinin temel noktalarından biridir.
+>
+> Aynı husus transform için de geçerlidir. `u_model` shader'da duruyor ama
+> `Painter` onu daima **birim** gönderiyor; dönüşüm
+> `RenderBatcher::PushTriangles` içinde, rengin yazıldığı kopyalama
+> döngüsünde CPU'da uygulanıyor. Böylece `Translate`/`Rotate`/`Scale` de
+> batch'i kırmıyor. Ölçüm: 2000 şekil, şekil başına transform ile
+> **2000 → 2 draw call**, 9.44 ms → 0.30 ms'e düştüğünü gördük.
+> Ayrıntılı sonuçlar ve örnekler için: [`examples/benchmarks/README.md`](../examples/benchmarks/README.md).
 
 ### 2.4 Texture İşlemleri
 

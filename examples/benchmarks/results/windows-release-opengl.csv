@@ -1,0 +1,11 @@
+scenario,mode,shapes,frames,draw_calls_per_frame,vertices_per_frame,model_uploads_per_frame,opacity_uploads_per_frame,scissor_changes_per_frame,ms_avg,ms_min,note
+fill_same_color,opengl,2000,300,2.00,12000,1.00,2.00,0.00,0.3235,0.1979,"referans: tek renk, transform yok"
+fill_many_colors,opengl,2000,300,2.00,12000,1.00,2.00,0.00,0.3827,0.2001,"sekil basina farkli renk"
+stroke_many_colors,opengl,2000,300,24.00,192000,1.00,24.00,0.00,3.8464,3.6493,"kalem cercevesi, farkli renk"
+circles_many_colors,opengl,2000,300,12.00,96000,1.00,12.00,0.00,1.5278,1.4687,"adaptif segmentli daire"
+translate_per_shape,opengl,2000,300,2.00,12000,1.00,2.00,0.00,0.3027,0.2413,"Save + Translate + Restore"
+translate_rotate_per_shape,opengl,2000,300,2.00,12000,1.00,2.00,0.00,0.3662,0.3202,"Save + Translate + Rotate + Restore"
+opacity_alternating,opengl,2000,300,2000.00,12000,1.00,2000.00,0.00,8.3536,7.4938,"sekil basina opaklik degisimi"
+clip_per_shape,opengl,2000,300,2000.00,12000,1.00,2000.00,2001.00,8.8583,8.0610,"sekil basina SetClipRect"
+text_only,opengl,2000,300,3.00,24000,1.00,3.00,0.00,0.6068,0.5014,"yalnizca metin (glyph atlasi)"
+shapes_and_text,opengl,2000,300,4000.00,36000,1.00,4000.00,0.00,19.0682,17.3045,"sekil ile metin donusumlu"

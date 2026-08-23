@@ -11,6 +11,20 @@ function(set_target_warnings target)
             /w14905  # wide string literal cast to 'LPSTR'
             /w14906  # string literal cast to 'LPWSTR'
             /w14928  # illegal copy-initialization
+
+            # C4251: "std::X uyesi, Y'nin istemcileri icin dll-interface'e
+            # sahip olmali". Export edilen bir sinifin standart kutuphane
+            # uyeleri (std::vector, std::unique_ptr, std::string ...) oldugunda
+            # KACINILMAZ; std tipleri dllexport edilemez.
+            #
+            # Bu kurulumda zararsiz: DLL ile tuketici ayni derleyici ve ayni
+            # runtime ile derleniyor (Conan/vcpkg paket kimligi bunu zaten
+            # garanti eder — farkli ayar = farkli paket). Uyari, ancak DLL ve
+            # exe farkli STL/runtime kullaniyorsa gercek bir riske isaret eder.
+            #
+            # Kalici cozum pimpl'e gecmek olurdu; bu, ABI stabilite beyani
+            # (Faz 4.3) kapsaminda ayrica degerlendirilecek.
+            /wd4251
         )
     else()
         target_compile_options(${target} PRIVATE

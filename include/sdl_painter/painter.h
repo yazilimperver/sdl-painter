@@ -2,7 +2,9 @@
 
 #include "sdl_painter/brush.h"
 #include "sdl_painter/color.h"
+#include "sdl_painter/export.h"
 #include "sdl_painter/font.h"
+#include "sdl_painter/frame_stats.h"
 #include "sdl_painter/geometry.h"
 #include "sdl_painter/pen.h"
 #include "sdl_painter/renderer.h"
@@ -48,7 +50,7 @@ struct RenderState {
 /// yaşayan bir konuma yerleştirmek tanımsız davranışa yol açar — yıkım
 /// sırasında dangling IRenderer pointer kullanılır. v0.2.0'da bu sözleşme
 /// `weak_ptr<IRenderer>` veya benzeri bir mekanizma ile zorunlu kılınacaktır.
-class Painter {
+class SDLPAINTER_API Painter {
  public:
   /// @brief Belirtilen pencere ve backend ile Painter oluştur.
   Painter(SDL_Window* window, RendererBackend backend);
@@ -105,6 +107,19 @@ class Painter {
   /// @brief Ekranı belirtilen renkle temizle.
   void Clear(const Color& color);
 
+  // --- Profilleme ---
+
+  /// @brief Son tamamlanan karenin çizim istatistikleri.
+  ///
+  /// @ref Begin sayaçları sıfırlar, @ref End değerleri tamamlar. Dolayısıyla
+  /// anlamlı okuma noktası `End()` sonrası — tipik olarak bir sonraki karenin
+  /// çizimi sırasında (ekran üstü FPS göstergesi bunu böyle kullanır).
+  ///
+  /// @see FrameStats
+  [[nodiscard]] const FrameStats& GetFrameStats() const noexcept {
+    return mLastStats;
+  }
+
   // --- Stil ---
 
   /// @brief Aktif kalemi ayarla (çizgi rengi ve kalınlığı).
@@ -115,6 +130,15 @@ class Painter {
 
   /// @brief Aktif fontu ayarla
   void SetFont(std::shared_ptr<Font> font);
+
+  /// @brief Aktif font (yoksa `nullptr`).
+  ///
+  /// @ref Save / @ref Restore font'u **kapsamaz** (font bir çizim durumu
+  /// değil, paylaşılan bir kaynaktır). Geçici olarak başka bir fontla çizim
+  /// yapan kod, önceki fontu bununla okuyup geri koyabilir.
+  [[nodiscard]] const std::shared_ptr<Font>& GetFont() const noexcept {
+    return mCurrentFont;
+  }
 
   /// @brief Global opaklığı ayarla [0.0, 1.0].
   void SetOpacity(float alpha);
@@ -214,13 +238,13 @@ class Painter {
   /// @brief Projeksiyon matrisini viewport boyutuna göre güncelle.
   void UpdateProjection();
 
-  /// @brief Aktif durumun transform matrisini renderer'a gönder.
-  void FlushTransform();
-
   /// @brief Scissor box'ı koordinat sistemi dönüsümü yaparak renderer'a gönder.
   ///
   /// OpenGL scissor Y=0 altta; Painter Y=0 ustte. Bu fonksiyon flip'i uygular.
   void ApplyScissor(const Rect& rect);
+
+  /// @brief Scissor'i kaldir ve durum degisikligi sayacini artir.
+  void ClearScissorCounted();
 
   [[nodiscard]] bool CanDrawPen() const noexcept {
     return mRenderer && mBatcher && mCurrentState.pen.IsVisible();
@@ -236,6 +260,11 @@ class Painter {
   std::vector<RenderState> mStateStack;
   RenderState mCurrentState;
   std::shared_ptr<Font> mCurrentFont;
+
+  /// Bu karede birikenler; End() sonunda mLastStats'a tasinir.
+  FrameStats mStats;
+  FrameStats mLastStats;
+  uint64_t mFrameStartNs{0};
 
   int32_t mViewportWidth{0};
   int32_t mViewportHeight{0};

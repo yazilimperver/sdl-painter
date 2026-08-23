@@ -84,3 +84,15 @@ if(SDLPAINTER_WITH_VULKAN)
         PRIVATE sdl_painter spdlog::spdlog_header_only)
     sdlpainter_copy_runtime_dlls(vulkan_demo)
 endif()
+
+# Ekran ustu FPS / kare istatistigi gostergesi demosu.
+# benchmarks/screenshot.cpp'yi paylasir: dokuman gorseli uretmek icin ayni
+# glReadPixels+PNG yardimcisi kullanilir, ikinci bir kopya yazilmaz.
+add_executable(stats_overlay stats_overlay.cpp benchmarks/screenshot.cpp)
+target_include_directories(stats_overlay PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(stats_overlay
+    PRIVATE sdl_painter_app stb::stb spdlog::spdlog_header_only)
+sdlpainter_copy_runtime_dlls(stats_overlay)
+
+# Olcum hedefleri (draw call / batch verimliligi) — bkz. benchmarks/README.md
+add_subdirectory(benchmarks)

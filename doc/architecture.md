@@ -170,10 +170,18 @@ flowchart LR
 ```
 
 **The point:** in a typical frame many `DrawRect`/`DrawCircle` calls arrive with
-the same pen and opacity. `Flush()` is not triggered, and every vertex goes out
-in a **single GPU draw call**. Details:
+the same opacity. `Flush()` is not triggered, and every vertex goes out
+in a **single GPU draw call**. Neither colour nor transform breaks a batch:
+both are baked into the vertex data — which is why `u_model` is always
+identity. Details:
 [Flow Diagrams → Batch flush conditions](akislar.md#3-render-batcher-akışı)
 *(in Turkish)*.
+
+Measured, not assumed — see
+[`examples/benchmarks/README.md`](../examples/benchmarks/README.md): with a
+per-shape `Translate`+`Rotate`, 2000 shapes went from **2000 draw calls
+(9.44 ms) to 2 draw calls (0.30 ms)**. `Painter::GetFrameStats()` exposes the
+same counters at runtime; `Application` draws them on screen with **F1**.
 
 ---
 
@@ -288,6 +296,7 @@ The rules components rely on to keep the architecture coherent:
 | **Texture handles are opaque** | a `uint32_t` the backend resolves in its own map. |
 | **Y grows downward in Painter** | Y = 0 is at the top; the flip for OpenGL's scissor happens in `ApplyScissor`. |
 | **Frames are bounded by Begin/End** | state accumulates between the two calls and flushes at `End`. |
+| **Only real GPU state breaks a batch** | opacity, scissor and draw mode do; colour and transform must not — they travel in the vertex data. |
 
 Break these and the architecture's benefits — testability, backend
 interchangeability, predictable performance — go with them.

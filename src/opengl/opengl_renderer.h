@@ -49,9 +49,19 @@ class OpenGLRenderer final : public IRenderer {
   void SetProjectionMatrix(const float* mat4) override;
   void SetModelMatrix(const float* mat3) override;
 
+  [[nodiscard]] double GetLastGpuFrameMs() const override {
+    return mLastGpuFrameMs;
+  }
+
  private:
   /// @brief OpenGL VAO, VBO oluştur.
   void SetupBuffers();
+
+  /// @brief Timer query nesnelerini oluştur (GL 3.3 core: ARB_timer_query).
+  void SetupTimerQueries();
+
+  /// @brief Hazır olan en eski sorgu sonucunu topla (bloklamadan).
+  void CollectGpuTime();
 
   SDL_Window* mWindow{nullptr};
   void* mGLContext{nullptr};
@@ -72,6 +82,18 @@ class OpenGLRenderer final : public IRenderer {
   float mProjection[16]{};
   float mModel[9]{};
   float mOpacity{1.0F};
+
+  // --- GPU zaman ölçümü ---
+  //
+  // Cift tamponlu: bu karenin sorgusu yazilirken bir onceki karenin sonucu
+  // okunur. Ayni karenin sonucunu beklemek CPU'yu GPU'ya kilitler ve
+  // olculmek istenen seyi bozar.
+  static constexpr int32_t kTimerQueryCount = 2;
+  uint32_t mTimerQueries[kTimerQueryCount]{};
+  bool mTimerQueryPending[kTimerQueryCount]{};
+  int32_t mTimerQueryIndex{0};
+  bool mTimerQueryActive{false};
+  double mLastGpuFrameMs{0.0};
 };
 
 }  // namespace sdl_painter
