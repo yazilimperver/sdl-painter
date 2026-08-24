@@ -7,6 +7,8 @@
 ///   - DrawImage(image, x, y) — orijinal boyut
 ///   - DrawImage(image, dest_rect) — olceklendirilmis cizim
 ///   - DrawImage(image, src_rect, dest_rect) — texture atlas dilimleme
+///   - DrawImage tint (renk tonlamasi) — batch'i kirmadan
+///   - DrawImage aynalama (ImageFlip) — UV takasi ile
 ///   - Transform + DrawImage birlestirme (donme animasyonu)
 ///   - Alfa karistirma (transparan doku uzerine cizim)
 ///
@@ -21,6 +23,7 @@
 
 #include <SDL3/SDL.h>
 
+#include <array>
 #include <cmath>
 #include <cstdint>
 #include <spdlog/sinks/ansicolor_sink.h>
@@ -163,8 +166,8 @@ int main() {
   SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
   SDL_Window* window =
-      SDL_CreateWindow("SDLPainter — images: Image & Texture (Phase 3)", 800, 600,
-                       SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+      SDL_CreateWindow("SDLPainter — images: Image & Texture (Phase 3)", 800,
+                       600, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
   if (!window) {
     spdlog::error("SDL_CreateWindow basarisiz: {}", SDL_GetError());
     SDL_Quit();
@@ -258,6 +261,49 @@ int main() {
       painter.FillRect(50.0f, 310.0f, 200.0f, 200.0f);
       painter.DrawImage(alpha_circ, 50.0f, 310.0f);   // 128x128, uzerine
       painter.DrawImage(alpha_circ, 122.0f, 382.0f);  // kismen ustuste
+
+      // ----------------------------------------------------------------
+      // Bolum 5b: Tint (renk tonlamasi) ve aynalama
+      // ----------------------------------------------------------------
+      // Ayni doku, dort farkli tint ile yan yana. Tint vertex'te tasindigi
+      // icin bu dort cizim TEK batch'te kalir — renk basina flush yoktur.
+      {
+        constexpr float kTintY = 530.0f;
+        constexpr float kTintSize = 48.0f;
+        const std::array<sdl_painter::Color, 4> kTints = {
+            sdl_painter::Color{255, 255, 255, 255},  // degisiklik yok
+            sdl_painter::Color{255, 90, 90, 255},    // kirmizi
+            sdl_painter::Color{90, 255, 120, 255},   // yesil
+            sdl_painter::Color{120, 160, 255, 128},  // mavi + yari saydam
+        };
+        for (std::size_t i = 0; i < kTints.size(); ++i) {
+          painter.DrawImage(
+              alpha_circ,
+              sdl_painter::Rect{50.0f + static_cast<float>(i) * 56.0f, kTintY,
+                                kTintSize, kTintSize},
+              kTints[i]);
+        }
+
+        // Aynalama: hedef dikdortgen ayni yerde kalir, yalnizca UV cevrilir.
+        // Save/Scale(-1,1)/Restore uclusune gore hem daha ucuz hem de
+        // konumu kendin yeniden hesaplamak zorunda kalmazsin.
+        const std::array<sdl_painter::ImageFlip, 4> kFlips = {
+            sdl_painter::ImageFlip::kNone,
+            sdl_painter::ImageFlip::kHorizontal,
+            sdl_painter::ImageFlip::kVertical,
+            sdl_painter::ImageFlip::kBoth,
+        };
+        for (std::size_t i = 0; i < kFlips.size(); ++i) {
+          // Kaynak: atlasin TAMAMI. Dort ceyregi farkli renkte oldugu icin
+          // hangi eksende cevrildigi ciplak gozle okunur — tek bir duz renk
+          // blogu secilseydi aynalamanin etkisi gorunmezdi.
+          painter.DrawImage(
+              atlas,
+              sdl_painter::Rect{300.0f + static_cast<float>(i) * 56.0f, kTintY,
+                                kTintSize, kTintSize},
+              sdl_painter::Color::White(), kFlips[i]);
+        }
+      }
 
       // ----------------------------------------------------------------
       // Bolum 6: Transform + DrawImage — donme animasyonu

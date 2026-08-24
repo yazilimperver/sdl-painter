@@ -1,6 +1,6 @@
 # SDLPainter Examples
 
-Sixteen runnable demos, each isolating one capability. Build them with the
+Twenty-seven runnable demos, each isolating one capability. Build them with the
 repository (they are on by default) and run them straight from the build tree:
 
 ```bash
@@ -14,18 +14,42 @@ On Windows the executables land under `build\windows-debug\examples\Debug\`.
 
 To skip building the demos entirely: `-DSDLPAINTER_BUILD_EXAMPLES=OFF`.
 
+One demo (`sprite_animation`) loads a file from [`assets/`](assets/); CMake
+copies that directory next to the executables, and the demo resolves it through
+`SDL_GetBasePath()`. Everything else is self-contained — and the **library**
+itself ships no assets at all (shaders are embedded, see
+[ADR-009](../adr/ADR-009-embedded-shaders.md)).
+
+Sources are grouped by topic — `basics/`, `graphics/`, `app/`, `games/`,
+`vulkan/` — but every executable is written to the **same** output directory,
+so the run commands above are unaffected by where a source file lives. Adding a
+demo is one line in [`CMakeLists.txt`](CMakeLists.txt); the helper is
+[`cmake/AddExample.cmake`](../cmake/AddExample.cmake).
+
 ---
 
 ## Start here
 
 | Demo | What it shows | Needs |
 |---|---|---|
-| [`hello_window`](hello_window.cpp) | Opens an SDL window and shuts down cleanly — verifies the toolchain, nothing is drawn. | — |
-| [`primitives`](primitives.cpp) | Every basic shape: filled and stroked rectangles, circles and ellipses, thick lines, polylines, a concave polygon. | — |
-| [`transforms`](transforms.cpp) | `Translate` / `Rotate` / `Scale`, nested `Save`/`Restore`, viewport tracking on resize. | — |
-| [`clipping`](clipping.cpp) | `SetClipRect` / `ClearClip`, plus a centre-rotation correctness check that stays centred at any window size. | — |
-| [`images`](images.cpp) | `DrawImage` in all three overloads — original size, scaled destination rect, atlas slicing — with alpha blending and a rotating texture. | — |
-| [`text`](text.cpp) | `DrawText` at a point and aligned inside a rect, `Font::MeasureText`, multiple point sizes, coloured and semi-transparent text. | SDL_ttf |
+| [`minimal`](basics/minimal.cpp) | The smallest thing that works — 25 lines, no logger, no resize handling. Copy this into an empty project to verify your setup. | — |
+| [`hello_window`](basics/hello_window.cpp) | Opens an SDL window and shuts down cleanly — verifies the toolchain, nothing is drawn. | — |
+| [`primitives`](basics/primitives.cpp) | Every basic shape: filled and stroked rectangles, circles and ellipses, thick lines, polylines, a concave polygon. | — |
+| [`transforms`](basics/transforms.cpp) | `Translate` / `Rotate` / `Scale`, nested `Save`/`Restore`, viewport tracking on resize. | — |
+| [`clipping`](basics/clipping.cpp) | `SetClipRect` / `ClearClip`, plus a centre-rotation correctness check that stays centred at any window size. | — |
+| [`images`](graphics/images.cpp) | `DrawImage` in all three overloads — original size, scaled destination rect, atlas slicing — with alpha blending and a rotating texture. | — |
+| [`text`](graphics/text.cpp) | `DrawText` at a point and aligned inside a rect, `Font::MeasureText`, multiple point sizes, coloured and semi-transparent text. | SDL_ttf |
+| [`input`](basics/input.cpp) | The difference between key **events** (one-shot) and key **state** (continuous) — and why writing movement with events feels wrong. Mouse tracking and a dashed crosshair. | — |
+
+## Drawing in depth
+
+| Demo | What it shows | Needs |
+|---|---|---|
+| [`plasma`](graphics/plasma.cpp) | A texture regenerated on the CPU **every frame** and uploaded in place with `Painter::UpdateImage` — no allocate/free churn. | — |
+| [`particles`](graphics/particles.cpp) | Tens of thousands of particles in **two** draw calls, with a live counter. SPACE switches to a batch-breaking pattern so the cost is visible side by side. | — |
+| [`sprite_animation`](graphics/sprite_animation.cpp) | A real CC0 sprite sheet sliced on an 8×4 grid. Its left- and right-facing rows are exact mirrors, so the demo draws the right-facing walk **either** from the sheet **or** by flipping the left row — pixel-identical, which is the argument for `ImageFlip` in one picture. | [asset](assets/) |
+| [`physics_rope`](graphics/physics_rope.cpp) | A Verlet rope and cloth: the honest stress test for thick-line joins and caps, cycled live with J and C. | — |
+| [`morph`](graphics/morph.cpp) | Smooth interpolation between a circle, a star and a concave cross — the tessellator re-runs every frame on deliberately awkward shapes. | — |
 
 | | |
 |:---:|:---:|
@@ -42,13 +66,25 @@ target (`sdl_painter::app` — see
 
 | Demo | What it shows | Needs |
 |---|---|---|
-| [`app_basics`](app_basics.cpp) | The same visual output as `transforms`, without its ~250 lines of SDL boilerplate. | — |
-| [`game_loop`](game_loop.cpp) | Fixed-timestep simulation with render interpolation — a bouncing ball stays smooth even at a low `fixed_update_hz`. | — |
-| [`tictactoe`](tictactoe.cpp) | A complete application: mouse hit testing, hover highlighting, responsive layout on resize, and an app state machine. | SDL_ttf |
-| [`stats_overlay`](stats_overlay.cpp) | The on-screen FPS / frame-stats overlay: `AppConfig::stats_overlay`, `show_fps_in_title`, **F1** to cycle modes, and `SPACE` to switch between a batch-friendly and a batch-breaking draw pattern so the draw-call difference is visible live. | SDL_ttf |
+| [`app_basics`](app/app_basics.cpp) | The same visual output as `transforms`, without its ~250 lines of SDL boilerplate. | — |
+| [`game_loop`](app/game_loop.cpp) | Fixed-timestep simulation with render interpolation — a bouncing ball stays smooth even at a low `fixed_update_hz`. | — |
+| [`paint`](app/paint.cpp) | A real drawing program: freehand strokes, a colour palette, brush size, eraser and undo. Strokes are stored as point lists and re-drawn each frame, which makes undo a one-liner. | — |
+| [`stats_overlay`](app/stats_overlay.cpp) | The on-screen FPS / frame-stats overlay: `AppConfig::stats_overlay`, `show_fps_in_title`, **F1** to cycle modes, and `SPACE` to switch between a batch-friendly and a batch-breaking draw pattern so the draw-call difference is visible live. | SDL_ttf |
 
-The pure game logic of `tictactoe` sits in [`tictactoe_logic.h`](tictactoe_logic.h)
-so it can be unit tested without a window (`tests/test_tictactoe_logic.cpp`).
+## Games and worlds
+
+| Demo | What it shows | Needs |
+|---|---|---|
+| [`tictactoe`](games/tictactoe.cpp) | A complete application: mouse hit testing, hover highlighting, responsive layout on resize, and an app state machine. Turn-based, so nothing moves on its own. | SDL_ttf |
+| [`breakout`](games/breakout.cpp) | What `tictactoe` leaves out: continuous motion, frame-independent physics, sub-stepped collision (no tunnelling) and a menu → play → win/lose state machine. | — |
+| [`camera_scroll`](games/camera_scroll.cpp) | The transform stack used as a camera: world ↔ screen conversion, parallax layers, cursor-anchored zoom, and a HUD that stays put. | — |
+| [`tilemap`](games/tilemap.cpp) | A tile grid drawn from one atlas with view-frustum culling. Press **C** to turn culling off and watch the vertex counter explode. | — |
+
+The pure logic of the games sits in headers next to them —
+[`tictactoe_logic.h`](games/tictactoe_logic.h) and
+[`collision_logic.h`](games/collision_logic.h) — so it can be unit tested
+without a window (`tests/test_tictactoe_logic.cpp`,
+`tests/test_collision_logic.cpp`).
 
 The overlay is available in **every** `Application` — F1 turns it on, no code
 change needed:
@@ -73,11 +109,11 @@ identically to OpenGL, one capability at a time.
 
 | Demo | What it shows | Needs |
 |---|---|---|
-| [`vulkan_clear`](vulkan_clear.cpp) | Instance, device, swapchain and `Clear`. | Vulkan |
-| [`vulkan_triangles`](vulkan_triangles.cpp) | Untextured primitives, transform stack, opacity. | Vulkan |
-| [`vulkan_textured`](vulkan_textured.cpp) | Texture upload and sampling through `DrawTextured`. | Vulkan |
-| [`vulkan_demo`](vulkan_demo.cpp) | Swapchain recreation on resize, every primitive, every opacity level — validation layers must stay silent. | Vulkan |
-| [`vulkan_text`](vulkan_text.cpp) | SDL_ttf glyph atlases on the Vulkan backend, including UTF-8. | Vulkan + SDL_ttf |
+| [`vulkan_clear`](vulkan/vulkan_clear.cpp) | Instance, device, swapchain and `Clear`. | Vulkan |
+| [`vulkan_triangles`](vulkan/vulkan_triangles.cpp) | Untextured primitives, transform stack, opacity. | Vulkan |
+| [`vulkan_textured`](vulkan/vulkan_textured.cpp) | Texture upload and sampling through `DrawTextured`. | Vulkan |
+| [`vulkan_demo`](vulkan/vulkan_demo.cpp) | Swapchain recreation on resize, every primitive, every opacity level — validation layers must stay silent. | Vulkan |
+| [`vulkan_text`](vulkan/vulkan_text.cpp) | SDL_ttf glyph atlases on the Vulkan backend, including UTF-8. | Vulkan + SDL_ttf |
 
 ## The hero animation
 

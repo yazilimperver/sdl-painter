@@ -6,6 +6,9 @@
 #include "sdl_painter/font.h"
 #include "sdl_painter/frame_stats.h"
 #include "sdl_painter/geometry.h"
+// ImageFlip için — Image'ın kendisi ileri bildirimle yetiyordu, ancak
+// DrawImage'ın varsayılan argümanı enum'un tam tanımını gerektiriyor.
+#include "sdl_painter/image.h"
 #include "sdl_painter/pen.h"
 #include "sdl_painter/renderer.h"
 
@@ -25,7 +28,6 @@ struct SDL_Window;
 
 namespace sdl_painter {
 
-class Image;
 class IRenderer;
 class RenderBatcher;
 
@@ -166,6 +168,33 @@ class SDLPAINTER_API Painter {
   /// @brief Elipsi doldur.
   void FillEllipse(float cx, float cy, float rx, float ry);
 
+  /// @brief Yay çiz (açık — uçları birleştirilmez).
+  ///
+  /// Açı birimi **derece**. 0° = +x ekseni ve açı, @ref Rotate ile aynı yönde
+  /// artar. Qt'nin 1/16 derece sözleşmesi bilinçli olarak izlenmez; kütüphane
+  /// içi tutarlılık tercih edildi.
+  ///
+  /// @param sweep_degrees Taranan açı; negatif olabilir (ters yön), mutlak
+  ///        değeri 360°'ye kırpılır.
+  void DrawArc(float cx, float cy, float rx, float ry, float start_degrees,
+               float sweep_degrees);
+
+  /// @brief Dilim (pie) çerçevesi — yay artı merkeze giden iki yarıçap.
+  void DrawPie(float cx, float cy, float rx, float ry, float start_degrees,
+               float sweep_degrees);
+
+  /// @brief Dilimi doldur. Çizelgelerin (pasta grafik) temel yapı taşı.
+  void FillPie(float cx, float cy, float rx, float ry, float start_degrees,
+               float sweep_degrees);
+
+  /// @brief Kiriş (chord) çerçevesi — yay artı uçlarını birleştiren doğru.
+  void DrawChord(float cx, float cy, float rx, float ry, float start_degrees,
+                 float sweep_degrees);
+
+  /// @brief Kirişi doldur.
+  void FillChord(float cx, float cy, float rx, float ry, float start_degrees,
+                 float sweep_degrees);
+
   /// @brief Çok kenarlı kapalı şeklin çerçevesini çiz.
   void DrawPolygon(const std::vector<Point>& points);
 
@@ -178,14 +207,46 @@ class SDLPAINTER_API Painter {
   // --- Görüntü ---
 
   /// @brief Görüntüyü orijinal boyutuyla çiz.
-  void DrawImage(const Image& image, float x, float y);
+  /// @param tint Doku rengiyle çarpılacak renk. Varsayılan beyaz = değişiklik
+  ///        yok. Alfası, @ref SetOpacity ile *çarpışmaz*: opaklık tüm kareye
+  ///        uygulanan bir uniform, tint ise yalnızca bu görüntüye aittir.
+  /// @param flip Aynalama (bkz. @ref ImageFlip).
+  void DrawImage(const Image& image, float x, float y,
+                 const Color& tint = Color::White(),
+                 ImageFlip flip = ImageFlip::kNone);
 
   /// @brief Görüntüyü hedef dikdörtgene ölçekleyerek çiz.
-  void DrawImage(const Image& image, const Rect& dest_rect);
+  void DrawImage(const Image& image, const Rect& dest_rect,
+                 const Color& tint = Color::White(),
+                 ImageFlip flip = ImageFlip::kNone);
+
+  /// @brief Yüklenmiş bir görüntünün doku içeriğini **yerinde** güncelle.
+  ///
+  /// Her karede değişen prosedürel dokular içindir (plazma, ısı haritası,
+  /// piksel tuvali). Görüntüyü her karede yeniden yaratmaya göre farkı,
+  /// doku tahsis/serbest bırakma döngüsünün hiç yaşanmamasıdır.
+  ///
+  /// Görüntü henüz yüklenmemişse bu çağrı onu yükler; sonraki çağrılar aynı
+  /// dokuyu günceller.
+  ///
+  /// @param image Güncellenecek görüntü. **4 kanallı (RGBA8)** olmalıdır;
+  ///        değilse çağrı yok sayılır ve hata loglanır.
+  /// @param rgba Sıkı paketlenmiş `Width() * Height() * 4` baytlık veri.
+  ///
+  /// @note Çağrı, biriken çizimleri **flush eder**. Doku içeriği anında
+  ///       değiştiği için, o karede aynı dokudan yapılmış ve henüz
+  ///       gönderilmemiş çizimler eski içerikle çizilmiş olmalı — aksi halde
+  ///       geriye dönük olarak yeni içerikle çizilirlerdi. Bedeli kare başına
+  ///       bir draw call'dur.
+  void UpdateImage(const Image& image, const uint8_t* rgba);
 
   /// @brief Görüntünün kaynak dikdörtgenini hedef dikdörtgene çiz.
+  ///
+  /// @note Tint, vertex'te taşınır — aynı texture'ı farklı renklerle çizmek
+  ///       batch'i **kırmaz**. (Opaklık için aynısı geçerli değildir.)
   void DrawImage(const Image& image, const Rect& src_rect,
-                 const Rect& dest_rect);
+                 const Rect& dest_rect, const Color& tint = Color::White(),
+                 ImageFlip flip = ImageFlip::kNone);
 
   // --- Metin
 

@@ -55,9 +55,9 @@ int main() {
   SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
   SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
-  SDL_Window* window =
-      SDL_CreateWindow("SDLPainter — transforms: Transform Stack & Clip (Phase 2)", 900, 700,
-                       SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+  SDL_Window* window = SDL_CreateWindow(
+      "SDLPainter — transforms: Transform Stack & Clip (Phase 2)", 900, 700,
+      SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
   if (!window) {
     spdlog::error("SDL_CreateWindow basarisiz: {}", SDL_GetError());
     SDL_Quit();

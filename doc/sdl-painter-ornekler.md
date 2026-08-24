@@ -292,7 +292,7 @@ Oyun bittiğinde herhangi bir tık yeni oyun başlatır.
 
 ### Mühendislik notu
 
-Oyun mantığı (`examples/tictactoe_logic.h`) çizimden ve SDL'den **tamamen
+Oyun mantığı (`examples/games/tictactoe_logic.h`) çizimden ve SDL'den **tamamen
 bağımsız** saf fonksiyonlardır: kazanan tespiti, hamle geçerliliği ve hit
 testing. Bu ayrım sayesinde mantık headless olarak birim testlerle
 doğrulanabilir (`tests/test_tictactoe_logic.cpp`) — demo dosyası yalnızca

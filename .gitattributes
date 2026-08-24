@@ -7,3 +7,9 @@
 *.json text eol=lf
 *.md text eol=lf
 Doxyfile* text eol=lf
+
+# Ikili varliklar: text=auto sezgisine birakma, satir sonu donusumu bozar.
+*.png binary
+*.jpg binary
+*.gif binary
+*.ttf binary

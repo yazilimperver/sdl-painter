@@ -52,8 +52,8 @@ int main() {
   SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
   SDL_Window* window =
-      SDL_CreateWindow("SDLPainter — clipping: Merkez Rotasyon (Phase 2b)", 800, 600,
-                       SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+      SDL_CreateWindow("SDLPainter — clipping: Merkez Rotasyon (Phase 2b)", 800,
+                       600, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
   if (!window) {
     spdlog::error("SDL_CreateWindow basarisiz: {}", SDL_GetError());
     SDL_Quit();

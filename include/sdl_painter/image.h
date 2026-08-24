@@ -12,6 +12,19 @@ namespace sdl_painter {
 
 class IRenderer;
 
+/// @brief Görüntü çizilirken uygulanacak aynalama.
+///
+/// Aynalama doku koordinatları takas edilerek yapılır; ek vertex, ek draw call
+/// veya negatif ölçek içeren bir transform gerektirmez. Bu yüzden
+/// @ref Painter::DrawImage çağrısını `Save`/`Scale(-1,1)`/`Restore` üçlüsüyle
+/// sarmalamaya göre hem daha ucuz hem de hedef dikdörtgeni yerinde bırakır.
+enum class ImageFlip : uint8_t {
+  kNone,        ///< Aynalama yok.
+  kHorizontal,  ///< Yatay (sol ↔ sağ).
+  kVertical,    ///< Dikey (üst ↔ alt).
+  kBoth,        ///< Her iki eksende — 180° döndürmeye denktir.
+};
+
 /// @brief Yüklenmiş görüntü — texture sarmalayıcı.
 ///
 /// stb_image üzerinden dosya yükler. Texture, renderer üzerinden oluşturulur.

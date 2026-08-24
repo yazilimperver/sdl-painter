@@ -17,6 +17,7 @@ set(TEST_SOURCES
     test_event_translator.cpp
     test_app_config.cpp
     test_tictactoe_logic.cpp
+    test_collision_logic.cpp
 )
 
 include(GoogleTest)
@@ -40,8 +41,9 @@ else()
 
     target_include_directories(sdl_painter_tests PRIVATE
         ${PROJECT_SOURCE_DIR}/src
-        # tictactoe demosunun saf oyun mantığı (tictactoe_logic.h) burada.
-        ${PROJECT_SOURCE_DIR}/examples
+        # Örneklerin saf oyun mantığı burada: tictactoe_logic.h,
+        # collision_logic.h (breakout).
+        ${PROJECT_SOURCE_DIR}/examples/games
         # Gömülü shader başlıkları — test_renderer_smoke.cpp SPIR-V'yi doğruluyor.
         ${PROJECT_BINARY_DIR}/generated
     )

@@ -6,6 +6,9 @@
 ///   - Dolu dikdörtgenler, daire ve elips
 ///   - Çerçeve dikdörtgen, daire ve elips
 ///   - Kalın çizgi ve polyline
+///   - Uç (cap) ve birleşim (join) stilleri
+///   - Kesikli çizgi desenleri (dash)
+///   - Yay, dilim (pie) ve kiriş (chord)
 ///   - Konkav poligon (dolu, ear clipping)
 ///   - Transform: döndürülmüş dikdörtgen
 ///
@@ -19,6 +22,8 @@
 
 #include <SDL3/SDL.h>
 
+#include <array>
+#include <cstddef>
 #include <spdlog/sinks/ansicolor_sink.h>
 #include <spdlog/spdlog.h>
 
@@ -141,6 +146,102 @@ int main() {
           {480.0f, 360.0f},
           {540.0f, 420.0f},
       });
+
+      // --- Uç (cap) ve birleşim (join) stilleri ---
+      // Ayni kalin V sekli uc kez cizilir; tek fark kalemin stili.
+      // Referans olarak altlarina ince beyaz bir cizgi konur: uc stilinin
+      // gecerli uc noktasindan ne kadar tastigi boylece gorunur olur.
+      {
+        constexpr float kWidth = 14.0f;
+        constexpr float kBaseY = 470.0f;
+        const std::array<sdl_painter::LineCap, 3> kCaps = {
+            sdl_painter::LineCap::kButt,
+            sdl_painter::LineCap::kSquare,
+            sdl_painter::LineCap::kRound,
+        };
+        const std::array<sdl_painter::LineJoin, 3> kJoins = {
+            sdl_painter::LineJoin::kMiter,
+            sdl_painter::LineJoin::kBevel,
+            sdl_painter::LineJoin::kRound,
+        };
+
+        for (std::size_t i = 0; i < kCaps.size(); ++i) {
+          const float x = 30.0f + static_cast<float>(i) * 90.0f;
+          sdl_painter::Pen pen(sdl_painter::Color{120, 200, 255, 220}, kWidth);
+          pen.SetCapStyle(kCaps[i]);
+          pen.SetJoinStyle(kJoins[i]);
+          painter.SetPen(pen);
+          painter.DrawPolyline({
+              {x, kBaseY},
+              {x + 30.0f, kBaseY + 45.0f},
+              {x + 60.0f, kBaseY},
+          });
+
+          // Gercek uc noktalarini isaretleyen ince referans cizgisi.
+          painter.SetPen(
+              sdl_painter::Pen(sdl_painter::Color{255, 255, 255, 120}, 1.0f));
+          painter.DrawLine(x, kBaseY, x + 60.0f, kBaseY);
+        }
+      }
+
+      // --- Kesikli çizgi desenleri ---
+      // Desen yol boyunca sureklidir: kosede sifirlanmaz, bu yuzden bir kesik
+      // kosenin uzerinden gecebilir.
+      {
+        constexpr float kDashY = 545.0f;
+        sdl_painter::Pen dash(sdl_painter::Color{255, 200, 90, 230}, 3.0f);
+
+        dash.SetDashPattern({12.0f, 6.0f});
+        painter.SetPen(dash);
+        painter.DrawLine(300.0f, kDashY, 560.0f, kDashY);
+
+        // Nokta-tire: dort uzunluklu desen.
+        dash.SetDashPattern({14.0f, 5.0f, 3.0f, 5.0f});
+        painter.SetPen(dash);
+        painter.DrawLine(300.0f, kDashY + 18.0f, 560.0f, kDashY + 18.0f);
+
+        // Kesik kapali sekilde de calisir — secim dikdortgeni gorunumu.
+        dash.SetDashPattern({6.0f, 6.0f});
+        painter.SetPen(dash);
+        painter.DrawRect(600.0f, 520.0f, 120.0f, 80.0f);
+      }
+
+      // --- Yay, dilim (pie) ve kiriş (chord) ---
+      {
+        constexpr float kArcY = 620.0f;
+
+        // Dolu dilim ucusu — pasta grafigin yapi tasi.
+        painter.SetPen(sdl_painter::Pen::NoPen());
+        painter.SetBrush(
+            sdl_painter::Brush(sdl_painter::Color{230, 90, 90, 220}));
+        painter.FillPie(330.0f, kArcY, 55.0f, 55.0f, 0.0f, 120.0f);
+        painter.SetBrush(
+            sdl_painter::Brush(sdl_painter::Color{90, 200, 120, 220}));
+        painter.FillPie(330.0f, kArcY, 55.0f, 55.0f, 120.0f, 90.0f);
+        painter.SetBrush(
+            sdl_painter::Brush(sdl_painter::Color{90, 150, 230, 220}));
+        painter.FillPie(330.0f, kArcY, 55.0f, 55.0f, 210.0f, 150.0f);
+
+        // Acik yay: uclari birlestirilmez.
+        sdl_painter::Pen arc_pen(sdl_painter::Color{255, 255, 255, 220}, 5.0f);
+        arc_pen.SetCapStyle(sdl_painter::LineCap::kRound);
+        painter.SetPen(arc_pen);
+        painter.DrawArc(470.0f, kArcY, 55.0f, 55.0f, 200.0f, 250.0f);
+
+        // Kiris: yay + uclarini birlestiren dogru. Dilimden farki merkeze
+        // gitmemesi.
+        painter.SetPen(
+            sdl_painter::Pen(sdl_painter::Color{180, 140, 255, 255}, 3.0f));
+        painter.SetBrush(
+            sdl_painter::Brush(sdl_painter::Color{180, 140, 255, 90}));
+        painter.FillChord(610.0f, kArcY, 60.0f, 45.0f, 20.0f, 200.0f);
+        painter.DrawChord(610.0f, kArcY, 60.0f, 45.0f, 20.0f, 200.0f);
+
+        // Dilim cercevesi: yay + merkeze giden iki yaricap.
+        painter.SetPen(
+            sdl_painter::Pen(sdl_painter::Color{120, 230, 220, 255}, 3.0f));
+        painter.DrawPie(770.0f, kArcY, 55.0f, 55.0f, 300.0f, 120.0f);
+      }
 
       // --- Dolu poligon (concave — L şekli) ---
       painter.SetBrush(

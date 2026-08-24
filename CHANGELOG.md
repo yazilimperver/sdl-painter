@@ -39,6 +39,72 @@
   (Conan Center bunu yasaklıyor).
 
 ### Eklendi
+- **`Painter::UpdateImage`** — yüklenmiş bir görüntünün doku içeriğini yerinde
+  günceller. `IRenderer::UpdateTexture` `v1.2.0`'da eklenmişti ama yalnızca
+  glyph atlası tarafından **içeriden** kullanılıyordu; tüketicinin ona
+  erişebileceği bir yol yoktu. `DrawImage` tint'iyle aynı durum: yetenek vardı,
+  yüzeyi yoktu. Çağrı biriken çizimleri flush eder — doku anında değiştiği
+  için o karede aynı dokudan yapılmış bekleyen çizimlerin eski içerikle
+  gitmesi gerekir. Demo: `examples/graphics/plasma.cpp`.
+- **`breakout` artık metin çiziyor** — skor, can ve menü/kazandın/kaybettin
+  başlıkları. Font sistemden aranır (`examples/example_font.h`); bulunamazsa
+  oyun şekil tabanlı göstergelerle metinsiz oynanmaya devam eder.
+- **İlk örnek varlık dosyası: `examples/assets/rpg_character_walk.png`**
+  (CC0, arikel — kaynak ve ızgara düzeni `examples/assets/README.md`'de).
+  `sprite_animation` gerçek bir sprite sheet kullanıyor. Sheet'in sola ve sağa bakan satırları **birbirinin tam
+  aynası** olduğu için örnek, sağa bakışı ya sheet'ten ya da sol satırı
+  `ImageFlip` ile çevirerek çiziyor — sonuç piksel piksel aynı. Aynalamanın
+  ne işe yaradığının tek karelik kanıtı.
+  `sdlpainter_add_example(... ASSETS)` varlıkları çalıştırılabilirin yanına
+  kopyalar; örnek `SDL_GetBasePath()` ile bulur. **Kütüphane hâlâ hiçbir
+  varlık dosyası taşımıyor** — bu yalnızca örneklere ait ve kurulmuyor.
+- **On bir yeni örnek** (`examples/README.md` tam listeyi taşıyor):
+  `minimal` (25 satırlık kopyala-çalıştır iskelet), `input` (tuş olayı ve tuş
+  durumu farkı), `plasma`, `particles` (SPACE ile batch farkı canlı),
+  `sprite_animation`, `physics_rope` (uç/birleşim stilinin hareket hâlindeki
+  sınavı), `morph`, `paint` (fırça/palet/geri al), `breakout`,
+  `camera_scroll`, `tilemap` (C ile eleme kapatılabiliyor).
+- **`examples/games/collision_logic.h` ve 18 testi.** `breakout`'un çarpışma
+  matematiği çizimden tamamen ayrık saf fonksiyonlar hâlinde — pencere
+  açmadan sınanabiliyor. `tictactoe_logic.h` ile aynı kalıp.
+- **Yay, dilim (pie) ve kiriş (chord).** `Painter::DrawArc`, `DrawPie` /
+  `FillPie`, `DrawChord` / `FillChord`. Açı birimi **derece**; 0° = +x ekseni
+  ve açı `Rotate()` ile aynı yönde artar. Segment sayısı
+  hem yarıçapa hem **taranan açıya** göre uyarlanır: 10°'lik bir yay, tam
+  çemberle aynı segment bütçesini harcamaz. 360°'yi aşan taramalar kırpılır.
+  Dilim merkezden üçgen fanı, kiriş ise yayın ilk noktasından fan ile
+  doldurulur. 
+- **Kesikli çizgi deseni.** `Pen::SetDashPattern({12, 6})` — uzunluklar sırayla
+  çizili/boş, piksel cinsinden. Desen **yol boyunca sürekli** ilerler: köşede
+  sıfırlanmaz, dolayısıyla bir kesik köşenin üzerinden geçebilir ve o parça
+  kendi köşesinde birleşim alır. Tek sayıda uzunluk verilirse desen SVG'deki
+  gibi iki tur boyunca kendini tersine çevirerek tamamlanır. Kesik; çizgi,
+  polyline, dikdörtgen, daire, elips, poligon, yay, dilim ve kirişin
+  **hepsinde** çalışır; her kesik parçası açık bir yol olduğu için kalemin uç
+  stilini de alır. Desen `Pen` içinde sabit boyutlu bir dizide (en fazla
+  `kMaxDashSegments` = 8) tutulur — `Pen`, `RenderState` üyesi olduğu ve her
+  `Save`/`Restore` ile kopyalandığı için orada yığın tahsisi istenmiyor.
+  15 yeni test.
+- **Uç (cap) ve birleşim (join) stilleri.** `Pen::SetCapStyle` (`kButt` /
+  `kSquare` / `kRound`) ve `Pen::SetJoinStyle` (`kRound` / `kMiter` /
+  `kBevel`). Uç stili yalnızca **açık** geometriye uygulanır (`DrawLine`,
+  `DrawPolyline`) ve orada da yalnızca iki uç noktaya; kapalı şekillerde uç
+  yoktur. Miter, `kMiterLimit` (4.0, SVG varsayılanı) aşıldığında keskin
+  açılarda sivri çıkıntı üretmemek için kendiliğinden bevel'a düşer.
+  Varsayılanlar (`kButt` / `kRound`) önceki davranışı **birebir** korur — Qt'nin
+  varsayılanları farklıdır ama onlara geçmek her mevcut çizimin görünümünü
+  sessizce değiştirirdi. Demo: `examples/basics/primitives.cpp`. 15 yeni test.
+
+- **`DrawImage` renk tonlaması (tint) ve aynalama.** Her üç `DrawImage` aşırı
+  yüklemesi artık isteğe bağlı `const Color& tint` ve `ImageFlip flip`
+  parametrelerini alıyor; varsayılanları (beyaz / `kNone`) mevcut davranışı
+  birebir koruyor. Tint **vertex'te** taşınıyor — aynı dokuyu farklı renklerle
+  çizmek batch'i bozmuyor (opaklık için aynısı geçerli değil). Aynalama, UV
+  uçlarını takas ederek yapılıyor: ek vertex, ek draw call ya da negatif
+  ölçekli transform gerektirmiyor ve hedef dikdörtgeni yerinde bırakıyor.
+  Demo: `examples/graphics/images.cpp` (Bölüm 5b). 7 yeni test.
+- **`ImageFlip` enum'u** (`sdl_painter/image.h`): `kNone`, `kHorizontal`,
+  `kVertical`, `kBoth`.
 - **`sdl_painter/export.h` ve `sdl_painter/app/export.h`:** derleme sırasında
   üretilen, kurulan public başlıklar. Static derlemede makrolar boş
   (`SDLPAINTER_STATIC_DEFINE`).

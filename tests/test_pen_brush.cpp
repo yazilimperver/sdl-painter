@@ -139,4 +139,103 @@ TEST(BrushTest, Equality) {
   EXPECT_NE(a, c);
 }
 
+// --- Uç ve birleşim stili ---
+
+/// @brief Varsayılanlar, stil seçeneği eklenmeden önceki davranışı korur:
+///        uç yoktu (düz kesik), birleşim daima yuvarlaktı.
+TEST(PenTest, DefaultCapIsButtAndDefaultJoinIsRound) {
+  const Pen pen;
+  EXPECT_EQ(pen.GetCapStyle(), LineCap::kButt);
+  EXPECT_EQ(pen.GetJoinStyle(), LineJoin::kRound);
+}
+
+TEST(PenTest, CapAndJoinAreSettable) {
+  Pen pen(Color::Red(), 4.0F);
+  pen.SetCapStyle(LineCap::kRound);
+  pen.SetJoinStyle(LineJoin::kMiter);
+  EXPECT_EQ(pen.GetCapStyle(), LineCap::kRound);
+  EXPECT_EQ(pen.GetJoinStyle(), LineJoin::kMiter);
+}
+
+/// @brief Eşitlik stilleri de kapsamalı; aksi halde `RenderState`
+///        karşılaştırmaları stil değişimini kaçırır.
+TEST(PenTest, EqualityCoversCapAndJoin) {
+  Pen a(Color::Red(), 4.0F);
+  Pen b(Color::Red(), 4.0F);
+  ASSERT_EQ(a, b);
+
+  b.SetCapStyle(LineCap::kSquare);
+  EXPECT_NE(a, b);
+
+  b.SetCapStyle(LineCap::kButt);
+  ASSERT_EQ(a, b);
+  b.SetJoinStyle(LineJoin::kBevel);
+  EXPECT_NE(a, b);
+}
+
+// --- Kesikli çizgi deseni ---
+
+TEST(PenTest, DefaultPenHasNoDash) {
+  const Pen pen;
+  EXPECT_FALSE(pen.HasDash());
+  EXPECT_EQ(pen.GetDashCount(), 0u);
+}
+
+TEST(PenTest, DashPatternIsStoredInOrder) {
+  Pen pen;
+  pen.SetDashPattern({10.0F, 5.0F, 2.0F});
+  ASSERT_EQ(pen.GetDashCount(), 3u);
+  EXPECT_TRUE(pen.HasDash());
+  EXPECT_FLOAT_EQ(pen.GetDashPattern()[0], 10.0F);
+  EXPECT_FLOAT_EQ(pen.GetDashPattern()[1], 5.0F);
+  EXPECT_FLOAT_EQ(pen.GetDashPattern()[2], 2.0F);
+}
+
+TEST(PenTest, ClearDashPatternDisablesDashing) {
+  Pen pen;
+  pen.SetDashPattern({10.0F, 5.0F});
+  ASSERT_TRUE(pen.HasDash());
+  pen.ClearDashPattern();
+  EXPECT_FALSE(pen.HasDash());
+}
+
+/// @brief Pozitif olmayan uzunluk desene girmemeli: tessellator tarafında
+///        sıfır uzunluk, desen yürüyüşünü hiç ilerletmez.
+TEST(PenTest, NonPositiveDashLengthsAreRejected) {
+  Pen pen;
+  pen.SetDashPattern({10.0F, 0.0F, -3.0F, 5.0F});
+  ASSERT_EQ(pen.GetDashCount(), 2u);
+  EXPECT_FLOAT_EQ(pen.GetDashPattern()[0], 10.0F);
+  EXPECT_FLOAT_EQ(pen.GetDashPattern()[1], 5.0F);
+}
+
+TEST(PenTest, DashPatternIsCappedAtMaxSegments) {
+  Pen pen;
+  pen.SetDashPattern({1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+  EXPECT_EQ(pen.GetDashCount(), sdl_painter::kMaxDashSegments);
+}
+
+TEST(PenTest, SettingDashPatternReplacesThePreviousOne) {
+  Pen pen;
+  pen.SetDashPattern({1.0F, 2.0F, 3.0F});
+  pen.SetDashPattern({9.0F});
+  ASSERT_EQ(pen.GetDashCount(), 1u);
+  EXPECT_FLOAT_EQ(pen.GetDashPattern()[0], 9.0F);
+}
+
+TEST(PenTest, EqualityCoversDashPattern) {
+  Pen a(Color::Red(), 2.0F);
+  Pen b(Color::Red(), 2.0F);
+  ASSERT_EQ(a, b);
+
+  b.SetDashPattern({4.0F, 4.0F});
+  EXPECT_NE(a, b);
+
+  a.SetDashPattern({4.0F, 4.0F});
+  EXPECT_EQ(a, b);
+
+  b.SetDashPattern({4.0F, 8.0F});
+  EXPECT_NE(a, b) << "Ayni uzunluktaki farkli desenler esit sayildi.";
+}
+
 }  // namespace sdl_painter

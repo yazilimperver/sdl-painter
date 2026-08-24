@@ -10,6 +10,7 @@
 #include <array>
 #include <glm/gtc/type_ptr.hpp>
 #include <spdlog/spdlog.h>
+#include <utility>
 
 #include "render_batcher.h"
 #include "tessellator.h"
@@ -39,6 +40,38 @@ bool ClipEquals(const RenderState& a, const RenderState& b) noexcept {
   }
   return a.clip_rect.x == b.clip_rect.x && a.clip_rect.y == b.clip_rect.y &&
          a.clip_rect.w == b.clip_rect.w && a.clip_rect.h == b.clip_rect.h;
+}
+
+/// @brief Kalemin kesik deseni varsa desen isaretcisi, yoksa nullptr.
+///
+/// Tessellator "kesik yok"u nullptr ile anliyor; her cagri yerinde ayni
+/// dallanmayi tekrarlamamak icin burada bir kez yazilir.
+const float* DashOf(const Pen& pen) noexcept {
+  return pen.HasDash() ? pen.GetDashPattern().data() : nullptr;
+}
+
+/// @brief Acik bir yolu kalemin stiline gore tessellate et.
+std::vector<Vertex> StrokeOpenPath(const std::vector<Point>& points,
+                                   float width, const Pen& pen) {
+  if (pen.HasDash()) {
+    return Tessellator::TessellateDashedPolyline(
+        points, width, DashOf(pen), pen.GetDashCount(), /*closed=*/false,
+        pen.GetCapStyle(), pen.GetJoinStyle());
+  }
+  return Tessellator::TessellateThickPolyline(points, width, pen.GetCapStyle(),
+                                              pen.GetJoinStyle());
+}
+
+/// @brief Kapali bir yolu kalemin stiline gore tessellate et.
+std::vector<Vertex> StrokeClosedPath(const std::vector<Point>& points,
+                                     float width, const Pen& pen) {
+  if (pen.HasDash()) {
+    return Tessellator::TessellateDashedPolyline(
+        points, width, DashOf(pen), pen.GetDashCount(), /*closed=*/true,
+        pen.GetCapStyle(), pen.GetJoinStyle());
+  }
+  return Tessellator::TessellateStrokedPolygon(points, width,
+                                               pen.GetJoinStyle());
 }
 
 }  // namespace
@@ -201,12 +234,13 @@ void Painter::DrawLine(float x1, float y1, float x2, float y2) {
   }
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
-    auto outline_verts = Tessellator::TessellateThickLine(
-        x1, y1, x2, y2, pen.GetWidth() + 2.0F * pen.GetOutlineWidth());
+    auto outline_verts =
+        StrokeOpenPath({{x1, y1}, {x2, y2}},
+                       pen.GetWidth() + 2.0F * pen.GetOutlineWidth(), pen);
     mBatcher->PushTriangles(outline_verts, mCurrentState.transform,
                             pen.GetOutlineColor(), mCurrentState.opacity);
   }
-  auto verts = Tessellator::TessellateThickLine(x1, y1, x2, y2, pen.GetWidth());
+  auto verts = StrokeOpenPath({{x1, y1}, {x2, y2}}, pen.GetWidth(), pen);
   mBatcher->PushTriangles(verts, mCurrentState.transform, pen.GetColor(),
                           mCurrentState.opacity);
 }
@@ -218,11 +252,14 @@ void Painter::DrawRect(float x, float y, float w, float h) {
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
     auto outline_verts = Tessellator::TessellateStrokedRect(
-        x, y, w, h, pen.GetWidth() + 2.0F * pen.GetOutlineWidth());
+        x, y, w, h, pen.GetWidth() + 2.0F * pen.GetOutlineWidth(),
+        pen.GetJoinStyle(), DashOf(pen), pen.GetDashCount(), pen.GetCapStyle());
     mBatcher->PushTriangles(outline_verts, mCurrentState.transform,
                             pen.GetOutlineColor(), mCurrentState.opacity);
   }
-  auto verts = Tessellator::TessellateStrokedRect(x, y, w, h, pen.GetWidth());
+  auto verts = Tessellator::TessellateStrokedRect(
+      x, y, w, h, pen.GetWidth(), pen.GetJoinStyle(), DashOf(pen),
+      pen.GetDashCount(), pen.GetCapStyle());
   mBatcher->PushTriangles(verts, mCurrentState.transform, pen.GetColor(),
                           mCurrentState.opacity);
 }
@@ -244,12 +281,14 @@ void Painter::DrawCircle(float cx, float cy, float radius) {
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
     auto outline_verts = Tessellator::TessellateStrokedCircle(
-        cx, cy, radius, pen.GetWidth() + 2.0F * pen.GetOutlineWidth());
+        cx, cy, radius, pen.GetWidth() + 2.0F * pen.GetOutlineWidth(),
+        pen.GetJoinStyle(), DashOf(pen), pen.GetDashCount(), pen.GetCapStyle());
     mBatcher->PushTriangles(outline_verts, mCurrentState.transform,
                             pen.GetOutlineColor(), mCurrentState.opacity);
   }
-  auto verts =
-      Tessellator::TessellateStrokedCircle(cx, cy, radius, pen.GetWidth());
+  auto verts = Tessellator::TessellateStrokedCircle(
+      cx, cy, radius, pen.GetWidth(), pen.GetJoinStyle(), DashOf(pen),
+      pen.GetDashCount(), pen.GetCapStyle());
   mBatcher->PushTriangles(verts, mCurrentState.transform, pen.GetColor(),
                           mCurrentState.opacity);
 }
@@ -271,12 +310,14 @@ void Painter::DrawEllipse(float cx, float cy, float rx, float ry) {
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
     auto outline_verts = Tessellator::TessellateStrokedEllipse(
-        cx, cy, rx, ry, pen.GetWidth() + 2.0F * pen.GetOutlineWidth());
+        cx, cy, rx, ry, pen.GetWidth() + 2.0F * pen.GetOutlineWidth(),
+        pen.GetJoinStyle(), DashOf(pen), pen.GetDashCount(), pen.GetCapStyle());
     mBatcher->PushTriangles(outline_verts, mCurrentState.transform,
                             pen.GetOutlineColor(), mCurrentState.opacity);
   }
-  auto verts =
-      Tessellator::TessellateStrokedEllipse(cx, cy, rx, ry, pen.GetWidth());
+  auto verts = Tessellator::TessellateStrokedEllipse(
+      cx, cy, rx, ry, pen.GetWidth(), pen.GetJoinStyle(), DashOf(pen),
+      pen.GetDashCount(), pen.GetCapStyle());
   mBatcher->PushTriangles(verts, mCurrentState.transform, pen.GetColor(),
                           mCurrentState.opacity);
 }
@@ -297,12 +338,12 @@ void Painter::DrawPolygon(const std::vector<Point>& points) {
   }
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
-    auto outline_verts = Tessellator::TessellateStrokedPolygon(
-        points, pen.GetWidth() + 2.0F * pen.GetOutlineWidth());
+    auto outline_verts = StrokeClosedPath(
+        points, pen.GetWidth() + 2.0F * pen.GetOutlineWidth(), pen);
     mBatcher->PushTriangles(outline_verts, mCurrentState.transform,
                             pen.GetOutlineColor(), mCurrentState.opacity);
   }
-  auto verts = Tessellator::TessellateStrokedPolygon(points, pen.GetWidth());
+  auto verts = StrokeClosedPath(points, pen.GetWidth(), pen);
   mBatcher->PushTriangles(verts, mCurrentState.transform, pen.GetColor(),
                           mCurrentState.opacity);
 }
@@ -317,39 +358,165 @@ void Painter::FillPolygon(const std::vector<Point>& points) {
                           mCurrentState.opacity);
 }
 
+void Painter::DrawArc(float cx, float cy, float rx, float ry,
+                      float start_degrees, float sweep_degrees) {
+  if (!CanDrawPen()) {
+    return;
+  }
+  const std::vector<Point> arc =
+      Tessellator::BuildArcPoints(cx, cy, rx, ry, start_degrees, sweep_degrees);
+  if (arc.size() < 2) {
+    return;
+  }
+  const Pen& pen = mCurrentState.pen;
+  if (pen.HasOutline()) {
+    auto outline_verts =
+        StrokeOpenPath(arc, pen.GetWidth() + 2.0F * pen.GetOutlineWidth(), pen);
+    mBatcher->PushTriangles(outline_verts, mCurrentState.transform,
+                            pen.GetOutlineColor(), mCurrentState.opacity);
+  }
+  auto verts = StrokeOpenPath(arc, pen.GetWidth(), pen);
+  mBatcher->PushTriangles(verts, mCurrentState.transform, pen.GetColor(),
+                          mCurrentState.opacity);
+}
+
+void Painter::DrawPie(float cx, float cy, float rx, float ry,
+                      float start_degrees, float sweep_degrees) {
+  if (!CanDrawPen()) {
+    return;
+  }
+  std::vector<Point> outline =
+      Tessellator::BuildArcPoints(cx, cy, rx, ry, start_degrees, sweep_degrees);
+  if (outline.size() < 2) {
+    return;
+  }
+  // Dilimin cercevesi: yay + merkez. Kapali bir yol olarak cizilir ki iki
+  // yaricap ile yay arasindaki koseler birlesim alsin.
+  outline.emplace_back(cx, cy);
+
+  const Pen& pen = mCurrentState.pen;
+  if (pen.HasOutline()) {
+    auto outline_verts = StrokeClosedPath(
+        outline, pen.GetWidth() + 2.0F * pen.GetOutlineWidth(), pen);
+    mBatcher->PushTriangles(outline_verts, mCurrentState.transform,
+                            pen.GetOutlineColor(), mCurrentState.opacity);
+  }
+  auto verts = StrokeClosedPath(outline, pen.GetWidth(), pen);
+  mBatcher->PushTriangles(verts, mCurrentState.transform, pen.GetColor(),
+                          mCurrentState.opacity);
+}
+
+void Painter::FillPie(float cx, float cy, float rx, float ry,
+                      float start_degrees, float sweep_degrees) {
+  if (!CanDrawBrush()) {
+    return;
+  }
+  auto verts = Tessellator::TessellateFilledPie(cx, cy, rx, ry, start_degrees,
+                                                sweep_degrees);
+  mBatcher->PushTriangles(verts, mCurrentState.transform,
+                          mCurrentState.brush.GetColor(),
+                          mCurrentState.opacity);
+}
+
+void Painter::DrawChord(float cx, float cy, float rx, float ry,
+                        float start_degrees, float sweep_degrees) {
+  if (!CanDrawPen()) {
+    return;
+  }
+  const std::vector<Point> arc =
+      Tessellator::BuildArcPoints(cx, cy, rx, ry, start_degrees, sweep_degrees);
+  if (arc.size() < 2) {
+    return;
+  }
+  // Kiris: yayin kendisi kapali bir yol olarak cizilir; kapanis dogrusu iki
+  // uc noktayi birlestirir.
+  const Pen& pen = mCurrentState.pen;
+  if (pen.HasOutline()) {
+    auto outline_verts = StrokeClosedPath(
+        arc, pen.GetWidth() + 2.0F * pen.GetOutlineWidth(), pen);
+    mBatcher->PushTriangles(outline_verts, mCurrentState.transform,
+                            pen.GetOutlineColor(), mCurrentState.opacity);
+  }
+  auto verts = StrokeClosedPath(arc, pen.GetWidth(), pen);
+  mBatcher->PushTriangles(verts, mCurrentState.transform, pen.GetColor(),
+                          mCurrentState.opacity);
+}
+
+void Painter::FillChord(float cx, float cy, float rx, float ry,
+                        float start_degrees, float sweep_degrees) {
+  if (!CanDrawBrush()) {
+    return;
+  }
+  auto verts = Tessellator::TessellateFilledChord(cx, cy, rx, ry, start_degrees,
+                                                  sweep_degrees);
+  mBatcher->PushTriangles(verts, mCurrentState.transform,
+                          mCurrentState.brush.GetColor(),
+                          mCurrentState.opacity);
+}
+
 void Painter::DrawPolyline(const std::vector<Point>& points) {
   if (!CanDrawPen()) {
     return;
   }
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
-    auto outline_verts = Tessellator::TessellateThickPolyline(
-        points, pen.GetWidth() + 2.0F * pen.GetOutlineWidth());
+    auto outline_verts = StrokeOpenPath(
+        points, pen.GetWidth() + 2.0F * pen.GetOutlineWidth(), pen);
     mBatcher->PushTriangles(outline_verts, mCurrentState.transform,
                             pen.GetOutlineColor(), mCurrentState.opacity);
   }
-  auto verts = Tessellator::TessellateThickPolyline(points, pen.GetWidth());
+  auto verts = StrokeOpenPath(points, pen.GetWidth(), pen);
   mBatcher->PushTriangles(verts, mCurrentState.transform, pen.GetColor(),
                           mCurrentState.opacity);
 }
 
-void Painter::DrawImage(const Image& image, float x, float y) {
+void Painter::DrawImage(const Image& image, float x, float y, const Color& tint,
+                        ImageFlip flip) {
   DrawImage(image,
             Rect{0.0F, 0.0F, static_cast<float>(image.Width()),
                  static_cast<float>(image.Height())},
             Rect{x, y, static_cast<float>(image.Width()),
-                 static_cast<float>(image.Height())});
+                 static_cast<float>(image.Height())},
+            tint, flip);
 }
 
-void Painter::DrawImage(const Image& image, const Rect& dest_rect) {
+void Painter::DrawImage(const Image& image, const Rect& dest_rect,
+                        const Color& tint, ImageFlip flip) {
   DrawImage(image,
             Rect{0.0F, 0.0F, static_cast<float>(image.Width()),
                  static_cast<float>(image.Height())},
-            dest_rect);
+            dest_rect, tint, flip);
+}
+
+void Painter::UpdateImage(const Image& image, const uint8_t* rgba) {
+  if (mRenderer == nullptr || !image.IsValid() || rgba == nullptr) {
+    return;
+  }
+  if (image.Channels() != 4) {
+    spdlog::error(
+        "Painter::UpdateImage: yalnizca 4 kanalli (RGBA8) goruntu "
+        "guncellenebilir, bu goruntu {} kanalli.",
+        image.Channels());
+    return;
+  }
+
+  const TextureHandle handle = image.Upload(*mRenderer);
+  if (handle == kInvalidTexture) {
+    return;
+  }
+
+  // Doku ANINDA degisir ama cizimler biriktiriliyor. Flush edilmezse, bu
+  // karede daha once bu dokudan yapilmis ve henuz gonderilmemis cizimler
+  // geriye donuk olarak YENI icerikle cizilirdi.
+  if (mBatcher != nullptr) {
+    mBatcher->Flush();
+  }
+  mRenderer->UpdateTexture(handle, 0, 0, image.Width(), image.Height(), rgba);
 }
 
 void Painter::DrawImage(const Image& image, const Rect& src_rect,
-                        const Rect& dest_rect) {
+                        const Rect& dest_rect, const Color& tint,
+                        ImageFlip flip) {
   if (mRenderer == nullptr || !image.IsValid()) {
     return;
   }
@@ -362,10 +529,18 @@ void Painter::DrawImage(const Image& image, const Rect& src_rect,
   // src_rect → UV koordinatlarina donustur [0, 1]
   const auto kImgW = static_cast<float>(image.Width());
   const auto kImgH = static_cast<float>(image.Height());
-  const float kU0 = src_rect.x / kImgW;
-  const float kV0 = src_rect.y / kImgH;
-  const float kU1 = (src_rect.x + src_rect.w) / kImgW;
-  const float kV1 = (src_rect.y + src_rect.h) / kImgH;
+  float u0 = src_rect.x / kImgW;
+  float v0 = src_rect.y / kImgH;
+  float u1 = (src_rect.x + src_rect.w) / kImgW;
+  float v1 = (src_rect.y + src_rect.h) / kImgH;
+
+  // Aynalama: hedef dikdortgen yerinde kalir, yalnizca UV ucalari takas edilir.
+  if (flip == ImageFlip::kHorizontal || flip == ImageFlip::kBoth) {
+    std::swap(u0, u1);
+  }
+  if (flip == ImageFlip::kVertical || flip == ImageFlip::kBoth) {
+    std::swap(v0, v1);
+  }
 
   // dest_rect → ekran koordinatlari
   const float kX0 = dest_rect.x;
@@ -375,12 +550,11 @@ void Painter::DrawImage(const Image& image, const Rect& src_rect,
 
   // Iki ucgenden olusan quad (CCW)
   const std::vector<TexturedVertex> kVerts = {
-      {kX0, kY0, kU0, kV0}, {kX1, kY0, kU1, kV0}, {kX1, kY1, kU1, kV1},
-      {kX0, kY0, kU0, kV0}, {kX1, kY1, kU1, kV1}, {kX0, kY1, kU0, kV1},
+      {kX0, kY0, u0, v0}, {kX1, kY0, u1, v0}, {kX1, kY1, u1, v1},
+      {kX0, kY0, u0, v0}, {kX1, kY1, u1, v1}, {kX0, kY1, u0, v1},
   };
 
-  mBatcher->PushTexturedTriangles(kVerts, mCurrentState.transform, handle,
-                                  Color{255, 255, 255, 255},
+  mBatcher->PushTexturedTriangles(kVerts, mCurrentState.transform, handle, tint,
                                   mCurrentState.opacity);
 }
 

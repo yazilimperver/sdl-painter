@@ -6,6 +6,7 @@
 /// örneğinde başlar.
 
 #include <SDL3/SDL.h>
+
 #include <spdlog/sinks/ansicolor_sink.h>
 #include <spdlog/spdlog.h>
 
@@ -50,8 +51,8 @@ int main() {
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
 
-  SDL_Window* window = SDL_CreateWindow(
-      "SDLPainter — hello_window (Phase 0)", 800, 600, SDL_WINDOW_OPENGL);
+  SDL_Window* window = SDL_CreateWindow("SDLPainter — hello_window (Phase 0)",
+                                        800, 600, SDL_WINDOW_OPENGL);
   if (!window) {
     spdlog::error("SDL_CreateWindow failed: {}", SDL_GetError());
     SDL_Quit();
@@ -65,9 +66,9 @@ int main() {
   while (running) {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
-      if (event.type == SDL_EVENT_QUIT) running = false;
-      if (event.type == SDL_EVENT_KEY_DOWN &&
-          event.key.key == SDLK_ESCAPE) {
+      if (event.type == SDL_EVENT_QUIT)
+        running = false;
+      if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE) {
         running = false;
       }
     }

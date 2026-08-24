@@ -754,6 +754,135 @@ TEST(PainterFrameStats, GpuTimeIsZeroWhenUnsupported) {
   EXPECT_DOUBLE_EQ(h.painter.GetFrameStats().gpu_frame_ms, 0.0);
 }
 
+// ─── Yay / dilim / kiriş ────────────────────────────────────────────────────
+
+TEST(PainterArc, FillPieUsesBrushAndDrawsFromCentre) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.FillPie(100.0F, 100.0F, 50.0F, 50.0F, 0.0F, 90.0F);
+  h.painter.End();
+
+  ASSERT_FALSE(h.mock->last_vertices.empty());
+  EXPECT_EQ(h.mock->last_vertices[0].r, 255);
+  EXPECT_EQ(h.mock->last_vertices[0].x, 100.0F);
+  EXPECT_EQ(h.mock->last_vertices[0].y, 100.0F);
+}
+
+TEST(PainterArc, NoBrushMeansNoFillDrawCall) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetBrush(Brush(Color::Transparent()));
+  h.painter.FillPie(100.0F, 100.0F, 50.0F, 50.0F, 0.0F, 90.0F);
+  h.painter.FillChord(100.0F, 100.0F, 50.0F, 50.0F, 0.0F, 90.0F);
+  h.painter.End();
+  EXPECT_EQ(h.mock->CountCalls("DrawTriangles"), 0);
+}
+
+TEST(PainterArc, NoPenMeansNoStrokeDrawCall) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetPen(Pen::NoPen());
+  h.painter.DrawArc(100.0F, 100.0F, 50.0F, 50.0F, 0.0F, 90.0F);
+  h.painter.DrawPie(100.0F, 100.0F, 50.0F, 50.0F, 0.0F, 90.0F);
+  h.painter.DrawChord(100.0F, 100.0F, 50.0F, 50.0F, 0.0F, 90.0F);
+  h.painter.End();
+  EXPECT_EQ(h.mock->CountCalls("DrawTriangles"), 0);
+}
+
+/// @brief Yay AÇIK bir yoldur: uçları birleştirilmez, dolayısıyla dilim ve
+///        kirişten daha az geometri üretir.
+TEST(PainterArc, ArcProducesLessGeometryThanPieAndChord) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetPen(Pen(Color::White(), 3.0F));
+  h.painter.DrawArc(100.0F, 100.0F, 50.0F, 50.0F, 0.0F, 90.0F);
+  h.painter.End();
+  const std::size_t arc_size = h.mock->last_vertices.size();
+
+  h.mock->Reset();
+  h.painter.Begin();
+  h.painter.SetPen(Pen(Color::White(), 3.0F));
+  h.painter.DrawPie(100.0F, 100.0F, 50.0F, 50.0F, 0.0F, 90.0F);
+  h.painter.End();
+  const std::size_t pie_size = h.mock->last_vertices.size();
+
+  ASSERT_GT(arc_size, 0u);
+  EXPECT_LT(arc_size, pie_size)
+      << "Yay, dilim kadar geometri uretti — uclari kapatiliyor olabilir.";
+}
+
+TEST(PainterArc, DegenerateSweepProducesNothing) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetPen(Pen(Color::White(), 3.0F));
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.DrawArc(100.0F, 100.0F, 50.0F, 50.0F, 0.0F, 0.0F);
+  h.painter.FillPie(100.0F, 100.0F, 50.0F, 50.0F, 0.0F, 0.0F);
+  h.painter.End();
+  EXPECT_EQ(h.mock->CountCalls("DrawTriangles"), 0);
+}
+
+TEST(PainterArc, TransformIsAppliedToArcVertices) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.Translate(200.0F, 300.0F);
+  h.painter.FillPie(0.0F, 0.0F, 50.0F, 50.0F, 0.0F, 360.0F);
+  h.painter.End();
+
+  ASSERT_FALSE(h.mock->last_vertices.empty());
+  const Bounds b = BoundsOf(h.mock->last_vertices);
+  EXPECT_NEAR(b.min_x, 150.0F, 1.0F);
+  EXPECT_NEAR(b.max_x, 250.0F, 1.0F);
+  EXPECT_NEAR(b.min_y, 250.0F, 1.0F);
+  EXPECT_NEAR(b.max_y, 350.0F, 1.0F);
+}
+
+// ─── Kesikli kalem ──────────────────────────────────────────────────────────
+
+TEST(PainterDash, DashedLineProducesLessGeometryThanSolid) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetPen(Pen(Color::White(), 4.0F));
+  h.painter.DrawLine(0.0F, 0.0F, 200.0F, 0.0F);
+  h.painter.End();
+  const std::size_t solid = h.mock->last_vertices.size();
+
+  h.mock->Reset();
+  Pen dashed(Color::White(), 4.0F);
+  dashed.SetDashPattern({10.0F, 10.0F});
+  h.painter.Begin();
+  h.painter.SetPen(dashed);
+  h.painter.DrawLine(0.0F, 0.0F, 200.0F, 0.0F);
+  h.painter.End();
+  const std::size_t dashed_size = h.mock->last_vertices.size();
+
+  ASSERT_GT(solid, 0u);
+  ASSERT_GT(dashed_size, 0u);
+  EXPECT_NE(dashed_size, solid) << "Kesik desen hic uygulanmadi.";
+}
+
+TEST(PainterDash, DashAppliesToClosedShapesToo) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetPen(Pen(Color::White(), 4.0F));
+  h.painter.DrawRect(0.0F, 0.0F, 100.0F, 100.0F);
+  h.painter.End();
+  const std::size_t solid = h.mock->last_vertices.size();
+
+  h.mock->Reset();
+  Pen dashed(Color::White(), 4.0F);
+  dashed.SetDashPattern({8.0F, 8.0F});
+  h.painter.Begin();
+  h.painter.SetPen(dashed);
+  h.painter.DrawRect(0.0F, 0.0F, 100.0F, 100.0F);
+  h.painter.End();
+
+  EXPECT_NE(h.mock->last_vertices.size(), solid)
+      << "DrawRect kalemin kesik desenini yok sayiyor.";
+}
+
 // ─── Görüntü çizimi ─────────────────────────────────────────────────────────
 
 TEST(PainterImage, DrawImageUploadsOnceAndDraws) {
@@ -824,6 +953,166 @@ TEST(PainterImage, SrcRectOverloadMapsSubRegionUVs) {
     max_u = std::fmax(max_u, v.u);
   }
   EXPECT_FLOAT_EQ(max_u, 0.5F);
+}
+
+// ─── Tint ve aynalama ───────────────────────────────────────────────────────
+
+TEST(PainterImage, DefaultTintIsWhiteSoTextureIsUnchanged) {
+  Harness h;
+  const auto image = MakeTinyImage();
+  ASSERT_TRUE(image.IsValid());
+
+  h.painter.Begin();
+  h.painter.DrawImage(image, 0.0F, 0.0F);
+  h.painter.End();
+
+  ASSERT_FALSE(h.mock->last_textured_vertices.empty());
+  for (const auto& v : h.mock->last_textured_vertices) {
+    EXPECT_EQ(v.r, 255);
+    EXPECT_EQ(v.g, 255);
+    EXPECT_EQ(v.b, 255);
+    EXPECT_EQ(v.a, 255);
+  }
+}
+
+TEST(PainterImage, TintReachesEveryVertex) {
+  Harness h;
+  const auto image = MakeTinyImage();
+  ASSERT_TRUE(image.IsValid());
+
+  const Color kTint{255, 0, 0, 128};
+  h.painter.Begin();
+  h.painter.DrawImage(image, 0.0F, 0.0F, kTint);
+  h.painter.End();
+
+  ASSERT_EQ(h.mock->last_textured_vertices.size(), 6u);
+  for (const auto& v : h.mock->last_textured_vertices) {
+    EXPECT_EQ(v.r, kTint.r);
+    EXPECT_EQ(v.g, kTint.g);
+    EXPECT_EQ(v.b, kTint.b);
+    EXPECT_EQ(v.a, kTint.a) << "Tint alfasi vertex'e tasinmadi.";
+  }
+}
+
+/// @brief Tint vertex'te tasinir; farkli renkler ayni batch'te kalmali.
+///
+/// Bu, ozelligin varlik sebebi: renk basina flush gerekseydi tint'i disari
+/// acmanin bedeli, kazancindan buyuk olurdu.
+TEST(PainterImage, DifferentTintsDoNotBreakBatching) {
+  Harness h;
+  const auto image = MakeTinyImage();
+  ASSERT_TRUE(image.IsValid());
+
+  h.painter.Begin();
+  h.painter.DrawImage(image, 0.0F, 0.0F, Color::Red());
+  h.painter.DrawImage(image, 20.0F, 0.0F, Color::Blue());
+  h.painter.End();
+
+  EXPECT_EQ(h.mock->CountCalls("DrawTextured"), 1)
+      << "Farkli tint batch'i kirdi.";
+  EXPECT_EQ(h.mock->last_textured_vertices.size(), 12u);
+}
+
+/// @brief Aynalama UV'leri takas eder; hedef dikdortgen yerinde kalir.
+TEST(PainterImage, HorizontalFlipSwapsUOnlyAndKeepsGeometry) {
+  Harness h;
+  const auto image = MakeTinyImage();
+  ASSERT_TRUE(image.IsValid());
+
+  const Rect kDest{0.0F, 0.0F, 10.0F, 10.0F};
+
+  h.painter.Begin();
+  h.painter.DrawImage(image, kDest);
+  h.painter.End();
+  const auto plain = h.mock->last_textured_vertices;
+
+  h.mock->Reset();
+  h.painter.Begin();
+  h.painter.DrawImage(image, kDest, Color::White(),
+                      sdl_painter::ImageFlip::kHorizontal);
+  h.painter.End();
+  const auto flipped = h.mock->last_textured_vertices;
+
+  ASSERT_EQ(plain.size(), flipped.size());
+  for (std::size_t i = 0; i < plain.size(); ++i) {
+    EXPECT_FLOAT_EQ(plain[i].x, flipped[i].x) << "Geometri i=" << i;
+    EXPECT_FLOAT_EQ(plain[i].y, flipped[i].y) << "Geometri i=" << i;
+    EXPECT_FLOAT_EQ(plain[i].v, flipped[i].v) << "Dikey UV degisti, i=" << i;
+    EXPECT_FLOAT_EQ(flipped[i].u, 1.0F - plain[i].u) << "Yatay UV, i=" << i;
+  }
+}
+
+TEST(PainterImage, VerticalFlipSwapsVOnly) {
+  Harness h;
+  const auto image = MakeTinyImage();
+  ASSERT_TRUE(image.IsValid());
+
+  const Rect kDest{0.0F, 0.0F, 10.0F, 10.0F};
+
+  h.painter.Begin();
+  h.painter.DrawImage(image, kDest);
+  h.painter.End();
+  const auto plain = h.mock->last_textured_vertices;
+
+  h.mock->Reset();
+  h.painter.Begin();
+  h.painter.DrawImage(image, kDest, Color::White(),
+                      sdl_painter::ImageFlip::kVertical);
+  h.painter.End();
+  const auto flipped = h.mock->last_textured_vertices;
+
+  ASSERT_EQ(plain.size(), flipped.size());
+  for (std::size_t i = 0; i < plain.size(); ++i) {
+    EXPECT_FLOAT_EQ(plain[i].u, flipped[i].u) << "Yatay UV degisti, i=" << i;
+    EXPECT_FLOAT_EQ(flipped[i].v, 1.0F - plain[i].v) << "Dikey UV, i=" << i;
+  }
+}
+
+TEST(PainterImage, BothFlipSwapsUAndV) {
+  Harness h;
+  const auto image = MakeTinyImage();
+  ASSERT_TRUE(image.IsValid());
+
+  const Rect kDest{0.0F, 0.0F, 10.0F, 10.0F};
+
+  h.painter.Begin();
+  h.painter.DrawImage(image, kDest);
+  h.painter.End();
+  const auto plain = h.mock->last_textured_vertices;
+
+  h.mock->Reset();
+  h.painter.Begin();
+  h.painter.DrawImage(image, kDest, Color::White(),
+                      sdl_painter::ImageFlip::kBoth);
+  h.painter.End();
+  const auto flipped = h.mock->last_textured_vertices;
+
+  ASSERT_EQ(plain.size(), flipped.size());
+  for (std::size_t i = 0; i < plain.size(); ++i) {
+    EXPECT_FLOAT_EQ(flipped[i].u, 1.0F - plain[i].u) << "i=" << i;
+    EXPECT_FLOAT_EQ(flipped[i].v, 1.0F - plain[i].v) << "i=" << i;
+  }
+}
+
+/// @brief Aynalama, src_rect ile birlikte yalnizca o alt bolgeyi cevirmeli.
+TEST(PainterImage, FlipStaysWithinSourceSubRegion) {
+  Harness h;
+  const auto image = MakeTinyImage();  // 4x4
+  ASSERT_TRUE(image.IsValid());
+
+  h.painter.Begin();
+  // Sol ust 2x2 -> UV [0, 0.5]; aynalama bu araligin disina tasmamali.
+  h.painter.DrawImage(image, Rect{0.0F, 0.0F, 2.0F, 2.0F},
+                      Rect{0.0F, 0.0F, 10.0F, 10.0F},
+                      Color::White(),
+                      sdl_painter::ImageFlip::kHorizontal);
+  h.painter.End();
+
+  ASSERT_FALSE(h.mock->last_textured_vertices.empty());
+  for (const auto& v : h.mock->last_textured_vertices) {
+    EXPECT_GE(v.u, 0.0F);
+    EXPECT_LE(v.u, 0.5F) << "Aynalama kaynak alt bolgesinin disina tasti.";
+  }
 }
 
 TEST(PainterImage, InvalidImageProducesNoDrawCall) {

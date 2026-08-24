@@ -28,7 +28,7 @@ sayıyor, sonra çağrıyı olduğu gibi iletiyor.
 
 > Uygulama içinde aynı sayaçlara `Painter::GetFrameStats()` ile de
 > erişilebilir; `Application` tabanlı uygulamalarda F1 ekran üstü göstergeyi
-> açar (bkz. `examples/stats_overlay.cpp`).
+> açar (bkz. `examples/app/stats_overlay.cpp`).
 
 ## Çalıştırma
 
