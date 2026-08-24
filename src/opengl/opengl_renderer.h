@@ -32,11 +32,15 @@ class OpenGLRenderer final : public IRenderer {
   void ClearScissor() override;
   void Clear(const Color& color) override;
   void SetOpacity(float alpha) override;
+  void SetBlendMode(BlendMode mode) override;
 
   void DrawTriangles(const std::vector<Vertex>& vertices) override;
 
   TextureHandle CreateTexture(const uint8_t* data, int32_t width,
                               int32_t height, int32_t channels) override;
+  TextureHandle CreateTexture(const uint8_t* data, int32_t width,
+                              int32_t height, int32_t channels,
+                              TextureFilter filter) override;
   void UpdateTexture(TextureHandle handle, int32_t x, int32_t y, int32_t width,
                      int32_t height, const uint8_t* data) override;
   void DestroyTexture(TextureHandle handle) override;

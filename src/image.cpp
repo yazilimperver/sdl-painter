@@ -129,8 +129,9 @@ TextureHandle Image::Upload(IRenderer& renderer) const {
   }
 
   if (!mHandle.IsValid()) {
-    mHandle = Texture(&renderer, renderer.CreateTexture(mRawData.get(), mWidth,
-                                                        mHeight, mChannels));
+    mHandle =
+        Texture(&renderer, renderer.CreateTexture(mRawData.get(), mWidth,
+                                                  mHeight, mChannels, mFilter));
   }
 
   return mHandle.Handle();

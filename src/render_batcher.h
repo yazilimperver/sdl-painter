@@ -34,11 +34,26 @@ class RenderBatcher {
                      const glm::mat3& transform, const Color& color,
                      float opacity);
 
+  /// @brief Vertex renkleri **zaten yazılmış** üçgenleri ekle.
+  ///
+  /// Gradient dolgular için: renk şekle göre vertex başına hesaplandığından
+  /// tek bir düz renkle ezilemez. Batch anahtarı açısından düz dolgudan farkı
+  /// yoktur — renk vertex'te taşındığı için gradient **batch'i kırmaz**.
+  void PushTrianglesPreColored(const std::vector<Vertex>& vertices,
+                               const glm::mat3& transform, float opacity);
+
   /// @brief Textured üçgenleri ekle.
   /// @param transform Vertex pozisyonlarına uygulanacak 3x3 affine matris.
   void PushTexturedTriangles(const std::vector<TexturedVertex>& vertices,
                              const glm::mat3& transform, TextureHandle texture,
                              const Color& tint, float opacity);
+
+  /// @brief Karıştırma modunu ayarla.
+  ///
+  /// Opaklık gibi bir GPU durumu: değişim biriken çizimleri **flush eder**,
+  /// çünkü onlar eski modla çizilmeliydi. Renk ve tint'in aksine batch'i
+  /// kırar — bu, modun vertex'te taşınamamasının doğal sonucu.
+  void SetBlendMode(BlendMode mode);
 
   /// @brief Birikmiş tüm verileri renderer'a gönder.
   void Flush();
@@ -73,6 +88,7 @@ class RenderBatcher {
   DrawMode mCurrentMode{DrawMode::kNone};
   TextureHandle mCurrentTexture{kInvalidTexture};
   float mCurrentOpacity{1.0F};
+  BlendMode mCurrentBlend{BlendMode::kAlpha};
 
   std::vector<Vertex> mVertexBuffer;
   std::vector<TexturedVertex> mTexturedBuffer;

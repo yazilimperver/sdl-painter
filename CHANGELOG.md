@@ -39,6 +39,83 @@
   (Conan Center bunu yasaklıyor).
 
 ### Eklendi
+- **Karıştırma (blend) modu.** `Painter::SetBlendMode` — `kAlpha` (varsayılan),
+  `kAdditive`, `kMultiply`, `kNone`. `Save`/`Restore` kapsamında.
+  **Backend farkı ve nasıl çözüldüğü:** OpenGL'de mod `glBlendFunc` ile çalışma
+  zamanında değişir; Vulkan 1.1'de blend, grafik pipeline'ının **sabit
+  durumudur** ve dinamik olarak değiştirilemez. Bu yüzden Vulkan tarafında mod
+  başına ayrı bir pipeline varyantı **başlangıçta** üretiliyor (dördü tek
+  `vkCreateGraphicsPipelines` çağrısında) ve çizim anında doğrusu bağlanıyor —
+  çizim sırasında pipeline derlenmiyor. İki backend'in blend faktörleri
+  `src/vulkan/vk_blend.h` içinde birebir eşleştirildi; aksi halde aynı çizim
+  iki backend'de farklı görünürdü. Vulkan tarafı validation layer açıkken dört
+  örnekle doğrulandı.
+  Mod bir GPU durumu olduğu için **batch'i kırar** (renk ve tint'in aksine,
+  vertex'te taşınamaz); `blend_modes` örneği bunun maliyetini canlı gösteriyor.
+  6 yeni test.
+- **Doku filtresi.** `Image::SetFilter(TextureFilter::kNearest)` — piksel
+  sanatı büyütüldüğünde keskin kalır. GL'de `glTexParameteri`, Vulkan'da
+  sampler; ikisi de MIN ve MAG için aynı filtreyi kullanır ki backend'ler aynı
+  görüntüyü versin. Filtre doku **yaratılırken** uygulanır, yani ilk çizimden
+  önce ayarlanmalı — belgelendi ve testlendi. 3 yeni test.
+- **`Painter::DrawImageMesh`** — dokuyu serbest biçimli bir ızgara üzerine
+  çizer, yani dörtgen köşeleri bağımsız hareket edebilir. `DrawImage`'ın üç
+  aşırı yüklemesi de eksen hizalı `Rect` aldığı için dalgalanan bayrak, sayfa
+  kıvrımı gibi efektler mümkün değildi. 6 yeni test.
+- **`IRenderer` genişletme yöntemi.** Bu sürümde arayüze eklenen üç metotun
+  (`SetBlendMode`, filtreli `CreateTexture`) hepsi **varsayılan gövdeli**;
+  yani bu arayüzü dışarıda implemente etmiş kod derlenmeye devam eder ve
+  desteklenmeyen kabiliyette makul varsayılana düşer. `v1.2.0`'da saf sanal
+  `UpdateTexture` eklenmesi bu tür kodu kırıyordu.
+- **Gradient fırça — shader'sız.** `Brush::LinearGradient(start, end, from, to)`
+  ve `Brush::RadialGradient(center, radius, from, to)`. Geçiş, tessellation
+  sonrası köşe renkleri hesaplanarak üretiliyor; enterpolasyonu donanım yapıyor.
+  Sonuç: **hiçbir backend değişikliği yok, shader değişmedi ve gradient batch'i
+  kırmıyor** — farklı gradientlerle çizilen üç şekil tek draw call'da kalıyor
+  (testi var). Bedeli, geçişin şeklin köşe yoğunluğu kadar hassas olması;
+  daire/elips segment sayısı yarıçapa göre uyarlandığı için pratikte sorun
+  çıkarmıyor. Gradient koordinatları çizim koordinatlarıyla aynı uzayda,
+  yani transform yığınından etkileniyor (Qt davranışı). 10 yeni test.
+- **`Painter::SetViewport` / `ResetViewport`.** Çizimi pencerenin bir alt
+  dikdörtgeniyle sınırlar ve koordinatları **o alt dikdörtgene yerelleştirir** —
+  bölünmüş ekran, mini harita, kenar paneli için. Kırpmadan farkı: kırpma
+  koordinat sistemini değiştirmeden piksel maskeler, viewport koordinat
+  sisteminin kendisini yeniden tanımlar. `IRenderer::SetViewport` zaten vardı,
+  eksik olan `Painter` yüzeyiydi. Bu değişiklikle `Painter` artık **çizim
+  yüzeyi boyutu** ile **yürürlükteki viewport** ayrımını tutuyor; kırpma
+  dikdörtgeni viewport-yerel verilir ve scissor kutusuna çevrilirken viewport
+  orijini eklenir (aksi halde bölünmüş ekranda kırpma yanlış panele düşerdi).
+  Yeniden boyutlandırma, kullanıcının seçtiği viewport'u ezmiyor. 8 yeni test.
+- **`DrawRoundedRect` / `FillRoundedRect`.** Arayüz çiziminin en sık kullanılan
+  şekli; dış hat konveks olduğu için mevcut ear clipping ve kalın çizgi yolları
+  ek mantık gerektirmedi. Köşe çözünürlüğü daire ile aynı adaptif kurala uyar.
+  Kenar durumları belgelenmiş ve testli: `radius <= 0` → `DrawRect` ile birebir
+  aynı, `radius > min(w,h)/2` → oraya kırpılır (kare girdide daireye
+  dejenere olur), `w`/`h` pozitif değilse hiçbir şey çizilmez. 14 yeni test.
+- **Çok satırlı metin, sözcük kaydırma ve `Font::LineHeight()`.**
+  `DrawText`'in her iki aşırı yüklemesi artık satır sonu karakterini satır
+  bölme olarak işliyor (eskiden görünmez bir glyph gibi ele alınıyordu);
+  satırlar arası mesafe fontun kendi metriği olan `LineHeight()` kadar.
+  Dikdörtgen aşırı yüklemesine `TextWrap` parametresi eklendi: `kWord` ile
+  satırlar sözcük sınırlarından bölünür, tek bir sözcük bile sığmazsa
+  **UTF-8 kod noktası sınırında** karakterden bölünür. Varsayılan `kNone`,
+  yani mevcut davranış birebir korunuyor — sarmalamayı varsayılan yapmak her
+  mevcut çizimin görünümünü sessizce değiştirirdi.
+  Yerleşim hesabı için `Painter::CountTextLines()` eklendi: metnin kaç satır
+  tutacağını çizmeden söyler. Demo: `examples/graphics/charts.cpp`.
+  10 yeni test.
+- **Üç yeni örnek — eklenen kabiliyetlerin kabul testleri:**
+  `strokes` (uç/birleşim/kesik/yuvarlatılmış dikdörtgen/yay tek sahnede; uç
+  taşmasını referans çizgisiyle, miter'ın bevel'a düşüşünü daralan açı
+  dizisiyle gösterir), `gradients` (shader'sız gradient ve **sınırının dürüst
+  gösterimi**: 3'ten 64 köşeye giden poligon dizisi geçişin köşe yoğunluğuna
+  bağlı olduğunu görünür kılar; hepsi yine tek draw call), `viewports`
+  (bölünmüş ekran + mini harita; dört panel aynı çizim fonksiyonunu ofset
+  hesabı olmadan çağırıyor).
+- **`charts` örneği** — yay/dilim ve çok satırlı metnin birlikte kabul testi:
+  pasta, çubuk ve çizgi grafiği, kesikli ızgara, ölçülerek hizalanmış
+  etiketler ve sarmalanan bir açıklama kutusu. Kütüphanenin oyun dışı hedef
+  kitlesini (araç / gösterge paneli çizimi) gösteren ilk örnek.
 - **`Painter::UpdateImage`** — yüklenmiş bir görüntünün doku içeriğini yerinde
   günceller. `IRenderer::UpdateTexture` `v1.2.0`'da eklenmişti ama yalnızca
   glyph atlası tarafından **içeriden** kullanılıyordu; tüketicinin ona

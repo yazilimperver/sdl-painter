@@ -1,6 +1,6 @@
 # SDLPainter Examples
 
-Twenty-seven runnable demos, each isolating one capability. Build them with the
+Thirty-four runnable demos, each isolating one capability. Build them with the
 repository (they are on by default) and run them straight from the build tree:
 
 ```bash
@@ -39,6 +39,7 @@ demo is one line in [`CMakeLists.txt`](CMakeLists.txt); the helper is
 | [`clipping`](basics/clipping.cpp) | `SetClipRect` / `ClearClip`, plus a centre-rotation correctness check that stays centred at any window size. | — |
 | [`images`](graphics/images.cpp) | `DrawImage` in all three overloads — original size, scaled destination rect, atlas slicing — with alpha blending and a rotating texture. | — |
 | [`text`](graphics/text.cpp) | `DrawText` at a point and aligned inside a rect, `Font::MeasureText`, multiple point sizes, coloured and semi-transparent text. | SDL_ttf |
+| [`viewports`](basics/viewports.cpp) | Split screen and a minimap. `SetViewport` makes coordinates **panel-local**, so all four panels call the same drawing function with no offset arithmetic — and clip rects are panel-local too. | — |
 | [`input`](basics/input.cpp) | The difference between key **events** (one-shot) and key **state** (continuous) — and why writing movement with events feels wrong. Mouse tracking and a dashed crosshair. | — |
 
 ## Drawing in depth
@@ -49,6 +50,12 @@ demo is one line in [`CMakeLists.txt`](CMakeLists.txt); the helper is
 | [`particles`](graphics/particles.cpp) | Tens of thousands of particles in **two** draw calls, with a live counter. SPACE switches to a batch-breaking pattern so the cost is visible side by side. | — |
 | [`sprite_animation`](graphics/sprite_animation.cpp) | A real CC0 sprite sheet sliced on an 8×4 grid. Its left- and right-facing rows are exact mirrors, so the demo draws the right-facing walk **either** from the sheet **or** by flipping the left row — pixel-identical, which is the argument for `ImageFlip` in one picture. | [asset](assets/) |
 | [`physics_rope`](graphics/physics_rope.cpp) | A Verlet rope and cloth: the honest stress test for thick-line joins and caps, cycled live with J and C. | — |
+| [`strokes`](graphics/strokes.cpp) | Every pen axis side by side — cap, join, dash pattern, rounded rects and arcs. Reference marks show exactly how far each cap overhangs the real endpoint, and a row of narrowing angles shows miter falling back to bevel on its own. | — |
+| [`gradients`](graphics/gradients.cpp) | Gradients without a shader, and an honest look at the catch: the transition is only as fine as the shape's vertex density. A row of polygons from 3 to 64 corners makes the limit visible; press **G** to see the vertices themselves. All of it still batches into one draw call. | — |
+| [`blend_modes`](graphics/blend_modes.cpp) | The four blend modes side by side, and their cost. Colour and tint ride in the vertex so they batch freely; **blend mode is GPU state and cannot** — press SPACE to switch between grouping by mode and changing it per shape, and watch the draw-call counter. | — |
+| [`pixel_art`](graphics/pixel_art.cpp) | The same sprite at the same scale, `kLinear` on the left and `kNearest` on the right, with a sweeping divider. One line of difference, decisive result. | [asset](assets/) |
+| [`mesh_warp`](graphics/mesh_warp.cpp) | `DrawImageMesh`: a textured grid whose corners move independently — a waving flag. Press **1/2/3** to change grid resolution and see how the curve is only as fine as the vertex count. | [asset](assets/) |
+| [`charts`](graphics/charts.cpp) | Pie, bar and line charts: `FillPie` / `DrawPie`, a dashed grid, labels aligned with `Font::MeasureText`, and a caption box that word-wraps. Press **W** to turn wrapping off and watch it overflow. | — |
 | [`morph`](graphics/morph.cpp) | Smooth interpolation between a circle, a star and a concave cross — the tessellator re-runs every frame on deliberately awkward shapes. | — |
 
 | | |

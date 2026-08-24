@@ -2,10 +2,13 @@
 
 #include "sdl_painter/vertex.h"
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
 #include <vulkan/vulkan.h>
+
+#include "vk_blend.h"
 
 namespace sdl_painter {
 
@@ -45,7 +48,13 @@ class VulkanPipeline {
   /// @brief Pipeline kaynaklarını serbest bırak. Idempotent; destructor da çağırır.
   void Destroy(VkDevice device);
 
-  VkPipeline GetPipeline() const { return mPipeline; }
+  /// @brief Karıştırma moduna karşılık gelen pipeline varyantı.
+  ///
+  /// Vulkan'da blend, pipeline'ın sabit durumudur; mod başına ayrı bir
+  /// varyant üretilir (bkz. vk_blend.h).
+  VkPipeline GetPipeline(BlendMode mode = BlendMode::kAlpha) const {
+    return mPipelines[vk_detail::BlendIndex(mode)];
+  }
   VkPipelineLayout GetLayout() const { return mLayout; }
 
  private:
@@ -57,7 +66,7 @@ class VulkanPipeline {
                                            std::size_t byte_size);
 
   VkDevice mDevice{VK_NULL_HANDLE};  // RAII için Init'te saklanır
-  VkPipeline mPipeline{VK_NULL_HANDLE};
+  std::array<VkPipeline, kBlendModeCount> mPipelines{};
   VkPipelineLayout mLayout{VK_NULL_HANDLE};
 };
 

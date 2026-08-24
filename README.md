@@ -138,12 +138,13 @@ Sixteen runnable demos (for the time being), one capability each:
 
 | Area | Supported |
 |------|-----------|
-| **Primitives** | Line, rectangle, circle, ellipse, polygon, polyline — all with stroke + fill |
-| **Styles** | Pen (color, width, outline), Brush (fill color), global opacity |
+| **Primitives** | Line, rectangle, rounded rectangle, circle, ellipse, arc, pie, chord, polygon, polyline — all with stroke + fill |
+| **Styles** | Pen (color, width, outline, dash pattern, cap and join style), Brush (flat fill or two-stop linear/radial gradient), global opacity, blend modes |
 | **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` stack |
 | **Clipping** | Scissor-based rectangular clipping |
-| **Image** | PNG / JPG loading (stb_image), source→destination scaling, alpha blending |
-| **Text** | SDL_ttf 3.x, glyph cache, left/center/right alignment |
+| **Viewport** | Draw into a sub-rectangle with local coordinates — split screen, minimaps |
+| **Image** | PNG / JPG loading (stb_image), source→destination scaling, atlas slicing, tint, mirroring, nearest/linear filtering, in-place texture update, free-form textured meshes |
+| **Text** | SDL_ttf 3.x, glyph cache, left/center/right alignment, multi-line and word wrap |
 | **Backend** | OpenGL 3.3 Core and Vulkan 1.1 — interchangeable through `IRenderer` |
 
 ## Is SDLPainter for you?
@@ -152,8 +153,8 @@ Sixteen runnable demos (for the time being), one capability each:
 than assemble triangles, you want a type-safe modern C++ API, or you want the
 Vulkan backend and the ability to plug in your own.
 
-**Look elsewhere if** you need paths, béziers or gradients, top-quality
-anti-aliasing, or D3D/Metal backends.
+**Look elsewhere if** you need paths and béziers, multi-stop or gradient-along-
+a-path fills, top-quality analytic anti-aliasing, or D3D/Metal backends.
 
 ### How it relates to SDL_Renderer
 

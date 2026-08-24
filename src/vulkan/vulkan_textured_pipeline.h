@@ -2,11 +2,13 @@
 
 #include "sdl_painter/vertex.h"
 
+#include <array>
 #include <cstdint>
 #include <string>
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "vk_blend.h"
 #include "vulkan_pipeline.h"  // PushConstants
 
 namespace sdl_painter {
@@ -49,7 +51,13 @@ class VulkanTexturedPipeline {
   /// @brief Tahsis edilmiş descriptor set'i pool'a iade et.
   void FreeDescriptorSet(VkDevice device, VkDescriptorSet set);
 
-  VkPipeline GetPipeline() const { return mPipeline; }
+  /// @brief Karıştırma moduna karşılık gelen pipeline varyantı.
+  ///
+  /// Vulkan'da blend, pipeline'ın sabit durumudur; mod başına ayrı bir
+  /// varyant üretilir (bkz. vk_blend.h).
+  VkPipeline GetPipeline(BlendMode mode = BlendMode::kAlpha) const {
+    return mPipelines[vk_detail::BlendIndex(mode)];
+  }
   VkPipelineLayout GetLayout() const { return mLayout; }
   VkDescriptorSetLayout GetDescriptorSetLayout() const {
     return mDescriptorSetLayout;
@@ -64,7 +72,7 @@ class VulkanTexturedPipeline {
                                            std::size_t byte_size);
 
   VkDevice mDevice{VK_NULL_HANDLE};  // RAII için Init'te saklanır
-  VkPipeline mPipeline{VK_NULL_HANDLE};
+  std::array<VkPipeline, kBlendModeCount> mPipelines{};
   VkPipelineLayout mLayout{VK_NULL_HANDLE};
   VkDescriptorSetLayout mDescriptorSetLayout{VK_NULL_HANDLE};
   VkDescriptorPool mDescriptorPool{VK_NULL_HANDLE};

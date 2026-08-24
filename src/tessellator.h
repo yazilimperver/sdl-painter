@@ -41,6 +41,21 @@ class Tessellator {
   static std::vector<Vertex> TessellateFilledPolygon(
       const std::vector<Point>& points);
 
+  /// @brief Yuvarlatılmış dikdörtgenin dış hat noktalarını üret.
+  ///
+  /// Dört köşe yayı ve onları birleştiren dört doğru parçası. Sonuç
+  /// **konvekstir**, bu yüzden hem @ref TessellateFilledPolygon hem de
+  /// @ref TessellateStrokedPolygon ek bir mantık gerektirmeden çalışır.
+  ///
+  /// Köşe çözünürlüğü @ref AdaptiveSegments ile belirlenir; yarıçap büyüdükçe
+  /// daire ile aynı oranda artar.
+  ///
+  /// @param radius Köşe yarıçapı. `<= 0` ise düz dikdörtgenin dört köşesi
+  ///        döner; `min(w, h) / 2`'yi aşarsa oraya kırpılır (stadyum şekli).
+  /// @return En az dört nokta; `w` veya `h` pozitif değilse boş.
+  static std::vector<Point> BuildRoundedRectPoints(float x, float y, float w,
+                                                   float h, float radius);
+
   // --- Yay (arc) tabanlı şekiller ---
   //
   // Açı birimi **derece**. 0° = +x ekseni; açı, @ref Painter::Rotate ile aynı

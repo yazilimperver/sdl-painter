@@ -11,7 +11,8 @@ sdlpainter_add_example(hello_window basics/hello_window.cpp)
 sdlpainter_add_example(primitives   basics/primitives.cpp)
 sdlpainter_add_example(transforms   basics/transforms.cpp)
 sdlpainter_add_example(clipping     basics/clipping.cpp)
-sdlpainter_add_example(input        basics/input.cpp APP)
+sdlpainter_add_example(input        basics/input.cpp     APP)
+sdlpainter_add_example(viewports    basics/viewports.cpp APP)
 
 # --- Görseller ve metin ---
 sdlpainter_add_example(images graphics/images.cpp)
@@ -20,6 +21,12 @@ sdlpainter_add_example(plasma graphics/plasma.cpp APP)
 sdlpainter_add_example(particles        graphics/particles.cpp        APP)
 sdlpainter_add_example(sprite_animation graphics/sprite_animation.cpp APP ASSETS)
 sdlpainter_add_example(morph            graphics/morph.cpp            APP)
+sdlpainter_add_example(charts           graphics/charts.cpp           APP)
+sdlpainter_add_example(strokes          graphics/strokes.cpp          APP)
+sdlpainter_add_example(gradients        graphics/gradients.cpp        APP)
+sdlpainter_add_example(blend_modes      graphics/blend_modes.cpp      APP)
+sdlpainter_add_example(pixel_art        graphics/pixel_art.cpp        APP ASSETS)
+sdlpainter_add_example(mesh_warp        graphics/mesh_warp.cpp        APP ASSETS)
 sdlpainter_add_example(physics_rope     graphics/physics_rope.cpp     APP)
 
 # --- Uygulama çatısı (sdl_painter_app, bkz. ADR-008) ---

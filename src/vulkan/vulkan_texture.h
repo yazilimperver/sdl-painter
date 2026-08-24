@@ -1,5 +1,7 @@
 #pragma once
 
+#include "sdl_painter/renderer.h"
+
 #include <cstdint>
 #include <vulkan/vulkan.h>
 
@@ -35,11 +37,13 @@ class VulkanTexture {
   /// @param channels Kanal sayısı (3 = RGB, 4 = RGBA). 3 ise RGBA'ya dönüştürülür.
   /// @param descriptor_set Texture'a bağlanacak hazır descriptor set.
   /// @param descriptor_set_layout Descriptor set'in layout'u (image sampler update için).
+  /// @param filter Örnekleme filtresi; sampler bununla kurulur.
   /// @return Başarı durumunda true.
   bool Upload(VkContext* context, VkCommandPool cmd_pool, const uint8_t* data,
               int32_t width, int32_t height, int32_t channels,
               VkDescriptorSet descriptor_set,
-              VkDescriptorSetLayout descriptor_set_layout);
+              VkDescriptorSetLayout descriptor_set_layout,
+              TextureFilter filter = TextureFilter::kLinear);
 
   /// @brief Var olan image'ın bir alt bölgesini yeniden yükle.
   ///
@@ -75,7 +79,7 @@ class VulkanTexture {
                    uint32_t width, uint32_t height);
 
   /// @brief VkSampler oluştur (linear filter, clamp to edge).
-  bool CreateSampler(VkDevice device);
+  bool CreateSampler(VkDevice device, TextureFilter filter);
 
   /// @brief Tek seferlik command buffer gönder (layout geçişi + copy).
   /// @param region Kopyalanacak image bölgesi.

@@ -454,7 +454,7 @@ void VulkanRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
   VkCommandBuffer cmd = mFrameSync->GetCommandBuffer(mCurrentFrame);
 
   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    mPipeline->GetPipeline());
+                    mPipeline->GetPipeline(mBlendMode));
 
   VkBuffer buf = mVertexRing->GetBuffer();
   vkCmdBindVertexBuffers(cmd, 0, 1, &buf, &offset_bytes);
@@ -466,8 +466,20 @@ void VulkanRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
   vkCmdDraw(cmd, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 }
 
+void VulkanRenderer::SetBlendMode(BlendMode mode) {
+  // Vulkan'da blend pipeline durumu: burada yalnizca kaydedilir, cizim aninda
+  // dogru pipeline varyanti baglanir.
+  mBlendMode = mode;
+}
+
 TextureHandle VulkanRenderer::CreateTexture(const uint8_t* data, int32_t width,
                                             int32_t height, int32_t channels) {
+  return CreateTexture(data, width, height, channels, TextureFilter::kLinear);
+}
+
+TextureHandle VulkanRenderer::CreateTexture(const uint8_t* data, int32_t width,
+                                            int32_t height, int32_t channels,
+                                            TextureFilter filter) {
   if (mTexturedPipeline == nullptr || data == nullptr || width <= 0 ||
       height <= 0) {
     return kInvalidTexture;
@@ -482,7 +494,7 @@ TextureHandle VulkanRenderer::CreateTexture(const uint8_t* data, int32_t width,
   auto tex = std::make_unique<VulkanTexture>();
   if (!tex->Upload(mContext.get(), mFrameSync->GetCommandPool(), data, width,
                    height, channels, desc_set,
-                   mTexturedPipeline->GetDescriptorSetLayout())) {
+                   mTexturedPipeline->GetDescriptorSetLayout(), filter)) {
     mTexturedPipeline->FreeDescriptorSet(mContext->GetDevice(), desc_set);
     return kInvalidTexture;
   }
@@ -591,7 +603,7 @@ void VulkanRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
   VkCommandBuffer cmd = mFrameSync->GetCommandBuffer(mCurrentFrame);
 
   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    mTexturedPipeline->GetPipeline());
+                    mTexturedPipeline->GetPipeline(mBlendMode));
 
   VkDescriptorSet desc_set = it->second->GetDescriptorSet();
   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,

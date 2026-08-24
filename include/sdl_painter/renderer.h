@@ -2,6 +2,7 @@
 
 #include "sdl_painter/export.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <vector>
@@ -20,6 +21,35 @@ using TextureHandle = uint32_t;
 
 /// @brief Geçersiz/boş texture tanımlayıcısı.
 constexpr TextureHandle kInvalidTexture = 0;
+
+/// @brief Doku örnekleme filtresi.
+enum class TextureFilter : uint8_t {
+  /// @brief Doğrusal enterpolasyon — büyütmede yumuşak. **Varsayılan.**
+  kLinear,
+  /// @brief En yakın komşu — büyütmede keskin piksel kenarları. Piksel sanatı
+  ///        bununla çizilmelidir; `kLinear` ile pikseller bulanıklaşır.
+  kNearest,
+};
+
+/// @brief Renk karıştırma (blend) modu.
+///
+/// Kaynak (çizilen) ile hedef (ekranda olan) rengin nasıl birleştirileceğini
+/// belirler.
+enum class BlendMode : uint8_t {
+  /// @brief Standart alfa karıştırma. **Varsayılan.**
+  kAlpha,
+  /// @brief Toplamalı — renkler üst üste biriktikçe parlar. Işık, kıvılcım,
+  ///        parlama efektleri için; koyu zeminde etkilidir.
+  kAdditive,
+  /// @brief Çarpımsal — hedefi koyulaştırır. Gölge ve renk süzgeci için.
+  kMultiply,
+  /// @brief Karıştırma kapalı — kaynak rengi olduğu gibi yazılır, alfa
+  ///        dikkate alınmaz.
+  kNone,
+};
+
+/// @brief @ref BlendMode değer sayısı (pipeline varyantı dizileri için).
+inline constexpr std::size_t kBlendModeCount = 4;
 
 /// @brief Render backend seçeneği.
 enum class RendererBackend : uint8_t {
@@ -76,6 +106,14 @@ class IRenderer {
   /// @brief Global opaklığı ayarla [0.0, 1.0].
   virtual void SetOpacity(float alpha) = 0;
 
+  /// @brief Renk karıştırma modunu ayarla.
+  ///
+  /// Saf sanal **değildir**: varsayılan gövde çağrıyı yok sayar, yani bu
+  /// arayüzü dışarıda implemente etmiş kod derlenmeye devam eder ve standart
+  /// alfa karıştırmayla çalışır. Aynı yaklaşım @ref GetLastGpuFrameMs ve
+  /// filtreli @ref CreateTexture için de kullanılıyor.
+  virtual void SetBlendMode(BlendMode mode) { (void)mode; }
+
   // --- Çizim primitifleri (tessellated vertex'ler) ---
 
   /// @brief Üçgenler çiz. Vertex listesi 3'ün katı olmalı. Renk vertex'te taşınır.
@@ -86,6 +124,20 @@ class IRenderer {
   /// @brief Ham piksel verisinden texture oluştur. Başarısızlıkta kInvalidTexture döner.
   virtual TextureHandle CreateTexture(const uint8_t* data, int32_t width,
                                       int32_t height, int32_t channels) = 0;
+
+  /// @brief Örnekleme filtresi belirterek texture oluştur.
+  ///
+  /// Saf sanal **değildir**: varsayılan gövde filtreyi yok sayıp yukarıdaki
+  /// aşırı yüklemeye düşer. Böylece bu arayüzü dışarıda implemente etmiş
+  /// kod, filtre desteği gelmeden önce yazılmış olsa bile **derlenmeye devam
+  /// eder** ve doğrusal filtreyle çalışır. Aynı yaklaşım
+  /// @ref GetLastGpuFrameMs için de kullanılıyor.
+  virtual TextureHandle CreateTexture(const uint8_t* data, int32_t width,
+                                      int32_t height, int32_t channels,
+                                      TextureFilter filter) {
+    (void)filter;
+    return CreateTexture(data, width, height, channels);
+  }
 
   /// @brief Var olan bir texture'ın alt bölgesini güncelle (sub-image yükleme).
   ///

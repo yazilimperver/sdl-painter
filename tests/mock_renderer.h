@@ -53,6 +53,11 @@ class MockRenderer : public IRenderer {
   int32_t update_texture_count{0};   ///< UpdateTexture kaç kez çağrıldı
   float last_opacity{1.0f};          ///< Son SetOpacity değeri
 
+  /// @brief SetBlendMode çağrılarının sırası (batch kırılmasını sınamak için).
+  std::vector<BlendMode> blend_calls;
+  /// @brief CreateTexture'a verilen son filtre.
+  TextureFilter last_filter{TextureFilter::kLinear};
+
   std::vector<UpdateCall> update_texture_calls;  ///< UpdateTexture çağrıları
 
   /// @brief SetModelMatrix'e verilen son 3x3 matris (sütun-major).
@@ -95,6 +100,11 @@ class MockRenderer : public IRenderer {
     calls.push_back({"SetOpacity", 0, kInvalidTexture, alpha});
   }
 
+  void SetBlendMode(BlendMode mode) override {
+    blend_calls.push_back(mode);
+    calls.push_back({"SetBlendMode"});
+  }
+
   void DrawTriangles(const std::vector<Vertex>& vertices) override {
     calls.push_back({"DrawTriangles", vertices.size()});
     last_vertices = vertices;
@@ -106,6 +116,12 @@ class MockRenderer : public IRenderer {
                               int32_t) override {
     ++create_texture_count;
     return static_cast<TextureHandle>(create_texture_count);
+  }
+
+  TextureHandle CreateTexture(const uint8_t* data, int32_t w, int32_t h,
+                              int32_t channels, TextureFilter filter) override {
+    last_filter = filter;
+    return CreateTexture(data, w, h, channels);
   }
 
   void UpdateTexture(TextureHandle handle, int32_t x, int32_t y, int32_t w,
@@ -165,6 +181,8 @@ class MockRenderer : public IRenderer {
     scissor_calls.clear();
     viewport_calls.clear();
     clear_scissor_count = 0;
+    blend_calls.clear();
+    last_filter = TextureFilter::kLinear;
     last_model = {{1, 0, 0, 0, 1, 0, 0, 0, 1}};
   }
 };

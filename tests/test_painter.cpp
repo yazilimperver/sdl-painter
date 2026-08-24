@@ -33,6 +33,7 @@ using sdl_painter::Pen;
 using sdl_painter::Point;
 using sdl_painter::Rect;
 using sdl_painter::RendererBackend;
+using sdl_painter::TextWrap;
 
 namespace {
 
@@ -752,6 +753,809 @@ TEST(PainterFrameStats, GpuTimeIsZeroWhenUnsupported) {
   h.painter.Begin();
   h.painter.End();
   EXPECT_DOUBLE_EQ(h.painter.GetFrameStats().gpu_frame_ms, 0.0);
+}
+
+// ─── Karıştırma modu ────────────────────────────────────────────────────────
+
+TEST(PainterBlend, DefaultIsAlphaAndNoModeIsPushedWhenUnchanged) {
+  Harness h;
+  EXPECT_EQ(h.painter.GetBlendMode(), sdl_painter::BlendMode::kAlpha);
+
+  h.painter.Begin();
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.FillRect(0.0F, 0.0F, 10.0F, 10.0F);
+  h.painter.End();
+
+  // Varsayilan zaten alfa: renderer'a gereksiz durum yazilmamali.
+  EXPECT_TRUE(h.mock->blend_calls.empty())
+      << "Mod degismedigi halde SetBlendMode cagrildi.";
+}
+
+TEST(PainterBlend, ChangingModeReachesTheRenderer) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetBlendMode(sdl_painter::BlendMode::kAdditive);
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.FillRect(0.0F, 0.0F, 10.0F, 10.0F);
+  h.painter.End();
+
+  ASSERT_FALSE(h.mock->blend_calls.empty());
+  EXPECT_EQ(h.mock->blend_calls.back(), sdl_painter::BlendMode::kAdditive);
+}
+
+/// @brief Karıştırma bir GPU durumu: vertex'te taşınamaz, bu yüzden batch'i
+///        kırar. Renk ve tint'in aksine.
+TEST(PainterBlend, ChangingModeBreaksTheBatch) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.FillRect(0.0F, 0.0F, 10.0F, 10.0F);
+  h.painter.SetBlendMode(sdl_painter::BlendMode::kAdditive);
+  h.painter.FillRect(20.0F, 0.0F, 10.0F, 10.0F);
+  h.painter.End();
+
+  EXPECT_EQ(h.mock->CountCalls("DrawTriangles"), 2)
+      << "Mod degisimi flush etmedi; iki mod tek batch'e girdi.";
+}
+
+TEST(PainterBlend, SameModeTwiceDoesNotBreakTheBatch) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetBlendMode(sdl_painter::BlendMode::kAdditive);
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.FillRect(0.0F, 0.0F, 10.0F, 10.0F);
+  h.painter.SetBlendMode(sdl_painter::BlendMode::kAdditive);
+  h.painter.FillRect(20.0F, 0.0F, 10.0F, 10.0F);
+  h.painter.End();
+
+  EXPECT_EQ(h.mock->CountCalls("DrawTriangles"), 1)
+      << "Ayni mod yeniden yazilinca gereksiz flush olustu.";
+}
+
+TEST(PainterBlend, SaveRestoreCoversBlendMode) {
+  Harness h;
+  h.painter.SetBlendMode(sdl_painter::BlendMode::kAlpha);
+  h.painter.Save();
+  h.painter.SetBlendMode(sdl_painter::BlendMode::kMultiply);
+  EXPECT_EQ(h.painter.GetBlendMode(), sdl_painter::BlendMode::kMultiply);
+  h.painter.Restore();
+  EXPECT_EQ(h.painter.GetBlendMode(), sdl_painter::BlendMode::kAlpha);
+}
+
+TEST(PainterBlend, TexturedDrawsAlsoHonourTheMode) {
+  Harness h;
+  const auto image = MakeTinyImage();
+  ASSERT_TRUE(image.IsValid());
+
+  h.painter.Begin();
+  h.painter.SetBlendMode(sdl_painter::BlendMode::kAdditive);
+  h.painter.DrawImage(image, 0.0F, 0.0F);
+  h.painter.End();
+
+  ASSERT_FALSE(h.mock->blend_calls.empty());
+  EXPECT_EQ(h.mock->blend_calls.back(), sdl_painter::BlendMode::kAdditive);
+}
+
+// ─── Doku filtresi ──────────────────────────────────────────────────────────
+
+TEST(PainterFilter, DefaultIsLinear) {
+  Harness h;
+  const auto image = MakeTinyImage();
+  h.painter.Begin();
+  h.painter.DrawImage(image, 0.0F, 0.0F);
+  h.painter.End();
+  EXPECT_EQ(h.mock->last_filter, sdl_painter::TextureFilter::kLinear);
+}
+
+TEST(PainterFilter, NearestReachesTheRenderer) {
+  Harness h;
+  auto image = MakeTinyImage();
+  ASSERT_TRUE(image.IsValid());
+  image.SetFilter(sdl_painter::TextureFilter::kNearest);
+
+  h.painter.Begin();
+  h.painter.DrawImage(image, 0.0F, 0.0F);
+  h.painter.End();
+
+  EXPECT_EQ(h.mock->last_filter, sdl_painter::TextureFilter::kNearest);
+}
+
+/// @brief Filtre doku YARATILIRKEN uygulanır: sonradan değiştirmek
+///        önbelleklenmiş dokuyu etkilemez. Belgelenmiş davranış.
+TEST(PainterFilter, ChangingAfterUploadDoesNotRecreateTheTexture) {
+  Harness h;
+  auto image = MakeTinyImage();
+  h.painter.Begin();
+  h.painter.DrawImage(image, 0.0F, 0.0F);
+  h.painter.End();
+  ASSERT_EQ(h.mock->create_texture_count, 1);
+
+  image.SetFilter(sdl_painter::TextureFilter::kNearest);
+  h.painter.Begin();
+  h.painter.DrawImage(image, 0.0F, 0.0F);
+  h.painter.End();
+
+  EXPECT_EQ(h.mock->create_texture_count, 1)
+      << "Filtre degisimi dokuyu yeniden yaratti.";
+}
+
+// ─── Dokulu ızgara ──────────────────────────────────────────────────────────
+
+namespace {
+
+/// @brief `cols` x `rows` hücrelik düzgün bir ızgara üret.
+std::vector<sdl_painter::Point> MakeGrid(int32_t cols, int32_t rows, float w,
+                                         float h) {
+  std::vector<sdl_painter::Point> pts;
+  for (int32_t r = 0; r <= rows; ++r) {
+    for (int32_t c = 0; c <= cols; ++c) {
+      pts.push_back({w * static_cast<float>(c) / static_cast<float>(cols),
+                     h * static_cast<float>(r) / static_cast<float>(rows)});
+    }
+  }
+  return pts;
+}
+
+}  // namespace
+
+TEST(PainterMesh, ProducesTwoTrianglesPerCell) {
+  Harness h;
+  const auto image = MakeTinyImage();
+  ASSERT_TRUE(image.IsValid());
+
+  h.painter.Begin();
+  h.painter.DrawImageMesh(image, 4, 3, MakeGrid(4, 3, 100.0F, 60.0F));
+  h.painter.End();
+
+  EXPECT_EQ(h.mock->last_textured_vertices.size(), 4u * 3u * 6u);
+}
+
+TEST(PainterMesh, UVsSpanTheWholeTexture) {
+  Harness h;
+  const auto image = MakeTinyImage();
+  h.painter.Begin();
+  h.painter.DrawImageMesh(image, 2, 2, MakeGrid(2, 2, 100.0F, 100.0F));
+  h.painter.End();
+
+  ASSERT_FALSE(h.mock->last_textured_vertices.empty());
+  float min_u = 1e9F;
+  float max_u = -1e9F;
+  float min_v = 1e9F;
+  float max_v = -1e9F;
+  for (const auto& v : h.mock->last_textured_vertices) {
+    min_u = std::fmin(min_u, v.u);
+    max_u = std::fmax(max_u, v.u);
+    min_v = std::fmin(min_v, v.v);
+    max_v = std::fmax(max_v, v.v);
+  }
+  EXPECT_FLOAT_EQ(min_u, 0.0F);
+  EXPECT_FLOAT_EQ(max_u, 1.0F);
+  EXPECT_FLOAT_EQ(min_v, 0.0F);
+  EXPECT_FLOAT_EQ(max_v, 1.0F);
+}
+
+/// @brief Deforme edilmiş ızgara: köşeler bağımsız hareket edebilmeli — bu,
+///        `DrawImage`'ın eksen hizalı `Rect` ile yapamadığı şey.
+TEST(PainterMesh, CornersMoveIndependently) {
+  Harness h;
+  const auto image = MakeTinyImage();
+  auto grid = MakeGrid(1, 1, 100.0F, 100.0F);
+  ASSERT_EQ(grid.size(), 4u);
+  grid[0] = {50.0F, -40.0F};  // sol-ust kosesi disari cekildi
+
+  h.painter.Begin();
+  h.painter.DrawImageMesh(image, 1, 1, grid);
+  h.painter.End();
+
+  const Bounds b = BoundsOf(h.mock->last_textured_vertices);
+  EXPECT_FLOAT_EQ(b.min_y, -40.0F)
+      << "Kose bagimsiz hareket etmedi; eksen hizali dikdortgen cizilmis.";
+}
+
+TEST(PainterMesh, WrongPointCountIsRejected) {
+  Harness h;
+  const auto image = MakeTinyImage();
+  h.painter.Begin();
+  // 3x2 izgara 12 nokta ister; 10 verildi.
+  h.painter.DrawImageMesh(image, 3, 2, MakeGrid(4, 1, 100.0F, 100.0F));
+  h.painter.End();
+  EXPECT_EQ(h.mock->CountCalls("DrawTextured"), 0)
+      << "Yanlis nokta sayisi sessizce kabul edildi.";
+}
+
+TEST(PainterMesh, DegenerateGridProducesNothing) {
+  Harness h;
+  const auto image = MakeTinyImage();
+  h.painter.Begin();
+  h.painter.DrawImageMesh(image, 0, 2, MakeGrid(1, 1, 10.0F, 10.0F));
+  h.painter.DrawImageMesh(image, 2, -1, MakeGrid(1, 1, 10.0F, 10.0F));
+  h.painter.End();
+  EXPECT_EQ(h.mock->CountCalls("DrawTextured"), 0);
+}
+
+TEST(PainterMesh, TintReachesEveryVertex) {
+  Harness h;
+  const auto image = MakeTinyImage();
+  h.painter.Begin();
+  h.painter.DrawImageMesh(image, 2, 2, MakeGrid(2, 2, 100.0F, 100.0F),
+                          Color{255, 0, 0, 128});
+  h.painter.End();
+
+  ASSERT_FALSE(h.mock->last_textured_vertices.empty());
+  for (const auto& v : h.mock->last_textured_vertices) {
+    EXPECT_EQ(v.r, 255);
+    EXPECT_EQ(v.a, 128);
+  }
+}
+
+// ─── Gradient fırça ─────────────────────────────────────────────────────────
+
+namespace {
+
+/// @brief Verilen konuma en yakın vertex'in rengi.
+sdl_painter::Color ColorNear(const std::vector<sdl_painter::Vertex>& verts,
+                             float x, float y) {
+  float best = 1e18F;
+  sdl_painter::Color out;
+  for (const auto& v : verts) {
+    const float d = (v.x - x) * (v.x - x) + (v.y - y) * (v.y - y);
+    if (d < best) {
+      best = d;
+      out = sdl_painter::Color{v.r, v.g, v.b, v.a};
+    }
+  }
+  return out;
+}
+
+}  // namespace
+
+TEST(PainterGradient, SolidBrushIsUnchangedByDefault) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.FillRect(0.0F, 0.0F, 100.0F, 100.0F);
+  h.painter.End();
+
+  ASSERT_FALSE(h.mock->last_vertices.empty());
+  for (const auto& v : h.mock->last_vertices) {
+    EXPECT_EQ(v.r, 255);
+    EXPECT_EQ(v.g, 0);
+    EXPECT_EQ(v.b, 0);
+  }
+}
+
+TEST(PainterGradient, LinearGradientEndpointsCarryTheEndColours) {
+  Harness h;
+  const Brush g = Brush::LinearGradient({0.0F, 0.0F}, {0.0F, 100.0F},
+                                        Color::Red(), Color::Blue());
+  h.painter.Begin();
+  h.painter.SetBrush(g);
+  h.painter.FillRect(0.0F, 0.0F, 100.0F, 100.0F);
+  h.painter.End();
+
+  ASSERT_FALSE(h.mock->last_vertices.empty());
+  const Color top = ColorNear(h.mock->last_vertices, 50.0F, 0.0F);
+  const Color bottom = ColorNear(h.mock->last_vertices, 50.0F, 100.0F);
+
+  EXPECT_EQ(top.r, 255);
+  EXPECT_EQ(top.b, 0);
+  EXPECT_EQ(bottom.r, 0);
+  EXPECT_EQ(bottom.b, 255);
+}
+
+/// @brief Gradient eksenine DİK yönde renk değişmemeli.
+TEST(PainterGradient, ColourIsConstantPerpendicularToTheAxis) {
+  Harness h;
+  const Brush g = Brush::LinearGradient({0.0F, 0.0F}, {0.0F, 100.0F},
+                                        Color::Red(), Color::Blue());
+  h.painter.Begin();
+  h.painter.SetBrush(g);
+  h.painter.FillRect(0.0F, 0.0F, 100.0F, 100.0F);
+  h.painter.End();
+
+  const Color left = ColorNear(h.mock->last_vertices, 0.0F, 0.0F);
+  const Color right = ColorNear(h.mock->last_vertices, 100.0F, 0.0F);
+  EXPECT_EQ(left.r, right.r);
+  EXPECT_EQ(left.b, right.b);
+}
+
+/// @brief Sıfır uzunluklu gradient sıfıra bölmemeli — düz renge düşmeli.
+TEST(PainterGradient, ZeroLengthLinearGradientFallsBackToStartColour) {
+  Harness h;
+  const Brush g = Brush::LinearGradient({50.0F, 50.0F}, {50.0F, 50.0F},
+                                        Color::Green(), Color::Blue());
+  h.painter.Begin();
+  h.painter.SetBrush(g);
+  h.painter.FillRect(0.0F, 0.0F, 100.0F, 100.0F);
+  h.painter.End();
+
+  ASSERT_FALSE(h.mock->last_vertices.empty());
+  for (const auto& v : h.mock->last_vertices) {
+    EXPECT_EQ(v.g, 255);
+    EXPECT_EQ(v.b, 0);
+  }
+}
+
+TEST(PainterGradient, RadialGradientIsBrightestAtTheCentre) {
+  Harness h;
+  const Brush g =
+      Brush::RadialGradient({50.0F, 50.0F}, 50.0F, Color::Red(), Color::Blue());
+  h.painter.Begin();
+  h.painter.SetBrush(g);
+  h.painter.FillCircle(50.0F, 50.0F, 50.0F);
+  h.painter.End();
+
+  ASSERT_FALSE(h.mock->last_vertices.empty());
+  const Color centre = ColorNear(h.mock->last_vertices, 50.0F, 50.0F);
+  const Color edge = ColorNear(h.mock->last_vertices, 100.0F, 50.0F);
+  EXPECT_EQ(centre.r, 255);
+  EXPECT_EQ(centre.b, 0);
+  EXPECT_EQ(edge.r, 0);
+  EXPECT_EQ(edge.b, 255);
+}
+
+TEST(PainterGradient, RadialWithZeroRadiusFallsBackToStartColour) {
+  Harness h;
+  const Brush g =
+      Brush::RadialGradient({50.0F, 50.0F}, 0.0F, Color::Green(), Color::Blue());
+  h.painter.Begin();
+  h.painter.SetBrush(g);
+  h.painter.FillRect(0.0F, 0.0F, 100.0F, 100.0F);
+  h.painter.End();
+
+  for (const auto& v : h.mock->last_vertices) {
+    EXPECT_EQ(v.g, 255);
+  }
+}
+
+/// @brief Gradient'in varlık sebebi: renk vertex'te taşındığı için batch'i
+///        kırmaz. Kırsaydı özelliğin bedeli kazancından büyük olurdu.
+TEST(PainterGradient, GradientsDoNotBreakBatching) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetBrush(Brush::LinearGradient({0.0F, 0.0F}, {100.0F, 0.0F},
+                                           Color::Red(), Color::Blue()));
+  h.painter.FillRect(0.0F, 0.0F, 100.0F, 50.0F);
+  h.painter.SetBrush(Brush::RadialGradient({200.0F, 50.0F}, 40.0F,
+                                           Color::Green(), Color::White()));
+  h.painter.FillRect(150.0F, 0.0F, 100.0F, 50.0F);
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.FillRect(300.0F, 0.0F, 100.0F, 50.0F);
+  h.painter.End();
+
+  EXPECT_EQ(h.mock->CountCalls("DrawTriangles"), 1)
+      << "Gradient batch'i kirdi.";
+}
+
+TEST(PainterGradient, TransformStillAppliesToGradientFills) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.Translate(200.0F, 300.0F);
+  h.painter.SetBrush(Brush::LinearGradient({0.0F, 0.0F}, {0.0F, 100.0F},
+                                           Color::Red(), Color::Blue()));
+  h.painter.FillRect(0.0F, 0.0F, 100.0F, 100.0F);
+  h.painter.End();
+
+  const Bounds b = BoundsOf(h.mock->last_vertices);
+  EXPECT_FLOAT_EQ(b.min_x, 200.0F);
+  EXPECT_FLOAT_EQ(b.min_y, 300.0F);
+  // Renk sekil-yerel koordinata gore hesaplanir: ust kenar hala kirmizi.
+  const Color top = ColorNear(h.mock->last_vertices, 250.0F, 300.0F);
+  EXPECT_EQ(top.r, 255);
+}
+
+TEST(BrushGradient, TransparentToOpaqueIsStillVisible) {
+  const Brush g = Brush::LinearGradient({0.0F, 0.0F}, {10.0F, 0.0F},
+                                        Color::Transparent(), Color::Red());
+  EXPECT_TRUE(g.IsVisible())
+      << "Saydamdan opaga giden gradient gorunmez sayildi.";
+}
+
+TEST(BrushGradient, EqualityCoversGradientParameters) {
+  const Brush a = Brush::LinearGradient({0.0F, 0.0F}, {10.0F, 0.0F},
+                                        Color::Red(), Color::Blue());
+  const Brush b = Brush::LinearGradient({0.0F, 0.0F}, {10.0F, 0.0F},
+                                        Color::Red(), Color::Blue());
+  const Brush c = Brush::LinearGradient({0.0F, 0.0F}, {20.0F, 0.0F},
+                                        Color::Red(), Color::Blue());
+  const Brush solid(Color::Red());
+  EXPECT_EQ(a, b);
+  EXPECT_NE(a, c);
+  EXPECT_NE(a, solid);
+}
+
+// ─── Viewport ───────────────────────────────────────────────────────────────
+
+TEST(PainterViewport, SetViewportForwardsRectToRenderer) {
+  Harness h;
+  h.mock->viewport_calls.clear();
+  h.painter.SetViewport(100, 50, 300, 200);
+
+  ASSERT_FALSE(h.mock->viewport_calls.empty());
+  const auto& v = h.mock->viewport_calls.back();
+  EXPECT_EQ(v.w, 300);
+  EXPECT_EQ(v.h, 200);
+  EXPECT_EQ(v.x, 100);
+  // OpenGL viewport orijini sol ALTTA: y = yuzey yuksekligi - y - h.
+  EXPECT_EQ(v.y, kViewportH - 50 - 200);
+}
+
+TEST(PainterViewport, VulkanBackendDoesNotFlipViewportY) {
+  auto mock = std::make_unique<MockRenderer>();
+  mock->backend = RendererBackend::kVulkan;
+  Harness h(std::move(mock));
+
+  h.mock->viewport_calls.clear();
+  h.painter.SetViewport(100, 50, 300, 200);
+
+  ASSERT_FALSE(h.mock->viewport_calls.empty());
+  EXPECT_EQ(h.mock->viewport_calls.back().y, 50)
+      << "Vulkan'da viewport Y'si ters cevrilmemeli.";
+}
+
+TEST(PainterViewport, InvalidSizeIsIgnored) {
+  Harness h;
+  h.mock->viewport_calls.clear();
+  h.painter.SetViewport(0, 0, 0, 100);
+  h.painter.SetViewport(0, 0, 100, -5);
+  EXPECT_TRUE(h.mock->viewport_calls.empty());
+}
+
+/// @brief Viewport çizim koordinatlarını yerelleştirir: aynı koordinat,
+///        viewport farklıysa ekranda farklı yere düşer.
+TEST(PainterViewport, DrawingCoordinatesBecomeViewportLocal) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetViewport(0, 0, 200, 100);
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.FillRect(0.0F, 0.0F, 50.0F, 50.0F);
+  h.painter.End();
+
+  ASSERT_FALSE(h.mock->last_vertices.empty());
+  const Bounds b = BoundsOf(h.mock->last_vertices);
+  // Vertex koordinatlari degismez; degisen projeksiyondur.
+  EXPECT_FLOAT_EQ(b.min_x, 0.0F);
+  EXPECT_FLOAT_EQ(b.max_x, 50.0F);
+}
+
+TEST(PainterViewport, ResetRestoresTheFullSurface) {
+  Harness h;
+  h.painter.SetViewport(10, 10, 100, 100);
+  h.mock->viewport_calls.clear();
+  h.painter.ResetViewport();
+
+  ASSERT_FALSE(h.mock->viewport_calls.empty());
+  const auto& v = h.mock->viewport_calls.back();
+  EXPECT_EQ(v.x, 0);
+  EXPECT_EQ(v.y, 0);
+  EXPECT_EQ(v.w, kViewportW);
+  EXPECT_EQ(v.h, kViewportH);
+}
+
+TEST(PainterViewport, ResetWithoutCustomViewportDoesNothing) {
+  Harness h;
+  h.mock->viewport_calls.clear();
+  h.painter.ResetViewport();
+  EXPECT_TRUE(h.mock->viewport_calls.empty());
+}
+
+/// @brief Viewport bir GPU durumu: değiştirmek biriken çizimi flush etmeli,
+///        yoksa önceki panelin geometrisi yeni viewport'la çizilirdi.
+TEST(PainterViewport, ChangingViewportFlushesPendingGeometry) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.FillRect(0.0F, 0.0F, 10.0F, 10.0F);
+  h.painter.SetViewport(0, 0, 100, 100);
+  h.painter.SetBrush(Brush(Color::Blue()));
+  h.painter.FillRect(0.0F, 0.0F, 10.0F, 10.0F);
+  h.painter.End();
+
+  EXPECT_EQ(h.mock->CountCalls("DrawTriangles"), 2)
+      << "Viewport degisimi flush etmedi; iki panel tek batch'e girdi.";
+}
+
+/// @brief Kırpma viewport-yerel verilir ama scissor pencere koordinatındadır.
+TEST(PainterViewport, ClipRectIsOffsetByTheViewportOrigin) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetViewport(200, 100, 300, 200);
+  h.painter.SetClipRect(Rect{10.0F, 20.0F, 50.0F, 40.0F});
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.FillRect(0.0F, 0.0F, 10.0F, 10.0F);
+  h.painter.End();
+
+  ASSERT_FALSE(h.mock->scissor_calls.empty());
+  const auto& s = h.mock->scissor_calls.back();
+  EXPECT_EQ(s.x, 200 + 10) << "Kirpma viewport orijinine tasinmadi.";
+  // OpenGL: y = yuzey yuksekligi - (viewport_y + rect_y) - rect_h
+  EXPECT_EQ(s.y, kViewportH - (100 + 20) - 40);
+}
+
+// ─── Yuvarlatılmış dikdörtgen ───────────────────────────────────────────────
+
+TEST(PainterRoundedRect, ZeroRadiusFillMatchesFillRect) {
+  Harness a;
+  a.painter.Begin();
+  a.painter.SetBrush(Brush(Color::Red()));
+  a.painter.FillRect(10.0F, 20.0F, 100.0F, 50.0F);
+  a.painter.End();
+  const Bounds plain = BoundsOf(a.mock->last_vertices);
+
+  Harness b;
+  b.painter.Begin();
+  b.painter.SetBrush(Brush(Color::Red()));
+  b.painter.FillRoundedRect(10.0F, 20.0F, 100.0F, 50.0F, 0.0F);
+  b.painter.End();
+  const Bounds rounded = BoundsOf(b.mock->last_vertices);
+
+  EXPECT_FLOAT_EQ(plain.min_x, rounded.min_x);
+  EXPECT_FLOAT_EQ(plain.min_y, rounded.min_y);
+  EXPECT_FLOAT_EQ(plain.max_x, rounded.max_x);
+  EXPECT_FLOAT_EQ(plain.max_y, rounded.max_y);
+}
+
+TEST(PainterRoundedRect, FillUsesBrushAndStaysInsideTheBox) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetBrush(Brush(Color::Blue()));
+  h.painter.FillRoundedRect(30.0F, 40.0F, 160.0F, 90.0F, 25.0F);
+  h.painter.End();
+
+  ASSERT_FALSE(h.mock->last_vertices.empty());
+  EXPECT_EQ(h.mock->last_vertices[0].b, 255);
+  const Bounds b = BoundsOf(h.mock->last_vertices);
+  EXPECT_GE(b.min_x, 30.0F - 1e-3F);
+  EXPECT_LE(b.max_x, 190.0F + 1e-3F);
+  EXPECT_GE(b.min_y, 40.0F - 1e-3F);
+  EXPECT_LE(b.max_y, 130.0F + 1e-3F);
+}
+
+TEST(PainterRoundedRect, StrokeHonoursPenDashAndJoin) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetPen(Pen(Color::White(), 4.0F));
+  h.painter.DrawRoundedRect(0.0F, 0.0F, 120.0F, 80.0F, 20.0F);
+  h.painter.End();
+  const std::size_t solid = h.mock->last_vertices.size();
+
+  h.mock->Reset();
+  Pen dashed(Color::White(), 4.0F);
+  dashed.SetDashPattern({8.0F, 8.0F});
+  h.painter.Begin();
+  h.painter.SetPen(dashed);
+  h.painter.DrawRoundedRect(0.0F, 0.0F, 120.0F, 80.0F, 20.0F);
+  h.painter.End();
+
+  ASSERT_GT(solid, 0u);
+  EXPECT_NE(h.mock->last_vertices.size(), solid)
+      << "DrawRoundedRect kalemin kesik desenini yok sayiyor.";
+}
+
+TEST(PainterRoundedRect, NoBrushOrPenMeansNoDrawCall) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetBrush(Brush(Color::Transparent()));
+  h.painter.SetPen(Pen::NoPen());
+  h.painter.FillRoundedRect(0.0F, 0.0F, 100.0F, 60.0F, 10.0F);
+  h.painter.DrawRoundedRect(0.0F, 0.0F, 100.0F, 60.0F, 10.0F);
+  h.painter.End();
+  EXPECT_EQ(h.mock->CountCalls("DrawTriangles"), 0);
+}
+
+TEST(PainterRoundedRect, DegenerateSizeProducesNothing) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.SetPen(Pen(Color::White(), 2.0F));
+  h.painter.FillRoundedRect(0.0F, 0.0F, 0.0F, 60.0F, 10.0F);
+  h.painter.DrawRoundedRect(0.0F, 0.0F, 100.0F, -5.0F, 10.0F);
+  h.painter.End();
+  EXPECT_EQ(h.mock->CountCalls("DrawTriangles"), 0);
+}
+
+// ─── Çok satırlı metin ve sözcük kaydırma ───────────────────────────────────
+
+namespace {
+
+/// @brief Metin testleri için font yüklü bir Harness.
+struct TextHarness {
+  Harness h;
+  std::shared_ptr<Font> font;
+
+  explicit TextHarness(const std::string& path, int32_t size = 16)
+      : font(std::make_shared<Font>(path, size)) {}
+};
+
+}  // namespace
+
+TEST(PainterText, LineHeightIsPositiveAndAtLeastPointSize) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
+  const Font font(font_path, 20);
+  ASSERT_TRUE(font.IsValid());
+  EXPECT_GT(font.LineHeight(), 0);
+  EXPECT_GE(font.LineHeight(), font.Ascent());
+}
+
+/// @brief Satır sonu artık gerçekten satır bölmeli — eskiden tek bir görünmez
+///        glyph olarak ele alınıyordu.
+TEST(PainterText, NewlineStartsANewLine) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
+  TextHarness t(font_path);
+  ASSERT_TRUE(t.font->IsValid());
+
+  t.h.painter.Begin();
+  t.h.painter.SetFont(t.font);
+  t.h.painter.SetPen(Pen(Color::White(), 1.0F));
+  t.h.painter.DrawText(10.0F, 40.0F, "AA");
+  t.h.painter.End();
+  const Bounds single = BoundsOf(t.h.mock->last_textured_vertices);
+
+  t.h.mock->Reset();
+  t.h.painter.Begin();
+  t.h.painter.SetFont(t.font);
+  t.h.painter.SetPen(Pen(Color::White(), 1.0F));
+  t.h.painter.DrawText(10.0F, 40.0F, "A\nA");
+  t.h.painter.End();
+  const Bounds two = BoundsOf(t.h.mock->last_textured_vertices);
+
+  EXPECT_GT(two.max_y - two.min_y, single.max_y - single.min_y)
+      << "Satir sonu dikeyde yer kaplamadi.";
+  EXPECT_LT(two.max_x, single.max_x)
+      << "Iki satir hala yan yana ciziliyor.";
+}
+
+TEST(PainterText, SecondLineIsOneLineHeightBelowTheFirst) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
+  TextHarness t(font_path);
+  ASSERT_TRUE(t.font->IsValid());
+
+  t.h.painter.Begin();
+  t.h.painter.SetFont(t.font);
+  t.h.painter.SetPen(Pen(Color::White(), 1.0F));
+  t.h.painter.DrawText(10.0F, 40.0F, "A");
+  t.h.painter.End();
+  const Bounds first = BoundsOf(t.h.mock->last_textured_vertices);
+
+  t.h.mock->Reset();
+  t.h.painter.Begin();
+  t.h.painter.SetFont(t.font);
+  t.h.painter.SetPen(Pen(Color::White(), 1.0F));
+  t.h.painter.DrawText(10.0F, 40.0F, "\nA");  // yalnizca ikinci satir dolu
+  t.h.painter.End();
+  const Bounds second = BoundsOf(t.h.mock->last_textured_vertices);
+
+  EXPECT_NEAR(second.min_y - first.min_y,
+              static_cast<float>(t.font->LineHeight()), 1.0F);
+}
+
+TEST(PainterText, EmptyLinesStillTakeVerticalSpace) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
+  TextHarness t(font_path);
+  ASSERT_TRUE(t.font->IsValid());
+
+  t.h.painter.Begin();
+  t.h.painter.SetFont(t.font);
+  t.h.painter.SetPen(Pen(Color::White(), 1.0F));
+  t.h.painter.DrawText(10.0F, 40.0F, "A\n\n\nA");
+  t.h.painter.End();
+
+  const Bounds b = BoundsOf(t.h.mock->last_textured_vertices);
+  // Ilk ve son satir arasi 3 satir yuksekligi olmali.
+  EXPECT_GT(b.max_y - b.min_y, 2.5F * static_cast<float>(t.font->LineHeight()));
+}
+
+/// @brief Varsayılan sarmalama YOK: mevcut davranış birebir korunmalı.
+TEST(PainterText, WrappingIsOffByDefault) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
+  TextHarness t(font_path);
+  ASSERT_TRUE(t.font->IsValid());
+
+  const std::string kLong = "bu metin dar bir kutuya kesinlikle sigmaz";
+  const Rect kNarrow{0.0F, 0.0F, 60.0F, 200.0F};
+
+  t.h.painter.Begin();
+  t.h.painter.SetFont(t.font);
+  t.h.painter.SetPen(Pen(Color::White(), 1.0F));
+  t.h.painter.DrawText(kNarrow, kLong, Alignment::kLeft);
+  t.h.painter.End();
+
+  const Bounds b = BoundsOf(t.h.mock->last_textured_vertices);
+  EXPECT_GT(b.max_x, kNarrow.w)
+      << "Varsayilan sarmalama acilmis; eski davranis degisti.";
+}
+
+TEST(PainterText, WordWrapKeepsTextInsideTheBox) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
+  TextHarness t(font_path);
+  ASSERT_TRUE(t.font->IsValid());
+
+  const std::string kLong = "bu metin dar bir kutuya kesinlikle sigmaz";
+  const Rect kBox{0.0F, 0.0F, 120.0F, 300.0F};
+
+  t.h.painter.Begin();
+  t.h.painter.SetFont(t.font);
+  t.h.painter.SetPen(Pen(Color::White(), 1.0F));
+  t.h.painter.DrawText(kBox, kLong, Alignment::kLeft, TextWrap::kWord);
+  t.h.painter.End();
+
+  const Bounds b = BoundsOf(t.h.mock->last_textured_vertices);
+  // Bir miktar tolerans: son glyph'in bearing'i kutuyu birkac piksel asabilir.
+  EXPECT_LE(b.max_x, kBox.w + 4.0F) << "Sarmalama kutuyu tutamadi.";
+  EXPECT_GT(b.max_y - b.min_y, static_cast<float>(t.font->LineHeight()))
+      << "Metin tek satirda kalmis; sarmalama calismadi.";
+}
+
+TEST(PainterText, CountTextLinesMatchesWrappedOutput) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
+  TextHarness t(font_path);
+  ASSERT_TRUE(t.font->IsValid());
+
+  t.h.painter.SetFont(t.font);
+  EXPECT_EQ(t.h.painter.CountTextLines("tek satir", 1000.0F, TextWrap::kNone),
+            1u);
+  EXPECT_EQ(t.h.painter.CountTextLines("a\nb\nc", 1000.0F, TextWrap::kNone),
+            3u);
+  EXPECT_GT(
+      t.h.painter.CountTextLines("bu metin dar bir kutuya kesinlikle sigmaz",
+                                 120.0F, TextWrap::kWord),
+      1u);
+}
+
+TEST(PainterText, CountTextLinesIsZeroWithoutFontOrText) {
+  Harness h;
+  EXPECT_EQ(h.painter.CountTextLines("bir sey", 100.0F, TextWrap::kWord), 0u)
+      << "Font yokken satir sayilmamali.";
+}
+
+/// @brief Tek bir sözcük bile sığmazsa karakterden bölünmeli — ve bölme
+///        UTF-8 kod noktası sınırında olmalı, yoksa bozuk dizi oluşur.
+TEST(PainterText, OverlongWordIsSplitAtCodepointBoundaries) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
+  TextHarness t(font_path);
+  ASSERT_TRUE(t.font->IsValid());
+
+  // Turkce karakterler cok baytli: bolme yanlis yerden olursa U+FFFD cikar.
+  const std::string kWord = "çğıöşüçğıöşüçğıöşü";
+  const Rect kNarrow{0.0F, 0.0F, 40.0F, 300.0F};
+
+  t.h.painter.Begin();
+  t.h.painter.SetFont(t.font);
+  t.h.painter.SetPen(Pen(Color::White(), 1.0F));
+  t.h.painter.DrawText(kNarrow, kWord, Alignment::kLeft, TextWrap::kWord);
+  t.h.painter.End();
+
+  const Bounds b = BoundsOf(t.h.mock->last_textured_vertices);
+  EXPECT_GT(b.max_y - b.min_y, static_cast<float>(t.font->LineHeight()))
+      << "Sigmayan sozcuk hic bolunmedi.";
+  EXPECT_LE(b.max_x, kNarrow.w + 8.0F);
+}
+
+TEST(PainterText, WrappedLinesHonourAlignment) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
+  TextHarness t(font_path);
+  ASSERT_TRUE(t.font->IsValid());
+
+  const std::string kText = "kisa\nbiraz daha uzun satir";
+  const Rect kBox{0.0F, 0.0F, 300.0F, 200.0F};
+
+  t.h.painter.Begin();
+  t.h.painter.SetFont(t.font);
+  t.h.painter.SetPen(Pen(Color::White(), 1.0F));
+  t.h.painter.DrawText(kBox, kText, Alignment::kLeft);
+  t.h.painter.End();
+  const Bounds left = BoundsOf(t.h.mock->last_textured_vertices);
+
+  t.h.mock->Reset();
+  t.h.painter.Begin();
+  t.h.painter.SetFont(t.font);
+  t.h.painter.SetPen(Pen(Color::White(), 1.0F));
+  t.h.painter.DrawText(kBox, kText, Alignment::kRight);
+  t.h.painter.End();
+  const Bounds right = BoundsOf(t.h.mock->last_textured_vertices);
+
+  EXPECT_GT(right.min_x, left.min_x) << "Saga hizalama satir basina uygulanmadi.";
+  EXPECT_NEAR(right.max_x, kBox.w, 4.0F);
 }
 
 // ─── Yay / dilim / kiriş ────────────────────────────────────────────────────

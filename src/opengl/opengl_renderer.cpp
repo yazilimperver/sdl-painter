@@ -255,8 +255,37 @@ void OpenGLRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
   glBindVertexArray(0);
 }
 
+void OpenGLRenderer::SetBlendMode(BlendMode mode) {
+  switch (mode) {
+    case BlendMode::kNone:
+      glDisable(GL_BLEND);
+      return;
+    case BlendMode::kAdditive:
+      glEnable(GL_BLEND);
+      // Kaynak alfasiyla olceklenip eklenir: ust uste binen parlak nesneler
+      // birbirini soner degil, parlatir.
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+      return;
+    case BlendMode::kMultiply:
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_DST_COLOR, GL_ZERO);
+      return;
+    case BlendMode::kAlpha:
+    default:
+      glEnable(GL_BLEND);
+      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      return;
+  }
+}
+
 TextureHandle OpenGLRenderer::CreateTexture(const uint8_t* data, int32_t width,
                                             int32_t height, int32_t channels) {
+  return CreateTexture(data, width, height, channels, TextureFilter::kLinear);
+}
+
+TextureHandle OpenGLRenderer::CreateTexture(const uint8_t* data, int32_t width,
+                                            int32_t height, int32_t channels,
+                                            TextureFilter filter) {
   if (data == nullptr || width <= 0 || height <= 0) {
     return kInvalidTexture;
   }
@@ -295,8 +324,12 @@ TextureHandle OpenGLRenderer::CreateTexture(const uint8_t* data, int32_t width,
   glGetIntegerv(GL_UNPACK_ALIGNMENT, &prev_alignment);
   glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  // Buyutmede (MAG) fark gorunur; kucultmede (MIN) de ayni filtre kullanilir
+  // ki piksel sanati olceklendikce tutarli kalsin.
+  const GLint kFilter =
+      (filter == TextureFilter::kNearest) ? GL_NEAREST : GL_LINEAR;
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, kFilter);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, kFilter);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 

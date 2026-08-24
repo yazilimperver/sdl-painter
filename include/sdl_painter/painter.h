@@ -11,7 +11,9 @@
 #include "sdl_painter/image.h"
 #include "sdl_painter/pen.h"
 #include "sdl_painter/renderer.h"
+#include "sdl_painter/vertex.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <memory>
@@ -37,6 +39,7 @@ struct RenderState {
   Pen pen;
   Brush brush;
   float opacity{1.0F};
+  BlendMode blend_mode{BlendMode::kAlpha};
   Rect clip_rect;
   bool has_clip{false};
 };
@@ -104,6 +107,32 @@ class SDLPAINTER_API Painter {
   ///       (o zaman otomatik yoklama sürer).
   void SetDrawableSize(int32_t width, int32_t height);
 
+  // --- Görüntü alanı (viewport) ---
+
+  /// @brief Çizimi pencerenin bir alt dikdörtgeniyle sınırla.
+  ///
+  /// Bölünmüş ekran, mini harita ve kenar panelleri için. Viewport
+  /// ayarlandıktan sonra çizim koordinatları **o alt dikdörtgene göre
+  /// yereldir**: `(0, 0)` viewport'un sol üst köşesidir ve projeksiyon
+  /// `width` × `height`'a göre kurulur.
+  ///
+  /// @warning Bu, @ref SetClipRect ile **aynı şey değildir**. Kırpma
+  ///          koordinat sistemini değiştirmeden pikselleri maskeler; viewport
+  ///          ise koordinat sisteminin kendisini yeniden tanımlar.
+  ///
+  /// @note Viewport bir GPU durumudur ve @ref Save / @ref Restore kapsamında
+  ///       **değildir**; değiştirmek biriken çizimleri flush eder. Tam
+  ///       pencereye dönmek için @ref ResetViewport.
+  ///
+  /// @param x Sol kenar (framebuffer piksel, sol üst köşeden).
+  /// @param y Üst kenar (framebuffer piksel, sol üst köşeden).
+  /// @param width  Genişlik (> 0; değilse çağrı yok sayılır).
+  /// @param height Yükseklik (> 0; değilse çağrı yok sayılır).
+  void SetViewport(int32_t x, int32_t y, int32_t width, int32_t height);
+
+  /// @brief Viewport'u tüm çizim yüzeyine geri al.
+  void ResetViewport();
+
   // --- Temizlik ---
 
   /// @brief Ekranı belirtilen renkle temizle.
@@ -145,6 +174,22 @@ class SDLPAINTER_API Painter {
   /// @brief Global opaklığı ayarla [0.0, 1.0].
   void SetOpacity(float alpha);
 
+  /// @brief Renk karıştırma modunu ayarla.
+  ///
+  /// @ref Save / @ref Restore kapsamındadır. Opaklık gibi bir GPU durumu
+  /// olduğu için **batch'i kırar**: mod değiştikçe bir draw call daha çıkar.
+  /// Renk ve tint'in aksine vertex'te taşınamaz.
+  ///
+  /// @note Vulkan'da karıştırma pipeline'ın sabit durumudur; mod başına ayrı
+  ///       bir pipeline varyantı önceden üretilir, çizim anında derleme
+  ///       yapılmaz.
+  void SetBlendMode(BlendMode mode);
+
+  /// @brief Yürürlükteki karıştırma modu.
+  [[nodiscard]] BlendMode GetBlendMode() const noexcept {
+    return mCurrentState.blend_mode;
+  }
+
   // --- Primitifler ---
 
   /// @brief İki nokta arasına çizgi çiz.
@@ -155,6 +200,22 @@ class SDLPAINTER_API Painter {
 
   /// @brief Dikdörtgeni doldur.
   void FillRect(float x, float y, float w, float h);
+
+  /// @brief Yuvarlatılmış köşeli dikdörtgen çerçevesi çiz.
+  ///
+  /// Arayüz çiziminin en sık kullanılan şekli; QPainter'daki
+  /// `drawRoundedRect` karşılığı.
+  ///
+  /// @param radius Köşe yarıçapı. `<= 0` ise @ref DrawRect ile **birebir aynı**
+  ///        sonucu verir. `min(w, h) / 2`'yi aşarsa oraya kırpılır — sonuç
+  ///        stadyum (kare girdide daire) şeklidir, taşma olmaz.
+  ///        `w` veya `h` pozitif değilse hiçbir şey çizilmez.
+  void DrawRoundedRect(float x, float y, float w, float h, float radius);
+
+  /// @brief Yuvarlatılmış köşeli dikdörtgeni doldur.
+  ///
+  /// Kenar durumları @ref DrawRoundedRect ile aynıdır.
+  void FillRoundedRect(float x, float y, float w, float h, float radius);
 
   /// @brief Daire çerçeve çiz.
   void DrawCircle(float cx, float cy, float radius);
@@ -220,6 +281,27 @@ class SDLPAINTER_API Painter {
                  const Color& tint = Color::White(),
                  ImageFlip flip = ImageFlip::kNone);
 
+  /// @brief Dokuyu serbest biçimli bir ızgara üzerine çiz.
+  ///
+  /// `DrawImage`'ın üç aşırı yüklemesi de eksen hizalı `Rect` alır, yani
+  /// dörtgenin köşeleri bağımsız hareket edemez. Dalgalanan bayrak, sayfa
+  /// kıvrımı, perspektif taklidi gibi efektler bunu gerektirir; bu aşırı
+  /// yükleme `IRenderer::DrawTextured`'a `Painter` seviyesinden erişim verir.
+  ///
+  /// Doku koordinatları ızgara konumundan **düzgün** türetilir: `(c, r)`
+  /// köşesinin UV'si `(c / cols, r / rows)`'tur. Yani deformasyon yalnızca
+  /// konumdadır, dokunun kendisi ızgaraya eşit dağılır.
+  ///
+  /// @param cols Yatay hücre sayısı (> 0).
+  /// @param rows Dikey hücre sayısı (> 0).
+  /// @param points Izgara köşeleri, **satır-major** ve tam
+  ///        `(cols + 1) * (rows + 1)` adet. Boyut tutmuyorsa çağrı yok sayılır
+  ///        ve hata loglanır — sessizce yanlış geometri çizmektense.
+  /// @param tint @ref DrawImage ile aynı anlamda.
+  void DrawImageMesh(const Image& image, int32_t cols, int32_t rows,
+                     const std::vector<Point>& points,
+                     const Color& tint = Color::White());
+
   /// @brief Yüklenmiş bir görüntünün doku içeriğini **yerinde** güncelle.
   ///
   /// Her karede değişen prosedürel dokular içindir (plazma, ısı haritası,
@@ -251,11 +333,35 @@ class SDLPAINTER_API Painter {
   // --- Metin
 
   /// @brief Noktaya metin çiz.
+  ///
+  /// Satır sonu karakteri (LF) satır böler; her satır bir öncekinden
+  /// @ref Font::LineHeight kadar aşağıya çizilir. `y` **ilk satırın**
+  /// baseline'ıdır.
   void DrawText(float x, float y, const std::string& text);
 
   /// @brief Dikdörtgen içine hizalanmış metin çiz.
+  ///
+  /// Metin dikdörtgen içinde dikey olarak ortalanır; satır sonu karakteri
+  /// (LF) satır böler.
+  ///
+  /// @param wrap @ref TextWrap::kWord ise satırlar dikdörtgen genişliğini
+  ///        aşmayacak şekilde **sözcük sınırlarından** bölünür. Tek bir sözcük
+  ///        bile sığmıyorsa karakter sınırından bölünür (UTF-8 güvenli).
+  ///        Varsayılan @ref TextWrap::kNone: davranış eskisiyle birebir aynı,
+  ///        uzun metin dikdörtgenden taşar.
   void DrawText(const Rect& rect, const std::string& text,
-                Alignment alignment = Alignment::kLeft);
+                Alignment alignment = Alignment::kLeft,
+                TextWrap wrap = TextWrap::kNone);
+
+  /// @brief Sarmalanmış metnin kaç satır tutacağını hesapla (çizmeden).
+  ///
+  /// Yerleşim hesabı için: kutunun yüksekliğini metne göre belirlemek
+  /// isteyenin, metni önce çizip ölçmesi gerekmesin.
+  ///
+  /// @return Satır sayısı; font yoksa veya metin boşsa 0.
+  [[nodiscard]] std::size_t CountTextLines(const std::string& text,
+                                           float max_width,
+                                           TextWrap wrap) const;
 
   // --- Transform stack ---
 
@@ -299,6 +405,26 @@ class SDLPAINTER_API Painter {
   /// @brief Projeksiyon matrisini viewport boyutuna göre güncelle.
   void UpdateProjection();
 
+  /// @brief Çizgi geometrisini tek renkle batcher'a ver (karıştırma senkronu
+  ///        dahil).
+  void PushStroke(const std::vector<Vertex>& verts, const Color& color);
+
+  /// @brief Dolgu geometrisini fırçaya göre renklendirip batcher'a ver.
+  ///
+  /// Düz fırçada renk batcher'da tek seferde yazılır; gradient'te vertex
+  /// başına hesaplanır. Vertex'ler bu yüzden `const` değildir.
+  void PushFilled(std::vector<Vertex>& verts);
+
+  /// @brief Tek bir satırı baseline'a çiz (satır sonu içermediği varsayılır).
+  ///
+  /// Çok satırlı çizim bunu satır başına bir kez çağırır; satır bölme ve
+  /// hizalama hesabı çağıranda kalır.
+  void DrawTextLine(float x, float y, const std::string& text);
+
+  /// @brief Bir satırın hizalamaya göre başlangıç x'i.
+  [[nodiscard]] float AlignedX(const Rect& rect, const std::string& line,
+                               Alignment alignment) const;
+
   /// @brief Scissor box'ı koordinat sistemi dönüsümü yaparak renderer'a gönder.
   ///
   /// OpenGL scissor Y=0 altta; Painter Y=0 ustte. Bu fonksiyon flip'i uygular.
@@ -327,8 +453,21 @@ class SDLPAINTER_API Painter {
   FrameStats mLastStats;
   uint64_t mFrameStartNs{0};
 
+  /// Tüm çizim yüzeyi (framebuffer) boyutu.
+  int32_t mDrawableWidth{0};
+  int32_t mDrawableHeight{0};
+
+  /// Yürürlükteki viewport. Varsayılan olarak yüzeyin tamamıdır;
+  /// @ref SetViewport ile daraltılabilir. Projeksiyon **bunun** boyutuna
+  /// göre kurulur, yüzeyin tamamına göre değil.
+  int32_t mViewportX{0};
+  int32_t mViewportY{0};
   int32_t mViewportWidth{0};
   int32_t mViewportHeight{0};
+
+  /// @ref SetViewport çağrıldı mı? `true` iken yeniden boyutlandırma
+  /// viewport'u ezmez — kullanıcının seçimi korunur.
+  bool mCustomViewport{false};
 
   /// @brief Boyut her karede pencereden okunsun mu?
   /// @ref SetDrawableSize ilk çağrıldığında `false` olur.

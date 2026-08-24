@@ -130,24 +130,20 @@ bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass) {
   multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
   multisampling.sampleShadingEnable = VK_FALSE;
 
-  // --- Alpha blending ---
-  VkPipelineColorBlendAttachmentState blend_attachment{};
-  blend_attachment.blendEnable = VK_TRUE;
-  blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-  blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-  blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
-  blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-  blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-  blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
-  blend_attachment.colorWriteMask =
-      VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
-      VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-
-  VkPipelineColorBlendStateCreateInfo color_blend{};
-  color_blend.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-  color_blend.logicOpEnable = VK_FALSE;
-  color_blend.attachmentCount = 1;
-  color_blend.pAttachments = &blend_attachment;
+  // --- Karistirma: mod basina bir pipeline varyanti ---
+  // Vulkan 1.1'de blend pipeline'in sabit durumu; calisma zamaninda
+  // degistirilemez (bkz. vk_blend.h). Dizilerin omru
+  // vkCreateGraphicsPipelines cagrisini kapsamali.
+  std::array<VkPipelineColorBlendAttachmentState, kBlendModeCount>
+      attachments{};
+  std::array<VkPipelineColorBlendStateCreateInfo, kBlendModeCount> blends{};
+  for (std::size_t i = 0; i < kBlendModeCount; ++i) {
+    attachments[i] = vk_detail::BlendAttachmentFor(static_cast<BlendMode>(i));
+    blends[i].sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    blends[i].logicOpEnable = VK_FALSE;
+    blends[i].attachmentCount = 1;
+    blends[i].pAttachments = &attachments[i];
+  }
 
   // --- Pipeline layout (push constants) ---
   VkPushConstantRange push_range{};
@@ -180,14 +176,22 @@ bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass) {
   pipeline_ci.pRasterizationState = &rasterization;
   pipeline_ci.pMultisampleState = &multisampling;
   pipeline_ci.pDepthStencilState = nullptr;
-  pipeline_ci.pColorBlendState = &color_blend;
+  // pColorBlendState varyant basina asagida atanir.
   pipeline_ci.pDynamicState = &dynamic_state;
   pipeline_ci.layout = mLayout;
   pipeline_ci.renderPass = render_pass;
   pipeline_ci.subpass = 0;
 
-  VkResult res = vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1,
-                                           &pipeline_ci, nullptr, &mPipeline);
+  // Tek cagrida dort varyant: aralarindaki TEK fark blend durumu.
+  std::array<VkGraphicsPipelineCreateInfo, kBlendModeCount> infos{};
+  for (std::size_t i = 0; i < kBlendModeCount; ++i) {
+    infos[i] = pipeline_ci;
+    infos[i].pColorBlendState = &blends[i];
+  }
+
+  VkResult res = vkCreateGraphicsPipelines(
+      device, VK_NULL_HANDLE, static_cast<uint32_t>(kBlendModeCount),
+      infos.data(), nullptr, mPipelines.data());
 
   // Shader modülleri artık gerekmez — pipeline oluşturulduktan hemen sonra sil.
   vkDestroyShaderModule(device, vert_mod, nullptr);
@@ -213,9 +217,11 @@ void VulkanPipeline::Destroy(VkDevice device) {
   if (d == VK_NULL_HANDLE) {
     return;
   }
-  if (mPipeline != VK_NULL_HANDLE) {
-    vkDestroyPipeline(d, mPipeline, nullptr);
-    mPipeline = VK_NULL_HANDLE;
+  for (auto& pipeline : mPipelines) {
+    if (pipeline != VK_NULL_HANDLE) {
+      vkDestroyPipeline(d, pipeline, nullptr);
+      pipeline = VK_NULL_HANDLE;
+    }
   }
   if (mLayout != VK_NULL_HANDLE) {
     vkDestroyPipelineLayout(d, mLayout, nullptr);

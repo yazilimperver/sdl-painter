@@ -107,6 +107,13 @@ int32_t Font::Ascent() const {
   return TTF_GetFontAscent(static_cast<TTF_Font*>(mHandle));
 }
 
+int32_t Font::LineHeight() const {
+  if (mHandle == nullptr) {
+    return 0;
+  }
+  return TTF_GetFontHeight(static_cast<TTF_Font*>(mHandle));
+}
+
 bool Font::MeasureText(const std::string& text, int32_t& out_width,
                        int32_t& out_height) const {
   if (mHandle == nullptr || text.empty()) {

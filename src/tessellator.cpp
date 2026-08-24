@@ -70,6 +70,51 @@ std::vector<Vertex> Tessellator::TessellateFilledPolygon(
   return EarClipping(points);
 }
 
+std::vector<Point> Tessellator::BuildRoundedRectPoints(float x, float y,
+                                                       float w, float h,
+                                                       float radius) {
+  if (!(w > 0.0F) || !(h > 0.0F)) {
+    return {};
+  }
+
+  // Yarıçap yarım genişliği/yüksekliği aşarsa şekil kendi üzerine kıvrılırdı;
+  // kırpılınca stadyum (veya daire) şekline dejenere olur — beklenen davranış.
+  const float r = std::fmin(radius, std::fmin(w, h) * 0.5F);
+  if (!(r > 0.0F)) {
+    // Yarıçapsız hâl düz dikdörtgendir; DrawRect ile aynı geometri.
+    return {{x, y}, {x + w, y}, {x + w, y + h}, {x, y + h}};
+  }
+
+  // Köşe başına segment sayısı: çeyrek daire olduğu için tam çemberin 1/4'ü.
+  const int32_t kQuarter = std::max(2, AdaptiveSegments(r) / 4);
+  constexpr float kHalfPi = 3.14159265358979323846F * 0.5F;
+
+  // Köşe merkezleri, saat yönünde: sol-üst, sağ-üst, sağ-alt, sol-alt.
+  // Başlangıç açıları ekran koordinatına (y aşağı) göre seçilmiştir.
+  const struct {
+    float cx;
+    float cy;
+    float start;
+  } kCorners[4] = {
+      {x + w - r, y + r, -kHalfPi},    // sağ-üst
+      {x + w - r, y + h - r, 0.0F},    // sağ-alt
+      {x + r, y + h - r, kHalfPi},     // sol-alt
+      {x + r, y + r, 2.0F * kHalfPi},  // sol-üst
+  };
+
+  std::vector<Point> pts;
+  pts.reserve(static_cast<std::size_t>(kQuarter + 1) * 4);
+  for (const auto& corner : kCorners) {
+    for (int32_t i = 0; i <= kQuarter; ++i) {
+      const float t = static_cast<float>(i) / static_cast<float>(kQuarter);
+      const float a = corner.start + kHalfPi * t;
+      pts.emplace_back(corner.cx + std::cos(a) * r,
+                       corner.cy + std::sin(a) * r);
+    }
+  }
+  return pts;
+}
+
 // --- Yay tabanlı şekiller ---
 
 std::vector<Point> Tessellator::BuildArcPoints(float cx, float cy, float rx,

@@ -219,6 +219,120 @@ TEST(TessellateThickPolyline, TwoPointsHasNoInteriorVertexSoNoJoin) {
   EXPECT_EQ(v.size(), 6u) << "Ic kose yokken birlesim eklenmemeli.";
 }
 
+// ─── Yuvarlatılmış dikdörtgen ───────────────────────────────────────────────
+
+TEST(RoundedRect, ZeroRadiusGivesThePlainFourCorners) {
+  auto pts = Tessellator::BuildRoundedRectPoints(10, 20, 100, 50, 0.0f);
+  ASSERT_EQ(pts.size(), 4u);
+  EXPECT_FLOAT_EQ(pts[0].x, 10.0f);
+  EXPECT_FLOAT_EQ(pts[0].y, 20.0f);
+  EXPECT_FLOAT_EQ(pts[2].x, 110.0f);
+  EXPECT_FLOAT_EQ(pts[2].y, 70.0f);
+}
+
+TEST(RoundedRect, NegativeRadiusBehavesLikeZero) {
+  auto zero = Tessellator::BuildRoundedRectPoints(0, 0, 80, 40, 0.0f);
+  auto neg = Tessellator::BuildRoundedRectPoints(0, 0, 80, 40, -12.0f);
+  ASSERT_EQ(neg.size(), zero.size());
+  for (std::size_t i = 0; i < neg.size(); ++i) {
+    EXPECT_FLOAT_EQ(neg[i].x, zero[i].x);
+    EXPECT_FLOAT_EQ(neg[i].y, zero[i].y);
+  }
+}
+
+TEST(RoundedRect, NonPositiveSizeReturnsEmpty) {
+  EXPECT_TRUE(Tessellator::BuildRoundedRectPoints(0, 0, 0, 40, 5.0f).empty());
+  EXPECT_TRUE(Tessellator::BuildRoundedRectPoints(0, 0, 80, 0, 5.0f).empty());
+  EXPECT_TRUE(Tessellator::BuildRoundedRectPoints(0, 0, -10, 40, 5.0f).empty());
+}
+
+/// @brief Dış hat asla verilen dikdörtgenin dışına taşmamalı.
+TEST(RoundedRect, OutlineStaysInsideTheRectangle) {
+  const float x = 15.0f;
+  const float y = 25.0f;
+  const float w = 120.0f;
+  const float h = 80.0f;
+  auto pts = Tessellator::BuildRoundedRectPoints(x, y, w, h, 20.0f);
+  ASSERT_GE(pts.size(), 4u);
+  for (const auto& p : pts) {
+    EXPECT_GE(p.x, x - 1e-3f);
+    EXPECT_LE(p.x, x + w + 1e-3f);
+    EXPECT_GE(p.y, y - 1e-3f);
+    EXPECT_LE(p.y, y + h + 1e-3f);
+  }
+}
+
+TEST(RoundedRect, OutlineTouchesAllFourEdges) {
+  const float x = 0.0f;
+  const float y = 0.0f;
+  const float w = 100.0f;
+  const float h = 60.0f;
+  auto pts = Tessellator::BuildRoundedRectPoints(x, y, w, h, 15.0f);
+  ASSERT_GE(pts.size(), 4u);
+
+  float min_x = 1e9f;
+  float max_x = -1e9f;
+  float min_y = 1e9f;
+  float max_y = -1e9f;
+  for (const auto& p : pts) {
+    min_x = std::fmin(min_x, p.x);
+    max_x = std::fmax(max_x, p.x);
+    min_y = std::fmin(min_y, p.y);
+    max_y = std::fmax(max_y, p.y);
+  }
+  EXPECT_NEAR(min_x, x, 1e-3f);
+  EXPECT_NEAR(max_x, x + w, 1e-3f);
+  EXPECT_NEAR(min_y, y, 1e-3f);
+  EXPECT_NEAR(max_y, y + h, 1e-3f);
+}
+
+/// @brief Yarıçap yarım boyutu aşarsa kırpılmalı — aksi halde şekil kendi
+///        üzerine kıvrılıp bozulurdu.
+TEST(RoundedRect, OversizedRadiusIsClampedToHalfTheShortSide) {
+  const float w = 100.0f;
+  const float h = 60.0f;
+  auto huge = Tessellator::BuildRoundedRectPoints(0, 0, w, h, 5000.0f);
+  auto clamped = Tessellator::BuildRoundedRectPoints(0, 0, w, h, h * 0.5f);
+
+  ASSERT_EQ(huge.size(), clamped.size());
+  for (std::size_t i = 0; i < huge.size(); ++i) {
+    EXPECT_NEAR(huge[i].x, clamped[i].x, 1e-3f) << "i=" << i;
+    EXPECT_NEAR(huge[i].y, clamped[i].y, 1e-3f) << "i=" << i;
+  }
+  // Ve hala dikdortgenin icinde.
+  for (const auto& p : huge) {
+    EXPECT_LE(p.x, w + 1e-3f);
+    EXPECT_LE(p.y, h + 1e-3f);
+  }
+}
+
+/// @brief Kare girdide azami yarıçap daireye dejenere olmalı.
+TEST(RoundedRect, SquareWithMaxRadiusBecomesACircle) {
+  const float size = 80.0f;
+  auto pts = Tessellator::BuildRoundedRectPoints(0, 0, size, size, size * 0.5f);
+  ASSERT_GE(pts.size(), 4u);
+  const float r = size * 0.5f;
+  for (const auto& p : pts) {
+    const float dx = p.x - r;
+    const float dy = p.y - r;
+    EXPECT_NEAR(std::sqrt(dx * dx + dy * dy), r, 1e-2f);
+  }
+}
+
+TEST(RoundedRect, SegmentCountGrowsWithRadius) {
+  auto small = Tessellator::BuildRoundedRectPoints(0, 0, 400, 400, 8.0f);
+  auto big = Tessellator::BuildRoundedRectPoints(0, 0, 400, 400, 150.0f);
+  EXPECT_LT(small.size(), big.size())
+      << "Kose cozunurlugu yaricapa gore uyarlanmiyor.";
+}
+
+TEST(RoundedRect, FilledPolygonAcceptsTheOutline) {
+  auto pts = Tessellator::BuildRoundedRectPoints(0, 0, 120, 80, 20.0f);
+  auto verts = Tessellator::TessellateFilledPolygon(pts);
+  EXPECT_FALSE(verts.empty()) << "Konveks dis hat ear clipping'i gecemedi.";
+  EXPECT_EQ(verts.size() % 3, 0u);
+}
+
 // ─── Yay / dilim / kiriş ────────────────────────────────────────────────────
 
 TEST(ArcPoints, EndpointsMatchStartAndSweepAngles) {

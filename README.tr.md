@@ -139,12 +139,13 @@ Her biri tek bir yeteneği izole eden on altı çalışan demo:
 
 | Alan | Desteklenen |
 |------|-------------|
-| **Primitifler** | Çizgi, dikdörtgen, daire, elips, çokgen, polyline — hepsi stroke + fill |
-| **Stiller** | Pen (renk, kalınlık, outline), Brush (dolgu rengi), global opacity |
+| **Primitifler** | Çizgi, dikdörtgen, yuvarlatılmış dikdörtgen, daire, elips, yay, dilim, kiriş, çokgen, polyline — hepsi stroke + fill |
+| **Stiller** | Pen (renk, kalınlık, outline, kesik deseni, uç ve birleşim stili), Brush (düz dolgu veya iki uçlu doğrusal/ışınsal gradient), global opacity, karıştırma modları |
 | **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` yığını |
 | **Clipping** | Scissor tabanlı dikdörtgen kırpma |
-| **Image** | PNG / JPG yükleme (stb_image), kaynak→hedef ölçekleme, alpha blending |
-| **Metin** | SDL_ttf 3.x, glyph cache, left/center/right hizalama |
+| **Viewport** | Alt dikdörtgene yerel koordinatlarla çizim — bölünmüş ekran, mini harita |
+| **Image** | PNG / JPG yükleme (stb_image), kaynak→hedef ölçekleme, atlas dilimleme, tint, aynalama, nearest/linear filtre, yerinde doku güncelleme, serbest dokulu ızgara |
+| **Metin** | SDL_ttf 3.x, glyph cache, left/center/right hizalama, çok satırlı ve sözcük kaydırmalı |
 | **Backend** | OpenGL 3.3 Core ve Vulkan 1.1 — `IRenderer` ile değiştirilebilir |
 
 ## SDLPainter size uygun mu?
@@ -153,8 +154,9 @@ Her biri tek bir yeteneği izole eden on altı çalışan demo:
 istiyorsanız, tip güvenli modern C++ bir API istiyorsanız ya da Vulkan
 backend'ine ve kendi backend'inizi ekleyebilmeye ihtiyacınız varsa.
 
-**Başka yere bakın:** Path, bezier veya gradient gerekiyorsa; üst düzey
-anti-aliasing arıyorsanız; D3D/Metal backend'i şartsa.
+**Başka yere bakın:** Path ve bezier gerekiyorsa; çok duraklı veya yol boyunca
+gradient istiyorsanız; üst düzey analitik anti-aliasing arıyorsanız;
+D3D/Metal backend'i şartsa.
 
 ### SDL_Renderer ile ilişkisi
 

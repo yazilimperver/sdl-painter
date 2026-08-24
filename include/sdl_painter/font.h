@@ -49,6 +49,17 @@ enum class Alignment : uint8_t {
   kRight,
 };
 
+/// @brief Dikdörtgen içine çizilen metnin sarmalama (word wrap) davranışı.
+enum class TextWrap : uint8_t {
+  /// @brief Sarmalama yok — uzun satır dikdörtgenden taşar. **Varsayılan**,
+  ///        çünkü sarmalamayı varsayılan yapmak mevcut çizimlerin görünümünü
+  ///        sessizce değiştirirdi.
+  kNone,
+  /// @brief Sözcük sınırlarından böl. Tek bir sözcük bile sığmıyorsa
+  ///        karakter sınırından bölünür (UTF-8 güvenli).
+  kWord,
+};
+
 /// @brief Font sarmalayıcı — SDL_ttf üzerinden
 /// @warning **Yaşam döngüsü sözleşmesi:** Font, glyph önbelleğindeki
 /// texture'ları yükleyen Painter (ve dolayısıyla IRenderer) yaşıyorken
@@ -86,6 +97,13 @@ class SDLPAINTER_API Font {
 
   /// @brief Font ascent (baseline'dan yukariya olan maksimum piksel) degerini dondur.
   [[nodiscard]] int32_t Ascent() const;
+
+  /// @brief İki satır arasındaki önerilen dikey mesafe (piksel).
+  ///
+  /// Fontun kendi metriğidir; `PointSize()` ile aynı şey **değildir** ve
+  /// ondan büyük olması normaldir (çıkıntılar ve satır arası boşluk dahil).
+  /// Çok satırlı metinde satır başına bu kadar ilerlenir.
+  [[nodiscard]] int32_t LineHeight() const;
 
   /// @brief SDL_ttf font handle'ı döndür (opak pointer).
   [[nodiscard]] void* Handle() const noexcept { return mHandle; }

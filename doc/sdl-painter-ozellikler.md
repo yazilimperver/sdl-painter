@@ -6,16 +6,28 @@ Bu sayfa içerisinde SDLPainter kütüphanesine yönelik önce çıkan özellikl
 
 - Çizgi (`DrawLine`)
 - Dikdörtgen — stroke ve fill (`DrawRect` / `FillRect`)
+- Yuvarlatılmış dikdörtgen — stroke ve fill
+  (`DrawRoundedRect` / `FillRoundedRect`)
 - Daire — stroke ve fill (`DrawCircle` / `FillCircle`)
 - Elips — stroke ve fill (`DrawEllipse` / `FillEllipse`)
+- Yay (`DrawArc`), dilim (`DrawPie` / `FillPie`), kiriş
+  (`DrawChord` / `FillChord`) — açı birimi derece, 0° = +x
 - Çokgen — stroke ve fill (`DrawPolygon` / `FillPolygon`)
 - Polyline (`DrawPolyline`)
 
 ## Görsel Stiller
 
-- **Pen:** renk + kalınlık (geometry-based quad; `glLineWidth` kullanılmıyor)
-- **Brush:** dolgu rengi
+- **Pen:** renk + kalınlık (geometry-based quad; `glLineWidth` kullanılmıyor),
+  kesik deseni (`SetDashPattern`), uç stili (butt/square/round), birleşim
+  stili (miter/bevel/round — miter sınırı aşılınca kendiliğinden bevel'a düşer)
+- **Brush:** düz dolgu rengi veya iki uçlu doğrusal/ışınsal gradient.
+  Gradient shader gerektirmez: geçiş köşe renklerine yazılır, enterpolasyonu
+  donanım yapar — bu yüzden **batch'i kırmaz**, ama hassasiyeti şeklin köşe
+  yoğunluğu kadardır
 - **Opacity:** global saydamlık `[0.0, 1.0]`
+- **Karıştırma modu:** `kAlpha` / `kAdditive` / `kMultiply` / `kNone`.
+  GPU durumu olduğu için batch'i kırar; Vulkan'da mod başına pipeline varyantı
+  başlangıçta üretilir
 
 ## Transform Stack
 
@@ -28,10 +40,24 @@ Bu sayfa içerisinde SDLPainter kütüphanesine yönelik önce çıkan özellikl
 
 - Scissor-based rect clip (`SetClipRect` / `ClearClip`)
 
+## Viewport
+
+- `SetViewport` / `ResetViewport` — çizimi bir alt dikdörtgenle sınırlar ve
+  koordinatları ona yerelleştirir (bölünmüş ekran, mini harita)
+- Kırpmadan farkı: kırpma koordinat sistemini değiştirmeden maskeler,
+  viewport sistemin kendisini yeniden tanımlar
+
 ## Image / Texture
 
 - PNG ve JPG yükleme (stb_image)
-- Tam kaynak rect → hedef rect ölçekleme
+- Tam kaynak rect → hedef rect ölçekleme (atlas dilimleme)
+- Renk tonlaması (tint) ve aynalama (`ImageFlip`) — ikisi de vertex'te
+  taşındığı için batch'i kırmaz
+- Örnekleme filtresi: `kLinear` (varsayılan) / `kNearest` (piksel sanatı)
+- `Painter::UpdateImage` ile yerinde doku güncelleme (her karede değişen
+  prosedürel dokular)
+- `Painter::DrawImageMesh` ile serbest biçimli dokulu ızgara — köşeler
+  bağımsız hareket edebilir
 - Alpha blending desteği
 
 ## Metin
@@ -40,6 +66,9 @@ Bu sayfa içerisinde SDLPainter kütüphanesine yönelik önce çıkan özellikl
 - Glyph cache
 - Alignment: left / center / right
 - Rect içine metin yerleştirme
+- Çok satırlı metin (satır sonu karakteri) ve `Font::LineHeight()`
+- Sözcük kaydırma (`TextWrap::kWord`) — UTF-8 güvenli; `CountTextLines()` ile
+  çizmeden satır sayısı
 
 ## Tessellator
 

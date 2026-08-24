@@ -25,9 +25,10 @@
 /// sırasında çalıştırılabilirin yanına kopyalar; örnek onu
 /// `SDL_GetBasePath()` üzerinden bulur.
 ///
-/// @note Piksel sanatı 3× büyütülüyor ve doku filtresi şu an seçilemiyor —
-///       kenarlar bu yüzden yumuşak görünür. Filtre seçimi (nearest) yol
-///       haritasında P1.2; `pixel_art` örneği onunla birlikte gelecek.
+/// @note Bu örnek varsayılan (doğrusal) doku filtresini kullanır, yani piksel
+///       kenarları 3× büyütmede yumuşar. Keskin piksel için
+///       `Image::SetFilter(TextureFilter::kNearest)` — farkı yan yana gösteren
+///       örnek: `pixel_art`.
 ///
 /// Kontroller:
 ///   SPACE — sağ yönü: sheet'in kendi satırı / sola bakan satırın aynası

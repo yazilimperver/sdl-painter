@@ -66,6 +66,29 @@ void RenderBatcher::PushTriangles(const std::vector<Vertex>& vertices,
   }
 }
 
+void RenderBatcher::PushTrianglesPreColored(const std::vector<Vertex>& vertices,
+                                            const glm::mat3& transform,
+                                            float opacity) {
+  if (mCurrentMode != DrawMode::kBasic ||
+      !SameOpacity(mCurrentOpacity, opacity) ||
+      (mVertexBuffer.size() + vertices.size()) > kMaxVertices) {
+    Flush();
+  }
+
+  mCurrentMode = DrawMode::kBasic;
+  mCurrentOpacity = opacity;
+
+  const Affine2D t(transform);
+  for (auto v : vertices) {
+    const float x = v.x;
+    const float y = v.y;
+    v.x = t.X(x, y);
+    v.y = t.Y(x, y);
+    // Renk KORUNUR — cagiran zaten yazdi.
+    mVertexBuffer.push_back(v);
+  }
+}
+
 void RenderBatcher::PushTexturedTriangles(
     const std::vector<TexturedVertex>& vertices, const glm::mat3& transform,
     TextureHandle texture, const Color& tint, float opacity) {
@@ -91,6 +114,16 @@ void RenderBatcher::PushTexturedTriangles(
     v.a = tint.a;
     mTexturedBuffer.push_back(v);
   }
+}
+
+void RenderBatcher::SetBlendMode(BlendMode mode) {
+  if (mode == mCurrentBlend) {
+    return;
+  }
+  // Biriken cizimler onceki modla cizilmeliydi; once onlari gonder.
+  Flush();
+  mCurrentBlend = mode;
+  mRenderer.SetBlendMode(mode);
 }
 
 void RenderBatcher::Flush() {

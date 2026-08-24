@@ -22,7 +22,8 @@ VulkanTexture::~VulkanTexture() {
 bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
                            const uint8_t* data, int32_t width, int32_t height,
                            int32_t channels, VkDescriptorSet descriptor_set,
-                           VkDescriptorSetLayout descriptor_set_layout) {
+                           VkDescriptorSetLayout descriptor_set_layout,
+                           TextureFilter filter) {
   VkDevice device = context->GetDevice();
   VkPhysicalDevice phys_device = context->GetPhysicalDevice();
 
@@ -101,7 +102,7 @@ bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
   vkFreeMemory(device, staging_mem, nullptr);
 
   // 4. Sampler
-  if (!CreateSampler(device)) {
+  if (!CreateSampler(device, filter)) {
     return false;
   }
 
@@ -299,11 +300,16 @@ bool VulkanTexture::CreateImage(VkDevice device, VkPhysicalDevice phys_device,
 // ---------------------------------------------------------------------------
 // Sampler
 // ---------------------------------------------------------------------------
-bool VulkanTexture::CreateSampler(VkDevice device) {
+bool VulkanTexture::CreateSampler(VkDevice device, TextureFilter filter) {
+  // OpenGL tarafiyla ayni sozlesme: MIN ve MAG ayni filtreyi kullanir, boylece
+  // iki backend ayni goruntuyu uretir.
+  const VkFilter kVkFilter = (filter == TextureFilter::kNearest)
+                                 ? VK_FILTER_NEAREST
+                                 : VK_FILTER_LINEAR;
   VkSamplerCreateInfo sampler_ci{};
   sampler_ci.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-  sampler_ci.magFilter = VK_FILTER_LINEAR;
-  sampler_ci.minFilter = VK_FILTER_LINEAR;
+  sampler_ci.magFilter = kVkFilter;
+  sampler_ci.minFilter = kVkFilter;
   sampler_ci.mipmapMode = VK_SAMPLER_MIPMAP_MODE_NEAREST;
   sampler_ci.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
   sampler_ci.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;

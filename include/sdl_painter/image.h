@@ -74,6 +74,19 @@ class SDLPAINTER_API Image {
   [[nodiscard]] static Image CreateFromData(const uint8_t* data, int32_t width,
                                             int32_t height, int32_t channels);
 
+  /// @brief Örnekleme filtresini ayarla.
+  ///
+  /// Piksel sanatı `kNearest` ister; varsayılan `kLinear` ile pikseller
+  /// büyütüldüğünde bulanıklaşır.
+  ///
+  /// @warning Filtre **doku oluşturulurken** uygulanır, yani ilk çizimden
+  ///          (ilk @ref Upload) önce ayarlanmalıdır. Sonradan çağırmak
+  ///          önbelleklenmiş dokuyu etkilemez.
+  void SetFilter(TextureFilter filter) noexcept { mFilter = filter; }
+
+  /// @brief Yürürlükteki örnekleme filtresi.
+  [[nodiscard]] TextureFilter GetFilter() const noexcept { return mFilter; }
+
   /// @brief Texture'ı renderer'a yükle; ikinci çağrıda önbelleği döner.
   TextureHandle Upload(IRenderer& renderer) const;
 
@@ -91,6 +104,7 @@ class SDLPAINTER_API Image {
   int32_t mWidth{0};
   int32_t mHeight{0};
   int32_t mChannels{0};
+  TextureFilter mFilter{TextureFilter::kLinear};
   mutable Texture
       mHandle;  ///< Önbelleklenmiş RAII texture; sahip renderer mHandle.Owner()'da
 };
