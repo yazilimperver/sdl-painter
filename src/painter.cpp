@@ -776,11 +776,13 @@ void Painter::DrawImageMesh(const Image& image, int32_t cols, int32_t rows,
   const float inv_rows = 1.0F / static_cast<float>(rows);
 
   std::vector<TexturedVertex> verts;
-  verts.reserve(static_cast<std::size_t>(cols) * rows * 6);
+  verts.reserve(static_cast<std::size_t>(cols) *
+                static_cast<std::size_t>(rows) * 6);
 
   for (int32_t r = 0; r < rows; ++r) {
     for (int32_t c = 0; c < cols; ++c) {
-      const std::size_t i0 = static_cast<std::size_t>(r) * stride + c;
+      const std::size_t i0 =
+          static_cast<std::size_t>(r) * stride + static_cast<std::size_t>(c);
       const std::size_t i1 = i0 + 1;
       const std::size_t i2 = i0 + stride;
       const std::size_t i3 = i2 + 1;
