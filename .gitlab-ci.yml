@@ -22,15 +22,13 @@ build:linux:debug:
         -c tools.system.package_manager:sudo=False
     - cmake --preset linux-debug
     - cmake --build --preset linux-debug
-  artifacts:
-    paths:
-      - build/linux-debug/libsdl_painter.a
-      - build/linux-debug/tests/sdl_painter_tests
-      - build/linux-debug/examples/*
-    exclude:
-      - build/linux-debug/examples/CMakeFiles/**/*
-      - build/linux-debug/examples/*.cmake
-    expire_in: 1 day
+  # Artifact YOK — GitHub'dan bilinçli fark (orada aynı çıktılar
+  # `upload-artifact` ile saklanıyor). Gerekçe: Debug'da 47 örnek
+  # executable'ının her biri ~61 MB statik binary, toplamı ~2.1 GB; GitLab
+  # koordinatörü bunu 413 (Request Entity Too Large) ile reddediyor.
+  # Tüketeni de yok: `test:unit` kendi build'ini yapıyor (aşağıda), çünkü
+  # `ctest` zaten CMakeCache/CTestTestfile isterdi ve onlar bu listede hiç
+  # yoktu — upload geçseydi bile test job'ı düşerdi.
 
 build:linux:release:
   stage: build
@@ -44,15 +42,7 @@ build:linux:release:
         -c tools.system.package_manager:sudo=False
     - cmake --preset linux-release
     - cmake --build --preset linux-release
-  artifacts:
-    paths:
-      - build/linux-release/libsdl_painter.a
-      - build/linux-release/tests/sdl_painter_tests
-      - build/linux-release/examples/*
-    exclude:
-      - build/linux-release/examples/CMakeFiles/**/*
-      - build/linux-release/examples/*.cmake
-    expire_in: 1 day
+  # Artifact YOK — gerekce build:linux:debug ile ayni.
 
 build:windows:debug:
   stage: build
@@ -76,7 +66,11 @@ build:windows:release:
 test:unit:
   stage: test
   image: $CI_REGISTRY_IMAGE
-  needs: ["build:linux:debug"]
+  # Kendi conan+cmake build'ini yapar, build-stage artifact'ı tüketmez —
+  # `test:unit:asan` ve GitHub'daki karşılığı da böyle çalışıyor.
+  # needs: [] → pipeline başında bağımsız koşsun; alakasız bir build
+  # job'ının (örn. windows MinGW) fail'i bunu SKIP ettirmesin.
+  needs: []
   variables:
     SDL_VIDEODRIVER: "offscreen"
     # Font yoksa metin testleri sessizce atlanmasin, HATA versin.
@@ -94,6 +88,14 @@ test:unit:
     # HIC surucu yuklemiyor ve Vulkan testleri sessizce SKIP oluyor.
     - export VK_ICD_FILENAMES=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json 2>/dev/null | head -1)
     - echo "lavapipe ICD=${VK_ICD_FILENAMES:-<bulunamadi, loader varsayilani>}"
+    - |
+      conan install . --output-folder=build/linux-debug/generators --build=missing \
+        -s build_type=Debug \
+        -o "&:with_vulkan=True" \
+        -c tools.system.package_manager:mode=install \
+        -c tools.system.package_manager:sudo=False
+    - cmake --preset linux-debug
+    - cmake --build --preset linux-debug
     - ctest --preset linux-debug --output-on-failure
 
 test:unit:asan:

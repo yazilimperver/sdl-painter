@@ -368,6 +368,31 @@ jobs:
             echo '```'
             echo '</details>'
           } >> "$GITHUB_STEP_SUMMARY"
+      # Rozet, shields.io "endpoint" JSON'u olarak uretiliyor: ucuncu taraf bir
+      # kapsama servisine (Codecov/Coveralls) hesap acmadan rozet gostermenin
+      # yolu. Dosyayi docs job'i GitHub Pages'e kopyaliyor, README de oradan
+      # okuyor — boylece rozet ve raporun kendisi ayni yerde yayinlaniyor.
+      - name: Kapsama rozeti (shields endpoint JSON)
+        run: |
+          # gcovr --print-summary ciktisi: "lines: 62.5% (1234 out of 1975)".
+          # GitLab tarafindaki `coverage:` regex'i de ayni satiri okuyor.
+          PCT=$(awk '/^lines:/ { gsub(/%/, "", $2); print $2; exit }' coverage/totals.txt)
+          if [ -z "$PCT" ]; then
+            echo "HATA: gcovr ozetinden satir kapsami okunamadi." >&2
+            cat coverage/totals.txt >&2
+            exit 1
+          fi
+          COLOR=$(awk -v p="$PCT" 'BEGIN {
+            if      (p >= 90) print "brightgreen";
+            else if (p >= 75) print "green";
+            else if (p >= 60) print "yellowgreen";
+            else if (p >= 45) print "yellow";
+            else if (p >= 30) print "orange";
+            else              print "red"
+          }')
+          printf '{"schemaVersion":1,"label":"coverage","message":"%s%%","color":"%s"}' "$PCT" "$COLOR" > coverage/badge.json
+          echo >> coverage/badge.json
+          cat coverage/badge.json
       - uses: actions/upload-artifact@v4
         with:
           name: coverage-report
@@ -552,8 +577,17 @@ jobs:
   docs:
     name: docs
     runs-on: ubuntu-latest
-    needs: [quality-clang-format, quality-clang-tidy]
-    if: github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    # coverage burada yalnizca RAPORU tasimak icin; kapi degil. Kapsama job'i
+    # job seviyesinde continue-on-error oldugu icin sonucu ne olursa olsun
+    # dokuman yayinlanmali — bu yuzden always() ve kapi olarak yalnizca iki
+    # kalite job'inin acikca basarili olmasi sarti. Duz `needs` yazmak,
+    # kapsama dustugunde docs'u da SKIP ettirme riskini tasiyordu.
+    needs: [quality-clang-format, quality-clang-tidy, coverage]
+    if: |
+      always()
+      && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+      && needs.quality-clang-format.result == 'success'
+      && needs.quality-clang-tidy.result == 'success'
     permissions:
       contents: read
       pages: write
@@ -629,6 +663,25 @@ jobs:
           SEARCHENGINE           = YES
           EOF
           doxygen _ci_doxyfile
+      # Kapsama raporu Doxygen ciktisinin yanina, /coverage/ altina konuyor: HTML
+      # rapor tek tiklamayla erisilebilir hale geliyor ve README rozeti ayni
+      # dizindeki badge.json'u okuyor. Kapsama job'i duserse indirme sessizce
+      # bos gecer ve bir sonraki adim "unknown" rozeti yazar — rozetin URL'i
+      # hicbir kosulda 404 olmamali, yoksa README'de kirik gorsel cikar.
+      - name: Kapsama raporunu ekle (varsa)
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage-report
+          path: public/coverage
+      - name: Kapsama rozeti icin yedek deger
+        run: |
+          if [ ! -f public/coverage/badge.json ]; then
+            mkdir -p public/coverage
+            printf '{"schemaVersion":1,"label":"coverage","message":"unknown","color":"lightgrey"}' > public/coverage/badge.json
+            echo >> public/coverage/badge.json
+          fi
+          cat public/coverage/badge.json
       - uses: actions/upload-pages-artifact@v3
         with:
           path: public

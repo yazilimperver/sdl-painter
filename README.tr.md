@@ -5,7 +5,9 @@
   <h1>SDLPainter</h1>
   <p><strong>SDL3 + OpenGL/Vulkan dual backend destekli modern C++ 2B çizim kütüphanesi.</strong></p>
   <p>
-    <a href="https://github.com/yazilimperver/sdl-painter/actions/workflows/ci.yml"><img src="https://github.com/yazilimperver/sdl-painter/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
+    <a href="https://github.com/yazilimperver/sdl-painter/actions/workflows/ci.yml"><img src="https://github.com/yazilimperver/sdl-painter/actions/workflows/ci.yml/badge.svg?branch=main" alt="GitHub CI"></a>
+    <a href="https://gitlab.com/yazilimperver/sdl-painter/-/pipelines"><img src="https://gitlab.com/yazilimperver/sdl-painter/badges/main/pipeline.svg" alt="GitLab pipeline"></a>
+    <a href="https://yazilimperver.github.io/sdl-painter/coverage/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fyazilimperver.github.io%2Fsdl-painter%2Fcoverage%2Fbadge.json" alt="Kod kapsama"></a>
     <a href="https://github.com/yazilimperver/sdl-painter/releases/latest"><img src="https://img.shields.io/github/v/release/yazilimperver/sdl-painter?logo=github" alt="Son sürüm"></a>
     <a href="https://yazilimperver.github.io/sdl-painter"><img src="https://img.shields.io/badge/dok%C3%BCman-Doxygen-informational" alt="Dokümantasyon"></a>
     <a href="LICENSE"><img src="https://img.shields.io/github/license/yazilimperver/sdl-painter" alt="MIT lisansı"></a>
