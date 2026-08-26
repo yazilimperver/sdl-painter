@@ -5,6 +5,12 @@ Her biri, bir diğerinin üzerine bir ekleme yaparak gider. Bu doküman her örn
 yeteneklerini kullandığını** ve **mühendislik açısından neden önemli
 olduğunu** açıklar.
 
+> **Kapsam:** Bu rehber fazlandırma sırasıyla gelen çekirdek demoları anlatır
+> (`hello_window` → `tictactoe`). Sonradan eklenen `graphics/`, `games/`,
+> `benchmarks/` demoları ve `hero` showcase'i henüz burada yok; hepsinin güncel
+> listesi ve tek satırlık açıklamaları için
+> [examples/README.md](../examples/README.md).
+
 ---
 
 ## hello_window — Altyapı Doğrulaması

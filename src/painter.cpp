@@ -264,6 +264,13 @@ std::vector<Vertex> StrokeClosedPath(const std::vector<Point>& points,
                                                pen.GetJoinStyle());
 }
 
+/// @brief Bir alt yolu kapali/acik olusuna gore tessellate et.
+std::vector<Vertex> StrokeSubPath(const SubPath& sub, float width,
+                                  const Pen& pen) {
+  return sub.closed ? StrokeClosedPath(sub.points, width, pen)
+                    : StrokeOpenPath(sub.points, width, pen);
+}
+
 }  // namespace
 
 Painter::Painter(SDL_Window* window, RendererBackend backend)
@@ -423,13 +430,7 @@ void Painter::SetViewport(int32_t x, int32_t y, int32_t width, int32_t height) {
   mViewportY = y;
   mViewportWidth = width;
   mViewportHeight = height;
-
-  // OpenGL viewport'unun orijini sol ALT kosededir; Vulkan'da sol ust.
-  const bool kIsVulkan = (mRenderer->GetBackend() == RendererBackend::kVulkan);
-  const int32_t kGpuY = kIsVulkan ? y : (mDrawableHeight - y - height);
-  mRenderer->SetViewport(x, kGpuY, width, height);
-  ++mStats.state_changes;
-  UpdateProjection();
+  ApplyViewport();
 }
 
 void Painter::ResetViewport() {
@@ -444,9 +445,7 @@ void Painter::ResetViewport() {
   mViewportY = 0;
   mViewportWidth = mDrawableWidth;
   mViewportHeight = mDrawableHeight;
-  mRenderer->SetViewport(0, 0, mViewportWidth, mViewportHeight);
-  ++mStats.state_changes;
-  UpdateProjection();
+  ApplyViewport();
 }
 
 void Painter::Clear(const Color& color) {
@@ -726,6 +725,51 @@ void Painter::DrawPolyline(const std::vector<Point>& points) {
   PushStroke(verts, pen.GetColor());
 }
 
+void Painter::DrawPath(const Path& path) {
+  if (!CanDrawPen() || path.IsEmpty()) {
+    return;
+  }
+  const Pen& pen = mCurrentState.pen;
+
+  // Iki gecis: once TUM alt yollarin dis konturu, sonra TUM govdeler. Tek
+  // gecisle yapilsaydi ikinci alt yolun konturu birincinin govdesinin uzerine
+  // biner ve cok parcali yollarda kontur ici kenarlarda gorunurdu.
+  if (pen.HasOutline()) {
+    const float outline_width = pen.GetWidth() + (2.0F * pen.GetOutlineWidth());
+    for (const SubPath& sub : path.SubPaths()) {
+      if (sub.points.size() < 2) {
+        continue;
+      }
+      auto outline_verts = StrokeSubPath(sub, outline_width, pen);
+      PushStroke(outline_verts, pen.GetOutlineColor());
+    }
+  }
+
+  for (const SubPath& sub : path.SubPaths()) {
+    if (sub.points.size() < 2) {
+      continue;
+    }
+    auto verts = StrokeSubPath(sub, pen.GetWidth(), pen);
+    PushStroke(verts, pen.GetColor());
+  }
+}
+
+void Painter::FillPath(const Path& path) {
+  if (!CanDrawBrush() || path.IsEmpty()) {
+    return;
+  }
+  for (const SubPath& sub : path.SubPaths()) {
+    // Iki nokta bir alan cevrelemez; ear clipping'e gonderilse bos donerdi.
+    if (sub.points.size() < 3) {
+      continue;
+    }
+    // Acik alt yol dolgu icin ortuk kapatilir: TessellateFilledPolygon nokta
+    // dizisini zaten kapali kabul eder, ek bir nokta gerekmez.
+    auto verts = Tessellator::TessellateFilledPolygon(sub.points);
+    PushFilled(verts);
+  }
+}
+
 void Painter::DrawImage(const Image& image, float x, float y, const Color& tint,
                         ImageFlip flip) {
   DrawImage(image,
@@ -848,11 +892,14 @@ void Painter::DrawImage(const Image& image, const Rect& src_rect,
   // src_rect → UV koordinatlarina donustur [0, 1]
   const auto kImgW = static_cast<float>(image.Width());
   const auto kImgH = static_cast<float>(image.Height());
-  float u0 = src_rect.x / kImgW;
-  float v0 = src_rect.y / kImgH;
-  float u1 = (src_rect.x + src_rect.w) / kImgW;
-  float v1 = (src_rect.y + src_rect.h) / kImgH;
+  PushTexturedQuad(handle, src_rect.x / kImgW, src_rect.y / kImgH,
+                   (src_rect.x + src_rect.w) / kImgW,
+                   (src_rect.y + src_rect.h) / kImgH, dest_rect, tint, flip);
+}
 
+void Painter::PushTexturedQuad(TextureHandle texture, float u0, float v0,
+                               float u1, float v1, const Rect& dest_rect,
+                               const Color& tint, ImageFlip flip) {
   // Aynalama: hedef dikdortgen yerinde kalir, yalnizca UV ucalari takas edilir.
   if (flip == ImageFlip::kHorizontal || flip == ImageFlip::kBoth) {
     std::swap(u0, u1);
@@ -874,8 +921,8 @@ void Painter::DrawImage(const Image& image, const Rect& src_rect,
   };
 
   mBatcher->SetBlendMode(mCurrentState.blend_mode);
-  mBatcher->PushTexturedTriangles(kVerts, mCurrentState.transform, handle, tint,
-                                  mCurrentState.opacity);
+  mBatcher->PushTexturedTriangles(kVerts, mCurrentState.transform, texture,
+                                  tint, mCurrentState.opacity);
 }
 
 void Painter::DrawText(float x, float y, const std::string& text) {
@@ -1181,6 +1228,150 @@ void Painter::PushFilled(std::vector<Vertex>& verts) {
                                     mCurrentState.opacity);
 }
 
+bool Painter::YAxisMatchesGpu() const {
+  if (mRenderer == nullptr) {
+    return false;
+  }
+  return mRenderer->GetBackend() == RendererBackend::kVulkan ||
+         mActiveTarget != kInvalidRenderTarget;
+}
+
+int32_t Painter::SurfaceHeight() const {
+  return mActiveTarget != kInvalidRenderTarget ? mTargetHeight
+                                               : mDrawableHeight;
+}
+
+void Painter::ApplyViewport() {
+  if (mRenderer == nullptr) {
+    return;
+  }
+  // OpenGL viewport'unun orijini ekranda sol ALT kosededir; Vulkan'da ve bir
+  // hedefe cizerken sol ust (bkz. YAxisMatchesGpu).
+  const int32_t kGpuY = YAxisMatchesGpu()
+                            ? mViewportY
+                            : (SurfaceHeight() - mViewportY - mViewportHeight);
+  mRenderer->SetViewport(mViewportX, kGpuY, mViewportWidth, mViewportHeight);
+  ++mStats.state_changes;
+  UpdateProjection();
+}
+
+// --- Çizim hedefi ----------------------------------------------------------
+
+RenderTarget Painter::CreateRenderTarget(int32_t width, int32_t height,
+                                         TextureFilter filter) {
+  if (mRenderer == nullptr || width <= 0 || height <= 0) {
+    return {};
+  }
+  const RenderTargetHandle kHandle =
+      mRenderer->CreateRenderTarget(width, height, filter);
+  if (kHandle == kInvalidRenderTarget) {
+    spdlog::error(
+        "[Painter] Cizim hedefi olusturulamadi ({}x{}). Backend "
+        "desteklemiyor olabilir.",
+        width, height);
+    return {};
+  }
+  return RenderTarget(mRenderer.get(), kHandle, width, height);
+}
+
+bool Painter::SetRenderTarget(const RenderTarget& target) {
+  if (mRenderer == nullptr || !target.IsValid()) {
+    return false;
+  }
+  if (mActiveTarget == target.Handle()) {
+    return true;
+  }
+  // Hedef bir GPU durumu: biriken cizimler onceki yuzeye aitti.
+  if (mBatcher != nullptr) {
+    mBatcher->Flush();
+  }
+  if (!mRenderer->SetRenderTarget(target.Handle())) {
+    return false;
+  }
+
+  // Ekrandan hedefe ilk gecis: viewport'u geri yukleyebilmek icin sakla.
+  if (mActiveTarget == kInvalidRenderTarget) {
+    mSavedViewportX = mViewportX;
+    mSavedViewportY = mViewportY;
+    mSavedViewportWidth = mViewportWidth;
+    mSavedViewportHeight = mViewportHeight;
+    mSavedCustomViewport = mCustomViewport;
+  }
+
+  mActiveTarget = target.Handle();
+  mTargetWidth = target.Width();
+  mTargetHeight = target.Height();
+
+  // Cizim koordinatlari hedefe yerel: viewport hedefin tamami olur.
+  mCustomViewport = false;
+  mViewportX = 0;
+  mViewportY = 0;
+  mViewportWidth = mTargetWidth;
+  mViewportHeight = mTargetHeight;
+  ApplyViewport();
+  return true;
+}
+
+void Painter::ResetRenderTarget() {
+  if (mRenderer == nullptr || mActiveTarget == kInvalidRenderTarget) {
+    return;
+  }
+  if (mBatcher != nullptr) {
+    mBatcher->Flush();
+  }
+  mRenderer->SetRenderTarget(kInvalidRenderTarget);
+
+  mActiveTarget = kInvalidRenderTarget;
+  mTargetWidth = 0;
+  mTargetHeight = 0;
+
+  mCustomViewport = mSavedCustomViewport;
+  mViewportX = mSavedViewportX;
+  mViewportY = mSavedViewportY;
+  mViewportWidth = mSavedViewportWidth;
+  mViewportHeight = mSavedViewportHeight;
+  ApplyViewport();
+}
+
+void Painter::DrawRenderTarget(const RenderTarget& target, float x, float y,
+                               const Color& tint, ImageFlip flip) {
+  DrawRenderTarget(target,
+                   Rect{x, y, static_cast<float>(target.Width()),
+                        static_cast<float>(target.Height())},
+                   tint, flip);
+}
+
+void Painter::DrawRenderTarget(const RenderTarget& target,
+                               const Rect& dest_rect, const Color& tint,
+                               ImageFlip flip) {
+  if (mRenderer == nullptr || mBatcher == nullptr || !target.IsValid()) {
+    return;
+  }
+  if (mActiveTarget == target.Handle()) {
+    spdlog::error(
+        "[Painter] DrawRenderTarget: hedef kendi icerigini ornekleyemez; "
+        "once ResetRenderTarget cagirin.");
+    return;
+  }
+  const TextureHandle kTexture =
+      mRenderer->GetRenderTargetTexture(target.Handle());
+  if (kTexture == kInvalidTexture) {
+    return;
+  }
+  PushTexturedQuad(kTexture, 0.0F, 0.0F, 1.0F, 1.0F, dest_rect, tint, flip);
+}
+
+bool Painter::ReadRenderTarget(const RenderTarget& target,
+                               std::vector<uint8_t>& out_rgba) {
+  if (mRenderer == nullptr || !target.IsValid()) {
+    return false;
+  }
+  const auto kNeeded = static_cast<std::size_t>(target.Width()) *
+                       static_cast<std::size_t>(target.Height()) * 4U;
+  out_rgba.resize(kNeeded);
+  return mRenderer->ReadRenderTarget(target.Handle(), out_rgba.data(), kNeeded);
+}
+
 void Painter::UpdateProjection() {
   if (mRenderer == nullptr) {
     return;
@@ -1194,14 +1385,15 @@ void Painter::UpdateProjection() {
     mBatcher->Flush();
   }
   // Ortografik projeksiyon: [0, width] x [0, height] → NDC
-  // OpenGL: Y ekseni clip space'de yukarı pozitif → Y'yi ters çevir (-2/h).
-  // Vulkan: Y ekseni clip space'de aşağı pozitif → ters çevirme gerekmez (+2/h).
+  // OpenGL ekranda: Y ekseni clip space'de yukarı pozitif → ters çevir (-2/h).
+  // Vulkan'da ve GL'de bir HEDEFE çizerken ters çevirme gerekmez (+2/h);
+  // gerekçesi YAxisMatchesGpu() belgesinde.
   auto w = static_cast<float>(mViewportWidth);
   auto h = static_cast<float>(mViewportHeight);
 
-  const bool kIsVulkan = (mRenderer->GetBackend() == RendererBackend::kVulkan);
-  const float kSy = kIsVulkan ? (2.0F / h) : (-2.0F / h);
-  const float kTy = kIsVulkan ? -1.0F : 1.0F;
+  const bool kSameY = YAxisMatchesGpu();
+  const float kSy = kSameY ? (2.0F / h) : (-2.0F / h);
+  const float kTy = kSameY ? -1.0F : 1.0F;
 
   // 4x4 sütun-major ortografik matris
   // clang-format off
@@ -1233,11 +1425,12 @@ void Painter::ApplyScissor(const Rect& rect) {
   const int32_t kWindowY = mViewportY + static_cast<int32_t>(rect.y);
 
   // OpenGL scissor Y=0 altta; Vulkan Y=0 üstte. Ters cevirme YUZEYIN
-  // tamamina gore yapilir, viewport'a gore degil.
-  const bool kIsVulkan = (mRenderer->GetBackend() == RendererBackend::kVulkan);
+  // tamamina gore yapilir, viewport'a gore degil. Bir hedefe cizerken GL de
+  // cevirmez (bkz. YAxisMatchesGpu).
   const int32_t kScissorY =
-      kIsVulkan ? kWindowY
-                : (mDrawableHeight - kWindowY - static_cast<int32_t>(rect.h));
+      YAxisMatchesGpu()
+          ? kWindowY
+          : (SurfaceHeight() - kWindowY - static_cast<int32_t>(rect.h));
   ++mStats.state_changes;
   mRenderer->SetScissor(kWindowX, kScissorY, static_cast<int32_t>(rect.w),
                         static_cast<int32_t>(rect.h));

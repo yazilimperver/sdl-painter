@@ -104,6 +104,24 @@ void VulkanRenderer::Shutdown() {
       tex->Destroy(mContext->GetDevice());
     }
     mTextures.clear();
+    // Hedefler de descriptor set'lerini aynı havuzdan almıştı.
+    for (auto& [handle, entry] : mRenderTargets) {
+      entry.target->Destroy(mContext->GetDevice());
+    }
+    mRenderTargets.clear();
+    mCurrentTarget = kInvalidRenderTarget;
+    if (mOffscreenTexturedPipeline) {
+      mOffscreenTexturedPipeline->Destroy(mContext->GetDevice());
+      mOffscreenTexturedPipeline.reset();
+    }
+    if (mOffscreenPipeline) {
+      mOffscreenPipeline->Destroy(mContext->GetDevice());
+      mOffscreenPipeline.reset();
+    }
+    if (mOffscreenRenderPass != VK_NULL_HANDLE) {
+      vkDestroyRenderPass(mContext->GetDevice(), mOffscreenRenderPass, nullptr);
+      mOffscreenRenderPass = VK_NULL_HANDLE;
+    }
     if (mTexturedPipeline) {
       mTexturedPipeline->Destroy(mContext->GetDevice());
       mTexturedPipeline.reset();
@@ -190,6 +208,8 @@ bool VulkanRenderer::AcquireNextImage() {
 void VulkanRenderer::BeginFrame() {
   mSwapchainOutOfDate = false;
   mFrameActive = false;
+  // Hedef secimi kare sinirini asmaz: her kare ekranda baslar.
+  mCurrentTarget = kInvalidRenderTarget;
 
   // Pencere simge durumuna küçültüldüğünde yüzey 0x0 olur. Bu durumda
   // swapchain/framebuffer oluşturmak ve render pass başlatmak Vulkan
@@ -251,6 +271,13 @@ void VulkanRenderer::BeginFrame() {
 void VulkanRenderer::EndFrame() {
   if (!mFrameActive) {
     return;
+  }
+
+  // Kullanici hedefte biraktiysa ekrana don: aksi halde bu karede swapchain
+  // image'ina hic yazilmaz ve resume pass'in initialLayout beklentisi de
+  // karsilanmaz.
+  if (mCurrentTarget != kInvalidRenderTarget) {
+    SetRenderTarget(kInvalidRenderTarget);
   }
 
   VkCommandBuffer cmd = mFrameSync->GetCommandBuffer(mCurrentFrame);
@@ -317,7 +344,7 @@ void VulkanRenderer::ApplyDynamicViewportScissor(VkCommandBuffer cmd) const {
 }
 
 void VulkanRenderer::ApplyDynamicViewport(VkCommandBuffer cmd) const {
-  const VkExtent2D kExtent = mSwapchain->GetExtent();
+  const VkExtent2D kExtent = CurrentExtent();
 
   VkViewport vp{};
   vp.x = static_cast<float>(mViewportX);
@@ -332,11 +359,12 @@ void VulkanRenderer::ApplyDynamicViewport(VkCommandBuffer cmd) const {
 }
 
 void VulkanRenderer::ApplyDynamicScissor(VkCommandBuffer cmd) const {
-  const VkExtent2D kExtent = mSwapchain->GetExtent();
+  const VkExtent2D kExtent = CurrentExtent();
 
   VkRect2D scissor{};
   if (mScissorEnabled) {
-    // Scissor, swapchain sınırlarını aşamaz (Vulkan geçerlilik kuralı):
+    // Scissor, yürürlükteki hedefin sınırlarını aşamaz (Vulkan geçerlilik
+    // kuralı):
     // negatif offset ve taşan genişlik kırpılır.
     const int32_t kX0 = std::max(0, mScissorX);
     const int32_t kY0 = std::max(0, mScissorY);
@@ -405,7 +433,7 @@ void VulkanRenderer::Clear(const Color& color) {
   clear.colorAttachment = 0;
   clear.clearValue = mClearValue;
 
-  VkExtent2D extent = mSwapchain->GetExtent();
+  VkExtent2D extent = CurrentExtent();
   VkClearRect rect{};
   rect.rect.offset = {0, 0};
   rect.rect.extent = extent;
@@ -430,7 +458,8 @@ void VulkanRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
         vertices.size());
     return;
   }
-  if (mPipeline == nullptr || mVertexRing == nullptr) {
+  const VulkanPipeline* pipeline = ActivePipeline();
+  if (pipeline == nullptr || mVertexRing == nullptr) {
     return;
   }
 
@@ -454,12 +483,12 @@ void VulkanRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
   VkCommandBuffer cmd = mFrameSync->GetCommandBuffer(mCurrentFrame);
 
   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    mPipeline->GetPipeline(mBlendMode));
+                    pipeline->GetPipeline(mBlendMode));
 
   VkBuffer buf = mVertexRing->GetBuffer();
   vkCmdBindVertexBuffers(cmd, 0, 1, &buf, &offset_bytes);
 
-  vkCmdPushConstants(cmd, mPipeline->GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0,
+  vkCmdPushConstants(cmd, pipeline->GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0,
                      static_cast<uint32_t>(sizeof(PushConstants)),
                      &mPushConstants);
 
@@ -573,12 +602,14 @@ void VulkanRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
   if (!mFrameActive || vertices.empty()) {
     return;
   }
-  if (mTexturedPipeline == nullptr || mTexturedVertexRing == nullptr) {
+  const VulkanTexturedPipeline* pipeline = ActiveTexturedPipeline();
+  if (pipeline == nullptr || mTexturedVertexRing == nullptr) {
     return;
   }
 
-  auto it = mTextures.find(texture);
-  if (it == mTextures.end()) {
+  // Handle normal bir texture'a da, bir hedefin renk image'ina da ait olabilir.
+  VkDescriptorSet desc_set = LookupDescriptorSet(texture);
+  if (desc_set == VK_NULL_HANDLE) {
     return;
   }
 
@@ -603,21 +634,261 @@ void VulkanRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
   VkCommandBuffer cmd = mFrameSync->GetCommandBuffer(mCurrentFrame);
 
   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    mTexturedPipeline->GetPipeline(mBlendMode));
+                    pipeline->GetPipeline(mBlendMode));
 
-  VkDescriptorSet desc_set = it->second->GetDescriptorSet();
+  // Not: descriptor set birincil pipeline'in havuzundan gelmis olabilir. Iki
+  // pipeline layout'u AYNI SEKILDE tanimlandigi icin Vulkan onlari set 0 icin
+  // uyumlu sayar; baglama gecerlidir.
   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                          mTexturedPipeline->GetLayout(), 0, 1, &desc_set, 0,
-                          nullptr);
+                          pipeline->GetLayout(), 0, 1, &desc_set, 0, nullptr);
 
   VkBuffer buf = mTexturedVertexRing->GetBuffer();
   vkCmdBindVertexBuffers(cmd, 0, 1, &buf, &offset_bytes);
 
-  vkCmdPushConstants(cmd, mTexturedPipeline->GetLayout(),
-                     VK_SHADER_STAGE_VERTEX_BIT, 0,
+  vkCmdPushConstants(cmd, pipeline->GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0,
                      static_cast<uint32_t>(sizeof(PushConstants)), &pc);
 
   vkCmdDraw(cmd, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
+}
+
+// --- Çizim hedefleri ---------------------------------------------------
+
+VkExtent2D VulkanRenderer::CurrentExtent() const {
+  const auto it = mRenderTargets.find(mCurrentTarget);
+  if (it != mRenderTargets.end()) {
+    return it->second.target->GetExtent();
+  }
+  return mSwapchain != nullptr ? mSwapchain->GetExtent() : VkExtent2D{0, 0};
+}
+
+const VulkanPipeline* VulkanRenderer::ActivePipeline() const {
+  return mCurrentTarget == kInvalidRenderTarget ? mPipeline.get()
+                                                : mOffscreenPipeline.get();
+}
+
+const VulkanTexturedPipeline* VulkanRenderer::ActiveTexturedPipeline() const {
+  return mCurrentTarget == kInvalidRenderTarget
+             ? mTexturedPipeline.get()
+             : mOffscreenTexturedPipeline.get();
+}
+
+VkDescriptorSet VulkanRenderer::LookupDescriptorSet(
+    TextureHandle handle) const {
+  const auto tex = mTextures.find(handle);
+  if (tex != mTextures.end()) {
+    return tex->second->GetDescriptorSet();
+  }
+  // Hedeflerin renk image'lari da ayni handle uzayindan bir handle alir.
+  for (const auto& entry : mRenderTargets) {
+    if (entry.second.texture == handle) {
+      return entry.second.target->GetDescriptorSet();
+    }
+  }
+  return VK_NULL_HANDLE;
+}
+
+bool VulkanRenderer::EnsureOffscreenResources() {
+  if (mOffscreenRenderPass != VK_NULL_HANDLE) {
+    return true;
+  }
+  if (mContext == nullptr) {
+    return false;
+  }
+  VkDevice device = mContext->GetDevice();
+
+  VkAttachmentDescription color{};
+  color.format = VulkanRenderTarget::kColorFormat;
+  color.samples = VK_SAMPLE_COUNT_1_BIT;
+  color.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+  color.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+  color.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  color.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  // Hedef, pass disinda daima orneklenebilir durumda bulunur; boylece ayni
+  // komut buffer'inda "hedefe ciz, sonra ekrana bas" mumkun olur.
+  color.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+  color.finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+  VkAttachmentReference color_ref{};
+  color_ref.attachment = 0;
+  color_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+  VkSubpassDescription subpass{};
+  subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  subpass.colorAttachmentCount = 1;
+  subpass.pColorAttachments = &color_ref;
+
+  // Iki bagimlilik: girerken onceki ornekleme bitmis olmali, cikarken renk
+  // yazimlari fragment shader okumasindan ONCE gorunur olmali. Ikincisi,
+  // hedefin ayni karede ekrana basilabilmesinin sarti.
+  std::array<VkSubpassDependency, 2> deps{};
+  deps[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+  deps[0].dstSubpass = 0;
+  deps[0].srcStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  deps[0].srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+  deps[0].dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  deps[0].dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+  deps[0].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+  deps[1].srcSubpass = 0;
+  deps[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+  deps[1].srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  deps[1].srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+  deps[1].dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+  deps[1].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+  deps[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+
+  VkRenderPassCreateInfo ci{};
+  ci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+  ci.attachmentCount = 1;
+  ci.pAttachments = &color;
+  ci.subpassCount = 1;
+  ci.pSubpasses = &subpass;
+  ci.dependencyCount = static_cast<uint32_t>(deps.size());
+  ci.pDependencies = deps.data();
+  VK_CHECK(vkCreateRenderPass(device, &ci, nullptr, &mOffscreenRenderPass));
+
+  // Pipeline yalnizca UYUMLU render pass ile kullanilabilir ve uyumluluk
+  // attachment formatini kapsar; hedeflerin formati ekranınkinden farkli
+  // oldugu icin ikinci bir takim sart.
+  auto pipeline = std::make_unique<VulkanPipeline>();
+  if (!pipeline->Init(device, mOffscreenRenderPass)) {
+    spdlog::error("VulkanRenderer: offscreen pipeline olusturulamadi.");
+    return false;
+  }
+  auto textured = std::make_unique<VulkanTexturedPipeline>();
+  if (!textured->Init(device, mOffscreenRenderPass)) {
+    spdlog::error(
+        "VulkanRenderer: offscreen textured pipeline olusturulamadi.");
+    return false;
+  }
+  mOffscreenPipeline = std::move(pipeline);
+  mOffscreenTexturedPipeline = std::move(textured);
+  return true;
+}
+
+RenderTargetHandle VulkanRenderer::CreateRenderTarget(int32_t width,
+                                                      int32_t height,
+                                                      TextureFilter filter) {
+  if (mContext == nullptr || mTexturedPipeline == nullptr || width <= 0 ||
+      height <= 0) {
+    return kInvalidRenderTarget;
+  }
+  if (!EnsureOffscreenResources()) {
+    return kInvalidRenderTarget;
+  }
+
+  VkDevice device = mContext->GetDevice();
+
+  // Descriptor set DAIMA birincil pipeline'in havuzundan alinir; hedefin
+  // texture'i ekrana basilirken de o pipeline ile baglaniyor.
+  VkDescriptorSet desc_set = mTexturedPipeline->AllocateDescriptorSet(device);
+  if (desc_set == VK_NULL_HANDLE) {
+    return kInvalidRenderTarget;
+  }
+
+  auto target = std::make_unique<VulkanRenderTarget>();
+  if (!target->Create(mContext.get(), mOffscreenRenderPass,
+                      mFrameSync->GetCommandPool(), width, height, desc_set,
+                      mTexturedPipeline->GetDescriptorSetLayout(), filter)) {
+    mTexturedPipeline->FreeDescriptorSet(device, desc_set);
+    return kInvalidRenderTarget;
+  }
+
+  RenderTargetEntry entry;
+  entry.texture = mNextTextureHandle++;
+  entry.target = std::move(target);
+
+  const RenderTargetHandle kHandle = mNextRenderTarget++;
+  mRenderTargets.emplace(kHandle, std::move(entry));
+  return kHandle;
+}
+
+void VulkanRenderer::DestroyRenderTarget(RenderTargetHandle handle) {
+  auto it = mRenderTargets.find(handle);
+  if (it == mRenderTargets.end() || mContext == nullptr) {
+    return;
+  }
+  if (mCurrentTarget == handle) {
+    SetRenderTarget(kInvalidRenderTarget);
+  }
+  // Texture'lardaki gecikmeli silme burada uygulanamaz: hedefin framebuffer'i
+  // da yikiliyor ve o, ucustaki komut buffer'larindan referans ediliyor.
+  // Hedef yaratma/yikma kare dongusunde degil, kurulum sirasinda yapilir;
+  // burada tam bekleme kabul edilebilir bir bedel.
+  vkDeviceWaitIdle(mContext->GetDevice());
+  mTexturedPipeline->FreeDescriptorSet(mContext->GetDevice(),
+                                       it->second.target->GetDescriptorSet());
+  it->second.target->Destroy(mContext->GetDevice());
+  mRenderTargets.erase(it);
+}
+
+TextureHandle VulkanRenderer::GetRenderTargetTexture(
+    RenderTargetHandle handle) const {
+  const auto it = mRenderTargets.find(handle);
+  return it == mRenderTargets.end() ? kInvalidTexture : it->second.texture;
+}
+
+bool VulkanRenderer::SetRenderTarget(RenderTargetHandle handle) {
+  if (handle != kInvalidRenderTarget &&
+      mRenderTargets.find(handle) == mRenderTargets.end()) {
+    return false;
+  }
+  if (handle == mCurrentTarget) {
+    return true;
+  }
+  // Kare aktif degilse yalnizca secimi kaydet; render pass zaten yok.
+  if (!mFrameActive) {
+    mCurrentTarget = handle;
+    return true;
+  }
+  BeginTargetRenderPass(handle);
+  return true;
+}
+
+void VulkanRenderer::BeginTargetRenderPass(RenderTargetHandle handle) {
+  VkCommandBuffer cmd = mFrameSync->GetCommandBuffer(mCurrentFrame);
+
+  // Bir komut buffer'inda birden fazla render pass ORNEGI olabilir, ama ic
+  // ice olamaz: once yururlukteki bitirilir.
+  vkCmdEndRenderPass(cmd);
+  mCurrentTarget = handle;
+
+  VkRenderPassBeginInfo rp{};
+  rp.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+  rp.renderArea.offset = {0, 0};
+
+  const auto it = mRenderTargets.find(handle);
+  if (it != mRenderTargets.end()) {
+    rp.renderPass = mOffscreenRenderPass;
+    rp.framebuffer = it->second.target->GetFramebuffer();
+    rp.renderArea.extent = it->second.target->GetExtent();
+    rp.clearValueCount = 1;
+    rp.pClearValues = &mClearValue;
+  } else {
+    // Ekrana donus: CLEAR yerine LOAD yapan ikiz pass kullanilir, yoksa bu
+    // karede o ana kadar cizilen her sey silinirdi (bkz. GetResumeRenderPass).
+    rp.renderPass = mSwapchain->GetResumeRenderPass();
+    rp.framebuffer = mSwapchain->GetFramebuffer(mCurrentImageIndex);
+    rp.renderArea.extent = mSwapchain->GetExtent();
+    rp.clearValueCount = 0;
+    rp.pClearValues = nullptr;
+  }
+
+  vkCmdBeginRenderPass(cmd, &rp, VK_SUBPASS_CONTENTS_INLINE);
+  // Dinamik state render pass ornegine bagli degildir ama viewport/scissor
+  // artik farkli bir yuzeye gore hesaplanmali.
+  ApplyDynamicViewportScissor(cmd);
+}
+
+bool VulkanRenderer::ReadRenderTarget(RenderTargetHandle handle,
+                                      uint8_t* out_rgba,
+                                      std::size_t byte_capacity) {
+  const auto it = mRenderTargets.find(handle);
+  if (it == mRenderTargets.end() || mContext == nullptr) {
+    return false;
+  }
+  return it->second.target->ReadPixels(
+      mContext.get(), mFrameSync->GetCommandPool(), out_rgba, byte_capacity);
 }
 
 void VulkanRenderer::SetProjectionMatrix(const float* mat4) {

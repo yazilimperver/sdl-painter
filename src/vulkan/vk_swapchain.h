@@ -42,6 +42,20 @@ class VkSwapchain {
 
   VkSwapchainKHR GetSwapchain() const { return mSwapchain; }
   VkRenderPass GetRenderPass() const { return mRenderPass; }
+
+  /// @brief Ekran render pass'inin **içeriği koruyan** ikizi.
+  ///
+  /// Kare ortasında bir offscreen hedefe geçilip geri dönüldüğünde ekran
+  /// render pass'i yeniden başlatılmak zorundadır (bir komut buffer'ında
+  /// birden fazla render pass örneği olabilir, ama iç içe olamaz). Asıl
+  /// pass `loadOp = CLEAR` olduğu için onu yeniden başlatmak o ana kadar
+  /// çizilen her şeyi **silerdi**; bu ikiz `loadOp = LOAD` ile devam eder.
+  ///
+  /// Asıl pass ile @b uyumludur (aynı format, aynı örnek sayısı, aynı
+  /// attachment düzeni) — bu yüzden hem aynı framebuffer'lar hem de asıl
+  /// pass için üretilmiş pipeline'lar olduğu gibi kullanılabilir. Uyumluluk
+  /// `loadOp`/`storeOp` ve layout'ları kapsamaz.
+  VkRenderPass GetResumeRenderPass() const { return mResumeRenderPass; }
   VkFormat GetImageFormat() const { return mImageFormat; }
   VkExtent2D GetExtent() const { return mExtent; }
   uint32_t GetImageCount() const {
@@ -57,6 +71,7 @@ class VkSwapchain {
                               VkSwapchainKHR old_swapchain);
   bool CreateImageViews();
   bool CreateRenderPass();
+  bool CreateResumeRenderPass();
   bool CreateFramebuffers();
   void DestroySwapchainResources();
 
@@ -70,6 +85,9 @@ class VkSwapchain {
   std::vector<VkFramebuffer> mFramebuffers;
 
   VkRenderPass mRenderPass{VK_NULL_HANDLE};
+
+  /// Icerigi koruyan ikiz (bkz. GetResumeRenderPass).
+  VkRenderPass mResumeRenderPass{VK_NULL_HANDLE};
 };
 
 }  // namespace sdl_painter

@@ -355,9 +355,21 @@ sequenceDiagram
 ```
 
 **Sonuç piksel düzeyinde aynıdır** — tessellation aynı vertex'leri
-üretir, projeksiyon matrisleri aynıdır, blend state aynıdır. Tek olası
-fark: anti-aliasing yapılandırması (MSAA örnekleme) backend'in pipeline
-veya FBO ayarına bağlı olabilir.
+üretir, projeksiyon matrisleri aynıdır, blend state aynıdır.
+
+Bu artık bir varsayım değil, **ölçüm**: `tests/test_backend_parity.cpp` aynı
+sahneyi iki backend'de bir çizim hedefine çizip pikselleri karşılaştırıyor
+(ölçülen fark: 0). Test yazıldığında üç gerçek ayrışma buldu — Vulkan
+dokularının sRGB formatında olması, karıştırma modlarının alfa faktörlerinin
+uyuşmaması ve OpenGL'de başlangıç blend durumunun `SetBlendMode`'u atlaması.
+Üçü de ekranda görünmüyordu.
+
+**Bilinen tek fark anti-aliasing.** MSAA bir GL pencere özniteliğidir
+(`SDL_GL_MULTISAMPLESAMPLES`, `AppConfig::msaa_samples` üzerinden) ve yalnızca
+OpenGL'in **ekran** framebuffer'ında etkilidir. Vulkan pipeline'ları
+`VK_SAMPLE_COUNT_1_BIT` sabitler; çizim hedefleri de her iki backend'de tek
+örneklemlidir. Parite testi bu yüzden hedefe çizer: karşılaştırma MSAA farkına
+takılmaz.
 
 ---
 

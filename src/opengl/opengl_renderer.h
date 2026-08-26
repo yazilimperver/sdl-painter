@@ -2,7 +2,9 @@
 
 #include "sdl_painter/renderer.h"
 
+#include <cstddef>
 #include <cstdint>
+#include <unordered_map>
 #include <vector>
 
 #include "shader_program.h"
@@ -47,6 +49,15 @@ class OpenGLRenderer final : public IRenderer {
   void DrawTextured(const std::vector<TexturedVertex>& vertices,
                     TextureHandle texture) override;
 
+  RenderTargetHandle CreateRenderTarget(int32_t width, int32_t height,
+                                        TextureFilter filter) override;
+  void DestroyRenderTarget(RenderTargetHandle handle) override;
+  [[nodiscard]] TextureHandle GetRenderTargetTexture(
+      RenderTargetHandle handle) const override;
+  bool SetRenderTarget(RenderTargetHandle handle) override;
+  bool ReadRenderTarget(RenderTargetHandle handle, uint8_t* out_rgba,
+                        std::size_t byte_capacity) override;
+
   RendererBackend GetBackend() const override {
     return RendererBackend::kOpenGL;
   }
@@ -66,6 +77,25 @@ class OpenGLRenderer final : public IRenderer {
 
   /// @brief Hazır olan en eski sorgu sonucunu topla (bloklamadan).
   void CollectGpuTime();
+
+  /// @brief Bir offscreen hedefin GL kaynakları.
+  struct RenderTargetGL {
+    uint32_t fbo{0};
+    uint32_t texture{0};
+    int32_t width{0};
+    int32_t height{0};
+  };
+
+  /// @brief Verilen hedefin FBO'sunu bağla (0 → ekran).
+  void BindTargetFramebuffer(RenderTargetHandle handle);
+
+  /// @brief Handle → hedef eşlemesi. Handle olarak FBO id'si kullanılmaz;
+  ///        boyutu da saklamak gerektiği için ayrı bir kayıt tutulur.
+  std::unordered_map<RenderTargetHandle, RenderTargetGL> mRenderTargets;
+  RenderTargetHandle mNextRenderTarget{1};  // 0 = kInvalidRenderTarget
+
+  /// @brief Yürürlükteki hedef (0 = ekran).
+  RenderTargetHandle mCurrentTarget{kInvalidRenderTarget};
 
   SDL_Window* mWindow{nullptr};
   void* mGLContext{nullptr};

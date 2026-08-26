@@ -1,6 +1,6 @@
 # SDLPainter Examples
 
-Thirty-four runnable demos, each isolating one capability. Build them with the
+Runnable demos, each isolating one capability. Build them with the
 repository (they are on by default) and run them straight from the build tree:
 
 ```bash
@@ -51,6 +51,8 @@ demo is one line in [`CMakeLists.txt`](CMakeLists.txt); the helper is
 | [`sprite_animation`](graphics/sprite_animation.cpp) | A real CC0 sprite sheet sliced on an 8×4 grid. Its left- and right-facing rows are exact mirrors, so the demo draws the right-facing walk **either** from the sheet **or** by flipping the left row — pixel-identical, which is the argument for `ImageFlip` in one picture. | [asset](assets/) |
 | [`physics_rope`](graphics/physics_rope.cpp) | A Verlet rope and cloth: the honest stress test for thick-line joins and caps, cycled live with J and C. | — |
 | [`strokes`](graphics/strokes.cpp) | Every pen axis side by side — cap, join, dash pattern, rounded rects and arcs. Reference marks show exactly how far each cap overhangs the real endpoint, and a row of narrowing angles shows miter falling back to bevel on its own. | — |
+| [`paths`](graphics/paths.cpp) | `Path` with quadratic and cubic Beziers. Curves are flattened when they enter the path, so every pen axis — cap, join, dash — keeps working on them; the arrow keys change the flattening tolerance and the generated points are drawn on top, so the trade-off is visible rather than described. The last row shows the documented limit: sub-paths fill independently, so an inner ring does **not** punch a hole. | — |
+| [`render_target`](graphics/render_target.cpp) | Drawing into a texture instead of the screen. The same target is shown three ways: full size, as a cheap mini-map (the scene is **not** drawn twice), and as a fading trail built by ping-ponging two targets — which is also the demo of the one rule you cannot break: a target may not sample itself. | - |
 | [`gradients`](graphics/gradients.cpp) | Gradients without a shader, and an honest look at the catch: the transition is only as fine as the shape's vertex density. A row of polygons from 3 to 64 corners makes the limit visible; press **G** to see the vertices themselves. All of it still batches into one draw call. | — |
 | [`blend_modes`](graphics/blend_modes.cpp) | The four blend modes side by side, and their cost. Colour and tint ride in the vertex so they batch freely; **blend mode is GPU state and cannot** — press SPACE to switch between grouping by mode and changing it per shape, and watch the draw-call counter. | — |
 | [`pixel_art`](graphics/pixel_art.cpp) | The same sprite at the same scale, `kLinear` on the left and `kNearest` on the right, with a sweeping divider. One line of difference, decisive result. | [asset](assets/) |
@@ -126,21 +128,33 @@ identically to OpenGL, one capability at a time.
 
 | Demo | What it shows | Needs |
 |---|---|---|
-| [`hero`](hero.cpp) | The choreographed scene behind the README banner: primitives, a thick polyline, a concave polygon, nested transforms, a procedural texture, an opacity ramp and text — all animating on an 8-second perfect loop. | SDL_ttf |
+| [`hero`](hero.cpp) | The choreographed showcase behind the README banner — a four-act tour of the whole library on a 12-second perfect loop. | SDL_ttf |
 
-Unlike the others this one is a *composition* rather than an isolated feature,
-and it can render itself to disk instead of to a window:
+Unlike the others this one is a *composition* rather than an isolated feature.
+Each act runs for three seconds, fading in and out on its own:
+
+| Act | Shows |
+|---|---|
+| **01 · Shapes & paths** | Rect, rounded rect, circle, ellipse, arc, pie, chord; dash patterns; butt/square/round caps; miter/round/bevel joins; a Bézier `Path`, stroked and filled |
+| **02 · Color & blending** | Linear and radial gradients, a gradient-filled concave polygon (ear clipping), additive and multiply blend modes, the global opacity ramp |
+| **03 · Transform & clip** | A nested transform stack, scissor clipping, a viewport with its own local coordinates, and 276 individually transformed quads that still batch |
+| **04 · Images & text** | Texture scaling/tint/flip, nearest vs. linear sampling on pixel art, a free-form `DrawImageMesh` warp, a `RenderTarget` stamped three times, and SDL_ttf with word wrap |
+
+The footer carries the live `FrameStats` counters, so the draw-call cost of
+everything on screen is visible in the banner itself. It can render to disk
+instead of to a window:
 
 ```bash
 ./build/linux-debug/examples/hero                                 # watch it
-./build/linux-debug/examples/hero --dump-frames build/hero_frames # 240 PPM frames
-./scripts/make-hero-gif.sh                                        # → doc/hero.gif
+./build/linux-debug/examples/hero --dump-frames build/hero_frames # 360 PPM frames
+./scripts/make-hero-gif.sh --fps 12                               # → doc/hero.gif
 ```
 
 Dumping frames beats screen recording here: no cursor, no window chrome, no
 dropped frames, and the loop closes exactly. It needs `ffmpeg` only for the
-final assembly step. Every animation completes a whole number of periods over
-the 240 frames, so frame 240 is identical to frame 0.
+final assembly step. Frame 360 is identical to frame 0 because every act is
+fully faded out at its own boundaries — animations inside an act therefore
+don't have to complete a whole number of periods.
 
 ---
 

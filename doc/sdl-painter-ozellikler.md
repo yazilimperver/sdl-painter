@@ -29,6 +29,17 @@ Bu sayfa içerisinde SDLPainter kütüphanesine yönelik önce çıkan özellikl
   GPU durumu olduğu için batch'i kırar; Vulkan'da mod başına pipeline varyantı
   başlangıçta üretilir
 
+## Yol (Path)
+
+- `Path` — doğru parçaları, quadratic (`QuadTo`) ve cubic (`CubicTo`) Bézier
+  eğrileri; her `MoveTo` yeni bir alt yol başlatır, `Close` alt yolu kapatır
+- Eğriler **yola eklenirken** düzleştirilir (`Flatness`, varsayılan 0.25 px):
+  kontrol noktası saklanmaz, tessellator'a dokunulmaz ve kalemin tüm stilleri
+  (kesik, uç, birleşim) eğride de çalışır
+- `DrawPath` çerçeveyi, `FillPath` dolguyu çizer
+- **Sınır:** `FillPath` her alt yolu bağımsız doldurur — even-odd / nonzero
+  kuralı yok, dolayısıyla "O" harfi gibi delikli şekiller doğru dolmaz
+
 ## Transform Stack
 
 - `Translate`, `Rotate`, `Scale`
@@ -59,6 +70,18 @@ Bu sayfa içerisinde SDLPainter kütüphanesine yönelik önce çıkan özellikl
 - `Painter::DrawImageMesh` ile serbest biçimli dokulu ızgara — köşeler
   bağımsız hareket edebilir
 - Alpha blending desteği
+
+## Çizim Hedefi (RenderTarget)
+
+- `Painter::CreateRenderTarget` ile ekran yerine dokuya çizim — mini harita,
+  son işlem efektleri, iz efekti, pahalı ama nadir değişen katmanların
+  önbelleklenmesi
+- `SetRenderTarget` / `ResetRenderTarget`; hedef bağlıyken koordinatlar
+  **hedefe yereldir** ve iki backend'de piksel piksel aynı sonucu verir
+- `DrawRenderTarget` ile hedefi bir görüntü gibi (tint ve aynalama dahil) bas
+- `ReadRenderTarget` ile pikselleri doğrusal RGBA8 olarak geri oku — ekran
+  görüntüsü ve backend parite testleri bunu kullanır
+- Hedefler tek örneklemlidir (MSAA yok)
 
 ## Metin
 
@@ -94,10 +117,10 @@ Her çizim çağrısı doğrudan GPU'ya gitmez; `RenderBatcher` vertex'leri bir 
 
 ## Altyapı
 
-- CMake Presets (7 preset: `linux-debug`, `linux-release`, `linux-debug-asan`, `windows-debug`, `windows-release`, `windows-mingw-debug`, `windows-mingw-release`)
-- Conan 2 bağımlılık yönetimi — opsiyonel Vulkan ve metin bağımlılıkları
+- CMake Presets (8 preset: `linux-debug`, `linux-release`, `linux-debug-coverage`, `linux-debug-asan`, `windows-debug`, `windows-release`, `windows-mingw-debug`, `windows-mingw-release`)
+- Conan 2 bağımlılık yönetimi — SDL_ttf dahil zorunlu paketler, yalnızca Vulkan opsiyonel (`-o "&:with_vulkan=True"`)
 - Docker multi-stage: geliştirme / headless CI / cross-compile
-- GitLab CI/CD: build → test → quality (clang-format zorunlu, clang-tidy soft)
+- CI/CD: GitHub Actions (birincil) + GitLab CI (ayna) — build → test → quality → docs; clang-format zorunlu, clang-tidy soft
 - AddressSanitizer + UBSan preset (`linux-debug-asan`)
 - Google C++ Style, clang-format-18
 - Birim testler (gtest)

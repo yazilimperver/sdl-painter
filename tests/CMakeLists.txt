@@ -7,6 +7,9 @@ set(TEST_SOURCES
     test_pen_brush.cpp
     test_transform.cpp
     test_tessellator.cpp
+    test_path.cpp
+    test_render_target.cpp
+    test_backend_parity.cpp
     test_painter.cpp
     test_font.cpp
     test_text_utf8.cpp

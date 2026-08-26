@@ -21,6 +21,33 @@
   yazıyor. Öncekiler bir sonraki flush'ta nasıl olsa eziliyordu.
 
 ### Düzeltildi
+
+> Aşağıdaki ilk üç madde, backend parite testi tarafından **yazıldığı gün**
+> bulundu. Üçü de ekranda görünmüyordu; ancak iki backend'in çıktısı piksel
+> piksel karşılaştırılınca ortaya çıktılar.
+
+- **Vulkan'da dokular sRGB formatındaydı, OpenGL'de doğrusal.** `VulkanTexture`
+  image'ları `VK_FORMAT_R8G8B8A8_SRGB` ile yaratıyordu; GPU örneklerken
+  sRGB→doğrusal dönüşüm uyguluyor, swapchain (`B8G8R8A8_UNORM`) ise geri
+  kodlama yapmıyordu. OpenGL tarafı `GL_RGBA` ile hiç dönüşüm yapmadığından
+  **aynı PNG iki backend'de farklı renkte** çiziliyordu. Format
+  `R8G8B8A8_UNORM` oldu. Glyph atlası da aynı yoldan geçtiği için metin de
+  etkileniyordu.
+- **Karıştırma modlarının alfa faktörleri iki backend'de ayrışıyordu.**
+  OpenGL'de `glBlendFunc` alfa kanalına da **renk** faktörlerini uygular;
+  Vulkan'da alfa faktörleri ayrı alanlardır ve orada farklı değerler seçilmişti
+  (`vk_blend.h` kendi dokümanında "birebir aynı olmalı" dediği hâlde). Ekranda
+  görünmüyordu çünkü swapchain'in alfası sunumda yok sayılır — bir çizim
+  hedefine çizilince ortaya çıktı. Artık GL `glBlendFuncSeparate` kullanıyor ve
+  iki backend de aynı formülü uyguluyor: `aOut = aSrc + aDst·(1 - aSrc)`
+  (standart "over" bileşimi). Eski davranış (`aSrc² + aDst(1-aSrc)`) alfayı
+  eksik biriktiriyordu; yarı saydam bir şekil çizilen hedef olması gerekenden
+  saydam kalıyordu.
+- **OpenGL'de başlangıç karıştırma durumu `SetBlendMode`'u atlıyordu.**
+  `Initialize()` içinde ayrı bir `glBlendFunc` çağrısı vardı; `SetBlendMode`
+  düzeltilince o satır sessizce eskidi ve **modu hiç değiştirmeyen** sahnelerde
+  eski faktörler yürürlükte kaldı (batcher yalnızca mod değiştiğinde
+  `SetBlendMode` çağırıyor). Başlangıç durumu artık tek kaynaktan geliyor.
 - **Windows'ta paylaşımlı (shared) kütüphane derlenemiyordu.** Projede hiçbir
   sembol export mekanizması yoktu; `BUILD_SHARED_LIBS=ON` ile MSVC
   `sdl_painter.dll` üretiyor ama **import library (`.lib`) üretmiyordu**, yani
@@ -39,6 +66,47 @@
   (Conan Center bunu yasaklıyor).
 
 ### Eklendi
+- **Yol ve Bézier eğrileri.** `sdl_painter::Path` — `MoveTo` / `LineTo` /
+  `QuadTo` / `CubicTo` / `Close`, ve `Painter::DrawPath` / `Painter::FillPath`.
+  Eğriler yola **eklenirken** kırık çizgiye çevrilir; böylece mevcut kalın
+  çizgi ve ear clipping altyapısı olduğu gibi kullanılır ve kalemin tüm stil
+  eksenleri (uç, birleşim, kesikli desen) yolda da çalışır. Parça sayısı
+  ikinci türev sınırından hesaplanır — `n = ceil(sqrt(max|B''| / (8·flatness)))`
+  — yani tolerans bir tahmin değil, garanti; testte sayısal olarak
+  doğrulanıyor. **Sınır:** her alt yol bağımsız doldurulur, even-odd/nonzero
+  dolgu kuralı yoktur; delikli şekiller bu sürümün kapsamı dışında. Yeni örnek:
+  `paths`. 24 yeni test.
+- **Dokuya çizim (render target).** `Painter::CreateRenderTarget` ile üretilen
+  `sdl_painter::RenderTarget`, çizimi ekran yerine bir dokuya yönlendirir
+  (`SetRenderTarget` / `ResetRenderTarget` / `DrawRenderTarget`). Mini harita,
+  son işlem efektleri, iz efekti ve pahalı katmanların önbelleklenmesi için.
+  **Y ekseni tuzağı ve çözümü:** OpenGL'in ekran framebuffer'ı aşağıdan yukarı
+  adreslenir, Vulkan'ınki yukarıdan aşağı. Bir hedefe çizerken GL'de
+  projeksiyon/viewport/scissor çevirmesi **yapılmaz**; böylece hedefin 0.
+  satırı her iki backend'de de `y = 0`'a denk gelir. Aksi halde doku bellekte
+  baş aşağı durur, ekranda ters görünür ve geri okuma iki backend'de farklı
+  çıkardı. Vulkan tarafında hedefler kendi render pass'lerini ve ona bağlı
+  ikinci bir pipeline takımını gerektirir (pipeline yalnızca **uyumlu** render
+  pass ile kullanılabilir, uyumluluk attachment formatını kapsar); kare
+  ortasında ekrana dönüş için `loadOp = LOAD` yapan bir ikiz render pass
+  eklendi — asıl pass `CLEAR` olduğu için onu yeniden başlatmak o karede
+  çizilmiş her şeyi silerdi. Yeni örnek: `render_target`. 17 yeni test.
+- **`Painter::ReadRenderTarget`** — bir hedefin piksellerini ana belleğe okur.
+  Çıktı her platformda **sıkı paketlenmiş, doğrusal RGBA8 ve yukarıdan aşağı**;
+  hedefler bu yüzden ekran yüzeyinin formatını devralmaz (yüzey formatı
+  sürücüye göre BGRA veya sRGB olabilirdi). Bloklar — kare döngüsü için değil,
+  ekran görüntüsü ve testler için.
+- **Backend parite testi** (`tests/test_backend_parity.cpp`). Aynı zengin sahne
+  OpenGL ve Vulkan'da bir hedefe çizilip pikselleri karşılaştırılıyor. Repoya
+  referans PNG gömülmedi: doğrulanmak istenen iddia "iki backend aynı sonucu
+  verir" ve gömülü bir referans sürücüye bağımlı olurdu. **Ölçülen fark: 0** —
+  19.200 pikselin tamamı bayt bayt aynı. Test düştüğünde farkın nerede
+  toplandığını gösteren bir ASCII harita ve en kötü pikselin komşuluğunu
+  basıyor. Bu test, aşağıdaki üç hatayı yazıldığı gün buldu.
+- **Vulkan validation hataları artık testleri düşürüyor.** Mesajlar yalnızca
+  log'a yazılıyordu; yeşil bir takımın altında gerçek spec ihlalleri
+  birikebiliyordu. `vk_detail::ValidationErrorCount()` sayacı ve testlerdeki
+  `ValidationGuard` bunu bir hata sinyaline çeviriyor.
 - **Karıştırma (blend) modu.** `Painter::SetBlendMode` — `kAlpha` (varsayılan),
   `kAdditive`, `kMultiply`, `kNone`. `Save`/`Restore` kapsamında.
   **Backend farkı ve nasıl çözüldüğü:** OpenGL'de mod `glBlendFunc` ile çalışma
@@ -224,6 +292,19 @@
   fark edilmemişti.
 
 ### Değişti
+- **`hero` tanıtım sahnesi dört perdeli showcase olarak yeniden yazıldı.**
+  Eski sahne tek karede yalnızca v1.0 yeteneklerini gösteriyordu; aradan geçen
+  sürümlerde eklenen yol/Bézier, gradient, karıştırma modları, kesik desenleri,
+  uç ve birleşim stilleri, viewport, doku filtresi, mesh warp ve çizim hedefi
+  tanıtımda hiç görünmüyordu. Yeni sahne 3'er saniyelik dört perdeye bölünüyor
+  (şekiller ve yollar · renk ve karıştırma · transform ve kırpma · görüntü ve
+  metin), toplam 12 saniye; künye şeridinde canlı `FrameStats` sayacı var, yani
+  276 ayrı transform'lu quad ekrandayken draw call sayısının tek haneli kaldığı
+  GIF'in kendisinde görünüyor. Perde geçişi `SetOpacity` yerine renk alfası
+  ölçeklenerek yapılıyor — opaklık GPU durumu ve batch'i kırardı, sayaç bunu ele
+  verirdi. Döngü artık her animasyonun tam periyot tamamlamasına değil, perde
+  sınırlarında sahnenin tamamen kararmasına dayanıyor. `doc/hero.gif` 12 fps /
+  720 px ile yeniden üretildi.
 - **`IRenderer`'a `GetLastGpuFrameMs()` eklendi** (saf sanal değil, varsayılan
   `0.0` döner). Kaynak düzeyinde geriye dönük uyumludur — mevcut
   implementasyonlar değişmeden derlenir — ancak **vtable büyüdüğü için ABI

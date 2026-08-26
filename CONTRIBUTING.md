@@ -179,9 +179,9 @@ kullan — GitHub'da issue açarken otomatik olarak sunulur. Bilgi olarak şunla
 ## Özellik Önerisi
 
 Yeni özellik önerirken
-[Feature Request şablonunu](.github/ISSUE_TEMPLATE/feature_request.yml) kullan. v1
-kapsamında olmayan bazı özellikler (path, gradient, bezier) bilinçli olarak
-ertelenmiştir — bkz.
+[Feature Request şablonunu](.github/ISSUE_TEMPLATE/feature_request.yml) kullan. Bazı
+özellikler (delikli dolgu, çok duraklı/conical gradient, yol tabanlı kırpma,
+analitik anti-aliasing) bilinçli olarak kapsam dışıdır — bkz.
 [doc/sdl-painter-yazilim-muhendisligi.md → Kapsam Yönetimi](doc/sdl-painter-yazilim-muhendisligi.md).
 
 ## Lisans

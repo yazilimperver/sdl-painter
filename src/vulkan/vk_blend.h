@@ -56,12 +56,18 @@ inline VkPipelineColorBlendAttachmentState BlendAttachmentFor(BlendMode mode) {
 
     case BlendMode::kAlpha:
     default:
-      // GL karsiligi: glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
+      // GL karsiligi:
+      // glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA,
+      //                     GL_ONE, GL_ONE_MINUS_SRC_ALPHA)
+      //
+      // Alfa dst faktoru eskiden ZERO idi (aOut = aSrc): yari saydam bir
+      // sekil cizmek hedefin alfasini o bolgede DUSURUYORDU. Dogru "over"
+      // bilesimi aOut = aSrc + aDst(1 - aSrc); asagidaki bunu verir.
       a.blendEnable = VK_TRUE;
       a.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
       a.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
       a.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-      a.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+      a.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
       return a;
   }
 }

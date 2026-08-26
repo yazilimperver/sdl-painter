@@ -232,7 +232,13 @@ bool VulkanTexture::CreateImage(VkDevice device, VkPhysicalDevice phys_device,
   VkImageCreateInfo img_ci{};
   img_ci.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
   img_ci.imageType = VK_IMAGE_TYPE_2D;
-  img_ci.format = VK_FORMAT_R8G8B8A8_SRGB;
+  // DIKKAT: UNORM, SRGB DEGIL. Bir sRGB image'i orneklendiginde GPU
+  // dogrusal uzaya cozer; swapchain ise B8G8R8A8_UNORM oldugu icin geri
+  // kodlama YAPILMAZ. Sonuc: ayni PNG Vulkan'da OpenGL'dekinden farkli
+  // (soluk) cikiyordu — GL tarafi GL_RGBA ile hic donusum yapmiyor.
+  // Bunu test_backend_parity.cpp yakaladi; format degistirilirken o
+  // testin hala gectiginden emin olun.
+  img_ci.format = VK_FORMAT_R8G8B8A8_UNORM;
   img_ci.extent = {width, height, 1};
   img_ci.mipLevels = 1;
   img_ci.arrayLayers = 1;
@@ -280,7 +286,7 @@ bool VulkanTexture::CreateImage(VkDevice device, VkPhysicalDevice phys_device,
   view_ci.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
   view_ci.image = mImage;
   view_ci.viewType = VK_IMAGE_VIEW_TYPE_2D;
-  view_ci.format = VK_FORMAT_R8G8B8A8_SRGB;
+  view_ci.format = VK_FORMAT_R8G8B8A8_UNORM;  // image ile ayni olmali
   view_ci.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   view_ci.subresourceRange.baseMipLevel = 0;
   view_ci.subresourceRange.levelCount = 1;

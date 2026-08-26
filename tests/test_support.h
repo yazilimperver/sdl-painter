@@ -4,8 +4,14 @@
 
 #include <SDL3/SDL.h>
 
+#include <cstdint>
 #include <cstdlib>
+#include <gtest/gtest.h>
 #include <string>
+
+#ifdef SDLPAINTER_HAS_VULKAN
+#include "vulkan/vk_context.h"
+#endif
 
 namespace sdl_painter::testing {
 
@@ -66,6 +72,43 @@ class HiddenWindow {
   SDL_Window* mWindow{nullptr};
   bool mVideoInitialized{false};
   const char* mError{""};
+};
+
+/// @brief Bir blok boyunca yeni Vulkan validation hatası çıkmadığını doğrular.
+///
+/// Validation mesajları yalnızca log'a yazılıyor, testleri düşürmüyordu;
+/// yeşil bir takımın altında gerçek spec ihlalleri birikebiliyordu (render
+/// target çalışmasında bir render-pass uyumsuzluğu böyle ortaya çıktı).
+/// Bu koruyucu, kapsamı bittiğinde sayaç arttıysa testi **düşürür**.
+///
+/// Vulkan derlenmemişse veya validation katmanı yoksa sayaç sabit kalır ve
+/// koruyucu hiçbir şey yapmaz — yani OpenGL-only ortamda zararsızdır.
+class ValidationGuard {
+ public:
+  ValidationGuard() : mBefore(CurrentCount()) {}
+
+  ~ValidationGuard() {
+    const uint64_t after = CurrentCount();
+    if (after != mBefore) {
+      ADD_FAILURE() << "Vulkan validation " << (after - mBefore)
+                    << " yeni hata raporladi (ayrinti icin test ciktisindaki "
+                       "[Vulkan] satirlarina bakin).";
+    }
+  }
+
+  ValidationGuard(const ValidationGuard&) = delete;
+  ValidationGuard& operator=(const ValidationGuard&) = delete;
+
+ private:
+  static uint64_t CurrentCount() {
+#ifdef SDLPAINTER_HAS_VULKAN
+    return vk_detail::ValidationErrorCount();
+#else
+    return 0;
+#endif
+  }
+
+  uint64_t mBefore{0};
 };
 
 /// @brief Font bulunamadığında test atlanmak yerine başarısız mı olmalı?

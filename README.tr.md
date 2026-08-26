@@ -3,7 +3,7 @@
 <div align="center">
   <img src="sdl-logo-small.png" alt="SDLPainter" width="120">
   <h1>SDLPainter</h1>
-  <p><strong>SDL3 + OpenGL/Vulkan dual backend destekli C++17 2B çizim kütüphanesi.</strong></p>
+  <p><strong>SDL3 + OpenGL/Vulkan dual backend destekli modern C++ 2B çizim kütüphanesi.</strong></p>
   <p>
     <a href="https://github.com/yazilimperver/sdl-painter/actions/workflows/ci.yml"><img src="https://github.com/yazilimperver/sdl-painter/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
     <a href="https://github.com/yazilimperver/sdl-painter/releases/latest"><img src="https://img.shields.io/github/v/release/yazilimperver/sdl-painter?logo=github" alt="Son sürüm"></a>
@@ -20,8 +20,18 @@
 
 ![SDLPainter tanıtım](doc/hero.gif)
 
-> SDLPainter bağımsız bir topluluk projesidir; SDL ekibiyle bir ilişkisi yoktur ve
-> SDL ekibi tarafından onaylanmamıştır.
+<div align="center">
+  <sub>
+    Dört perde, her karesi SDLPainter ile çizildi: şekiller ve Bézier yolları ·
+    gradient ve karıştırma modları · transform, kırpma ve viewport · doku,
+    çizim hedefi ve metin. Alttaki sayaç canlı <code>FrameStats</code>.
+    Kaynak: <a href="examples/hero.cpp"><code>examples/hero.cpp</code></a>
+  </sub>
+</div>
+
+
+
+> SDLPainter bağımsız bir topluluk projesidir; SDL ekibiyle bir ilişkisi yoktur ve SDL ekibi tarafından onaylanmamıştır.
 
 ## Neden SDLPainter?
 
@@ -31,8 +41,10 @@ poligon triangulation'ı, adaptif tessellation, transform stack ve batching —
 böylece vertex yerine **şekil** düşünebilirsiniz.
 
 - **Tek API, iki backend** — Aynı kod OpenGL 3.3 ve Vulkan 1.1'de aynı sonucu
-  üretir; backend değiştirmek tek satır, üçüncüsünü eklemek yalnızca `IRenderer`
-  implemente etmek anlamına geliyor.
+  üretir; bu bir iddia değil, **ölçüm**: bir test aynı sahneyi iki backend'de
+  çizip pikselleri karşılaştırıyor. Backend değiştirmek tek satır, üçüncüsünü
+  eklemek yalnızca `IRenderer` implemente etmek anlamına geliyor. İkisinin
+  ayrıştığı tek yer kenar yumuşatma — aşağıdaki tabloya bakın.
 - **Doğru geometri** — Kalın çizgiler `glLineWidth` yerine quad tabanlı
   (platformlar arası tutarlı), konkav çokgenler "ear clipping" ile doğru
   dolduruluyor, daire segment sayısı yarıçapa göre uyarlanabiliyor.
@@ -132,7 +144,7 @@ Ayrıntılı anlatım: [Hızlı Başlangıç Rehberi](doc/hizli-baslangic.md).
 | ![Metin](doc/screenshots/metin.png) | ![Uygulama](doc/screenshots/uygulama.png) |
 | **Metin** — SDL_ttf, hizalama, rect içine yerleştirme (`text`) | **Uygulama çatısı** — `sdl_painter_app` ile tic-tac-toe (`tictactoe`) |
 
-Her biri tek bir yeteneği izole eden on altı çalışan demo:
+Her biri tek bir yeteneği izole eden çalışan demolar:
 [Örnekler Rehberi](doc/sdl-painter-ornekler.md).
 
 ## Özellikler
@@ -141,8 +153,11 @@ Her biri tek bir yeteneği izole eden on altı çalışan demo:
 |------|-------------|
 | **Primitifler** | Çizgi, dikdörtgen, yuvarlatılmış dikdörtgen, daire, elips, yay, dilim, kiriş, çokgen, polyline — hepsi stroke + fill |
 | **Stiller** | Pen (renk, kalınlık, outline, kesik deseni, uç ve birleşim stili), Brush (düz dolgu veya iki uçlu doğrusal/ışınsal gradient), global opacity, karıştırma modları |
+| **Yol (Path)** | Doğru parçaları ve quadratic/cubic Bézier'lerden oluşan `Path`; kalemin tüm stilleriyle çizilir veya alt yol başına doldurulur (even-odd/nonzero kuralı yok, dolayısıyla delik yok) |
 | **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` yığını |
 | **Clipping** | Scissor tabanlı dikdörtgen kırpma |
+| **Çizim hedefi** | Ekran yerine dokuya çizim — mini harita, son işlem efektleri, iz efekti — ve pikselleri geri okuma |
+| **Kenar yumuşatma** | 4× MSAA, **yalnızca OpenGL** ve yalnızca `Application` üzerinden (bir GL pencere özniteliği). Vulkan backend'i ve tüm çizim hedefleri tek örneklemli. |
 | **Viewport** | Alt dikdörtgene yerel koordinatlarla çizim — bölünmüş ekran, mini harita |
 | **Image** | PNG / JPG yükleme (stb_image), kaynak→hedef ölçekleme, atlas dilimleme, tint, aynalama, nearest/linear filtre, yerinde doku güncelleme, serbest dokulu ızgara |
 | **Metin** | SDL_ttf 3.x, glyph cache, left/center/right hizalama, çok satırlı ve sözcük kaydırmalı |
@@ -154,9 +169,9 @@ Her biri tek bir yeteneği izole eden on altı çalışan demo:
 istiyorsanız, tip güvenli modern C++ bir API istiyorsanız ya da Vulkan
 backend'ine ve kendi backend'inizi ekleyebilmeye ihtiyacınız varsa.
 
-**Başka yere bakın:** Path ve bezier gerekiyorsa; çok duraklı veya yol boyunca
-gradient istiyorsanız; üst düzey analitik anti-aliasing arıyorsanız;
-D3D/Metal backend'i şartsa.
+**Başka yere bakın:** Delikli yol dolgusu (even-odd / nonzero kuralı)
+gerekiyorsa; çok duraklı veya yol boyunca gradient istiyorsanız; üst düzey
+analitik anti-aliasing arıyorsanız; D3D/Metal backend'i şartsa.
 
 ### SDL_Renderer ile ilişkisi
 

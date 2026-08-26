@@ -2,6 +2,7 @@
 
 #include "sdl_painter/renderer.h"
 
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -14,6 +15,7 @@
 #include "vk_swapchain.h"
 #include "vulkan_buffer.h"
 #include "vulkan_pipeline.h"
+#include "vulkan_render_target.h"
 #include "vulkan_texture.h"
 #include "vulkan_textured_pipeline.h"
 
@@ -55,6 +57,15 @@ class VulkanRenderer final : public IRenderer {
   void DestroyTexture(TextureHandle handle) override;
   void DrawTextured(const std::vector<TexturedVertex>& vertices,
                     TextureHandle texture) override;
+
+  RenderTargetHandle CreateRenderTarget(int32_t width, int32_t height,
+                                        TextureFilter filter) override;
+  void DestroyRenderTarget(RenderTargetHandle handle) override;
+  [[nodiscard]] TextureHandle GetRenderTargetTexture(
+      RenderTargetHandle handle) const override;
+  bool SetRenderTarget(RenderTargetHandle handle) override;
+  bool ReadRenderTarget(RenderTargetHandle handle, uint8_t* out_rgba,
+                        std::size_t byte_capacity) override;
 
   RendererBackend GetBackend() const override {
     return RendererBackend::kVulkan;
@@ -140,9 +151,64 @@ class VulkanRenderer final : public IRenderer {
   /// @brief Monoton artan kare sayacı (gecikmeli silme zamanlaması için).
   uint64_t mFrameCounter{0};
 
+  // --- Çizim hedefleri ---
+  //
+  // Hedefler ekranınkinden farklı bir renk formatı kullanır (bkz.
+  // VulkanRenderTarget::kColorFormat), bu yüzden kendi render pass'lerini ve
+  // ona bağlı ikinci bir pipeline takımını gerektirirler: bir pipeline
+  // yalnızca **uyumlu** render pass ile kullanılabilir ve uyumluluk
+  // attachment formatını kapsar.
+
+  /// @brief Bir hedefin ve ona verilen texture handle'ının birlikte kaydı.
+  struct RenderTargetEntry {
+    std::unique_ptr<VulkanRenderTarget> target;
+    /// Hedefin içeriğini örneklemek için kullanılan handle; @ref mTextures
+    /// ile **aynı** sayaçtan gelir, dolayısıyla çakışmaz.
+    TextureHandle texture{kInvalidTexture};
+  };
+
+  std::unordered_map<RenderTargetHandle, RenderTargetEntry> mRenderTargets;
+  RenderTargetHandle mNextRenderTarget{1};  // 0 = kInvalidRenderTarget
+
+  /// @brief Yürürlükteki hedef (kInvalidRenderTarget = ekran).
+  RenderTargetHandle mCurrentTarget{kInvalidRenderTarget};
+
+  VkRenderPass mOffscreenRenderPass{VK_NULL_HANDLE};
+  std::unique_ptr<VulkanPipeline> mOffscreenPipeline;
+  std::unique_ptr<VulkanTexturedPipeline> mOffscreenTexturedPipeline;
+
   /// @brief Süresi dolan gecikmeli silmeleri işle.
   /// @param force `true` ise süre gözetmeksizin hepsi yıkılır (Shutdown).
   void ProcessPendingTextureDeletes(bool force);
+
+  // --- Çizim hedefleri ---
+
+  /// @brief Offscreen render pass'i ve ona bağlı pipeline takımını üret.
+  ///
+  /// İlk @ref CreateRenderTarget çağrısında **tembel** olarak çalışır: hedef
+  /// kullanmayan uygulama ikinci bir pipeline takımının bedelini ödemez.
+  bool EnsureOffscreenResources();
+
+  /// @brief Yürürlükteki render pass'i bitirip verilen hedefinkini başlat.
+  void BeginTargetRenderPass(RenderTargetHandle handle);
+
+  /// @brief Yürürlükteki çizim yüzeyinin boyutu (hedef bağlıysa onunki).
+  ///
+  /// Viewport, scissor ve `vkCmdClearAttachments` bunu kullanır; hepsi
+  /// attachment sınırlarını aşamaz.
+  [[nodiscard]] VkExtent2D CurrentExtent() const;
+
+  /// @brief Çizimde kullanılacak düz renk pipeline'ı (hedefe göre).
+  [[nodiscard]] const VulkanPipeline* ActivePipeline() const;
+
+  /// @brief Çizimde kullanılacak texture'lı pipeline'ı (hedefe göre).
+  [[nodiscard]] const VulkanTexturedPipeline* ActiveTexturedPipeline() const;
+
+  /// @brief Bir texture handle'ının descriptor set'ini bul.
+  ///
+  /// Handle ya normal bir @ref VulkanTexture'a ya da bir hedefin renk
+  /// image'ına ait olabilir; ikisi de aynı handle uzayını paylaşır.
+  [[nodiscard]] VkDescriptorSet LookupDescriptorSet(TextureHandle handle) const;
 
   /// @brief Mevcut frame için viewport + scissor dinamik state'ini ayarla.
   void ApplyDynamicViewportScissor(VkCommandBuffer cmd) const;

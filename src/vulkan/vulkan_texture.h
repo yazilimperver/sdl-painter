@@ -11,7 +11,7 @@ class VkContext;
 
 /// @brief Bir Vulkan texture'ının tüm kaynaklarını yöneten RAII sınıfı.
 ///
-/// Ham piksel verisinden VkImage (RGBA8_SRGB), VkImageView ve VkSampler
+/// Ham piksel verisinden VkImage (RGBA8_UNORM), VkImageView ve VkSampler
 /// oluşturur. DrawTextured çağrısı için bir VkDescriptorSet de içerir.
 ///
 /// Upload işlemi tek seferlik bir staging buffer + transfer komut setiyle

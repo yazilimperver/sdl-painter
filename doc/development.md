@@ -103,7 +103,13 @@ Notes worth knowing before touching CI:
   no `glslc`; `cmake -P cmake/CheckShaderFreshness.cmake` re-hashes the GLSL
   sources and compares them against `src/vulkan/shaders/spirv/sources.sha256`.
 
-The repository also contains a `.gitlab-ci.yml` for the GitLab mirror. It sets
-up the same stages with two differences: Windows builds go through **MinGW
-cross-compile** on a Linux runner (without Vulkan), and the `pages` job
-publishes to GitLab Pages.
+The repository also contains a `.gitlab-ci.yml` for the GitLab mirror. Both
+pipelines now run the **same 15 jobs** — including the packaging path
+(`build:standalone-cmake`, `build:shared`, `package:conan-create`,
+`quality:shader-freshness`), which the mirror was missing until 26 August 2026.
+`clang-format` is a hard gate on both.
+
+Three differences remain, all deliberate: Windows builds go through **MinGW
+cross-compile** on a Linux runner (GitHub uses native MSVC), the Windows test
+job is commented out (it needs a GitLab SaaS Windows runner), and the `pages`
+job publishes to GitLab Pages instead of GitHub Pages.

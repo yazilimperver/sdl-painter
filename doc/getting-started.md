@@ -306,7 +306,7 @@ for newcomers:
 | `vulkan_demo.cpp` | Vulkan: every primitive | — |
 | `vulkan_text.cpp` | Vulkan: text | — |
 
-Descriptions of all sixteen demos: [examples/README.md](../examples/README.md).
+Descriptions of every demo: [examples/README.md](../examples/README.md).
 
 ---
 

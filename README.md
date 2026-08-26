@@ -3,7 +3,7 @@
 <div align="center">
   <img src="sdl-logo-small.png" alt="SDLPainter" width="120">
   <h1>SDLPainter</h1>
-  <p><strong>A C++17 2D drawing library for SDL3 with dual OpenGL/Vulkan backends.</strong></p>
+  <p><strong>A lightweight, modern C++ 2D drawing library built on SDL3 with dual OpenGL/Vulkan backends.</strong></p>
   <p>
     <a href="https://github.com/yazilimperver/sdl-painter/actions/workflows/ci.yml"><img src="https://github.com/yazilimperver/sdl-painter/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
     <a href="https://github.com/yazilimperver/sdl-painter/releases/latest"><img src="https://img.shields.io/github/v/release/yazilimperver/sdl-painter?logo=github" alt="Latest release"></a>
@@ -20,19 +20,29 @@
 
 ![SDLPainter in motion](doc/hero.gif)
 
-> SDLPainter is an independent community project. It is not affiliated with, nor
-> endorsed by, the SDL team.
+<div align="center">
+  <sub>
+    Four acts, every frame drawn by SDLPainter itself: shapes and Bézier paths ·
+    gradients and blend modes · transforms, clipping and viewports · textures,
+    render targets and text. The counter in the footer is live
+    <code>FrameStats</code>. Source: <a href="examples/hero.cpp"><code>examples/hero.cpp</code></a>
+  </sub>
+</div>
+
+> SDLPainter is an independent community project. It is not affiliated with, nor endorsed by, the SDL team.
 
 ## Why SDLPainter?
 
 SDL3 gives you the window, the input and a capable triangle-level renderer.
-SDLPainter adds the layer above it — thick-line geometry, polygon
+SDLPainter adds a higher-level 2d drawing API on top of it — thick-line geometry, polygon
 triangulation, adaptive tessellation, a transform stack and batching — so you
 can think in **shapes** instead of vertices.
 
 - **One API, two backends** — the same code produces the same result on OpenGL
-  3.3 and Vulkan 1.1; switching is a one-line change, and adding a third backend
-  means implementing `IRenderer` only.
+  3.3 and Vulkan 1.1, and that is measured rather than asserted: a test draws
+  one scene through both backends and compares every pixel. Switching is a
+  one-line change, and adding a third backend means implementing `IRenderer`
+  only. Anti-aliasing is the one place the two differ — see the table below.
 - **Correct geometry** — thick lines are quad-based rather than `glLineWidth`
   (consistent across platforms), concave polygons are filled via ear clipping,
   and circle segment counts adapt to the radius.
@@ -131,7 +141,7 @@ Full instructions: [Building from source](doc/building.md).
 | ![Text](doc/screenshots/metin.png) | ![Application](doc/screenshots/uygulama.png) |
 | **Text** — SDL_ttf, alignment, layout inside a rect (`text`) | **Application framework** — tic-tac-toe via `sdl_painter_app` (`tictactoe`) |
 
-Sixteen runnable demos (for the time being), one capability each:
+Runnable demos, each isolating one capability:
 [examples/README.md](examples/README.md).
 
 ## Features
@@ -140,8 +150,11 @@ Sixteen runnable demos (for the time being), one capability each:
 |------|-----------|
 | **Primitives** | Line, rectangle, rounded rectangle, circle, ellipse, arc, pie, chord, polygon, polyline — all with stroke + fill |
 | **Styles** | Pen (color, width, outline, dash pattern, cap and join style), Brush (flat fill or two-stop linear/radial gradient), global opacity, blend modes |
+| **Paths** | `Path` of lines and quadratic/cubic Béziers, stroked with the full pen style set or filled per sub-path (no even-odd/nonzero rule, so no holes) |
 | **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` stack |
 | **Clipping** | Scissor-based rectangular clipping |
+| **Render target** | Draw into a texture instead of the screen — minimaps, post-processing, trails — plus pixel read-back |
+| **Anti-aliasing** | 4× MSAA, **OpenGL only**, and only through `Application` (it is a GL window attribute). The Vulkan backend and every render target are single-sample. |
 | **Viewport** | Draw into a sub-rectangle with local coordinates — split screen, minimaps |
 | **Image** | PNG / JPG loading (stb_image), source→destination scaling, atlas slicing, tint, mirroring, nearest/linear filtering, in-place texture update, free-form textured meshes |
 | **Text** | SDL_ttf 3.x, glyph cache, left/center/right alignment, multi-line and word wrap |
@@ -153,8 +166,9 @@ Sixteen runnable demos (for the time being), one capability each:
 than assemble triangles, you want a type-safe modern C++ API, or you want the
 Vulkan backend and the ability to plug in your own.
 
-**Look elsewhere if** you need paths and béziers, multi-stop or gradient-along-
-a-path fills, top-quality analytic anti-aliasing, or D3D/Metal backends.
+**Look elsewhere if** you need filled paths with holes (even-odd / nonzero fill
+rules), multi-stop or gradient-along-a-path fills, top-quality analytic
+anti-aliasing, or D3D/Metal backends.
 
 ### How it relates to SDL_Renderer
 
@@ -168,6 +182,15 @@ picks a backend per platform. SDLPainter takes on the shape-level work you would
 | A smooth circle at any radius | Tune the segment count by hand, build the fan | `FillCircle(cx, cy, r)` — segments adapt |
 | Rotate a group of shapes | Multiply the vertices yourself | `Save(); Rotate(45); …; Restore()` |
 | 5,000 small shapes | Group them and merge draw calls by hand | `RenderBatcher` does it |
+
+### What can you build with it?
+
+- 2D games
+- Tools and editors
+- Drawing applications
+- Visualizers
+- Graphics experiments
+- Lightweight 2D UI / canvas applications
 
 ## Architecture
 
@@ -220,6 +243,11 @@ Design documents are currently only in **Turkish**, as are the diagrams:
 [Publishing to Docker Hub](doc/docker-hub-deployment.md)
 
 I will translate them as soon as possible.
+
+## Support the project
+
+If SDLPainter is useful to you, consider giving it a ⭐ on GitHub.
+It helps other SDL3 and C++ developers to discover the project.
 
 ## Contributing
 

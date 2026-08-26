@@ -4,6 +4,7 @@
 #include <SDL3/SDL_vulkan.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cstring>
 #include <optional>
 #include <set>
@@ -24,6 +25,9 @@ constexpr bool kEnableValidationDefault = false;
 constexpr bool kEnableValidationDefault = true;
 #endif
 
+/// @brief Raporlanan validation hatasi sayaci (bkz. vk_detail::ValidationErrorCount).
+std::atomic<uint64_t> gValidationErrors{0};
+
 VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT severity,
     VkDebugUtilsMessageTypeFlagsEXT /*type*/,
@@ -32,6 +36,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(
     return VK_FALSE;
   }
   if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
+    gValidationErrors.fetch_add(1, std::memory_order_relaxed);
     spdlog::error("[Vulkan] {}", data->pMessage);
   } else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
     spdlog::warn("[Vulkan] {}", data->pMessage);
@@ -90,6 +95,14 @@ VkDebugUtilsMessengerCreateInfoEXT MakeDebugMessengerCreateInfo() {
 }
 
 }  // namespace
+
+namespace vk_detail {
+
+uint64_t ValidationErrorCount() noexcept {
+  return gValidationErrors.load(std::memory_order_relaxed);
+}
+
+}  // namespace vk_detail
 
 VkContext::~VkContext() {
   Shutdown();

@@ -153,24 +153,24 @@ yakalanır.
 
 ## Kapsam Yönetimi
 
-Kasıtlı olarak kapsam dışı bırakılan özellikler belgelenmiştir:
+Kasıtlı olarak kapsam dışı bırakılan özellikler belgelenmiştir. Liste
+**bugünkü** sınırları anlatır; bir dönem burada duran Path/Bézier eğrileri ve
+gradient dolgu bu sürümde eklendi (`Path` + `DrawPath`/`FillPath`,
+`Brush::LinearGradient`/`RadialGradient`) ve listeden çıkarıldı.
 
 | Özellik | Durum | Gerekçe |
 |---------|-------|---------|
-| Path / Bezier eğrileri | Kapsam dışı (v1) | Tessellator karmaşıklığını katlar; v1 için gereksiz |
-| Gradient dolgu | Kapsam dışı (v1) | Shader karmaşıklığı; v1 tek renk yeterli |
-| Delikli poligonlar | Kapsam dışı | Ear clipping hole desteklemez; Delaunay CDT gerektirirdi |
-| Tam anti-aliasing | Kısmi (MSAA) | Path tabanlı AA scope dışı |
-
-Bu sınırlar ADR belgelerinde gerekçesiyle kayıt altına alınmıştır.
-"Neden yapılmadı?" sorusu ileride projeye dahil olan bir geliştirici
-için cevapsız kalmaz.
+| Delikli dolgu (even-odd / nonzero) | Kapsam dışı | Ear clipping hole desteklemez; Delaunay CDT gerektirirdi. `FillPath` her alt yolu bağımsız doldurur |
+| Çok duraklı ve conical gradient | Kapsam dışı | İki duraklı geçiş vertex renginden bedavaya geliyor; fazlası shader ve batch maliyeti demek |
+| Yol tabanlı kırpma | Kapsam dışı | Kırpma scissor ile yapılıyor; path clip stencil buffer gerektirirdi |
+| Tam anti-aliasing | Kısmi (MSAA) | Analitik AA, path tabanlı bir rasterleştirici ister |
+| Print / PDF çıktısı | Kapsam dışı | Kütüphane ekran çizimi için tasarlandı |
 
 ---
 
 ## Mimari Karar Kayıtları (ADR)
 
-Projedeki her kritik mimari karar bir ADR dosyasına bağlanmıştır:
+Projedeki önemli kararlarımız bir ADR dosyasına bağlanmış duruma:
 
 | ADR | Karar |
 |-----|-------|
@@ -181,7 +181,7 @@ Projedeki her kritik mimari karar bir ADR dosyasına bağlanmıştır:
 | ADR-006 | Triangulation için ear clipping |
 
 ADR formatı: bağlam → değerlendirilen alternatifler → karar → gerekçe → sonuçlar.
-"Ne yapıldı" değil, "neden yapıldı" sorusu yanıtlanmaktadır.
+"Ne yapıldı" değil, "neden yapıldı" sorusu yanıtlıyor.
 
 ---
 

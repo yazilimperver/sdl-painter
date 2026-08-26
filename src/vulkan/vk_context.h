@@ -7,6 +7,22 @@ struct SDL_Window;
 
 namespace sdl_painter {
 
+namespace vk_detail {
+
+/// @brief Süreç başından beri raporlanan Vulkan validation **hatası** sayısı.
+///
+/// Debug messenger her `ERROR` seviyeli mesajda artırır. Var olma sebebi:
+/// validation mesajları yalnızca log'a yazılıyordu ve testler yeşil kalırken
+/// gerçek spec ihlalleri gözden kaçıyordu (render target çalışmasında bir
+/// render-pass uyumsuzluğu tam olarak böyle fark edildi). Testler bir bloğun
+/// öncesi/sonrası değerleri karşılaştırıp yeni hata çıkmadığını doğrular.
+///
+/// Sayaç süreç geneli ve iş parçacığı güvenlidir; validation kapalıysa
+/// (release derlemesi, katman kurulu değil) daima 0 kalır.
+[[nodiscard]] uint64_t ValidationErrorCount() noexcept;
+
+}  // namespace vk_detail
+
 /// @brief Vulkan instance, surface, physical/logical device ve queue sahipliği.
 ///
 /// VulkanRenderer'ın alt bileşenidir — tek bir pencereye bağlıdır.

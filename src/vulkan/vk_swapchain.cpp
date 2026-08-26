@@ -19,7 +19,7 @@ VkSurfaceFormatKHR PickSurfaceFormat(VkPhysicalDevice device,
   std::vector<VkSurfaceFormatKHR> formats(count);
   vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &count, formats.data());
 
-  for (const auto &f : formats) {
+  for (const auto& f : formats) {
     if (f.format == VK_FORMAT_B8G8R8A8_UNORM &&
         f.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
       return f;
@@ -28,6 +28,26 @@ VkSurfaceFormatKHR PickSurfaceFormat(VkPhysicalDevice device,
   return formats.empty() ? VkSurfaceFormatKHR{VK_FORMAT_B8G8R8A8_UNORM,
                                               VK_COLOR_SPACE_SRGB_NONLINEAR_KHR}
                          : formats[0];
+}
+
+/// @brief Ekran render pass'lerinin ORTAK subpass bagimliligi.
+///
+/// Hem `CreateRenderPass` hem `CreateResumeRenderPass` bunu kullanir. Tek
+/// kaynak olmasi bilincli: ikisi ayrisirsa render pass'ler uyumsuz hale gelir
+/// ve ayni framebuffer/pipeline ikisinde birden kullanilamaz.
+///
+/// `srcAccessMask` sifir degil: ikiz pass `loadOp = LOAD` ile onceki kare-ici
+/// yazimlari geri yukluyor, dolayisiyla o yazimlarin gorunur olmasi gerekiyor.
+VkSubpassDependency MakeColorDependency() {
+  VkSubpassDependency dep{};
+  dep.srcSubpass = VK_SUBPASS_EXTERNAL;
+  dep.dstSubpass = 0;
+  dep.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  dep.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+  dep.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+  dep.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+                      VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+  return dep;
 }
 
 VkPresentModeKHR PickPresentMode(VkPhysicalDevice device,
@@ -45,7 +65,7 @@ VkPresentModeKHR PickPresentMode(VkPhysicalDevice device,
   return VK_PRESENT_MODE_FIFO_KHR;  // her zaman desteklenir
 }
 
-VkExtent2D PickExtent(const VkSurfaceCapabilitiesKHR &caps, uint32_t width,
+VkExtent2D PickExtent(const VkSurfaceCapabilitiesKHR& caps, uint32_t width,
                       uint32_t height) {
   if (caps.currentExtent.width != UINT32_MAX) {
     return caps.currentExtent;
@@ -64,7 +84,7 @@ VkSwapchain::~VkSwapchain() {
   Shutdown();
 }
 
-bool VkSwapchain::Initialize(VkContext *context, uint32_t width,
+bool VkSwapchain::Initialize(VkContext* context, uint32_t width,
                              uint32_t height) {
   mContext = context;
   if (!CreateSwapchain(width, height)) {
@@ -74,6 +94,9 @@ bool VkSwapchain::Initialize(VkContext *context, uint32_t width,
     return false;
   }
   if (!CreateRenderPass()) {
+    return false;
+  }
+  if (!CreateResumeRenderPass()) {
     return false;
   }
   if (!CreateFramebuffers()) {
@@ -94,6 +117,10 @@ void VkSwapchain::Shutdown() {
     if (mRenderPass != VK_NULL_HANDLE) {
       vkDestroyRenderPass(device, mRenderPass, nullptr);
       mRenderPass = VK_NULL_HANDLE;
+    }
+    if (mResumeRenderPass != VK_NULL_HANDLE) {
+      vkDestroyRenderPass(device, mResumeRenderPass, nullptr);
+      mResumeRenderPass = VK_NULL_HANDLE;
     }
   }
   mContext = nullptr;
@@ -127,13 +154,13 @@ bool VkSwapchain::Recreate(uint32_t width, uint32_t height) {
   mSwapchain = VK_NULL_HANDLE;
 
   // Framebuffer + image view'ları yok et (swapchain henüz canlı).
-  for (auto *fb : mFramebuffers) {
+  for (auto* fb : mFramebuffers) {
     if (fb != VK_NULL_HANDLE) {
       vkDestroyFramebuffer(device, fb, nullptr);
     }
   }
   mFramebuffers.clear();
-  for (auto *view : mImageViews) {
+  for (auto* view : mImageViews) {
     if (view != VK_NULL_HANDLE) {
       vkDestroyImageView(device, view, nullptr);
     }
@@ -166,13 +193,13 @@ bool VkSwapchain::Recreate(uint32_t width, uint32_t height) {
 
 void VkSwapchain::DestroySwapchainResources() {
   VkDevice device = mContext->GetDevice();
-  for (auto *fb : mFramebuffers) {
+  for (auto* fb : mFramebuffers) {
     if (fb != VK_NULL_HANDLE) {
       vkDestroyFramebuffer(device, fb, nullptr);
     }
   }
   mFramebuffers.clear();
-  for (auto *view : mImageViews) {
+  for (auto* view : mImageViews) {
     if (view != VK_NULL_HANDLE) {
       vkDestroyImageView(device, view, nullptr);
     }
@@ -300,13 +327,12 @@ bool VkSwapchain::CreateRenderPass() {
   subpass.colorAttachmentCount = 1;
   subpass.pColorAttachments = &color_ref;
 
-  VkSubpassDependency dep{};
-  dep.srcSubpass = VK_SUBPASS_EXTERNAL;
-  dep.dstSubpass = 0;
-  dep.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-  dep.srcAccessMask = 0;
-  dep.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-  dep.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+  // DIKKAT: bu bagimlilik, GetResumeRenderPass'teki ikizle BIREBIR ayni
+  // olmalidir. Render pass uyumlulugu (spec: "otherwise identical") yalnizca
+  // layout ve load/store islemlerinin farkli olmasina izin verir —
+  // bagimliliklar da karsilastirilir. Ayrisirlarsa hem framebuffer hem de
+  // pipeline uyumsuz sayilir ve cizim gecerli olmaz.
+  VkSubpassDependency dep = MakeColorDependency();
 
   VkRenderPassCreateInfo ci{};
   ci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -320,6 +346,52 @@ bool VkSwapchain::CreateRenderPass() {
   VkResult res = vkCreateRenderPass(device, &ci, nullptr, &mRenderPass);
   if (res != VK_SUCCESS) {
     spdlog::error("vkCreateRenderPass failed: {}",
+                  vk_detail::VkResultToString(res));
+    return false;
+  }
+  return true;
+}
+
+bool VkSwapchain::CreateResumeRenderPass() {
+  VkDevice device = mContext->GetDevice();
+
+  VkAttachmentDescription color{};
+  color.format = mImageFormat;
+  color.samples = VK_SAMPLE_COUNT_1_BIT;
+  // Asil pass'ten TEK farki bu iki satir: icerik silinmez, korunur ve image
+  // zaten PRESENT_SRC layout'unda bulunur (asil pass'in finalLayout'u).
+  color.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+  color.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+  color.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+  color.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+  color.initialLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+  color.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+  VkAttachmentReference color_ref{};
+  color_ref.attachment = 0;
+  color_ref.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+  VkSubpassDescription subpass{};
+  subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+  subpass.colorAttachmentCount = 1;
+  subpass.pColorAttachments = &color_ref;
+
+  // Asil pass ile BIREBIR ayni bagimlilik — uyumluluk sarti (bkz.
+  // CreateRenderPass icindeki not).
+  VkSubpassDependency dep = MakeColorDependency();
+
+  VkRenderPassCreateInfo ci{};
+  ci.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+  ci.attachmentCount = 1;
+  ci.pAttachments = &color;
+  ci.subpassCount = 1;
+  ci.pSubpasses = &subpass;
+  ci.dependencyCount = 1;
+  ci.pDependencies = &dep;
+
+  VkResult res = vkCreateRenderPass(device, &ci, nullptr, &mResumeRenderPass);
+  if (res != VK_SUCCESS) {
+    spdlog::error("vkCreateRenderPass (resume) failed: {}",
                   vk_detail::VkResultToString(res));
     return false;
   }

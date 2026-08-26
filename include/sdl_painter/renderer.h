@@ -22,6 +22,17 @@ using TextureHandle = uint32_t;
 /// @brief Geçersiz/boş texture tanımlayıcısı.
 constexpr TextureHandle kInvalidTexture = 0;
 
+/// @brief Çizim hedefi (offscreen render target) tanımlayıcısı — opak tip.
+using RenderTargetHandle = uint32_t;
+
+/// @brief Geçersiz hedef; @ref IRenderer::SetRenderTarget'a verildiğinde
+///        çizim ekrana (varsayılan framebuffer'a) döner.
+constexpr RenderTargetHandle kInvalidRenderTarget = 0;
+
+// Çizim hedeflerinin piksel formatı her backend'de **doğrusal RGBA8**'dir ve
+// ekran yüzeyinin formatından (Vulkan'da tipik olarak B8G8R8A8_UNORM)
+// kasıtlı olarak ayrıştırılmıştır — gerekçe ReadRenderTarget'ta.
+
 /// @brief Doku örnekleme filtresi.
 enum class TextureFilter : uint8_t {
   /// @brief Doğrusal enterpolasyon — büyütmede yumuşak. **Varsayılan.**
@@ -167,6 +178,83 @@ class IRenderer {
   /// @brief Texture'lı vertex'leri çiz. Tint rengi vertex'te taşınır.
   virtual void DrawTextured(const std::vector<TexturedVertex>& vertices,
                             TextureHandle texture) = 0;
+
+  // --- Çizim hedefleri (offscreen render target) ---
+  //
+  // Aşağıdakilerin hiçbiri saf sanal DEĞİLDİR; varsayılan gövdeler "hedef
+  // desteklenmiyor" anlamına gelir. Böylece bu arayüzü dışarıda implemente
+  // etmiş kod derlenmeye devam eder (aynı yaklaşım SetBlendMode, filtreli
+  // CreateTexture ve GetLastGpuFrameMs için de kullanılıyor).
+
+  /// @brief Çizilebilir bir offscreen hedef oluştur.
+  ///
+  /// Hedefin içeriği @ref GetRenderTargetTexture ile bir texture olarak
+  /// örneklenebilir; yani "önce dokuya çiz, sonra o dokuyu ekrana bas"
+  /// akışı mümkün olur (mini harita, son işlem efektleri, iz efekti).
+  ///
+  /// @param width  Genişlik (piksel, > 0).
+  /// @param height Yükseklik (piksel, > 0).
+  /// @param filter Sonucu örneklerken kullanılacak filtre.
+  /// @return Hedef tanımlayıcısı; desteklenmiyorsa veya başarısızsa
+  ///         @ref kInvalidRenderTarget.
+  virtual RenderTargetHandle CreateRenderTarget(int32_t width, int32_t height,
+                                                TextureFilter filter) {
+    (void)width;
+    (void)height;
+    (void)filter;
+    return kInvalidRenderTarget;
+  }
+
+  /// @brief Hedefi ve ona ait tüm kaynakları serbest bırak.
+  virtual void DestroyRenderTarget(RenderTargetHandle handle) { (void)handle; }
+
+  /// @brief Hedefin içeriğini örneklemek için kullanılacak texture.
+  ///
+  /// @return @ref DrawTextured'a verilebilecek tanımlayıcı; hedef geçersizse
+  ///         @ref kInvalidTexture.
+  [[nodiscard]] virtual TextureHandle GetRenderTargetTexture(
+      RenderTargetHandle handle) const {
+    (void)handle;
+    return kInvalidTexture;
+  }
+
+  /// @brief Sonraki çizimlerin gideceği hedefi seç.
+  ///
+  /// @param handle Hedef; @ref kInvalidRenderTarget verilirse çizim ekrana
+  ///        döner.
+  /// @return Geçiş yapıldıysa `true`.
+  ///
+  /// @warning Bir hedefe çizerken o hedefin **kendi texture'ından okumak**
+  ///          tanımsızdır. Önce hedeften çıkın, sonra örnekleyin.
+  virtual bool SetRenderTarget(RenderTargetHandle handle) {
+    (void)handle;
+    return false;
+  }
+
+  /// @brief Hedefin piksellerini ana belleğe oku.
+  ///
+  /// Formatı **sıkı paketlenmiş, doğrusal RGBA8**'dir ve satırlar
+  /// **yukarıdan aşağı** sıralanır — iki backend'de de birebir aynı. Bu,
+  /// hedeflerin ekran yüzeyinin formatını devralmamasının sebebidir: yüzey
+  /// formatı sürücüye göre BGRA veya sRGB olabilir ve o zaman "iki backend
+  /// aynı çizimde farklı bayt üretti" bulgusu gerçek bir hatayı değil,
+  /// yalnızca format farkını gösterirdi.
+  ///
+  /// Çağrı **bloklar**: GPU'nun işi bitene kadar bekler. Kare döngüsünde
+  /// değil, ekran görüntüsü alma ve test gibi yerlerde kullanılmalıdır.
+  ///
+  /// @param handle Okunacak hedef.
+  /// @param out_rgba `width * height * 4` bayt kapasiteli tampon.
+  /// @param byte_capacity `out_rgba`'nın bayt kapasitesi; yetersizse çağrı
+  ///        başarısız olur (taşma yerine hata).
+  /// @return Başarıda `true`.
+  virtual bool ReadRenderTarget(RenderTargetHandle handle, uint8_t* out_rgba,
+                                std::size_t byte_capacity) {
+    (void)handle;
+    (void)out_rgba;
+    (void)byte_capacity;
+    return false;
+  }
 
   // --- Transform ---
 

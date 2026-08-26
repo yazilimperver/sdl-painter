@@ -87,6 +87,8 @@ set(SDLPAINTER_SOURCES
     src/painter.cpp
     src/renderer.cpp
     src/image.cpp
+    src/path.cpp
+    src/render_target.cpp
     src/tessellator.cpp
     src/render_batcher.cpp
     src/font.cpp
@@ -107,6 +109,7 @@ if(SDLPAINTER_WITH_VULKAN)
         src/vulkan/vulkan_renderer.cpp
         src/vulkan/vulkan_pipeline.cpp
         src/vulkan/vulkan_buffer.cpp
+        src/vulkan/vulkan_render_target.cpp
         src/vulkan/vulkan_texture.cpp
         src/vulkan/vulkan_textured_pipeline.cpp
     )

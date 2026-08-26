@@ -207,6 +207,116 @@ quality:coverage:
     expire_in: 1 week
   allow_failure: true
 
+# --- Paketleme yolu ---------------------------------------------------------
+#
+# Aşağıdaki dört job uzun süre YALNIZCA GitHub'da vardı. Sonuç: GitLab
+# pipeline'ı paketleme yolunu hiç doğrulamıyordu ve "iki pipeline aynı şeyi
+# kontrol ediyor" varsayımı yanlıştı. Yeni bir job eklerken "yalnızca birine
+# eklemek yeterli mi?" sorusunu açıkça cevaplayın (bkz. .claude/rules/ci-cd.md).
+
+# Preset KULLANMADAN, örnek/test KAPALI derleme + install + find_package ile
+# tüketici doğrulaması. Kütüphaneyi dışarıdan kullanmanın gerçek yolu bu; preset
+# üzerinden derlemek onu doğrulamıyor.
+build:standalone-cmake:
+  stage: build
+  image: $CI_REGISTRY_IMAGE
+  needs: []
+  script:
+    - |
+      conan install . --output-folder=build/standalone/generators --build=missing \
+        -s build_type=Release \
+        -o "&:with_vulkan=True" \
+        -c tools.system.package_manager:mode=install \
+        -c tools.system.package_manager:sudo=False
+    - |
+      TC=$(find build/standalone/generators -name conan_toolchain.cmake | head -1)
+      echo "toolchain: $TC"
+      cmake -S . -B build/standalone/out \
+        -DCMAKE_TOOLCHAIN_FILE="$PWD/$TC" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DSDLPAINTER_WITH_VULKAN=ON \
+        -DSDLPAINTER_BUILD_EXAMPLES=OFF \
+        -DSDLPAINTER_BUILD_TESTS=OFF
+      cmake --build build/standalone/out
+    - |
+      cmake --install build/standalone/out --prefix "$PWD/build/standalone/prefix"
+      TC=$(find build/standalone/generators -name conan_toolchain.cmake | head -1)
+      cmake -S packaging/consumer -B build/standalone/consumer \
+        -DCMAKE_TOOLCHAIN_FILE="$PWD/$TC" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_PREFIX_PATH="$PWD/build/standalone/prefix" \
+        -DCONSUMER_MODE=find_package
+      cmake --build build/standalone/consumer
+      ./build/standalone/consumer/consumer
+
+# Paylaşımlı (shared) kütüphane yolu. Bu job olmadan sessizce bozuluyordu:
+# Windows/MSVC export işaretlemesi olmadan .dll üretip .lib ÜRETMİYOR, yani
+# hiçbir tüketici link edemiyor. Linux'ta varsayılan sembol görünürlüğü bunu
+# gizlediği için fark edilmemişti. Conan Center shared derlemeyi zorunlu
+# olarak test ediyor.
+#
+# sdl_painter_tests bu modda bilinçli olarak ATLANIR (dahili sembollere
+# erişir); public yüzeyi sdl_painter_abi_tests doğrular.
+build:shared:
+  stage: build
+  image: $CI_REGISTRY_IMAGE
+  needs: []
+  variables:
+    SDL_VIDEODRIVER: "offscreen"
+  script:
+    - |
+      conan install . --output-folder=build/shared/generators --build=missing \
+        -s build_type=Release \
+        -o "&:with_vulkan=True" \
+        -c tools.system.package_manager:mode=install \
+        -c tools.system.package_manager:sudo=False
+    - |
+      TC=$(find build/shared/generators -name conan_toolchain.cmake | head -1)
+      cmake -S . -B build/shared/out \
+        -DCMAKE_TOOLCHAIN_FILE="$PWD/$TC" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DBUILD_SHARED_LIBS=ON \
+        -DSDLPAINTER_WITH_VULKAN=ON \
+        -DSDLPAINTER_BUILD_EXAMPLES=OFF \
+        -DSDLPAINTER_BUILD_TESTS=ON
+      cmake --build build/shared/out
+    - ctest --test-dir build/shared/out --output-on-failure
+    - |
+      cmake --install build/shared/out --prefix "$PWD/build/shared/prefix"
+      TC=$(find build/shared/generators -name conan_toolchain.cmake | head -1)
+      cmake -S packaging/consumer -B build/shared/consumer \
+        -DCMAKE_TOOLCHAIN_FILE="$PWD/$TC" \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DCMAKE_PREFIX_PATH="$PWD/build/shared/prefix" \
+        -DCONSUMER_MODE=find_package
+      cmake --build build/shared/consumer
+      LD_LIBRARY_PATH="$PWD/build/shared/prefix/lib:$LD_LIBRARY_PATH" \
+        ./build/shared/consumer/consumer
+
+# Conan Center'a gitmeden önce paketleme yolunun erken uyarısı:
+# `conan create` + test_package burada kırılırsa görülür.
+package:conan-create:
+  stage: build
+  image: $CI_REGISTRY_IMAGE
+  needs: []
+  script:
+    - |
+      conan create . --build=missing \
+        -o "&:with_vulkan=False" \
+        -o "&:build_examples=False" \
+        -o "&:build_tests=False" \
+        -c tools.system.package_manager:mode=install \
+        -c tools.system.package_manager:sudo=False
+
+# SPIR-V çıktılarının GLSL kaynağıyla senkron olduğunu doğrular.
+# glslc GEREKTİRMEZ: karşılaştırma sources.sha256 manifesti üzerinden yapılır.
+quality:shader-freshness:
+  stage: quality
+  image: $CI_REGISTRY_IMAGE
+  needs: []
+  script:
+    - cmake -P cmake/CheckShaderFreshness.cmake
+
 quality:clang-format:
   stage: quality
   image: $CI_REGISTRY_IMAGE
@@ -218,7 +328,9 @@ quality:clang-format:
   # apt ile yeniden kurmaya gerek yok (imajda apt list'leri silinmiş durumda).
   script:
     - find include/ src/ -name '*.h' -o -name '*.cpp' | xargs clang-format-18 --dry-run --Werror
-  allow_failure: true
+  # SERT KAPI — allow_failure YOK. GitHub tarafında da öyle; ikisi ayrışırsa
+  # biçim ihlali yalnızca bir pipeline'da görünür ve diğerinde birikir.
+  # (clang-tidy bilinçli olarak yumuşak kalır: yanlış pozitif üretebiliyor.)
 
 quality:clang-tidy:
   stage: quality

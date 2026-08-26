@@ -111,7 +111,10 @@ Tüm Painter API çağrıları aynı şekilde çalışır. Detay:
 Detay: [akislar.md → §3](akislar.md#3-render-batcher-akışı).
 
 **5. Path / Bezier / Gradient destekleniyor mu?**
-→ Hayır (şimdilik). Gerekçeler:
+→ Evet. `Path` doğru parçaları ve quadratic/cubic Bézier taşır (`DrawPath` /
+`FillPath`); `Brush::LinearGradient` ve `Brush::RadialGradient` iki duraklı
+geçiş verir. **Sınırlar:** delikli dolgu (even-odd / nonzero) ve çok duraklı /
+conical gradient yok. Gerekçeler:
 [sdl-painter-yazilim-muhendisligi.md → Kapsam Yönetimi](sdl-painter-yazilim-muhendisligi.md#kapsam-yönetimi).
 
 ---

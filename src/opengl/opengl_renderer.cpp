@@ -43,8 +43,11 @@ bool OpenGLRenderer::Initialize(SDL_Window* window) {
     return false;
   }
 
-  glEnable(GL_BLEND);
-  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  // Baslangic karistirma durumu SetBlendMode uzerinden kurulur. Eskiden burada
+  // ayri bir glBlendFunc cagrisi vardi; SetBlendMode duzeltilince o satir
+  // sessizce eskidi ve mod hic degistirilmeyen sahnelerde ESKI faktorler
+  // yururlukte kaldi. Tek kaynak: SetBlendMode.
+  SetBlendMode(BlendMode::kAlpha);
 
   // Shader kaynakları binary'ye gömülüdür (bkz. cmake/EmbedShaders.cmake);
   // çalışma zamanında hiçbir dosya aranmaz.
@@ -143,6 +146,16 @@ void OpenGLRenderer::Shutdown() {
     glDeleteBuffers(1, &mTexturedVbo);
     mTexturedVbo = 0;
   }
+
+  // Kullanicinin serbest birakmadigi hedefler: context yikilmadan once sil ki
+  // ayikla derlemede sizinti araclari temiz rapor versin.
+  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  mCurrentTarget = kInvalidRenderTarget;
+  for (auto& entry : mRenderTargets) {
+    glDeleteFramebuffers(1, &entry.second.fbo);
+    glDeleteTextures(1, &entry.second.texture);
+  }
+  mRenderTargets.clear();
 
   SDL_GL_DestroyContext(static_cast<SDL_GLContext>(mGLContext));
   mGLContext = nullptr;
@@ -256,6 +269,20 @@ void OpenGLRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
 }
 
 void OpenGLRenderer::SetBlendMode(BlendMode mode) {
+  // Neden glBlendFunc DEGIL de glBlendFuncSeparate:
+  //
+  // glBlendFunc alfa kanalina da RENK faktorlerini uygular. Vulkan tarafinda
+  // ise alfa faktorleri ayri alanlardir (srcAlphaBlendFactor /
+  // dstAlphaBlendFactor) ve orada bilincli olarak farkli degerler secilmisti.
+  // Sonuc: iki backend ayni cizimde ayni RGB'yi ama FARKLI alfayi uretiyordu.
+  //
+  // Ekranda gorunmuyordu — swapchain'in alfasi sunumda yok sayilir. Bir cizim
+  // hedefine cizilince ortaya cikti ve test_backend_parity.cpp yakaladi.
+  //
+  // Secilen alfa formulu her iki backend'de de ayni (bkz. vk_blend.h):
+  // aOut = aSrc + aDst * (1 - aSrc) — standart "over" bilesimi. Eski GL
+  // davranisi (aSrc^2 + aDst(1-aSrc)) alfayi eksik biriktiriyordu; yari
+  // saydam bir sekil cizilen hedef, olmasi gerekenden saydam kaliyordu.
   switch (mode) {
     case BlendMode::kNone:
       glDisable(GL_BLEND);
@@ -263,17 +290,18 @@ void OpenGLRenderer::SetBlendMode(BlendMode mode) {
     case BlendMode::kAdditive:
       glEnable(GL_BLEND);
       // Kaynak alfasiyla olceklenip eklenir: ust uste binen parlak nesneler
-      // birbirini soner degil, parlatir.
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+      // birbirini soner degil, parlatir. Alfa da birikir.
+      glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ONE, GL_ONE);
       return;
     case BlendMode::kMultiply:
       glEnable(GL_BLEND);
-      glBlendFunc(GL_DST_COLOR, GL_ZERO);
+      glBlendFuncSeparate(GL_DST_COLOR, GL_ZERO, GL_DST_ALPHA, GL_ZERO);
       return;
     case BlendMode::kAlpha:
     default:
       glEnable(GL_BLEND);
-      glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+      glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE,
+                          GL_ONE_MINUS_SRC_ALPHA);
       return;
   }
 }
@@ -405,6 +433,132 @@ void OpenGLRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
   glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertices.size()));
   glBindVertexArray(0);
   glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+// --- Çizim hedefleri (FBO) -------------------------------------------------
+
+RenderTargetHandle OpenGLRenderer::CreateRenderTarget(int32_t width,
+                                                      int32_t height,
+                                                      TextureFilter filter) {
+  if (mGLContext == nullptr || width <= 0 || height <= 0) {
+    return kInvalidRenderTarget;
+  }
+
+  RenderTargetGL target;
+  target.width = width;
+  target.height = height;
+
+  glGenTextures(1, &target.texture);
+  glBindTexture(GL_TEXTURE_2D, target.texture);
+  // Format bilincli olarak GL_RGBA8: hedeflerin icerigi geri okunabiliyor ve
+  // okuma sozlesmesi backend'e gore degismemeli (bkz. renderer.h).
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA,
+               GL_UNSIGNED_BYTE, nullptr);
+  const GLint kFilter =
+      (filter == TextureFilter::kNearest) ? GL_NEAREST : GL_LINEAR;
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, kFilter);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, kFilter);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+  glBindTexture(GL_TEXTURE_2D, 0);
+
+  glGenFramebuffers(1, &target.fbo);
+  glBindFramebuffer(GL_FRAMEBUFFER, target.fbo);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D,
+                         target.texture, 0);
+
+  const GLenum kStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+  // Yururlukteki hedefe geri don; kurulum arada gecici olarak baglamisti.
+  BindTargetFramebuffer(mCurrentTarget);
+
+  if (kStatus != GL_FRAMEBUFFER_COMPLETE) {
+    spdlog::error("[OpenGLRenderer] Framebuffer eksik: 0x{:X}", kStatus);
+    glDeleteFramebuffers(1, &target.fbo);
+    glDeleteTextures(1, &target.texture);
+    return kInvalidRenderTarget;
+  }
+
+  const RenderTargetHandle handle = mNextRenderTarget++;
+  mRenderTargets.emplace(handle, target);
+  return handle;
+}
+
+void OpenGLRenderer::DestroyRenderTarget(RenderTargetHandle handle) {
+  // Context yok olmussa GL kaynaklarini silmeye gerek yok; context yikimi
+  // zaten hepsini serbest birakir (DestroyTexture ile ayni gerekce).
+  const auto it = mRenderTargets.find(handle);
+  if (it == mRenderTargets.end()) {
+    return;
+  }
+  if (mCurrentTarget == handle) {
+    SetRenderTarget(kInvalidRenderTarget);
+  }
+  if (mGLContext != nullptr) {
+    glDeleteFramebuffers(1, &it->second.fbo);
+    glDeleteTextures(1, &it->second.texture);
+  }
+  mRenderTargets.erase(it);
+}
+
+TextureHandle OpenGLRenderer::GetRenderTargetTexture(
+    RenderTargetHandle handle) const {
+  const auto it = mRenderTargets.find(handle);
+  return it == mRenderTargets.end()
+             ? kInvalidTexture
+             : static_cast<TextureHandle>(it->second.texture);
+}
+
+bool OpenGLRenderer::SetRenderTarget(RenderTargetHandle handle) {
+  if (handle != kInvalidRenderTarget &&
+      mRenderTargets.find(handle) == mRenderTargets.end()) {
+    return false;
+  }
+  mCurrentTarget = handle;
+  BindTargetFramebuffer(handle);
+  return true;
+}
+
+void OpenGLRenderer::BindTargetFramebuffer(RenderTargetHandle handle) {
+  const auto it = mRenderTargets.find(handle);
+  glBindFramebuffer(GL_FRAMEBUFFER,
+                    it == mRenderTargets.end() ? 0U : it->second.fbo);
+}
+
+bool OpenGLRenderer::ReadRenderTarget(RenderTargetHandle handle,
+                                      uint8_t* out_rgba,
+                                      std::size_t byte_capacity) {
+  const auto it = mRenderTargets.find(handle);
+  if (it == mRenderTargets.end() || out_rgba == nullptr) {
+    return false;
+  }
+  const RenderTargetGL& target = it->second;
+  const auto kNeeded = static_cast<std::size_t>(target.width) *
+                       static_cast<std::size_t>(target.height) * 4U;
+  if (byte_capacity < kNeeded) {
+    spdlog::error(
+        "[OpenGLRenderer] ReadRenderTarget: tampon kucuk ({} < {} bayt).",
+        byte_capacity, kNeeded);
+    return false;
+  }
+
+  glFinish();
+  glBindFramebuffer(GL_FRAMEBUFFER, target.fbo);
+
+  GLint prev_alignment = 4;
+  glGetIntegerv(GL_PACK_ALIGNMENT, &prev_alignment);
+  glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+  // Satir sirasi: hedefe cizerken projeksiyonun Y'si TERS CEVRILMEZ
+  // (bkz. Painter::UpdateProjection), yani Painter'in y=0'i FBO'nun 0.
+  // satirina dusuyor. Dolayisiyla glReadPixels ciktisi dogrudan yukaridan
+  // asagi siralidir ve ekstra bir cevirme GEREKMEZ — ekran icin yazilmis
+  // examples/benchmarks/screenshot.cpp'den farki budur.
+  glReadPixels(0, 0, target.width, target.height, GL_RGBA, GL_UNSIGNED_BYTE,
+               out_rgba);
+
+  glPixelStorei(GL_PACK_ALIGNMENT, prev_alignment);
+  BindTargetFramebuffer(mCurrentTarget);
+  return true;
 }
 
 void OpenGLRenderer::SetProjectionMatrix(const float* mat4) {

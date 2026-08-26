@@ -96,6 +96,7 @@ demo into `doc/hero.gif`. Requires `ffmpeg` (`sudo apt install ffmpeg` /
 
 ```bash
 ./build/linux-debug/examples/hero --dump-frames build/hero_frames
+./scripts/make-hero-gif.sh --fps 12             # what the shipped banner uses
 ./scripts/make-hero-gif.sh                      # defaults: 15 fps, 720 px wide
 ./scripts/make-hero-gif.sh --fps 12 --width 640 # smaller file
 ./scripts/make-hero-gif.sh --mp4                # also emit doc/hero.mp4
@@ -103,7 +104,7 @@ demo into `doc/hero.gif`. Requires `ffmpeg` (`sudo apt install ffmpeg` /
 
 ```powershell
 .\build\windows-debug\examples\Debug\hero.exe --dump-frames build\hero_frames
-.\scripts\Make-HeroGif.ps1
+.\scripts\Make-HeroGif.ps1 -Fps 12
 .\scripts\Make-HeroGif.ps1 -Fps 12 -Width 640
 .\scripts\Make-HeroGif.ps1 -Mp4
 ```
@@ -111,6 +112,11 @@ demo into `doc/hero.gif`. Requires `ffmpeg` (`sudo apt install ffmpeg` /
 A two-pass palette (`palettegen` → `paletteuse`) is used because single-pass
 conversion bands visibly on this scene's gradients. The script prints the
 resulting size and warns above 3 MB.
+
+The demo dumps 360 frames (four 3-second acts at 30 fps), so the banner runs
+12 seconds. At `--fps 12 --width 720` that lands around 3.2 MB — slightly over
+the script's warning threshold, kept there deliberately because 640 px makes
+the 12 px captions inside the scene unreadable.
 
 ## changelog-section.sh
 

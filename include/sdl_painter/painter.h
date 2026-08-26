@@ -9,7 +9,9 @@
 // ImageFlip için — Image'ın kendisi ileri bildirimle yetiyordu, ancak
 // DrawImage'ın varsayılan argümanı enum'un tam tanımını gerektiriyor.
 #include "sdl_painter/image.h"
+#include "sdl_painter/path.h"
 #include "sdl_painter/pen.h"
+#include "sdl_painter/render_target.h"
 #include "sdl_painter/renderer.h"
 #include "sdl_painter/vertex.h"
 
@@ -132,6 +134,67 @@ class SDLPAINTER_API Painter {
 
   /// @brief Viewport'u tüm çizim yüzeyine geri al.
   void ResetViewport();
+
+  // --- Çizim hedefi (dokuya çizim) ---
+
+  /// @brief Ekran yerine çizilebilen offscreen bir yüzey oluştur.
+  ///
+  /// Mini harita, son işlem efektleri, iz efekti ve pahalı katmanların
+  /// önbelleklenmesi için. Ayrıntı ve kullanım örneği: @ref RenderTarget.
+  ///
+  /// @param width  Genişlik (piksel, > 0).
+  /// @param height Yükseklik (piksel, > 0).
+  /// @param filter Hedef ekrana basılırken kullanılacak örnekleme filtresi.
+  /// @return Geçerli bir hedef; başarısızlıkta @ref RenderTarget::IsValid
+  ///         `false` döner (backend desteklemiyor olabilir).
+  [[nodiscard]] RenderTarget CreateRenderTarget(
+      int32_t width, int32_t height,
+      TextureFilter filter = TextureFilter::kLinear);
+
+  /// @brief Sonraki çizimleri verilen hedefe yönlendir.
+  ///
+  /// Çizim koordinatları hedefe **yerel** olur: `(0, 0)` hedefin sol üst
+  /// köşesi, projeksiyon hedefin boyutuna göre. @ref SetViewport ile ayarlanmış
+  /// bir viewport varsa hedef süresince askıya alınır ve
+  /// @ref ResetRenderTarget ile geri gelir.
+  ///
+  /// @note Hedef seçimi bir GPU durumudur: @ref Save / @ref Restore kapsamında
+  ///       **değildir** ve değiştirmek biriken çizimleri flush eder. Seçim kare
+  ///       sınırını da aşmaz — her @ref Begin ekranda başlar.
+  ///
+  /// @return Geçiş yapıldıysa `true`.
+  bool SetRenderTarget(const RenderTarget& target);
+
+  /// @brief Çizimi ekrana geri al.
+  void ResetRenderTarget();
+
+  /// @brief Hedefin içeriğini orijinal boyutuyla çiz.
+  ///
+  /// @param tint @ref DrawImage ile aynı anlamda.
+  void DrawRenderTarget(const RenderTarget& target, float x, float y,
+                        const Color& tint = Color::White(),
+                        ImageFlip flip = ImageFlip::kNone);
+
+  /// @brief Hedefin içeriğini hedef dikdörtgene ölçekleyerek çiz.
+  void DrawRenderTarget(const RenderTarget& target, const Rect& dest_rect,
+                        const Color& tint = Color::White(),
+                        ImageFlip flip = ImageFlip::kNone);
+
+  /// @brief Hedefin piksellerini ana belleğe oku.
+  ///
+  /// Sonuç sıkı paketlenmiş, **doğrusal RGBA8** ve satırlar yukarıdan aşağı —
+  /// OpenGL ile Vulkan birebir aynı baytları verir. Ekran görüntüsü almak ve
+  /// iki backend'in çıktısını karşılaştıran testler için.
+  ///
+  /// @warning **Bloklar:** GPU'nun işi bitene kadar bekler. Kare döngüsünde
+  ///          kullanılmamalıdır. Ayrıca @ref End sonrasında çağrılmalıdır;
+  ///          kare ortasında çağrılırsa o karede biriken çizimler henüz
+  ///          gönderilmemiş olabilir.
+  ///
+  /// @param out_rgba Sonuç buraya yazılır; gerekiyorsa yeniden boyutlandırılır.
+  /// @return Başarıda `true`.
+  bool ReadRenderTarget(const RenderTarget& target,
+                        std::vector<uint8_t>& out_rgba);
 
   // --- Temizlik ---
 
@@ -264,6 +327,31 @@ class SDLPAINTER_API Painter {
 
   /// @brief Açık çizgi dizisi çiz.
   void DrawPolyline(const std::vector<Point>& points);
+
+  // --- Yol (path) ---
+
+  /// @brief Yolun çerçevesini çiz.
+  ///
+  /// Her alt yol ayrı çizilir: kapalı olanlar (@ref Path::Close) kapalı
+  /// poligon gibi, açık olanlar polyline gibi işlenir. Dolayısıyla uç stili
+  /// yalnızca açık alt yolların iki ucuna, birleşim stili tüm köşelere
+  /// uygulanır.
+  ///
+  /// @note Kesikli kalemde desen **her alt yolun başında sıfırlanır**; tek bir
+  ///       alt yol içinde ise yol boyunca sürekli ilerler (bir kesik köşenin
+  ///       üzerinden geçebilir).
+  void DrawPath(const Path& path);
+
+  /// @brief Yolun içini doldur (ear clipping tessellation).
+  ///
+  /// Açık alt yollar dolgu için **örtük olarak kapatılır** — QPainter da
+  /// böyle davranır.
+  ///
+  /// @warning Her alt yol **bağımsız** doldurulur; even-odd veya nonzero
+  ///          dolgu kuralı uygulanmaz. Bir alt yolun diğerinin içinde kalması
+  ///          onu delik yapmaz, üzerine ikinci bir dolgu çizer. Delikli
+  ///          şekiller bu sürümün kapsamı dışındadır (bkz. @ref Path).
+  void FillPath(const Path& path);
 
   // --- Görüntü ---
 
@@ -405,6 +493,32 @@ class SDLPAINTER_API Painter {
   /// @brief Projeksiyon matrisini viewport boyutuna göre güncelle.
   void UpdateProjection();
 
+  /// @brief Painter'ın Y ekseni ile GPU'nunki aynı yönde mi?
+  ///
+  /// Painter'da Y aşağı doğru artar. Vulkan'ın clip uzayı da öyledir, OpenGL'in
+  /// **ekran** framebuffer'ı ise ters yöndedir — bu yüzden GL'de projeksiyon,
+  /// viewport ve scissor çevrilir.
+  ///
+  /// Bir çizim hedefine (FBO) çizerken GL'de bu çevirme **yapılmaz**: hedefin
+  /// 0. satırı Painter'ın `y = 0`'ına denk gelsin isteriz. Aksi halde dokunun
+  /// bellekteki satır sırası ters olur ve hem ekrana basıldığında baş aşağı
+  /// görünür hem de @ref ReadRenderTarget çıktısı Vulkan'ınkiyle uyuşmazdı.
+  [[nodiscard]] bool YAxisMatchesGpu() const;
+
+  /// @brief Yürürlükteki çizim yüzeyinin yüksekliği (hedef bağlıysa onunki).
+  [[nodiscard]] int32_t SurfaceHeight() const;
+
+  /// @brief Viewport'u GPU'ya yaz (Y çevirmesi dahil) ve projeksiyonu güncelle.
+  void ApplyViewport();
+
+  /// @brief Dokulu bir dörtgeni batcher'a ver (aynalama dahil).
+  ///
+  /// @ref DrawImage ile @ref DrawRenderTarget'ın ortak gövdesi; ikisinin de
+  /// tek farkı UV'yi nereden aldıklarıdır.
+  void PushTexturedQuad(TextureHandle texture, float u0, float v0, float u1,
+                        float v1, const Rect& dest_rect, const Color& tint,
+                        ImageFlip flip);
+
   /// @brief Çizgi geometrisini tek renkle batcher'a ver (karıştırma senkronu
   ///        dahil).
   void PushStroke(const std::vector<Vertex>& verts, const Color& color);
@@ -468,6 +582,18 @@ class SDLPAINTER_API Painter {
   /// @ref SetViewport çağrıldı mı? `true` iken yeniden boyutlandırma
   /// viewport'u ezmez — kullanıcının seçimi korunur.
   bool mCustomViewport{false};
+
+  /// Yürürlükteki çizim hedefi (kInvalidRenderTarget = ekran).
+  RenderTargetHandle mActiveTarget{kInvalidRenderTarget};
+  int32_t mTargetWidth{0};
+  int32_t mTargetHeight{0};
+
+  /// Hedefe geçmeden önceki viewport; @ref ResetRenderTarget geri yükler.
+  int32_t mSavedViewportX{0};
+  int32_t mSavedViewportY{0};
+  int32_t mSavedViewportWidth{0};
+  int32_t mSavedViewportHeight{0};
+  bool mSavedCustomViewport{false};
 
   /// @brief Boyut her karede pencereden okunsun mu?
   /// @ref SetDrawableSize ilk çağrıldığında `false` olur.

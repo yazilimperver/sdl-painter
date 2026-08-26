@@ -1,7 +1,7 @@
 <!--
 Yeni bir özellik önermeden önce: doc/sdl-painter-yazilim-muhendisligi.md →
-Kapsam Yönetimi bölümünü inceledin mi? Bazı özellikler (path, gradient,
-bezier) bilinçli olarak v2 için ertelenmiştir.
+Kapsam Yönetimi bölümünü inceledin mi? Bazı özellikler (delikli dolgu, çok
+duraklı/conical gradient, yol tabanlı kırpma) bilinçli olarak kapsam dışıdır.
 -->
 
 ## Motivasyon

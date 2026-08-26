@@ -23,6 +23,7 @@
 #include "sdl_painter/geometry.h"
 #include "sdl_painter/image.h"
 #include "sdl_painter/painter.h"
+#include "sdl_painter/path.h"
 #include "sdl_painter/pen.h"
 
 #include <cstdint>
@@ -40,6 +41,7 @@ using sdl_painter::Color;
 using sdl_painter::Font;
 using sdl_painter::Image;
 using sdl_painter::Painter;
+using sdl_painter::Path;
 using sdl_painter::Pen;
 using sdl_painter::Point;
 using sdl_painter::Rect;
@@ -94,6 +96,19 @@ void DrawBusyFrame(Painter& painter, const Image& image, Font* font) {
   painter.DrawPolygon(kConcave);
   painter.DrawPolyline({{40.0F, 88.0F}, {56.0F, 68.0F}, {72.0F, 88.0F}});
 
+  // Yol: Bézier düzleştirme + çok parçalı dolgu. Kapalı ve açık alt yol
+  // birlikte, ki hem StrokeClosedPath hem StrokeOpenPath yolu çalışsın.
+  Path path;
+  path.MoveTo(4.0F, 92.0F);
+  path.CubicTo(20.0F, 70.0F, 44.0F, 70.0F, 60.0F, 92.0F);
+  path.MoveTo(80.0F, 92.0F);
+  path.QuadTo(96.0F, 72.0F, 112.0F, 92.0F);
+  path.Close();
+  painter.SetBrush(Brush(Color{200, 140, 240, 160}));
+  painter.FillPath(path);
+  painter.SetPen(Pen(Color{240, 220, 255, 255}, 2.0F));
+  painter.DrawPath(path);
+
   // Texture'lı çizim — üç aşırı yükleme de
   painter.DrawImage(image, 76.0F, 66.0F);
   painter.DrawImage(image, Rect{96.0F, 66.0F, 24.0F, 20.0F});
@@ -134,6 +149,9 @@ void DrawBusyFrame(Painter& painter, const Image& image, Font* font) {
 /// buffer'ın slot sıfırlaması, semaphore döngüsü ve gecikmeli texture silme
 /// ancak kare sayacı ilerleyince çalışır.
 void RunFrames(RendererBackend backend, int32_t frame_count) {
+  // Validation mesajlari eskiden yalnizca log'a yaziliyordu; bu koruyucu
+  // onlari testi dusuren bir sinyale cevirir (bkz. test_support.h).
+  const sdl_painter::testing::ValidationGuard guard;
   const sdl_painter::testing::HiddenWindow window(backend, kWidth, kHeight);
   if (window.Get() == nullptr) {
     GTEST_SKIP() << "Pencere olusturulamadi: " << window.Error();

@@ -23,6 +23,8 @@ sdlpainter_add_example(sprite_animation graphics/sprite_animation.cpp APP ASSETS
 sdlpainter_add_example(morph            graphics/morph.cpp            APP)
 sdlpainter_add_example(charts           graphics/charts.cpp           APP)
 sdlpainter_add_example(strokes          graphics/strokes.cpp          APP)
+sdlpainter_add_example(paths            graphics/paths.cpp            APP)
+sdlpainter_add_example(render_target    graphics/render_target.cpp    APP)
 sdlpainter_add_example(gradients        graphics/gradients.cpp        APP)
 sdlpainter_add_example(blend_modes      graphics/blend_modes.cpp      APP)
 sdlpainter_add_example(pixel_art        graphics/pixel_art.cpp        APP ASSETS)
