@@ -1,6 +1,6 @@
 # Changelog
 
-## [Yayınlanmadı]
+## [1.3.0] - 2026-08-28
 
 ### Performans
 - **Transform artık batch'i kırmıyor (2000 → 2 draw call).** Model matrisi bir

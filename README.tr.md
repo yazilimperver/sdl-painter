@@ -105,7 +105,7 @@ include(FetchContent)
 # Aşağıdaki sürümü güncel sürüm ile değiştirebilirsiniz
 FetchContent_Declare(sdl_painter
     GIT_REPOSITORY https://github.com/yazilimperver/sdl-painter.git
-    GIT_TAG        v1.2.0)
+    GIT_TAG        v1.3.0)
 
 # Demoları ve birim testleri kendi projenizin parçası olarak derlemeyin.
 set(SDLPAINTER_BUILD_EXAMPLES OFF)

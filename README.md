@@ -101,7 +101,7 @@ include(FetchContent)
 
 FetchContent_Declare(sdl_painter
     GIT_REPOSITORY https://github.com/yazilimperver/sdl-painter.git
-    GIT_TAG        v1.2.0)
+    GIT_TAG        v1.3.0)
 
 # Don't build the demos and unit tests as part of your project.
 set(SDLPAINTER_BUILD_EXAMPLES OFF)
