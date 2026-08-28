@@ -129,3 +129,26 @@ bash scripts/changelog-section.sh v1.1.0
 
 Exits non-zero if the version has no section, so a release never ships with
 empty notes.
+
+## release-tag.sh
+
+Runs the release pre-flight checks, creates the annotated version tag and — with
+`--push` — publishes it, which is what triggers the `release:publish` job.
+
+```bash
+./scripts/release-tag.sh --check-only   # checks only
+./scripts/release-tag.sh                # checks + local tag
+./scripts/release-tag.sh --push         # checks + local tag + push
+```
+
+The version is never passed in: it is read from `include/sdl_painter/version.h`,
+so the tag cannot drift from the version the library reports. The script refuses
+to tag unless the working tree is clean, `Doxyfile` and both READMEs carry the
+same version, `CHANGELOG.md` has a section for it, `main` matches `origin/main`,
+and the tag is absent from the remote.
+
+One check earns the script on its own: it rejects a commit whose message carries
+a CI skip keyword (`[skip ci]` and friends). A tag push is a push event, so
+GitHub Actions skips the **whole** workflow — the release job included — and
+`ci.yml` has no `workflow_dispatch` to re-trigger it by hand. That trap was hit
+during the v1.3.0 preparation.
