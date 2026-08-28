@@ -55,6 +55,31 @@ can think in **shapes** instead of vertices.
 - **Familiar API** — if you have used QPainter, most of this will feel like home:
   `DrawRect`, `FillCircle`, `Save`/`Restore`.
 
+## Features
+
+| Area | Supported |
+|------|-----------|
+| **Primitives** | Line, rectangle, rounded rectangle, circle, ellipse, arc, pie, chord, polygon, polyline — all with stroke + fill |
+| **Styles** | Pen (color, width, outline, dash pattern, cap and join style), Brush (flat fill or two-stop linear/radial gradient), global opacity, blend modes |
+| **Paths** | `Path` of lines and quadratic/cubic Béziers, stroked with the full pen style set or filled per sub-path (no even-odd/nonzero rule, so no holes) |
+| **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` stack |
+| **Clipping** | Scissor-based rectangular clipping |
+| **Render target** | Draw into a texture instead of the screen — minimaps, post-processing, trails — plus pixel read-back |
+| **Anti-aliasing** | 4× MSAA, **OpenGL only**, and only through `Application` (it is a GL window attribute). The Vulkan backend and every render target are single-sample. |
+| **Viewport** | Draw into a sub-rectangle with local coordinates — split screen, minimaps |
+| **Image** | PNG / JPG loading (stb_image), source→destination scaling, atlas slicing, tint, mirroring, nearest/linear filtering, in-place texture update, free-form textured meshes |
+| **Text** | SDL_ttf 3.x, glyph cache, left/center/right alignment, multi-line and word wrap |
+| **Backend** | OpenGL 3.3 Core and Vulkan 1.1 — interchangeable through `IRenderer` |
+
+## Blog Post
+
+You can find my blog posts about this library on my page at the following links:
+
+[Project CI/CD Infrastructure](https://yazilimperver.net/index.php/2026/08/04/sdl-painter-proje-altyapisi-devam-faz-0-ci-cd/)
+[Library Documentation](https://yazilimperver.net/index.php/2026/07/06/sdl-painter-dokumantasyon/)
+[Project Infrastructure](https://yazilimperver.net/index.php/2026/07/03/sdl-painter-proje-altyapisi-faz-0/)
+[First Post](https://yazilimperver.net/index.php/2026/05/18/duyuru-sdl-painter/)
+
 ## Installation
 
 ### CMake — `find_package`
@@ -146,21 +171,6 @@ Full instructions: [Building from source](doc/building.md).
 Runnable demos, each isolating one capability:
 [examples/README.md](examples/README.md).
 
-## Features
-
-| Area | Supported |
-|------|-----------|
-| **Primitives** | Line, rectangle, rounded rectangle, circle, ellipse, arc, pie, chord, polygon, polyline — all with stroke + fill |
-| **Styles** | Pen (color, width, outline, dash pattern, cap and join style), Brush (flat fill or two-stop linear/radial gradient), global opacity, blend modes |
-| **Paths** | `Path` of lines and quadratic/cubic Béziers, stroked with the full pen style set or filled per sub-path (no even-odd/nonzero rule, so no holes) |
-| **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` stack |
-| **Clipping** | Scissor-based rectangular clipping |
-| **Render target** | Draw into a texture instead of the screen — minimaps, post-processing, trails — plus pixel read-back |
-| **Anti-aliasing** | 4× MSAA, **OpenGL only**, and only through `Application` (it is a GL window attribute). The Vulkan backend and every render target are single-sample. |
-| **Viewport** | Draw into a sub-rectangle with local coordinates — split screen, minimaps |
-| **Image** | PNG / JPG loading (stb_image), source→destination scaling, atlas slicing, tint, mirroring, nearest/linear filtering, in-place texture update, free-form textured meshes |
-| **Text** | SDL_ttf 3.x, glyph cache, left/center/right alignment, multi-line and word wrap |
-| **Backend** | OpenGL 3.3 Core and Vulkan 1.1 — interchangeable through `IRenderer` |
 
 ## Is SDLPainter for you?
 

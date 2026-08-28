@@ -57,6 +57,31 @@ böylece vertex yerine **şekil** düşünebilirsiniz.
 - **Tanıdık API** — QT ya da QPainter kullandıysanız çoğu API sizlere tanıdık gelecektir. Kullanmadıysanız da isimlendirmeler sizlere bir fikir verecektir (elbette API dokümantasyonu da mevcut):
   `DrawRect`, `FillCircle`, `Save`/`Restore`.
 
+## Özellikler
+
+| Alan | Desteklenen |
+|------|-------------|
+| **Primitifler** | Çizgi, dikdörtgen, yuvarlatılmış dikdörtgen, daire, elips, yay, dilim, kiriş, çokgen, polyline — hepsi stroke + fill |
+| **Stiller** | Pen (renk, kalınlık, outline, kesik deseni, uç ve birleşim stili), Brush (düz dolgu veya iki uçlu doğrusal/ışınsal gradient), global opacity, karıştırma modları |
+| **Yol (Path)** | Doğru parçaları ve quadratic/cubic Bézier'lerden oluşan `Path`; kalemin tüm stilleriyle çizilir veya alt yol başına doldurulur |
+| **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` |
+| **Clipping** | Scissor tabanlı dikdörtgen kırpma |
+| **Çizim hedefi** | Ekran yerine dokuya çizim — mini harita, son işlem efektleri, iz efekti — ve pikselleri geri okuma |
+| **Kenar yumuşatma** | 4× MSAA, **yalnızca OpenGL** ve yalnızca `Application` üzerinden (bir GL pencere özniteliği). Vulkan backend'i ve tüm çizim hedefleri tek örneklemli |
+| **Viewport** | Alt dikdörtgene yerel koordinatlarla çizim — bölünmüş ekran, mini harita |
+| **Image** | PNG / JPG yükleme (stb_image), kaynak→hedef ölçekleme, atlas dilimleme, tint, aynalama, nearest/linear filtre, yerinde doku güncelleme, serbest dokulu ızgara |
+| **Metin** | SDL_ttf 3.x, glyph cache, left/center/right hizalama, çok satırlı ve sözcük kaydırmalı |
+| **Backend** | OpenGL 3.3 Core ve Vulkan 1.1 — `IRenderer` ile değiştirilebilir |
+
+## Blog Post
+
+Aşağıdaki bağlantıda www.yazilimperver.net sayfamda, bu kütüphane ile ilgili yayınlamış olduğum yazıları bulabilirsiniz:
+
+[Proje CI/CD Altyapıs](https://yazilimperver.net/index.php/2026/08/04/sdl-painter-proje-altyapisi-devam-faz-0-ci-cd/)
+[Kütüphane Dokümantasyon Mekanizması](https://yazilimperver.net/index.php/2026/07/06/sdl-painter-dokumantasyon/)
+[Proje Altyapısı](https://yazilimperver.net/index.php/2026/07/03/sdl-painter-proje-altyapisi-faz-0/)
+[Proje Duyurusu](https://yazilimperver.net/index.php/2026/05/18/duyuru-sdl-painter/)
+
 ## Kurulum
 
 ### CMake — `find_package`
@@ -77,6 +102,7 @@ CMake'i kurulum dizinine `-DCMAKE_PREFIX_PATH=/kurulum/yolu` ile yönlendirin.
 ```cmake
 include(FetchContent)
 
+# Aşağıdaki sürümü güncel sürüm ile değiştirebilirsiniz
 FetchContent_Declare(sdl_painter
     GIT_REPOSITORY https://github.com/yazilimperver/sdl-painter.git
     GIT_TAG        v1.2.0)
@@ -149,21 +175,6 @@ Ayrıntılı anlatım: [Hızlı Başlangıç Rehberi](doc/hizli-baslangic.md).
 Her biri tek bir yeteneği izole eden çalışan demolar:
 [Örnekler Rehberi](doc/sdl-painter-ornekler.md).
 
-## Özellikler
-
-| Alan | Desteklenen |
-|------|-------------|
-| **Primitifler** | Çizgi, dikdörtgen, yuvarlatılmış dikdörtgen, daire, elips, yay, dilim, kiriş, çokgen, polyline — hepsi stroke + fill |
-| **Stiller** | Pen (renk, kalınlık, outline, kesik deseni, uç ve birleşim stili), Brush (düz dolgu veya iki uçlu doğrusal/ışınsal gradient), global opacity, karıştırma modları |
-| **Yol (Path)** | Doğru parçaları ve quadratic/cubic Bézier'lerden oluşan `Path`; kalemin tüm stilleriyle çizilir veya alt yol başına doldurulur (even-odd/nonzero kuralı yok, dolayısıyla delik yok) |
-| **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` yığını |
-| **Clipping** | Scissor tabanlı dikdörtgen kırpma |
-| **Çizim hedefi** | Ekran yerine dokuya çizim — mini harita, son işlem efektleri, iz efekti — ve pikselleri geri okuma |
-| **Kenar yumuşatma** | 4× MSAA, **yalnızca OpenGL** ve yalnızca `Application` üzerinden (bir GL pencere özniteliği). Vulkan backend'i ve tüm çizim hedefleri tek örneklemli. |
-| **Viewport** | Alt dikdörtgene yerel koordinatlarla çizim — bölünmüş ekran, mini harita |
-| **Image** | PNG / JPG yükleme (stb_image), kaynak→hedef ölçekleme, atlas dilimleme, tint, aynalama, nearest/linear filtre, yerinde doku güncelleme, serbest dokulu ızgara |
-| **Metin** | SDL_ttf 3.x, glyph cache, left/center/right hizalama, çok satırlı ve sözcük kaydırmalı |
-| **Backend** | OpenGL 3.3 Core ve Vulkan 1.1 — `IRenderer` ile değiştirilebilir |
 
 ## SDLPainter size uygun mu?
 
