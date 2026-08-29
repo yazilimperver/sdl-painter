@@ -43,14 +43,8 @@ bool OpenGLRenderer::Initialize(SDL_Window* window) {
     return false;
   }
 
-  // Baslangic karistirma durumu SetBlendMode uzerinden kurulur. Eskiden burada
-  // ayri bir glBlendFunc cagrisi vardi; SetBlendMode duzeltilince o satir
-  // sessizce eskidi ve mod hic degistirilmeyen sahnelerde ESKI faktorler
-  // yururlukte kaldi. Tek kaynak: SetBlendMode.
   SetBlendMode(BlendMode::kAlpha);
 
-  // Shader kaynakları binary'ye gömülüdür (bkz. cmake/EmbedShaders.cmake);
-  // çalışma zamanında hiçbir dosya aranmaz.
   if (!mBasicShader.Build(detail::kBasicVert, detail::kBasicFrag)) {
     spdlog::error("[OpenGLRenderer] Failed to build basic shader");
     return false;
@@ -271,13 +265,9 @@ void OpenGLRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
 void OpenGLRenderer::SetBlendMode(BlendMode mode) {
   // Neden glBlendFunc DEGIL de glBlendFuncSeparate:
   //
-  // glBlendFunc alfa kanalina da RENK faktorlerini uygular. Vulkan tarafinda
+  // glBlendFunc alfa kanalina da renk faktorlerini uygular. Vulkan tarafinda
   // ise alfa faktorleri ayri alanlardir (srcAlphaBlendFactor /
-  // dstAlphaBlendFactor) ve orada bilincli olarak farkli degerler secilmisti.
-  // Sonuc: iki backend ayni cizimde ayni RGB'yi ama FARKLI alfayi uretiyordu.
-  //
-  // Ekranda gorunmuyordu — swapchain'in alfasi sunumda yok sayilir. Bir cizim
-  // hedefine cizilince ortaya cikti ve test_backend_parity.cpp yakaladi.
+  // dstAlphaBlendFactor) ve orada bilincli olarak farkli degerler secilir.du.
   //
   // Secilen alfa formulu her iki backend'de de ayni (bkz. vk_blend.h):
   // aOut = aSrc + aDst * (1 - aSrc) — standart "over" bilesimi. Eski GL

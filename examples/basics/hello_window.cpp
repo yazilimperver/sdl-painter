@@ -15,7 +15,6 @@
 #endif
 
 /// @brief Logger'ı renkli çıktı ve özel format ile başlatır.
-///
 /// Windows'ta ANSI escape kodları etkinleştirilir (Windows Terminal,
 /// VS Code ve modern PowerShell destekler).
 /// Format: [SS:DD:SS][Seviye] Mesaj

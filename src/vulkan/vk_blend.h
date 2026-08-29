@@ -3,19 +3,14 @@
 /// @file vk_blend.h
 /// @brief @ref sdl_painter::BlendMode → Vulkan blend attachment eşlemesi.
 ///
-/// OpenGL'de karıştırma modu `glBlendFunc` ile **çalışma zamanında**
-/// değiştirilebilir. Vulkan 1.1'de ise blend, grafik pipeline'ının sabit
-/// durumunun parçasıdır ve dinamik olarak değiştirilemez (bunu mümkün kılan
-/// `VK_EXT_extended_dynamic_state3` çok daha yeni ve isteğe bağlıdır).
+/// OpenGL'de karıştırma modu `glBlendFunc` ile çalışma zamanında
+/// değiştirilebilir. Vulkan 1.1'de ise blend, grafik pipeline'ın ın sabit
+/// durumunun parçasıdır ve dinamik olarak değiştirilemez.
 ///
-/// Bu yüzden Vulkan tarafında mod başına **ayrı bir pipeline** üretilir ve
+/// Bu yüzden Vulkan tarafında mod başına ayrı bir pipeline üretilir ve
 /// çizim anında doğru varyant bağlanır. Pipeline nesneleri küçük olduğundan
 /// dördünü birden başlangıçta yaratmak, çizim sırasında pipeline derlemekten
-/// çok daha iyidir.
-///
-/// Faktörlerin OpenGL karşılıklarıyla birebir aynı olması gerekir; aksi halde
-/// aynı çizim iki backend'de farklı görünür — bu kütüphanenin ilan ettiği
-/// "tek API, iki backend, aynı sonuç" sözleşmesinin ihlali olur.
+/// çok daha iyi.
 
 #include "sdl_painter/renderer.h"
 

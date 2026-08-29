@@ -1,4 +1,4 @@
-/// @brief primitives — OpenGL backend ile tüm temel primitifleri çizer.
+/// @brief primitives — OpenGL backend ile tüm temel primitifleri (bunu hazırladığım zamandaki tabi) çizer.
 ///
 /// Geliştirme Fazı 1 demosu (eski ad: phase1_demo).
 ///
@@ -70,7 +70,7 @@ int main() {
     return 1;
   }
 
-  // Painter'ı ayrı bir scope'a al; SDL_DestroyWindow'dan ÖNCE yok edilmeli.
+  // Painter'ı ayrı bir scope'a alıyoruz; SDL_DestroyWindow'dan önce yok edilmeli.
   // GL context pencereye bağlı — pencere önce silinirse glDelete* 1282 verir.
   {
     sdl_painter::Painter painter(window, sdl_painter::RendererBackend::kOpenGL);
@@ -188,7 +188,7 @@ int main() {
       // Desen yol boyunca sureklidir: kosede sifirlanmaz, bu yuzden bir kesik
       // kosenin uzerinden gecebilir.
       {
-        constexpr float kDashY = 545.0f;
+        constexpr float kDashY = 475.0f;
         sdl_painter::Pen dash(sdl_painter::Color{255, 200, 90, 230}, 3.0f);
 
         dash.SetDashPattern({12.0f, 6.0f});
@@ -228,14 +228,13 @@ int main() {
         painter.SetPen(arc_pen);
         painter.DrawArc(470.0f, kArcY, 55.0f, 55.0f, 200.0f, 250.0f);
 
-        // Kiris: yay + uclarini birlestiren dogru. Dilimden farki merkeze
-        // gitmemesi.
+        // Kiris: yay + uclarini birlestiren dogru. Dilimden farki merkeze gitmemesi.
         painter.SetPen(
             sdl_painter::Pen(sdl_painter::Color{180, 140, 255, 255}, 3.0f));
         painter.SetBrush(
             sdl_painter::Brush(sdl_painter::Color{180, 140, 255, 90}));
-        painter.FillChord(610.0f, kArcY, 60.0f, 45.0f, 20.0f, 200.0f);
-        painter.DrawChord(610.0f, kArcY, 60.0f, 45.0f, 20.0f, 200.0f);
+        painter.FillChord(560.0f, kArcY, 60.0f, 45.0f, 20.0f, 200.0f);
+        painter.DrawChord(560.0f, kArcY, 60.0f, 45.0f, 20.0f, 200.0f);
 
         // Dilim cercevesi: yay + merkeze giden iki yaricap.
         painter.SetPen(
@@ -295,7 +294,7 @@ int main() {
         for (int32_t i = 0; i < 5; ++i) {
           float a = 2.0f * kPi * static_cast<float>(i) / 5.0f - kPi / 2.0f;
           pentagon.push_back(
-              {650.0f + std::cos(a) * 55.0f, 580.0f + std::sin(a) * 55.0f});
+              {700.0f + std::cos(a) * 55.0f, 100.0f + std::sin(a) * 55.0f});
         }
         painter.SetBrush(
             sdl_painter::Brush(sdl_painter::Color{255, 160, 50, 200}));

@@ -6,7 +6,6 @@
 ///   - Translate / Rotate / Scale kombinasyonlari
 ///   - Save / Restore ile ic ice transform stack
 ///   - SetClipRect ile dikdortgen kispi (scissor)
-///   - Pencere yeniden boyutlandirildiginda viewport otomatik guncellenir
 ///
 /// ESC veya pencere kapat cikmak icin.
 

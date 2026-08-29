@@ -44,7 +44,7 @@ class Tessellator {
   /// @brief Yuvarlatılmış dikdörtgenin dış hat noktalarını üret.
   ///
   /// Dört köşe yayı ve onları birleştiren dört doğru parçası. Sonuç
-  /// **konvekstir**, bu yüzden hem @ref TessellateFilledPolygon hem de
+  /// konvekstir, bu yüzden hem @ref TessellateFilledPolygon hem de
   /// @ref TessellateStrokedPolygon ek bir mantık gerektirmeden çalışır.
   ///
   /// Köşe çözünürlüğü @ref AdaptiveSegments ile belirlenir; yarıçap büyüdükçe
@@ -58,7 +58,7 @@ class Tessellator {
 
   // --- Yay (arc) tabanlı şekiller ---
   //
-  // Açı birimi **derece**. 0° = +x ekseni; açı, @ref Painter::Rotate ile aynı
+  // Açı birimi derece. 0° = +x ekseni; açı, @ref Painter::Rotate ile aynı
   // yönde artar (dolayısıyla dolu daire tessellation'ıyla da aynı yönde).
   // Bilinçli olarak Qt'nin 1/16 derece + ters yön sözleşmesi izlenmez;
   // kütüphane içi tutarlılık tercih edildi.
@@ -136,12 +136,12 @@ class Tessellator {
 
   /// @brief Kesikli (dashed) polyline için kalın quad vertex üret.
   ///
-  /// Desen **yol boyunca sürekli** ilerler: bir köşede yarım kalan çizili
+  /// Desen yol boyunca sürekli ilerler: bir köşede yarım kalan çizili
   /// parça sonraki segmentte kaldığı yerden devam eder, yani bir kesik
   /// köşenin üzerinden geçebilir. Böyle bir parça kendi içinde bir polyline
   /// olduğundan köşesine birleşim de uygulanır.
   ///
-  /// Her çizili parça **açık** bir polyline'dır; uç stili her parçanın iki
+  /// Her çizili parça açık bir polyline'dır; uç stili her parçanın iki
   /// ucuna ayrı ayrı uygulanır (kesikli bir çizginin yuvarlak uçlu olması
   /// budur).
   ///
@@ -158,7 +158,7 @@ class Tessellator {
   /// @brief Poligon çerçevesi için kalın quad vertex üret (kapalı polyline).
   ///
   /// @ref TessellateThickPolyline ile aynı birleşim davranışı; kapalı olduğu
-  /// için **tüm** köşelere birleşim uygulanır ve uç stili anlamsızdır.
+  /// için tüm köşelere birleşim uygulanır ve uç stili anlamsızdır.
   static std::vector<Vertex> TessellateStrokedPolygon(
       const std::vector<Point>& points, float line_width,
       LineJoin join = LineJoin::kRound);
@@ -207,7 +207,7 @@ class Tessellator {
 
   /// @brief Köşeye miter veya bevel birleşim ekle.
   ///
-  /// Boşluk yalnızca dönüşün **dış** tarafındadır; iç taraf zaten iki quad'ın
+  /// Boşluk yalnızca dönüşün dış tarafındadır; iç taraf zaten iki quad'ın
   /// üst üste binmesiyle doludur. Bu yüzden dış taraf çapraz çarpımın
   /// işaretinden bulunur ve tek taraf doldurulur.
   ///

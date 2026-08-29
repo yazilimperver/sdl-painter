@@ -2,9 +2,9 @@
 ///
 /// Gösterilen ayrım — bu örneğin varlık sebebi:
 ///
-///   * **Olay** (event): tuşa basıldığı *an* bir kez gelir. Menü seçimi,
+///   * Olay (event): tuşa basıldığı an bir kez gelir. Menü seçimi,
 ///     zıplama, ateş etme gibi tek atımlık eylemler içindir.
-///   * **Durum** (state): tuş o karede basılı *mı*. Sürekli hareket içindir.
+///   * Durum (state): tuş o karede basılı mı. Sürekli hareket içindir.
 ///
 /// Sürekli hareketi olayla yazmak, işletim sisteminin tuş tekrar gecikmesine
 /// takılır: karakter bir adım atar, kısa bir duraklama olur, sonra akmaya
@@ -133,12 +133,7 @@ class InputDemo : public sp::Application {
     painter.DrawLine(mMouseX, 0.0F, mMouseX, static_cast<float>(Height()));
   }
 
-  // --- OLAY okuma ---
-
   void OnKeyDown(const sp::KeyEvent& event) override {
-    // Tekrar olaylarını durum tablosuna yazmak zararsız ama tek atımlık
-    // eylemlerde AYIKLANMALI: aksi halde tuşu basılı tutmak eylemi
-    // otomatik tekrarlar.
     mKeys.Press(event.key);
 
     if (event.repeat) {

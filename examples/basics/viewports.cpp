@@ -1,19 +1,23 @@
 /// @brief viewports — bölünmüş ekran ve mini harita.
 ///
-/// `SetViewport`, çizimi pencerenin bir alt dikdörtgeniyle sınırlar **ve
-/// koordinatları o alt dikdörtgene yerelleştirir**: viewport ayarlandıktan
-/// sonra `(0, 0)` panelin sol üst köşesidir. Bu sayede dört panelin dördü de
+/// `SetViewport`, çizimi pencerenin bir alt dikdörtgeniyle sınırlar ve
+/// koordinatları o alt dikdörtgene göre yapar: viewport ayarlandıktan
+/// sonra `(0, 0)` bu panelin sol üst köşesidir. Bu sayede dört panelin dördü de
 /// aynı çizim fonksiyonunu, hiçbir ofset hesabı yapmadan çağırabiliyor —
 /// aralarındaki tek fark kamera konumu.
 ///
-/// **Kırpma (`SetClipRect`) ile karıştırılmamalı.** Kırpma koordinat sistemini
+/// Dört kamera dünyanın bitişik dört parçasına bakar: birlikte oyuncunun
+/// çevresindeki kesintisiz 2x2 alanı gösterirler, yani ekran tek bir haritaya
+/// açılan dört pencere gibi okunur. Sınırı geçen bir işaret bir panelde
+/// kesilir, komşusunda devam eder.
+///
+/// Kırpma (`SetClipRect`) ile karıştırılmamalı. Kırpma koordinat sistemini
 /// değiştirmeden pikselleri maskeler; viewport koordinat sisteminin kendisini
 /// yeniden tanımlar. İkisi birlikte de çalışır: kırpma dikdörtgeni
 /// viewport-yerel verilir (sağ alt panelde gösteriliyor).
 ///
 /// Viewport bir GPU durumudur: her değişim biriken çizimleri flush eder, yani
-/// panel sayısı kadar draw call taban maliyeti vardır. F1 katmanındaki sayaçta
-/// görünür — bölünmüş ekranın bedeli budur ve gizlenmemeli.
+/// panel sayısı kadar draw call maliyeti olur.
 ///
 /// Kontroller:
 ///   WASD / oklar — paylaşılan dünyada gez
@@ -40,11 +44,6 @@ namespace {
 constexpr float kWorldSize = 1600.0F;
 constexpr float kSpeed = 420.0F;
 constexpr int32_t kLandmarks = 40;
-
-/// @brief Panel başına kamera ofseti — dördü dünyanın farklı yerine bakar.
-const std::array<sp::Point, 4> kCameraOffsets = {
-    sp::Point{0.0F, 0.0F}, sp::Point{420.0F, 0.0F}, sp::Point{0.0F, 380.0F},
-    sp::Point{420.0F, 380.0F}};
 
 const std::array<const char*, 4> kPanelNames = {
     "kamera 1", "kamera 2", "kamera 3", "kamera 4 (kirpmali)"};
@@ -115,9 +114,16 @@ class ViewportsDemo : public sp::Application {
                                      static_cast<float>(half_h) - 80.0F});
       }
 
+      // Kamera ofseti panel boyutundan turetilir: dort panel dunyanin bitisik
+      // 2x2 parcasini gosterir, bulusma noktalari da oyuncudur. Sabit bir ofset
+      // yazilsaydi binisme/bosluk pencere boyutuna gore degisirdi.
+      const sp::Point camera_offset{
+          static_cast<float>(half_w) * (i % 2 == 0 ? -0.5F : 0.5F),
+          static_cast<float>(half_h) * (i < 2 ? -0.5F : 0.5F)};
+
       DrawWorldPanel(painter, static_cast<float>(half_w),
-                     static_cast<float>(half_h), kCameraOffsets[i],
-                     kPanelTints[i], kPanelNames[i]);
+                     static_cast<float>(half_h), camera_offset, kPanelTints[i],
+                     kPanelNames[i]);
 
       if (clip_this_panel) {
         painter.ClearClip();
@@ -186,7 +192,7 @@ class ViewportsDemo : public sp::Application {
 
   /// @brief Paylaşılan dünyayı bir panele çiz.
   ///
-  /// Fonksiyon panelin nerede olduğunu **bilmiyor**: koordinatlar zaten
+  /// Fonksiyon panelin nerede olduğunu bilmiyor: koordinatlar zaten
   /// viewport-yereldir. Viewport olmasaydı her çizime panel ofseti eklemek
   /// ya da transform yığınını kirletmek gerekirdi.
   void DrawWorldPanel(sp::Painter& painter, float pw, float ph,
@@ -208,10 +214,12 @@ class ViewportsDemo : public sp::Application {
 
     // Dünya işaretleri — deterministik yerleşim.
     painter.SetPen(sp::Pen::NoPen());
+    // Dunya her panelde ayni gorunur: isaretler panel rengiyle boyanmaz, yoksa
+    // sinirin iki yanindaki ayni dikdortgen iki ayri nesne gibi okunurdu.
+    painter.SetBrush(sp::Brush(sp::Color{72, 98, 142, 170}));
     for (int32_t i = 0; i < kLandmarks; ++i) {
       const float fx = std::fmod(static_cast<float>(i) * 173.0F, kWorldSize);
       const float fy = std::fmod(static_cast<float>(i) * 271.0F, kWorldSize);
-      painter.SetBrush(sp::Brush(sp::Color{tint.r, tint.g, tint.b, 90}));
       painter.FillRoundedRect(fx, fy, 70.0F, 46.0F, 10.0F);
     }
 
