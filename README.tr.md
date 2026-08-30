@@ -87,6 +87,33 @@ Aşağıdaki bağlantıda [Yazilimperver](www.yazilimperver.net) sayfamda, bu k�
 
 - [SDLPainter - Proje Duyurusu](https://yazilimperver.net/index.php/2026/05/18/duyuru-sdl-painter/)
 
+- [SDL3 ve Conan](https://yazilimperver.net/index.php/2026/03/28/arac-sdl3-ve-conan/)
+
+- [SDL3 CI/CD](https://yazilimperver.net/index.php/2025/08/23/arac-sdl3-ci-cd/)
+
+- [SDL3 Birim Testler – II](https://yazilimperver.net/index.php/2025/07/27/arac-sdl3-birim-testler-ii/)
+
+- [SDL3 Birim Testler](https://yazilimperver.net/index.php/2025/07/13/arac-sdl3-birim-testler/)
+
+- [SDL3 İlk Adımlar – II](https://yazilimperver.net/index.php/2025/06/24/arac-sdl3-ilk-adimlar-ii/)
+
+- [SDL3 İlk Adımlar – I](https://yazilimperver.net/index.php/2025/06/09/arac-sdl3-ilk-adimlar-i/)
+
+- [Hello SDL3](https://yazilimperver.net/index.php/2025/05/25/arac-merhaba-sdl3/)
+
+Aşağıdaki yazılar ise SDL2 ile olan yazılar:
+
+- [Android – SDL 2.0.8 Güncellemesi](https://yazilimperver.net/index.php/2018/09/13/android-sdk-2-0-8-guncellemesi/)
+
+- [VS 2017 ile C/C++ Kütüphanelerin (SDL) Android için Oluşturulması](https://yazilimperver.net/index.php/2018/01/06/visual-studio-2017-ile-ucuncu-parti-cc-kutuphanelerin-sdl-android-icin-olusturulmasi/)
+
+- [uEngine4 Serüveni – Giriş (Painter Sınıfları)](https://yazilimperver.net/index.php/2023/06/07/uengine4-seruveni-giris-painter-siniflari/)
+
+- [uEngine4 Serüveni – BasicGLPainter – I](https://yazilimperver.net/index.php/2023/09/10/uengine4-seruveni-basicglpainter-i/)
+
+- [uEngine4 Serüveni – BasicGLPainter – II](https://yazilimperver.net/index.php/2023/10/15/uengine4-seruveni-basicglpainter-ii/)
+
+
 ## Kurulum
 
 ### CMake — `find_package`

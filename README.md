@@ -73,7 +73,7 @@ can think in **shapes** instead of vertices.
 
 ## Blog Post
 
-You can find my blog posts about this library on [my page](www.yazilimperver.net) (and much more) at the following links:
+You can find my blog posts about this library, SDL3 and much more on [my page](www.yazilimperver.net) at the following links:
 
 - [SDLPainter - Core Primitives and Capabilities](https://yazilimperver.net/index.php/2026/08/29/sdl-painter-temel-sekiller-ve-kabiliyetler-faz-1/)
 
@@ -84,6 +84,32 @@ You can find my blog posts about this library on [my page](www.yazilimperver.net
 - [SDLPainter - Project Infrastructure](https://yazilimperver.net/index.php/2026/07/03/sdl-painter-proje-altyapisi-faz-0/)
 
 - [SDLPainter - First Post](https://yazilimperver.net/index.php/2026/05/18/duyuru-sdl-painter/)
+
+- [SDL3 ve Conan](https://yazilimperver.net/index.php/2026/03/28/arac-sdl3-ve-conan/)
+
+- [SDL3 CI/CD](https://yazilimperver.net/index.php/2025/08/23/arac-sdl3-ci-cd/)
+
+- [SDL3 Birim Testler – II](https://yazilimperver.net/index.php/2025/07/27/arac-sdl3-birim-testler-ii/)
+
+- [SDL3 Birim Testler](https://yazilimperver.net/index.php/2025/07/13/arac-sdl3-birim-testler/)
+
+- [SDL3 İlk Adımlar – II](https://yazilimperver.net/index.php/2025/06/24/arac-sdl3-ilk-adimlar-ii/)
+
+- [SDL3 İlk Adımlar – I](https://yazilimperver.net/index.php/2025/06/09/arac-sdl3-ilk-adimlar-i/)
+
+- [Merhaba SDL3](https://yazilimperver.net/index.php/2025/05/25/arac-merhaba-sdl3/)
+
+Followings are about SDL2:
+
+- [Android – SDL 2.0.8 Güncellemesi](https://yazilimperver.net/index.php/2018/09/13/android-sdk-2-0-8-guncellemesi/)
+
+- [VS 2017 ile C/C++ Kütüphanelerin (SDL) Android için Oluşturulması](https://yazilimperver.net/index.php/2018/01/06/visual-studio-2017-ile-ucuncu-parti-cc-kutuphanelerin-sdl-android-icin-olusturulmasi/)
+
+- [uEngine4 Serüveni – Giriş (Painter Sınıfları)](https://yazilimperver.net/index.php/2023/06/07/uengine4-seruveni-giris-painter-siniflari/)
+
+- [uEngine4 Serüveni – BasicGLPainter – I](https://yazilimperver.net/index.php/2023/09/10/uengine4-seruveni-basicglpainter-i/)
+
+- [uEngine4 Serüveni – BasicGLPainter – II](https://yazilimperver.net/index.php/2023/10/15/uengine4-seruveni-basicglpainter-ii/)
 
 ## Installation
 
