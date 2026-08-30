@@ -73,12 +73,17 @@ can think in **shapes** instead of vertices.
 
 ## Blog Post
 
-You can find my blog posts about this library on my page at the following links:
+You can find my blog posts about this library on [my page](www.yazilimperver.net) (and much more) at the following links:
 
-[Project CI/CD Infrastructure](https://yazilimperver.net/index.php/2026/08/04/sdl-painter-proje-altyapisi-devam-faz-0-ci-cd/)
-[Library Documentation](https://yazilimperver.net/index.php/2026/07/06/sdl-painter-dokumantasyon/)
-[Project Infrastructure](https://yazilimperver.net/index.php/2026/07/03/sdl-painter-proje-altyapisi-faz-0/)
-[First Post](https://yazilimperver.net/index.php/2026/05/18/duyuru-sdl-painter/)
+- [SDLPainter - Core Primitives and Capabilities](https://yazilimperver.net/index.php/2026/08/29/sdl-painter-temel-sekiller-ve-kabiliyetler-faz-1/)
+
+- [SDLPainter - Project CI/CD Infrastructure](https://yazilimperver.net/index.php/2026/08/04/sdl-painter-proje-altyapisi-devam-faz-0-ci-cd/)
+
+- [SDLPainter - Library Documentation](https://yazilimperver.net/index.php/2026/07/06/sdl-painter-dokumantasyon/)
+
+- [SDLPainter - Project Infrastructure](https://yazilimperver.net/index.php/2026/07/03/sdl-painter-proje-altyapisi-faz-0/)
+
+- [SDLPainter - First Post](https://yazilimperver.net/index.php/2026/05/18/duyuru-sdl-painter/)
 
 ## Installation
 

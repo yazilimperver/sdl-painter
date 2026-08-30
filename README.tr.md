@@ -75,12 +75,17 @@ böylece vertex yerine **şekil** düşünebilirsiniz.
 
 ## Blog Post
 
-Aşağıdaki bağlantıda www.yazilimperver.net sayfamda, bu kütüphane ile ilgili yayınlamış olduğum yazıları bulabilirsiniz:
+Aşağıdaki bağlantıda [Yazilimperver](www.yazilimperver.net) sayfamda, bu kütüphane ile ilgili yayınlamış olduğum yazıları bulabilirsiniz:
 
-[Proje CI/CD Altyapıs](https://yazilimperver.net/index.php/2026/08/04/sdl-painter-proje-altyapisi-devam-faz-0-ci-cd/)
-[Kütüphane Dokümantasyon Mekanizması](https://yazilimperver.net/index.php/2026/07/06/sdl-painter-dokumantasyon/)
-[Proje Altyapısı](https://yazilimperver.net/index.php/2026/07/03/sdl-painter-proje-altyapisi-faz-0/)
-[Proje Duyurusu](https://yazilimperver.net/index.php/2026/05/18/duyuru-sdl-painter/)
+- [SDLPainter - Core Primitives and Capabilities](https://yazilimperver.net/index.php/2026/08/29/sdl-painter-temel-sekiller-ve-kabiliyetler-faz-1/)
+
+- [SDLPainter - Proje CI/CD Altyapıs](https://yazilimperver.net/index.php/2026/08/04/sdl-painter-proje-altyapisi-devam-faz-0-ci-cd/)
+
+- [SDLPainter - Kütüphane Dokümantasyon Mekanizması](https://yazilimperver.net/index.php/2026/07/06/sdl-painter-dokumantasyon/)
+
+- [SDLPainter - Proje Altyapısı](https://yazilimperver.net/index.php/2026/07/03/sdl-painter-proje-altyapisi-faz-0/)
+
+- [SDLPainter - Proje Duyurusu](https://yazilimperver.net/index.php/2026/05/18/duyuru-sdl-painter/)
 
 ## Kurulum
 
