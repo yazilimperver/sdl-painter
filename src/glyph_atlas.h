@@ -15,7 +15,7 @@ namespace sdl_painter {
 /// karakterde flush'a zorluyor ve `DrawText("Merhaba")` yedi ayrı draw call
 /// üretiyordu. Aynı sayfaya paketlenen glyph'ler tek çağrıda çizilir.
 ///
-/// **Paketleme:** basit *shelf* (raf) algoritması. Glyph'ler soldan sağa
+/// Paketleme: Basitçe paketleme yapıyoruz. Glyph'ler soldan sağa
 /// yerleştirilir; satır dolunca bir alt rafa geçilir. Serbest bırakma yoktur —
 /// bir bölge yazıldıktan sonra asla değişmez. Bu değişmezlik önemlidir:
 /// @ref IRenderer::UpdateTexture kare ortasında çağrılabildiği için, aynı

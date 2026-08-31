@@ -1,11 +1,8 @@
 
 """SDLPainter'ın repo içi Conan recipe'ı.
 
-NOT: Bu dosya Conan Center'a gönderilecek recipe DEĞİLDİR. CCI recipe'i
-`conan-io/conan-center-index` deposunda `recipes/sdl_painter/all/` altında
-yaşar, kaynağı `conandata.yml` üzerinden tarball'dan indirir ve
-`build_examples`/`build_tests` gibi seçenekleri barındıramaz.
-Bu dosya geliştiricinin bağımlılıkları çekmesi ve yerel `conan create`  denemesi içindir (bkz. roadmap/03-conan-center-plani.md).
+NOT: Bu dosya Conan Center'a gönderilecek recipe değil. 
+Bu dosya, bağımlılıkları çekmek ve yerel `conan create` ile kullanmak içindir (bkz. roadmap/03-conan-center-plani.md).
 """
 
 from conan import ConanFile
@@ -75,8 +72,7 @@ class SDLPainterConan(ConanFile):
             parts.append(match.group(1))
         version = ".".join(parts)
 
-        # kVersionString ile sayisal sabitler ayrisamaz — CMake de ayni kontrolu
-        # yapiyor, ama conan create CMake'ten once set_version cagiriyor.
+        # Heryerde tek bir surum kullanacagiz
         match = re.search(
             r"constexpr\s+std::string_view\s+kVersionString\s*=\s*\"([^\"]+)\"",
             header)
@@ -120,7 +116,7 @@ class SDLPainterConan(ConanFile):
             # Windows'ta USE_MASM=True'yu hardcoded set ediyor ve kapatan bir
             # option sunmuyor. MinGW gcc, asm_offset.c'ye MSVC assembler
             # flag'leri (/Fa /FA /Od) geçirilince derleme patlıyor. Bu yüzden
-            # MinGW hedefinde Vulkan'ı otomatik kapat. Windows'ta Vulkan için
+            # MinGW hedefinde Vulkan'ı otomatik kapatıyoruz. Windows'ta Vulkan için
             # native MSVC build (windows-release preset) kullanılmalı —
             # MSVC'de USE_MASM sorunsuz çalışır.
             if self.settings.compiler == "gcc" and self.options.with_vulkan:
@@ -131,6 +127,7 @@ class SDLPainterConan(ConanFile):
                 self.options.with_vulkan = False
 
             # SDL ve SDL3_ttf shared olmak zorunda (recipe validation aynı shared değeri gerektiriyor).
+            # Bunlar ileride conan-center'a kütüphaneyi taşıdığımızda işimize yarayacak.
             self.options["sdl"].shared = True
             self.options["sdl_ttf"].shared = True
             # SDL3_ttf'nin transitive bağımlılıkları MinGW cross-compile'da
@@ -175,16 +172,16 @@ class SDLPainterConan(ConanFile):
         deps = CMakeDeps(self)
         deps.generate()
         tc = CMakeToolchain(self)
-        # Conan'ın ürettiği CMakeUserPresets.json'ı devre dışı bırak.
+        # Conan'ın ürettiği CMakeUserPresets.json'ı devre dışı bırakıyoruz.
         # Conan preset adını yalnızca build_type'tan türetiyor (conan-debug /
         # conan-release); --output-folder ve hedef platform adı etkilemiyor.
-        # Bu yüzden aynı ağaçta İKİ Debug install'ı yapmak yeterli:
+        # Bu yüzden aynı repoda hem linux hem de windows debug install'ı yapmak yeterli:
         # windows-debug + linux-debug (Docker/WSL) ya da sadece Linux'ta
         # linux-debug + linux-debug-asan. Her iki fragment de "conan-debug"
-        # tanımlayınca CMake "Duplicate preset" hatasıyla HİÇBİR preset'i
-        # yükleyemiyor — mevcut windows-debug preset'i bile kırılıyor.
+        # tanımlayınca CMake "Duplicate preset" hatasıyla hiçbir preset'i
+        # yükleyemiyorduk :(.
         # Projenin kendi CMakePresets.json'ı toolchain dosyasının yolunu
-        # zaten açıkça veriyor, bu yüzden bu dosyaya ihtiyaç yok.
+        # zaten açıkça veriyor, bu yüzden bu dosyaya artık ihtiyaç yok.
         tc.user_presets_path = False
         tc.variables["SDLPAINTER_WITH_VULKAN"] = self.options.with_vulkan
         tc.variables["SDLPAINTER_BUILD_EXAMPLES"] = self.options.build_examples
