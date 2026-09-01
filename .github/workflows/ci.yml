@@ -670,7 +670,7 @@ jobs:
       # hicbir kosulda 404 olmamali, yoksa README'de kirik gorsel cikar.
       - name: Kapsama raporunu ekle (varsa)
         continue-on-error: true
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: coverage-report
           path: public/coverage
