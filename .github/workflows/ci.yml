@@ -36,7 +36,7 @@ jobs:
         run: |
           cmake --preset linux-debug
           cmake --build --preset linux-debug
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux-debug
           path: |
@@ -70,7 +70,7 @@ jobs:
         run: |
           cmake --preset linux-release
           cmake --build --preset linux-release
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: linux-release
           path: |
@@ -393,7 +393,7 @@ jobs:
           printf '{"schemaVersion":1,"label":"coverage","message":"%s%%","color":"%s"}' "$PCT" "$COLOR" > coverage/badge.json
           echo >> coverage/badge.json
           cat coverage/badge.json
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: coverage-report
           path: coverage/
