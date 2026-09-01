@@ -7,11 +7,11 @@
 ///
 /// İşleyiş: ızgara köşeleri her karede sinüsle deforme edilir, doku
 /// koordinatları ızgara konumundan düzgün türetilir. Yani deformasyon yalnızca
-/// **konumda**; doku hücrelere eşit dağılır ve gerilir.
+/// konumda; doku hücrelere eşit dağılır ve gerilir.
 ///
 /// Izgara çözünürlüğünün ne kadar önemli olduğu 1/2/3 tuşlarıyla görülür:
 /// az hücrede dalga köşeli görünür, çok hücrede yumuşar. Doku enterpolasyonu
-/// hücre içinde **doğrusaldır**, yani eğrilik ancak köşe sayısı kadar
+/// hücre içinde doğrusaldır, yani eğrilik ancak köşe sayısı kadar
 /// hassastır — gradient'teki takasın aynısı.
 ///
 /// Kontroller:

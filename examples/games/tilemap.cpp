@@ -2,11 +2,11 @@
 ///
 /// İki şeyi birlikte kanıtlar:
 ///
-///   1. **Draw call sayısı harita boyutundan bağımsızdır.** Karolar tek bir
+///   1. Draw call sayısı harita boyutundan bağımsızdır. Karolar tek bir
 ///      dokudan geldiği için hepsi aynı batch'e girer; 512x512'lik bir harita
 ///      da 64x64'lük bir harita da aynı sayıda draw call üretir.
 ///
-///   2. **Vertex sayısı ekran boyutundan bağımsızdır.** Görünür alan elemesi
+///   2. Vertex sayısı ekran boyutundan bağımsızdır. Görünür alan elemesi
 ///      (culling) olmadan her karede tüm harita tessellate edilirdi. C tuşuyla
 ///      elemeyi kapat ve F1 katmanındaki vertex/CPU sayaçlarına bak: fark
 ///      1000 katın üzerinde.

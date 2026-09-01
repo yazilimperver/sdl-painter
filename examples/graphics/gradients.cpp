@@ -1,15 +1,15 @@
 /// @brief gradients — shader'sız gradient ve sınırının dürüst gösterimi.
 ///
-/// SDLPainter'da gradient bir shader özelliği **değil**: vertex'ler zaten renk
+/// SDLPainter'da gradient bir shader özelliği değil: vertex'ler zaten renk
 /// taşıyor (batch'leme bunun için yapıldı), bu yüzden geçiş tessellation
 /// sırasında köşe renkleri hesaplanarak üretiliyor ve enterpolasyonu donanım
 /// yapıyor. İki sonucu var:
 ///
-///   * **Batch kırılmıyor.** Sahnedeki bütün gradientli şekiller, düz renkli
+///   * Batch kırılmıyor. Sahnedeki bütün gradientli şekiller, düz renkli
 ///     olanlarla birlikte tek draw call'a giriyor — F1 katmanındaki sayaç bunu
 ///     gösteriyor. Gradient shader uniform'u olsaydı her renk rampası bir
 ///     flush demek olurdu.
-///   * **Geçiş, şeklin köşe yoğunluğu kadar hassas.** Dikdörtgende doğrusal
+///   * Geçiş, şeklin köşe yoğunluğu kadar hassas. Dikdörtgende doğrusal
 ///     geçiş kusursuzdur (tam da donanımın enterpole ettiği şey). Işınsal
 ///     geçişte ise yarıçapa göre uyarlanan segment sayısı belirleyicidir;
 ///     G tuşuyla köşe noktalarını görebilirsin.
@@ -17,7 +17,7 @@
 /// Bu sınır bilinçli bir takas: shader tabanlı gradient daha doğru olurdu ama
 /// backend'e dokunmayı ve batch'i kırmayı gerektirirdi.
 ///
-/// Gradient koordinatları **çizim koordinatlarıyla aynı uzayda**, yani
+/// Gradient koordinatları çizim koordinatlarıyla aynı uzayda, yani
 /// transform yığınından etkilenir — sağ alttaki dönen kare bunu gösteriyor.
 ///
 /// Kontroller:

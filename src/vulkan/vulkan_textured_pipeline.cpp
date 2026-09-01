@@ -17,9 +17,7 @@ VulkanTexturedPipeline::~VulkanTexturedPipeline() {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Yardımcı: gömülü SPIR-V'den shader modülü oluştur
-// ---------------------------------------------------------------------------
 VkShaderModule VulkanTexturedPipeline::CreateShaderModule(
     VkDevice device, const uint32_t* code, std::size_t byte_size) {
   VkShaderModuleCreateInfo ci{};
@@ -32,9 +30,7 @@ VkShaderModule VulkanTexturedPipeline::CreateShaderModule(
   return mod;
 }
 
-// ---------------------------------------------------------------------------
 // Init
-// ---------------------------------------------------------------------------
 bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass) {
   // --- Descriptor set layout: set=0, binding=0 → combined image sampler ---
   VkDescriptorSetLayoutBinding sampler_binding{};
@@ -265,9 +261,7 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass) {
   return true;
 }
 
-// ---------------------------------------------------------------------------
 // Descriptor set tahsis/iade
-// ---------------------------------------------------------------------------
 VkDescriptorSet VulkanTexturedPipeline::AllocateDescriptorSet(VkDevice device) {
   VkDescriptorSetAllocateInfo alloc_info{};
   alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -290,9 +284,7 @@ void VulkanTexturedPipeline::FreeDescriptorSet(VkDevice device,
   }
 }
 
-// ---------------------------------------------------------------------------
 // Destroy
-// ---------------------------------------------------------------------------
 void VulkanTexturedPipeline::Destroy(VkDevice device) {
   VkDevice d = (mDevice != VK_NULL_HANDLE) ? mDevice : device;
   if (d == VK_NULL_HANDLE) {

@@ -154,56 +154,41 @@ int main() {
     painter.Begin();
     painter.Clear(kBg);
 
-    // -----------------------------------------------------------------------
-    // 1. SOL SÜTUN — Dolu şekiller (FillRect, FillCircle, FillEllipse)
-    // -----------------------------------------------------------------------
-
-    // FillRect — kırmızı
+    // 1. Sol sütun — dolu şekiller: Brush kullanılır, Pen yok sayılır.
     painter.SetBrush(sdl_painter::Brush(kRed));
     painter.SetPen(sdl_painter::Pen(kRed, 0.0f));
     painter.FillRect(20.0f, 20.0f, 120.0f, 80.0f);
 
-    // FillCircle — yeşil
     painter.SetBrush(sdl_painter::Brush(kGreen));
     painter.SetPen(sdl_painter::Pen(kGreen, 0.0f));
     painter.FillCircle(80.0f, 200.0f, 55.0f);
 
-    // FillEllipse — mavi
     painter.SetBrush(sdl_painter::Brush(kBlue));
     painter.SetPen(sdl_painter::Pen(kBlue, 0.0f));
     painter.FillEllipse(80.0f, 340.0f, 70.0f, 40.0f);
 
-    // FillPolygon — altıgen, sarı
+    // Konveks poligon: triangle fan yeter, ear clipping'e gerek yok.
     painter.SetBrush(sdl_painter::Brush(kYellow));
     painter.SetPen(sdl_painter::Pen(kYellow, 0.0f));
     painter.FillPolygon(RegularPolygon(80.0f, 470.0f, 55.0f, 6, 30.0f));
 
-    // -----------------------------------------------------------------------
-    // 2. ORTA SÜTUN — Çerçeveli şekiller (DrawRect, DrawCircle, DrawEllipse)
-    // -----------------------------------------------------------------------
-
-    // DrawRect — teal çerçeve, kalın
+    // 2. Orta sütun — çerçeveli şekiller: kalınlık geometry-based quad
+    //    ile üretilir, iki backend'de de aynı görüntüyü vermeli.
     painter.SetPen(sdl_painter::Pen(kTeal, 3.0f));
     painter.SetBrush(sdl_painter::Brush({0, 0, 0, 0}));
     painter.DrawRect(210.0f, 20.0f, 120.0f, 80.0f);
 
-    // DrawCircle — mauve çerçeve
     painter.SetPen(sdl_painter::Pen(kMauve, 2.5f));
     painter.DrawCircle(270.0f, 200.0f, 55.0f);
 
-    // DrawEllipse — sarı çerçeve
     painter.SetPen(sdl_painter::Pen(kYellow, 2.0f));
     painter.DrawEllipse(270.0f, 340.0f, 70.0f, 40.0f);
 
-    // DrawPolygon — sekizgen, beyaz çerçeve
     painter.SetPen(sdl_painter::Pen(kWhite, 2.0f));
     painter.DrawPolygon(RegularPolygon(270.0f, 470.0f, 55.0f, 8));
 
-    // -----------------------------------------------------------------------
-    // 3. TRANSFORM + ANİMASYON — dönen şekiller (orta sağ)
-    // -----------------------------------------------------------------------
-
-    // Dönen kırmızı dikdörtgen
+    // 3. Transform yığını: dönüşüm CPU'da vertex'lere uygulanır, yani
+    //    backend'den bağımsızdır — Vulkan tarafında da aynı sonuç.
     painter.Save();
     painter.Translate(450.0f, 100.0f);
     painter.Rotate(angle);
@@ -212,7 +197,6 @@ int main() {
     painter.FillRect(-55.0f, -35.0f, 110.0f, 70.0f);
     painter.Restore();
 
-    // Dönen beşgen (ters yön)
     painter.Save();
     painter.Translate(450.0f, 260.0f);
     painter.Rotate(-angle * 0.7f);
@@ -221,7 +205,7 @@ int main() {
     painter.FillPolygon(RegularPolygon(0.0f, 0.0f, 55.0f, 5, -90.0f));
     painter.Restore();
 
-    // Scale test — büyüyen/küçülen daire
+    // Scale çizgi kalınlığını da ölçekler.
     const float scale_factor = 0.6f + 0.4f * std::sin(angle * kPi / 180.0f);
     painter.Save();
     painter.Translate(450.0f, 430.0f);
@@ -231,29 +215,22 @@ int main() {
     painter.FillCircle(0.0f, 0.0f, 50.0f);
     painter.Restore();
 
-    // -----------------------------------------------------------------------
-    // 4. TEXTURE — sağ sütun
-    // -----------------------------------------------------------------------
-
-    // Sabit gradyan texture
+    // 4. Doku çizimi: Vulkan tarafında descriptor set / sampler yolu.
     painter.DrawImage(grad_img, sdl_painter::Rect{590.0f, 20.0f, 200.0f, 150.0f});
 
-    // %50 opacity ile texture
+    // Opaklık dokulu çizimde de geçerli.
     painter.SetOpacity(0.5f);
     painter.DrawImage(grad_img, sdl_painter::Rect{590.0f, 190.0f, 200.0f, 150.0f});
     painter.SetOpacity(1.0f);
 
-    // Dönen texture (transform + DrawImage)
     painter.Save();
     painter.Translate(690.0f, 430.0f);
     painter.Rotate(angle * 0.5f);
     painter.DrawImage(grad_img, sdl_painter::Rect{-75.0f, -75.0f, 150.0f, 150.0f});
     painter.Restore();
 
-    // -----------------------------------------------------------------------
-    // 5. OPACITY KORELASYOnu — üst bantda şeffaf katmanlar
-    // -----------------------------------------------------------------------
-
+    // 5. Üst üste binen yarı saydam katmanlar: alfa karıştırma sırası
+    //    iki backend'de aynı olmalı.
     // Yarı saydam peach dikdörtgen (tüm genişliğe yayılmış, alt kısım)
     painter.SetOpacity(0.35f);
     painter.SetBrush(sdl_painter::Brush(kPeach));
@@ -266,11 +243,7 @@ int main() {
     painter.SetPen(sdl_painter::Pen(kSurface, 0.0f));
     painter.FillRect(0.0f, 580.0f, 900.0f, 10.0f);
 
-    // -----------------------------------------------------------------------
-    // 6. ÇİZGİLER — DrawLine + DrawPolyline
-    // -----------------------------------------------------------------------
-
-    // Yatay çizgi (çerçeve test)
+    // 6. Çizgiler: DrawLine tek segment, DrawPolyline köşe birleşimli.
     painter.SetPen(sdl_painter::Pen(kWhite, 1.5f));
     painter.DrawLine(20.0f, 540.0f, 560.0f, 540.0f);
 

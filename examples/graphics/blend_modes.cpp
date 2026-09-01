@@ -1,19 +1,19 @@
 /// @brief blend_modes — karıştırma modları ve bedelleri.
 ///
 /// Dört mod, aynı sahne üzerinde yan yana. Üstteki üç panel her modun ne
-/// yaptığını gösterir; alttaki parçacık alanı **neden** işe yaradığını:
+/// yaptığını gösterir; alttaki parçacık alanı neden işe yaradığını:
 /// toplamalı karıştırmayla üst üste binen kıvılcımlar birbirini söndürmek
 /// yerine parlatır ve alev/ışık hissi ancak böyle doğar.
 ///
 /// Modun bedeli de saklanmıyor. Renk ve tint vertex'te taşındığı için
-/// batch'i kırmaz; **karıştırma modu bir GPU durumudur ve taşınamaz**. Her
+/// batch'i kırmaz; karıştırma modu bir GPU durumudur ve taşınamaz. Her
 /// değişim bir flush demek. SPACE ile "mod başına grupla" ve "şekil başına
 /// değiştir" arasında geçiş yap, F1 katmanındaki draw call sayacına bak:
 /// aynı görüntü, çok farklı maliyet. Doğru kullanım, aynı modu kullanan
 /// çizimleri bir arada tutmaktır.
 ///
 /// Vulkan'da karıştırma pipeline'ın sabit durumudur; mod başına ayrı bir
-/// pipeline varyantı **başlangıçta** üretilir, çizim sırasında derleme olmaz.
+/// pipeline varyantı başlangıçta üretilir, çizim sırasında derleme olmaz.
 /// İki backend aynı faktörleri kullanır, yani aynı görüntüyü verir.
 ///
 /// Kontroller:

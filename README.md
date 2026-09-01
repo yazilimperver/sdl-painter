@@ -202,17 +202,6 @@ Full instructions: [Building from source](doc/building.md).
 Runnable demos, each isolating one capability:
 [examples/README.md](examples/README.md).
 
-
-## Is SDLPainter for you?
-
-**A good fit if** you have an SDL3 application, you want to draw shapes rather
-than assemble triangles, you want a type-safe modern C++ API, or you want the
-Vulkan backend and the ability to plug in your own.
-
-**Look elsewhere if** you need filled paths with holes (even-odd / nonzero fill
-rules), multi-stop or gradient-along-a-path fills, top-quality analytic
-anti-aliasing, or D3D/Metal backends.
-
 ### How it relates to SDL_Renderer
 
 SDL3's `SDL_Renderer` draws arbitrary triangles through `SDL_RenderGeometry`,

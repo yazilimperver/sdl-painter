@@ -141,7 +141,8 @@ const Glyph* Font::GetGlyph(IRenderer& renderer, char32_t codepoint) const {
 
   auto* font = static_cast<TTF_Font*>(mHandle);
 
-  // Karakteri render et (Beyaz renkte)
+  // Beyaz render edilir: renk vertex'te tasindigi icin glyph notr bir
+  // taban olmali, aksi halde Pen rengiyle carpim yanlis sonuc verir.
   SDL_Color white = {255, 255, 255, 255};
   // TTF_RenderGlyph_Blended, karakterin sıkıca kırpılmış (tightly cropped)
   // bir yüzeyini verir.
@@ -150,7 +151,6 @@ const Glyph* Font::GetGlyph(IRenderer& renderer, char32_t codepoint) const {
     return nullptr;
   }
 
-  // RGBA32 formatina donustur
   SDL_Surface* rgba_surface =
       SDL_ConvertSurface(surface, SDL_PIXELFORMAT_RGBA32);
   SDL_DestroySurface(surface);
@@ -158,7 +158,6 @@ const Glyph* Font::GetGlyph(IRenderer& renderer, char32_t codepoint) const {
     return nullptr;
   }
 
-  // Metrikleri al
   int minx = 0;
   int maxx = 0;
   int miny = 0;

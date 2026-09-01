@@ -16,7 +16,7 @@ namespace sdl_painter {
 /// çizimde bir miktar pay bırakır.
 inline constexpr float kDefaultFlatness = 0.25F;
 
-/// @brief Bir @ref Path içindeki tek parça — **düzleştirilmiş** nokta dizisi.
+/// @brief Bir @ref Path içindeki tek parça — düzleştirilmiş nokta dizisi.
 ///
 /// Eğriler @ref Path içine eklenirken kırık çizgiye çevrilir; burada artık
 /// Bézier kontrol noktası yoktur, yalnızca çizilecek noktalar vardır.
@@ -34,7 +34,7 @@ struct SubPath {
 /// @brief Doğru parçaları ve Bézier eğrilerinden oluşan çizim yolu.
 ///
 /// QPainter'daki `QPainterPath` karşılığı. Yol, birbirinden bağımsız
-/// **alt yollardan** (@ref SubPath) oluşur; her @ref MoveTo yeni bir alt yol
+/// alt yollardan (@ref SubPath) oluşur; her @ref MoveTo yeni bir alt yol
 /// başlatır. @ref Painter::DrawPath yolun çerçevesini, @ref Painter::FillPath
 /// dolgusunu çizer.
 ///
@@ -45,13 +45,13 @@ struct SubPath {
 /// ear clipping tessellation'ı olduğu gibi kullanılır) ve aynı yolu birçok
 /// kez çizen kodun düzleştirme bedelini bir kez ödemesini sağlar.
 ///
-/// @warning Bunun bedeli: yol kurulduktan **sonra** @ref Painter::Scale ile
+/// @warning Bunun bedeli: yol kurulduktan sonra @ref Painter::Scale ile
 ///          büyütülürse düzleştirme o ölçeğe göre yapılmadığı için eğride
 ///          köşelenme görünebilir. Büyük ölçekte çizilecek bir yol, daha
 ///          küçük bir @ref Flatness değeriyle kurulmalıdır.
 ///
 /// @par Dolgu ve delikler
-/// @ref Painter::FillPath her alt yolu **bağımsız** olarak doldurur; bir alt
+/// @ref Painter::FillPath her alt yolu bağımsız olarak doldurur; bir alt
 /// yolun diğerinin içinde kalması onu delik yapmaz (even-odd / nonzero dolgu
 /// kuralı uygulanmaz). "O" harfi gibi delikli şekiller bu sürümde doğru
 /// doldurulmaz.
@@ -120,13 +120,13 @@ class SDLPAINTER_API Path {
 
   /// @brief Yürürlükteki alt yolu kapat.
   ///
-  /// Kapanış doğrusu **nokta olarak eklenmez**; parça yalnızca kapalı
+  /// Kapanış doğrusu nokta olarak eklenmez; parça yalnızca kapalı
   /// işaretlenir ve çizim aşamasında son nokta ilkine bağlanır. Böylece
   /// kapanış köşesi de birleşim (join) alır.
   ///
-  /// Kapatmadan sonra imleç alt yolun **başlangıç** noktasına döner
+  /// Kapatmadan sonra imleç alt yolun başlangıç noktasına döner
   /// (QPainter ve SVG davranışı). Sonraki @ref LineTo oradan devam eder ve
-  /// **yeni** bir alt yol başlatır — kapalı bir parçaya ekleme yapılamaz.
+  /// yeni bir alt yol başlatır — kapalı bir parçaya ekleme yapılamaz.
   void Close();
 
   /// @brief Tüm alt yolları sil; tolerans korunur.

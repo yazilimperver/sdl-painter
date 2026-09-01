@@ -180,26 +180,20 @@ int main() {
       painter.Begin();
       painter.Clear(sdl_painter::Color{18, 18, 28, 255});
 
-      // -----------------------------------------------------------------------
       // 1. Büyük başlık — ortada (Vulkan backend üzerinde)
-      // -----------------------------------------------------------------------
       painter.SetFont(font_xl);
       painter.SetPen(sdl_painter::Pen({249, 226, 175, 255}, 0.0f));  // sarı
       painter.DrawText(sdl_painter::Rect{0.0f, 10.0f, 900.0f, 70.0f},
                        "SDLPainter", sdl_painter::Alignment::kCenter);
 
-      // -----------------------------------------------------------------------
       // 2. Alt başlık — sağa hizalı
-      // -----------------------------------------------------------------------
       painter.SetFont(font_md);
       painter.SetPen(sdl_painter::Pen({137, 180, 250, 255}, 0.0f));  // mavi
       painter.DrawText(sdl_painter::Rect{0.0f, 75.0f, 890.0f, 30.0f},
                        "Phase 5e: Vulkan + Metin (UTF-8)",
                        sdl_painter::Alignment::kRight);
 
-      // -----------------------------------------------------------------------
       // 3. Hizalama karşılaştırması — sol / orta / sağ
-      // -----------------------------------------------------------------------
       constexpr float kBoxY   = 120.0f;
       constexpr float kBoxW   = 280.0f;
       constexpr float kBoxH   = 40.0f;
@@ -221,9 +215,7 @@ int main() {
                    "Sağ hizalı metin", sdl_painter::Alignment::kRight,
                    {80, 40, 60, 200}, {255, 200, 220, 255});
 
-      // -----------------------------------------------------------------------
       // 4. Farklı punto boyutları
-      // -----------------------------------------------------------------------
       painter.SetPen(sdl_painter::Pen({220, 220, 220, 255}, 0.0f));
       const float sz_y = 178.0f;
 
@@ -236,9 +228,7 @@ int main() {
       painter.SetFont(font_lg);
       painter.DrawText(20.0f, sz_y + 56.0f, "36pt - Büyük punto");
 
-      // -----------------------------------------------------------------------
       // 5. Renkli metinler
-      // -----------------------------------------------------------------------
       painter.SetFont(font_md);
       const float col_y = 308.0f;
       const sdl_painter::Color kColors[] = {
@@ -257,17 +247,13 @@ int main() {
                          kColorTexts[i]);
       }
 
-      // -----------------------------------------------------------------------
       // 6. UTF-8 / Türkçe karakter testi
-      // -----------------------------------------------------------------------
       painter.SetFont(font_md);
       painter.SetPen(sdl_painter::Pen({148, 226, 213, 255}, 0.0f));  // teal
       painter.DrawText(20.0f, 348.0f,
                        "UTF-8: Ğğ Üü Şş İı Öö Çç — Merhaba Dünya!");
 
-      // -----------------------------------------------------------------------
       // 7. SetOpacity ile yarı saydam metin
-      // -----------------------------------------------------------------------
       painter.SetFont(font_lg);
       painter.SetPen(sdl_painter::Pen({255, 255, 255, 255}, 0.0f));
       const float op_base    = 390.0f;
@@ -280,9 +266,7 @@ int main() {
       }
       painter.SetOpacity(1.0f);
 
-      // -----------------------------------------------------------------------
       // 8. Transform + DrawText — dönen metin
-      // -----------------------------------------------------------------------
       painter.Save();
       painter.Translate(750.0f, 490.0f);
       painter.Rotate(angle);
@@ -294,9 +278,7 @@ int main() {
                        static_cast<float>(-rot_h) * 0.5f, "Dönen metin!");
       painter.Restore();
 
-      // -----------------------------------------------------------------------
       // 9. Alt bilgi şeridi
-      // -----------------------------------------------------------------------
       painter.SetOpacity(0.35f);
       painter.SetBrush(sdl_painter::Brush({49, 50, 68, 255}));
       painter.SetPen(sdl_painter::Pen({49, 50, 68, 255}, 0.0f));

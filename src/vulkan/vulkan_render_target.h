@@ -22,7 +22,7 @@ class VkContext;
 /// devralsaydı içeriği geri okumanın sözleşmesi sürücüye göre değişirdi
 /// (BGRA/RGBA, sRGB/doğrusal). Bedeli, hedeflere çizen pipeline'ların ayrı
 /// bir render pass ile üretilmek zorunda olmasıdır — pipeline yalnızca
-/// **uyumlu** render pass ile kullanılabilir ve uyumluluk attachment
+/// uyumlu render pass ile kullanılabilir ve uyumluluk attachment
 /// formatını kapsar.
 class VulkanRenderTarget {
  public:
@@ -44,7 +44,7 @@ class VulkanRenderTarget {
   /// tanımsız olurdu.
   ///
   /// @param context Vulkan context.
-  /// @param render_pass Hedefe çizim yapacak **offscreen** render pass.
+  /// @param render_pass Hedefe çizim yapacak offscreen render pass.
   /// @param cmd_pool Layout geçişi için kullanılacak command pool.
   /// @param width  Genişlik (piksel, > 0).
   /// @param height Yükseklik (piksel, > 0).
@@ -62,7 +62,7 @@ class VulkanRenderTarget {
 
   /// @brief Hedefin piksellerini ana belleğe oku (sıkı paketli RGBA8).
   ///
-  /// GPU'nun işini bitirmesini **bekler**; kare döngüsünde kullanılmamalıdır.
+  /// GPU'nun işini bitirmesini bekler; kare döngüsünde kullanılmamalıdır.
   /// Satırlar yukarıdan aşağı sıralanır.
   ///
   /// @param byte_capacity `out_rgba`'nın kapasitesi; yetersizse `false`.

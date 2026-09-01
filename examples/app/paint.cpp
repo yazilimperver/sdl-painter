@@ -1,11 +1,11 @@
 /// @brief paint — kütüphanenin adını hak eden demo: gerçek bir çizim programı.
 ///
-/// Bu örnek kütüphaneyi temel işlevler için **kullanmaktadır**.
+/// Bu örnek kütüphaneyi temel işlevler için kullanmaktadır.
 /// Fare ile serbest çizim, fırça boyu, renk paleti, geri al, temizle.
 ///
 /// Çizim modeli — dikkate değer olan kısım:
 ///
-///   Her fırça darbesi bir **nokta listesi** olarak saklanır ve her karede
+///   Her fırça darbesi bir nokta listesi olarak saklanır ve her karede
 ///   `DrawPolyline` ile yeniden çizilir. Ekranın kendisi bir tampon değildir;
 ///   sahne her karede sıfırdan üretilir. Bunun bedeli, her karede tüm
 ///   darbelerin yeniden tessellate edilmesidir — F1 katmanındaki CPU süresi

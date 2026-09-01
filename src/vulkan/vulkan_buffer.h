@@ -54,7 +54,7 @@ class VulkanBuffer {
   /// @param byte_size Veri boyutu (byte).
   /// @param alignment Başlangıç adres hizalaması (genellikle 4).
   /// @param frame_slot Hedef slot (`[0, frame_slot_count)`).
-  /// @param out_offset_bytes [out] Buffer içindeki **mutlak** başlangıç
+  /// @param out_offset_bytes [out] Buffer içindeki mutlak başlangıç
   ///        ofseti (byte) — `vkCmdBindVertexBuffers`'a doğrudan verilebilir.
   /// @return Yazma başarılıysa true.
   bool Write(const void* data, VkDeviceSize byte_size, VkDeviceSize alignment,

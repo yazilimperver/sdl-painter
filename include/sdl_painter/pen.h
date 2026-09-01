@@ -11,7 +11,7 @@ namespace sdl_painter {
 
 /// @brief Açık uçlu çizgilerin uç (cap) stili.
 ///
-/// Yalnızca **açık** geometrinin uçlarına uygulanır: `DrawLine` ve
+/// Yalnızca açık geometrinin uçlarına uygulanır: `DrawLine` ve
 /// `DrawPolyline`. Kapalı şekillerde (dikdörtgen, daire, poligon çerçevesi)
 /// uç yoktur, yalnızca birleşim vardır.
 enum class LineCap : uint8_t {
@@ -112,17 +112,17 @@ class Pen {
 
   /// @brief Kesikli çizgi desenini ayarla.
   ///
-  /// Uzunluklar piksel cinsinden, sırayla **çizili / boş** olarak okunur:
+  /// Uzunluklar piksel cinsinden, sırayla çizili / boş olarak okunur:
   /// `{10, 5}` → 10 piksel çiz, 5 piksel atla, tekrarla.
   ///
-  /// Desen **yol boyunca sürekli** ilerler: bir köşede yarım kalan çizgi
+  /// Desen yol boyunca sürekli ilerler: bir köşede yarım kalan çizgi
   /// parçası, sonraki segmentte kaldığı yerden devam eder.
   ///
   /// Tek sayıda uzunluk verilirse desen SVG'deki gibi iki tur boyunca
   /// kendini tersine çevirerek tamamlar (`{5}` → 5 çiz, 5 atla).
   ///
   /// @param lengths Uzunluklar; en fazla @ref kMaxDashSegments tanesi alınır,
-  ///        fazlası **yok sayılır**. Pozitif olmayan değerler eklenmez.
+  ///        fazlası yok sayılır. Pozitif olmayan değerler eklenmez.
   ///        Boş liste veya toplamı sıfır olan desen, kesiği kapatır.
   void SetDashPattern(std::initializer_list<float> lengths) noexcept {
     mDashCount = 0;

@@ -3,7 +3,7 @@
 /// Gelistirme Fazi 8 demosu (eski ad: phase8_tictactoe).
 ///
 /// app_basics catinin temelini, game_loop sabit adimli oyun dongusunu gosterir.
-/// Bu demo ise catinin **girdi** tarafini ve gercek bir uygulamanin akisini
+/// Bu demo ise catinin girdi tarafini ve gercek bir uygulamanin akisini
 /// gosterir — diger orneklerin hicbirinde bulunmayan yetenekler:
 ///
 ///   - OnMouseButtonDown  → tiklamayi tahta hucresine cevirme (hit testing)

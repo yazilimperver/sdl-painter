@@ -56,7 +56,7 @@ class CountingRenderer final : public sdl_painter::IRenderer {
   [[nodiscard]] const RendererStats& Stats() const noexcept { return mStats; }
   void ResetStats() noexcept { mStats.Reset(); }
 
-  /// @brief Bir sonraki karede, sunumdan (swap) **önce** çağrılacak işlev.
+  /// @brief Bir sonraki karede, sunumdan (swap) önce çağrılacak işlev.
   ///
   /// Ekran görüntüsü almanın doğru anı burasıdır: `Painter::End()` önce
   /// batch'i boşaltır, sonra `EndFrame()` çağırır; asıl `SDL_GL_SwapWindow`

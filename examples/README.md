@@ -156,6 +156,24 @@ final assembly step. Frame 360 is identical to frame 0 because every act is
 fully faded out at its own boundaries — animations inside an act therefore
 don't have to complete a whole number of periods.
 
+### The four acts, standalone
+
+Each act is also available on its own, so a single group of features can be
+watched without waiting for the choreography to come around. These are plain
+`Application` demos: no act transitions, no frame dump, one act on a
+three-second loop. `SPACE` pauses, `F1` cycles the stats overlay, `ESC` quits.
+
+| Demo | Act |
+|---|---|
+| [`shapes_showcase`](showcase/shapes_showcase.cpp) | 01 · Shapes & paths |
+| [`color_showcase`](showcase/color_showcase.cpp) | 02 · Color & blending |
+| [`transform_showcase`](showcase/transform_showcase.cpp) | 03 · Transform & clip |
+| [`images_showcase`](showcase/images_showcase.cpp) | 04 · Images & text |
+
+They are deliberately self-contained — each file carries its own palette and
+card helpers rather than sharing a header with `hero.cpp`, so any one of them
+can be read top to bottom, or copied out as a starting point.
+
 ---
 
 ## Development phases

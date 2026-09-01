@@ -3,12 +3,12 @@
 /// @file example_font.h
 /// @brief Örneklerin metin çizebilmesi için sistemde bir TTF fontu arar.
 ///
-/// Kütüphane font **dosyası paketlemez** — shader'lar binary'ye gömülür
+/// Kütüphane font dosyası paketlemez — shader'lar binary'ye gömülür
 /// (ADR-009) ama font bir kullanıcı varlığıdır: hangi fontun çizileceği
 /// uygulamanın kararıdır, kütüphanenin değil. Örnekler de repoya font
 /// koymamak için sistemdekini arar.
 ///
-/// Font bulunamazsa örnek **metinsiz çalışmaya devam etmelidir**; çağıran
+/// Font bulunamazsa örnek metinsiz çalışmaya devam etmelidir; çağıran
 /// boş string'i bu şekilde ele almalıdır.
 ///
 /// @note `examples/graphics/text.cpp` ve `examples/games/tictactoe.cpp` bu

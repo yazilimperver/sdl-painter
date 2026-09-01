@@ -31,14 +31,14 @@ class Painter;
 /// @endcode
 ///
 /// @par Koordinatlar
-/// Hedef bağlıyken çizim koordinatları **hedefe yereldir**: `(0, 0)` hedefin
+/// Hedef bağlıyken çizim koordinatları hedefe yereldir: `(0, 0)` hedefin
 /// sol üst köşesidir ve projeksiyon hedefin boyutuna göre kurulur. İki
 /// backend'de de aynı: OpenGL'in aşağıdan yukarı framebuffer'ı ile Vulkan'ın
 /// yukarıdan aşağı olanı arasındaki fark kütüphane içinde kapatılır, sonuç
 /// piksel piksel aynıdır.
 ///
 /// @par Piksel formatı
-/// Hedefler daima **doğrusal RGBA8** tutar — ekran yüzeyinin formatı ne olursa
+/// Hedefler daima doğrusal RGBA8 tutar — ekran yüzeyinin formatı ne olursa
 /// olsun. @ref Painter::ReadRenderTarget bu yüzden her platformda aynı baytları
 /// döndürür.
 ///
@@ -46,7 +46,7 @@ class Painter;
 /// @ref Painter yaşıyorken yıkılmalıdır — @ref Image ve @ref Font ile aynı
 /// kural. Painter yok olduktan sonra yıkılırsa sahip pointer dangling olur.
 ///
-/// @warning Bir hedefe çizerken **o hedefin kendi içeriğini örneklemek**
+/// @warning Bir hedefe çizerken o hedefin kendi içeriğini örneklemek
 /// tanımsızdır. Önce @ref Painter::ResetRenderTarget çağırın.
 class SDLPAINTER_API RenderTarget {
  public:

@@ -16,9 +16,7 @@ VulkanTexture::~VulkanTexture() {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Upload — ana giriş noktası
-// ---------------------------------------------------------------------------
 bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
                            const uint8_t* data, int32_t width, int32_t height,
                            int32_t channels, VkDescriptorSet descriptor_set,
@@ -78,10 +76,7 @@ bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
     return false;
   }
 
-  // Bu noktadan itibaren nesne Vulkan kaynagi sahipleniyor. mDevice'i HEMEN
-  // ata ki bundan sonraki her hata yolunda destructor Destroy() cagirsin;
-  // aksi halde (mDevice fonksiyon sonunda atanirsa) CreateSampler veya
-  // sonraki bir adim basarisiz oldugunda image + memory + view sizardi.
+  // Bu noktadan itibaren nesne Vulkan kaynagi sahipleniyor.
   mDevice = device;
 
   // 3. Upload: layout geçişi + copy + son layout
@@ -113,9 +108,7 @@ bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
   return true;
 }
 
-// ---------------------------------------------------------------------------
 // UpdateRegion — var olan image'ın bir dikdörtgenini yeniden yükle
-// ---------------------------------------------------------------------------
 bool VulkanTexture::UpdateRegion(VkContext* context, VkCommandPool cmd_pool,
                                  int32_t x, int32_t y, int32_t width,
                                  int32_t height, const uint8_t* data) {
@@ -160,9 +153,7 @@ bool VulkanTexture::UpdateRegion(VkContext* context, VkCommandPool cmd_pool,
   return kOk;
 }
 
-// ---------------------------------------------------------------------------
 // Staging buffer
-// ---------------------------------------------------------------------------
 bool VulkanTexture::CreateStagingBuffer(VkDevice device,
                                         VkPhysicalDevice phys_device,
                                         const uint8_t* rgba_data,
@@ -224,9 +215,7 @@ bool VulkanTexture::CreateStagingBuffer(VkDevice device,
   return true;
 }
 
-// ---------------------------------------------------------------------------
 // Device-local image
-// ---------------------------------------------------------------------------
 bool VulkanTexture::CreateImage(VkDevice device, VkPhysicalDevice phys_device,
                                 uint32_t width, uint32_t height) {
   VkImageCreateInfo img_ci{};
@@ -234,10 +223,7 @@ bool VulkanTexture::CreateImage(VkDevice device, VkPhysicalDevice phys_device,
   img_ci.imageType = VK_IMAGE_TYPE_2D;
   // DIKKAT: UNORM, SRGB DEGIL. Bir sRGB image'i orneklendiginde GPU
   // dogrusal uzaya cozer; swapchain ise B8G8R8A8_UNORM oldugu icin geri
-  // kodlama YAPILMAZ. Sonuc: ayni PNG Vulkan'da OpenGL'dekinden farkli
-  // (soluk) cikiyordu — GL tarafi GL_RGBA ile hic donusum yapmiyor.
-  // Bunu test_backend_parity.cpp yakaladi; format degistirilirken o
-  // testin hala gectiginden emin olun.
+  // kodlama yapılmaz.
   img_ci.format = VK_FORMAT_R8G8B8A8_UNORM;
   img_ci.extent = {width, height, 1};
   img_ci.mipLevels = 1;
@@ -303,9 +289,6 @@ bool VulkanTexture::CreateImage(VkDevice device, VkPhysicalDevice phys_device,
   return true;
 }
 
-// ---------------------------------------------------------------------------
-// Sampler
-// ---------------------------------------------------------------------------
 bool VulkanTexture::CreateSampler(VkDevice device, TextureFilter filter) {
   // OpenGL tarafiyla ayni sozlesme: MIN ve MAG ayni filtreyi kullanir, boylece
   // iki backend ayni goruntuyu uretir.
@@ -328,9 +311,7 @@ bool VulkanTexture::CreateSampler(VkDevice device, TextureFilter filter) {
   return true;
 }
 
-// ---------------------------------------------------------------------------
 // Upload komut kaydı
-// ---------------------------------------------------------------------------
 void VulkanTexture::TransitionImageLayout(VkCommandBuffer cmd, VkImage image,
                                           VkImageLayout old_layout,
                                           VkImageLayout new_layout) {
@@ -445,9 +426,7 @@ bool VulkanTexture::RecordAndSubmitCopy(VkDevice device, VkQueue queue,
   return cleanup(true);
 }
 
-// ---------------------------------------------------------------------------
 // Descriptor set güncelle
-// ---------------------------------------------------------------------------
 void VulkanTexture::UpdateDescriptorSet(VkDevice device,
                                         VkDescriptorSetLayout /*layout*/) {
   VkDescriptorImageInfo image_info{};
@@ -467,9 +446,7 @@ void VulkanTexture::UpdateDescriptorSet(VkDevice device,
   vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
 }
 
-// ---------------------------------------------------------------------------
 // Destroy
-// ---------------------------------------------------------------------------
 void VulkanTexture::Destroy(VkDevice device) {
   VkDevice d = (mDevice != VK_NULL_HANDLE) ? mDevice : device;
   if (d == VK_NULL_HANDLE) {

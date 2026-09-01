@@ -14,11 +14,10 @@
 #include <windows.h>
 #endif
 
-/// @brief Logger'ı renkli çıktı ve özel format ile başlatır.
-/// Windows'ta ANSI escape kodları etkinleştirilir (Windows Terminal,
-/// VS Code ve modern PowerShell destekler).
-/// Format: [SS:DD:SS][Seviye] Mesaj
-/// Renkler: I=yeşil, W=sarı, E=kırmızı, C=koyu kırmızı
+/// @brief Logger'ı `[SS:DD:SS][Seviye] Mesaj` biçiminde, renkli başlatır.
+///
+/// Windows konsolu ANSI escape kodlarını varsayılan olarak yorumlamaz;
+/// aşağıdaki `SetConsoleMode` çağrısı olmadan renkler ham kod olarak basılır.
 static void InitLogger() {
 #ifdef _WIN32
   HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);

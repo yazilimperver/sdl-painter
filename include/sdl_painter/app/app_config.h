@@ -58,7 +58,7 @@ struct AppConfig {
   /// `true` ise pencere `SDL_WINDOW_HIGH_PIXEL_DENSITY` ile oluşturulur ve
   /// framebuffer, ekran ölçek faktörü kadar büyür (örn. 200% ölçekte
   /// 800x600 pencere → 1600x1200 framebuffer). @ref Application::Width ve
-  /// @ref Application::Height daima **piksel** cinsindendir; @ref Painter
+  /// @ref Application::Height daima piksel cinsindendir; @ref Painter
   /// koordinat sistemi de piksel tabanlıdır. Dolayısıyla bu seçenek açıkken
   /// çizim koordinatlarınızı @ref Application::Width / @ref Height üzerinden
   /// hesaplamanız gerekir — sabit sayılar küçük görünür.

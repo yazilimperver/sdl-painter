@@ -72,9 +72,7 @@ static std::string FindSystemFont() {
   return {};
 }
 
-// ---------------------------------------------------------------------------
 // Yardımcı: arka planlı metin kutusu çiz.
-// ---------------------------------------------------------------------------
 static void DrawLabelBox(sdl_painter::Painter& p,
                          const sdl_painter::Rect& box,
                          const std::string& text,
@@ -173,26 +171,20 @@ int main() {
       painter.Begin();
       painter.Clear(sdl_painter::Color{18, 18, 28, 255});
 
-      // ---------------------------------------------------------------
-      // Bölüm 1: Büyük başlık — ortada
-      // ---------------------------------------------------------------
+      // DrawText(rect, ...): metin dikdörtgene göre hizalanır.
+      // Metnin rengi Brush'tan değil, Pen'den gelir.
       painter.SetFont(font_xl);
       painter.SetPen(sdl_painter::Pen(sdl_painter::Color{255, 220, 80, 255}, 0.0f));
       painter.DrawText(sdl_painter::Rect{0.0f, 10.0f, 900.0f, 70.0f},
                        "SDLPainter", sdl_painter::Alignment::kCenter);
 
-      // ---------------------------------------------------------------
-      // Bölüm 2: Alt başlık — sağa hizalı
-      // ---------------------------------------------------------------
       painter.SetFont(font_md);
       painter.SetPen(sdl_painter::Pen(sdl_painter::Color{160, 200, 255, 255}, 0.0f));
       painter.DrawText(sdl_painter::Rect{0.0f, 75.0f, 890.0f, 30.0f},
                        "Phase 4: Metin Cizimi (SDL_ttf)",
                        sdl_painter::Alignment::kRight);
 
-      // ---------------------------------------------------------------
-      // Bölüm 3: Hizalama karşılaştırması (sol / orta / sağ)
-      // ---------------------------------------------------------------
+      // Üç hizalama aynı genişlikte kutularda: fark ancak yan yana okunur.
       constexpr float kBoxY  = 120.0f;
       constexpr float kBoxW  = 280.0f;
       constexpr float kBoxH  = 40.0f;
@@ -222,9 +214,8 @@ int main() {
                    sdl_painter::Color{80, 40, 60, 200},
                    sdl_painter::Color{255, 200, 220, 255});
 
-      // ---------------------------------------------------------------
-      // Bölüm 4: Farklı punto boyutları
-      // ---------------------------------------------------------------
+      // Punto Font nesnesine bağlı: her boyut ayrı bir Font, ayrı bir
+      // glyph atlası. Boyut çalışma zamanında ölçeklenmez.
       const float sz_y = 180.0f;
       painter.SetPen(sdl_painter::Pen(sdl_painter::Color{220, 220, 220, 255}, 0.0f));
 
@@ -237,9 +228,7 @@ int main() {
       painter.SetFont(font_lg);
       painter.DrawText(20.0f, sz_y + 56.0f, "36pt - Buyuk punto");
 
-      // ---------------------------------------------------------------
-      // Bölüm 5: Renkli metinler
-      // ---------------------------------------------------------------
+      // Renk vertex'te taşınır; beş farklı renk tek batch'te kalır.
       painter.SetFont(font_md);
       const float col_y = 310.0f;
       const sdl_painter::Color colors[] = {
@@ -262,9 +251,7 @@ int main() {
                          col_y, color_texts[i]);
       }
 
-      // ---------------------------------------------------------------
-      // Bölüm 6: SetOpacity ile yarı saydam metin
-      // ---------------------------------------------------------------
+      // Opaklık ise bir çizim durumu: her değişim batch'i kırar.
       painter.SetFont(font_lg);
       painter.SetPen(sdl_painter::Pen(sdl_painter::Color{255, 255, 255, 255}, 0.0f));
       const float op_base = 350.0f;
@@ -277,24 +264,20 @@ int main() {
       }
       painter.SetOpacity(1.0f);
 
-      // ---------------------------------------------------------------
-      // Bölüm 7: Transform + DrawText — dönen metin
-      // ---------------------------------------------------------------
+      // Metin de transform yığınına tabi; glyph'ler dönen dörtgenlere
+      // basılır. DrawText(x, y) sol ÜST köşeyi verir, bu yüzden merkez
+      // etrafında döndürmek için ölçülen boyutun yarısı kadar ofset gerek.
       painter.Save();
       painter.Translate(750.0f, 450.0f);
       painter.Rotate(angle);
       painter.SetFont(font_md);
       painter.SetPen(sdl_painter::Pen(sdl_painter::Color{255, 160, 60, 255}, 0.0f));
-      // Merkez etrafında döndürmek için ofset uygula.
       int32_t rot_w = 0, rot_h = 0;
       font_md->MeasureText("Donen metin!", rot_w, rot_h);
       painter.DrawText(static_cast<float>(-rot_w) * 0.5f,
                        static_cast<float>(-rot_h) * 0.5f, "Donen metin!");
       painter.Restore();
 
-      // ---------------------------------------------------------------
-      // Bölüm 8: DrawText(x, y) ile çok satırlı alt bilgi
-      // ---------------------------------------------------------------
       painter.SetFont(font_sm);
       painter.SetPen(sdl_painter::Pen(sdl_painter::Color{120, 120, 120, 255}, 0.0f));
       painter.SetOpacity(1.0f);

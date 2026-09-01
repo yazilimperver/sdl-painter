@@ -14,7 +14,7 @@ class IRenderer;
 
 /// @brief Çizim komutlarını biriktirip topluca renderer'a gönderen sınıf.
 ///
-/// @note Transform **burada** uygulanır. Önceden model matrisi
+/// @note Transform burada uygulanır. Önceden model matrisi
 /// `IRenderer::SetModelMatrix` ile bir uniform olarak gönderiliyordu; bu,
 /// her `Translate/Rotate/Scale` çağrısının batch'i kırması demekti — ölçüm
 /// (bkz. `examples/benchmarks/`) aynı 2000 şeklin transform'suz 2, şekil
@@ -34,11 +34,11 @@ class RenderBatcher {
                      const glm::mat3& transform, const Color& color,
                      float opacity);
 
-  /// @brief Vertex renkleri **zaten yazılmış** üçgenleri ekle.
+  /// @brief Vertex renkleri zaten yazılmış üçgenleri ekle.
   ///
   /// Gradient dolgular için: renk şekle göre vertex başına hesaplandığından
   /// tek bir düz renkle ezilemez. Batch anahtarı açısından düz dolgudan farkı
-  /// yoktur — renk vertex'te taşındığı için gradient **batch'i kırmaz**.
+  /// yoktur — renk vertex'te taşındığı için gradient batch'i kırmaz.
   void PushTrianglesPreColored(const std::vector<Vertex>& vertices,
                                const glm::mat3& transform, float opacity);
 
@@ -50,7 +50,7 @@ class RenderBatcher {
 
   /// @brief Karıştırma modunu ayarla.
   ///
-  /// Opaklık gibi bir GPU durumu: değişim biriken çizimleri **flush eder**,
+  /// Opaklık gibi bir GPU durumu: değişim biriken çizimleri flush eder,
   /// çünkü onlar eski modla çizilmeliydi. Renk ve tint'in aksine batch'i
   /// kırar — bu, modun vertex'te taşınamamasının doğal sonucu.
   void SetBlendMode(BlendMode mode);

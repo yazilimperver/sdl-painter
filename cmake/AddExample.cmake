@@ -18,7 +18,7 @@
 #             kendisi varlık dosyası taşımaz (ADR-009), bu yalnızca örnekler
 #             içindir ve kurulmaz.
 #
-# Örnek kaynakları alt dizinlerde durur ama çıktı **tek bir dizine** yazılır:
+# Örnek kaynakları alt dizinlerde durur ama çıktı tek bir dizine yazılır:
 # `${CMAKE_BINARY_DIR}/examples`. Bu bilinçlidir — dokümanlar, CI artifact
 # glob'ları ve blog yazıları `build/<preset>/examples/<ad>` yolunu kullanıyor;
 # dizin yeniden yapılandırması bu yolu kırmamalı.

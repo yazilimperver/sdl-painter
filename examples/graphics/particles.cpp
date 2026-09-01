@@ -1,16 +1,16 @@
 /// @brief particles — on binlerce parçacık, tek batch.
 ///
-/// Burada 20.000 parçacık **iki** draw call'a iniyor ve sayaç ekranda
+/// Burada 20.000 parçacık iki draw call'a iniyor ve sayaç ekranda
 /// canlı duruyor. `examples/benchmarks/` aynı şeyi sayıyla raporlar; bu ise
 /// gözle görülür hâli.
 ///
 /// Kritik ayrım — SPACE ile canlı karşılaştırılabilir:
 ///
-///   * **Batch dostu:** her parçacık aynı çizim durumuyla çizilir → hepsi tek
+///   * Batch dostu: her parçacık aynı çizim durumuyla çizilir → hepsi tek
 ///     tampona birikir, tek draw call.
-///   * **Batch kırıcı:** her parçacıktan önce `SetOpacity` çağrılır. Opaklık
-///     bir shader uniform'u olduğu için batcher **her değişimde flush etmek
-///     zorundadır** → parçacık başına bir draw call.
+///   * Batch kırıcı: her parçacıktan önce `SetOpacity` çağrılır. Opaklık
+///     bir shader uniform'u olduğu için batcher her değişimde flush etmek
+///     zorundadır → parçacık başına bir draw call.
 ///
 /// Renk bu farkı yaratmaz: renk vertex'te taşınır, bu yüzden her parçacık
 /// farklı renkte olsa bile batch bozulmaz. Uygulamada ikisini de görürsün.

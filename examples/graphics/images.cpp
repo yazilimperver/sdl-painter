@@ -213,27 +213,20 @@ int main() {
       painter.Clear(sdl_painter::Color{20, 20, 30, 255});
       painter.SetPen(sdl_painter::Pen(sdl_painter::Color{0, 0, 0, 0}, 0.0f));
 
-      // ----------------------------------------------------------------
-      // Bolum 1: Damalı doku — orijinal boyut (128x128)
-      // ----------------------------------------------------------------
+      // (image, x, y): doku kendi piksel boyutunda cizilir.
       painter.DrawImage(checker, 50.0f, 80.0f);
 
-      // ----------------------------------------------------------------
-      // Bolum 2: Damalı doku — olceklendirilmis (dest_rect)
-      // ----------------------------------------------------------------
+      // (image, dest_rect): hedef dikdortgene sigdirilir, en-boy korunmaz.
       painter.DrawImage(checker,
                         sdl_painter::Rect{210.0f, 80.0f, 180.0f, 180.0f});
 
-      // ----------------------------------------------------------------
-      // Bolum 3: Degrade doku — buyutulmus (360x100)
-      // ----------------------------------------------------------------
+      // Ayni asiri yukleme, bu kez dokuyu genisletiyor.
       painter.DrawImage(gradient, sdl_painter::Rect{0.0f, 0.0f, 256.0f, 64.0f},
                         sdl_painter::Rect{420.0f, 110.0f, 360.0f, 100.0f});
 
-      // ----------------------------------------------------------------
-      // Bolum 4: Texture atlas dilimleme — her kareyi ayri ayri ciz
-      // ----------------------------------------------------------------
-      // Atlas 256x256, dordü de 128x128
+      // (image, src_rect, dest_rect): atlas dilimleme. Tek doku, dort
+      // ayri kare — sprite sayfalari boyle calisir. Atlas 256x256,
+      // her ceyrek 128x128.
       const float half = 128.0f;
       const float tx = 710.0f, ty = 80.0f, tw = 100.0f, th = 100.0f;
 
@@ -246,15 +239,11 @@ int main() {
       painter.DrawImage(atlas, sdl_painter::Rect{half, half, half, half},
                         sdl_painter::Rect{tx + tw, ty + th, tw, th});
 
-      // Atlas karti: cerceve
       painter.SetPen(
           sdl_painter::Pen(sdl_painter::Color{200, 200, 200, 160}, 1.0f));
       painter.DrawRect(tx, ty, tw * 2.0f, th * 2.0f);
 
-      // ----------------------------------------------------------------
-      // Bolum 5: Alfa karistirmali daire dokusu
-      // ----------------------------------------------------------------
-      // Arkaplan olarak renkli dikdortgen ciz, sonra yarı saydam doku.
+      // Dokunun alfa kanali: kenari solan daire renkli zemine karisiyor.
       painter.SetPen(sdl_painter::Pen(sdl_painter::Color{0, 0, 0, 0}, 0.0f));
       painter.SetBrush(
           sdl_painter::Brush(sdl_painter::Color{60, 120, 200, 200}));
@@ -262,9 +251,6 @@ int main() {
       painter.DrawImage(alpha_circ, 50.0f, 310.0f);   // 128x128, uzerine
       painter.DrawImage(alpha_circ, 122.0f, 382.0f);  // kismen ustuste
 
-      // ----------------------------------------------------------------
-      // Bolum 5b: Tint (renk tonlamasi) ve aynalama
-      // ----------------------------------------------------------------
       // Ayni doku, dort farkli tint ile yan yana. Tint vertex'te tasindigi
       // icin bu dort cizim TEK batch'te kalir — renk basina flush yoktur.
       {
@@ -305,9 +291,8 @@ int main() {
         }
       }
 
-      // ----------------------------------------------------------------
-      // Bolum 6: Transform + DrawImage — donme animasyonu
-      // ----------------------------------------------------------------
+      // Transform yigini dokular icin de gecerli: donus, cizim
+      // koordinatlarina uygulanir.
       painter.Save();
       painter.Translate(520.0f, 430.0f);
       painter.Rotate(angle);
@@ -317,10 +302,6 @@ int main() {
                         sdl_painter::Rect{-96.0f, -96.0f, 192.0f, 192.0f});
       painter.Restore();
 
-      // ----------------------------------------------------------------
-      // Bolum 7: Scale animasyonu + degrade doku
-      // Ekran merkezinde, kendi merkezi etrafinda buyuyup kuculen gradient.
-      // ----------------------------------------------------------------
       {
         static float scaleCoeff = -0.9f;
         static float scaleIncrement = 0.001f;
@@ -349,12 +330,8 @@ int main() {
         painter.Restore();
       }
 
-      // ----------------------------------------------------------------
-      // Bolum 8: Pen outline — damali doku uzerinde kontrast
-      // Ayni renk/kalinliktaki iki kalem yan yana: solda outline yok,
-      // sagda siyah dis kontur. Kontur, karmasik arka plan uzerinde
-      // cizginin belirginligini artirir.
-      // ----------------------------------------------------------------
+      // Ayni renk ve kalinlikta iki kalem: solda outline yok, sagda siyah
+      // dis kontur. Kontur, karmasik zemin uzerinde cizgiyi ayirir.
       painter.SetPen(sdl_painter::Pen(sdl_painter::Color{0, 0, 0, 0}, 0.0f));
       painter.DrawImage(checker,
                         sdl_painter::Rect{560.0f, 350.0f, 220.0f, 200.0f});

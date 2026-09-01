@@ -16,19 +16,19 @@ enum class BrushType : uint8_t {
 
 /// @brief Dolgu stili — düz renk veya gradient.
 ///
-/// **Gradient shader gerektirmez.** Vertex'ler zaten renk taşıyor (batch'leme
+/// Gradient shader gerektirmez. Vertex'ler zaten renk taşıyor (batch'leme
 /// bunun için yapıldı), bu yüzden geçiş tessellation sırasında köşe renkleri
 /// hesaplanarak üretilir ve enterpolasyonu donanım yapar. Sonuç: gradient
-/// hiçbir backend değişikliği gerektirmez ve **batch'i kırmaz** — opaklığın
+/// hiçbir backend değişikliği gerektirmez ve batch'i kırmaz — opaklığın
 /// aksine.
 ///
-/// Bunun bedeli, geçişin şeklin **köşe yoğunluğu** kadar hassas olmasıdır:
+/// Bunun bedeli, geçişin şeklin köşe yoğunluğu kadar hassas olmasıdır:
 /// iki üçgenden ibaret bir dikdörtgende doğrusal geçiş kusursuzdur (tam da
 /// donanımın enterpole ettiği şey), ama az segmentli bir şekilde ışınsal
 /// geçiş bantlanabilir. Daire ve elips segment sayısı yarıçapa göre
 /// uyarlandığı için pratikte sorun çıkarmaz.
 ///
-/// Gradient koordinatları **çizim koordinatlarıyla aynı uzaydadır** (şekil
+/// Gradient koordinatları çizim koordinatlarıyla aynı uzaydadır (şekil
 /// yerel), yani transform yığınından etkilenir — Qt'nin `QLinearGradient`
 /// davranışı gibi.
 class Brush {
@@ -107,7 +107,7 @@ class Brush {
   /// @brief Fırça görünür mü? (alpha > 0)
   /// @brief Fırça görünür mü?
   ///
-  /// Gradient'te **iki uçtan biri** bile opaksa görünürdür; yalnızca başlangıç
+  /// Gradient'te iki uçtan biri bile opaksa görünürdür; yalnızca başlangıç
   /// rengine bakmak, saydamdan opağa giden bir geçişi yanlışlıkla görünmez
   /// sayardı.
   [[nodiscard]] bool IsVisible() const noexcept {

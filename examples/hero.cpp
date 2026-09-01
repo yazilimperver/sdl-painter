@@ -1,7 +1,6 @@
 /// @brief hero — README tanıtım GIF'ini üreten koreografili showcase sahnesi.
 ///
-/// Diğer demolardan farkı: burada amaç bir yeteneği izole etmek değil,
-/// kütüphanenin **bütün** maharetlerini tek tanıtımda sırayla göstermek.
+/// Kütüphanenin bütün maharetlerini tek tanıtımda sırayla göstermek için kullanılacak uygulama.
 /// Sahne dört perdeye bölünmüştür; her perde 3 saniye sürer, kendi içinde
 /// açılıp kapanır:
 ///
@@ -13,7 +12,7 @@
 ///                             batch'leme (yüzlerce şekil, birkaç draw call)
 ///   04 · IMAGES & TEXT      — doku, filtre, mesh warp, çizim hedefi, metin
 ///
-/// İçerik **döngüye uygun** tasarlandı: her perde kendi başında ve sonunda
+/// İçerik döngü şeklinde yapıldı: her perde kendi başında ve sonunda
 /// karartıldığı için son kare ilk kareyle örtüşür ve GIF'te görünür bir
 /// atlama olmaz. Perde geçişi `SetOpacity` ile değil, renklerin alfasını
 /// ölçekleyerek yapılır (bkz. @ref Fade) — renk vertex'te taşındığı için
@@ -81,7 +80,7 @@ constexpr float kFadeFrames = 9.0F;
 
 constexpr float kPi = 3.14159265358979F;
 
-// --- Yerleşim ---------------------------------------------------------------
+// Yerleşim
 // Başlık şeridi | perde gövdesi | künye şeridi. Şeritler her karede aynı
 // yerde ve aynı renkte kalır: hem sahneye çerçeve verir hem de GIF'te
 // değişmeyen piksel oldukları için dosyayı küçültür.
@@ -147,9 +146,7 @@ void InitLogger() {
   spdlog::set_default_logger(logger);
 }
 
-// ---------------------------------------------------------------------------
 // Küçük yardımcılar
-// ---------------------------------------------------------------------------
 
 float Smoothstep(float t) {
   const float x = std::clamp(t, 0.0F, 1.0F);
@@ -245,9 +242,7 @@ sp::Image MakeSpriteImage(sp::TextureFilter filter) {
   return image;
 }
 
-// ---------------------------------------------------------------------------
 // Hücre ızgarası
-// ---------------------------------------------------------------------------
 
 /// @brief Perde gövdesindeki bir kart: panel dikdörtgeni + içerik alanı.
 struct Cell {
@@ -299,15 +294,13 @@ void Caption(sp::Painter& p, const Fonts& fonts, const Cell& cell,
         text, sp::Alignment::kCenter, Fade(kMuted, fade));
 }
 
-// ---------------------------------------------------------------------------
 // 01 · SHAPES & PATHS
-// ---------------------------------------------------------------------------
 
 void ActShapes(sp::Painter& p, const Fonts& fonts, float t, float fade) {
   const float pulse = Pulse(t);
   const float spin = t * 360.0F;
 
-  // --- Dikdörtgen + yuvarlatılmış dikdörtgen ------------------------------
+  // Dikdörtgen + yuvarlatılmış dikdörtgen
   {
     const Cell cell = GridCell(0, 0, 3, 2);
     Panel(p, cell, fade);
@@ -325,7 +318,7 @@ void ActShapes(sp::Painter& p, const Fonts& fonts, float t, float fade) {
     Caption(p, fonts, cell, "rect · rounded rect", fade);
   }
 
-  // --- Daire + elips (yarıçapa göre adaptif tessellation) -----------------
+  // Daire + elips (yarıçapa göre adaptif tessellation)
   {
     const Cell cell = GridCell(1, 0, 3, 2);
     Panel(p, cell, fade);
@@ -342,7 +335,7 @@ void ActShapes(sp::Painter& p, const Fonts& fonts, float t, float fade) {
     Caption(p, fonts, cell, "circle · ellipse", fade);
   }
 
-  // --- Yay, dilim, kiriş ---------------------------------------------------
+  // Yay, dilim, kiriş
   {
     const Cell cell = GridCell(2, 0, 3, 2);
     Panel(p, cell, fade);
@@ -365,7 +358,7 @@ void ActShapes(sp::Painter& p, const Fonts& fonts, float t, float fade) {
     Caption(p, fonts, cell, "arc · pie · chord", fade);
   }
 
-  // --- Kesikli çizgi + uç stilleri ----------------------------------------
+  // Kesikli çizgi + uç stilleri
   {
     const Cell cell = GridCell(0, 1, 3, 2);
     Panel(p, cell, fade);
@@ -389,7 +382,7 @@ void ActShapes(sp::Painter& p, const Fonts& fonts, float t, float fade) {
     Caption(p, fonts, cell, "dash · butt / square / round caps", fade);
   }
 
-  // --- Birleşim stilleri ---------------------------------------------------
+  // Birleşim stilleri
   {
     const Cell cell = GridCell(1, 1, 3, 2);
     Panel(p, cell, fade);
@@ -413,7 +406,7 @@ void ActShapes(sp::Painter& p, const Fonts& fonts, float t, float fade) {
     Caption(p, fonts, cell, "miter · round · bevel joins", fade);
   }
 
-  // --- Bézier yolu (çerçeve + dolgu) --------------------------------------
+  // Bézier yolu (çerçeve + dolgu)
   {
     const Cell cell = GridCell(2, 1, 3, 2);
     Panel(p, cell, fade);
@@ -450,15 +443,13 @@ void ActShapes(sp::Painter& p, const Fonts& fonts, float t, float fade) {
   (void)spin;
 }
 
-// ---------------------------------------------------------------------------
 // 02 · COLOR & BLENDING
-// ---------------------------------------------------------------------------
 
 void ActColor(sp::Painter& p, const Fonts& fonts, float t, float fade) {
   const float pulse = Pulse(t);
   const float spin = t * 360.0F;
 
-  // --- Doğrusal gradient (yönü dönüyor) -----------------------------------
+  // Doğrusal gradient (yönü dönüyor)
   {
     const Cell cell = GridCell(0, 0, 3, 2);
     Panel(p, cell, fade);
@@ -475,7 +466,7 @@ void ActColor(sp::Painter& p, const Fonts& fonts, float t, float fade) {
     Caption(p, fonts, cell, "linear gradient", fade);
   }
 
-  // --- Işınsal gradient ----------------------------------------------------
+  // Işınsal gradient
   {
     const Cell cell = GridCell(1, 0, 3, 2);
     Panel(p, cell, fade);
@@ -491,7 +482,7 @@ void ActColor(sp::Painter& p, const Fonts& fonts, float t, float fade) {
     Caption(p, fonts, cell, "radial gradient", fade);
   }
 
-  // --- Konkav poligon + gradient (transform ile birlikte dönüyor) ---------
+  // Konkav poligon + gradient (transform ile birlikte dönüyor)
   {
     const Cell cell = GridCell(2, 0, 3, 2);
     Panel(p, cell, fade);
@@ -510,7 +501,7 @@ void ActColor(sp::Painter& p, const Fonts& fonts, float t, float fade) {
     Caption(p, fonts, cell, "concave polygon · ear clipping", fade);
   }
 
-  // --- Toplamalı karıştırma ------------------------------------------------
+  // Toplamalı karıştırma
   {
     const Cell cell = GridCell(0, 1, 3, 2);
     Panel(p, cell, fade);
@@ -531,7 +522,7 @@ void ActColor(sp::Painter& p, const Fonts& fonts, float t, float fade) {
     Caption(p, fonts, cell, "additive blend", fade);
   }
 
-  // --- Çarpımsal karıştırma ------------------------------------------------
+  // Çarpımsal karıştırma
   {
     const Cell cell = GridCell(1, 1, 3, 2);
     Panel(p, cell, fade);
@@ -554,7 +545,7 @@ void ActColor(sp::Painter& p, const Fonts& fonts, float t, float fade) {
     Caption(p, fonts, cell, "multiply blend", fade);
   }
 
-  // --- Global opaklık merdiveni -------------------------------------------
+  // Global opaklık merdiveni
   {
     const Cell cell = GridCell(2, 1, 3, 2);
     Panel(p, cell, fade);
@@ -574,9 +565,7 @@ void ActColor(sp::Painter& p, const Fonts& fonts, float t, float fade) {
   }
 }
 
-// ---------------------------------------------------------------------------
 // 03 · TRANSFORM & CLIP
-// ---------------------------------------------------------------------------
 
 void ActTransform(sp::Painter& p, const Fonts& fonts, float t, float fade) {
   constexpr float kStripH = 84.0F;
@@ -587,7 +576,7 @@ void ActTransform(sp::Painter& p, const Fonts& fonts, float t, float fade) {
   const float pulse = Pulse(t);
   const float spin = t * 360.0F;
 
-  // --- İç içe transform yığını --------------------------------------------
+  // İç içe transform yığını
   {
     const Cell cell = MakeCell(sp::Rect{kBodyX, kBodyY, cell_w, top_h});
     Panel(p, cell, fade);
@@ -611,7 +600,7 @@ void ActTransform(sp::Painter& p, const Fonts& fonts, float t, float fade) {
     Caption(p, fonts, cell, "save / restore · nested transform", fade);
   }
 
-  // --- Kırpma (scissor) ----------------------------------------------------
+  // Kırpma (scissor)
   {
     const Cell cell =
         MakeCell(sp::Rect{kBodyX + cell_w + kGap, kBodyY, cell_w, top_h});
@@ -648,7 +637,7 @@ void ActTransform(sp::Painter& p, const Fonts& fonts, float t, float fade) {
     Caption(p, fonts, cell, "clip rect · scissor", fade);
   }
 
-  // --- Viewport (yerel koordinatlar) --------------------------------------
+  // Viewport (yerel koordinatlar)
   {
     const Cell cell = MakeCell(
         sp::Rect{kBodyX + 2.0F * (cell_w + kGap), kBodyY, cell_w, top_h});
@@ -688,7 +677,7 @@ void ActTransform(sp::Painter& p, const Fonts& fonts, float t, float fade) {
     Caption(p, fonts, cell, "viewport · local coordinates", fade);
   }
 
-  // --- Batch'leme sürüsü ---------------------------------------------------
+  // Batch'leme sürüsü
   {
     const Cell cell =
         MakeCell(sp::Rect{kBodyX, kBodyY + top_h + kGap, kBodyW, kStripH});
@@ -723,9 +712,7 @@ void ActTransform(sp::Painter& p, const Fonts& fonts, float t, float fade) {
   }
 }
 
-// ---------------------------------------------------------------------------
 // 04 · IMAGES & TEXT
-// ---------------------------------------------------------------------------
 
 /// @brief Çizim hedefinin içeriğini üret — ekran yerine dokuya çizim.
 void RenderTargetScene(sp::Painter& p, const sp::RenderTarget& target,
@@ -775,7 +762,7 @@ void ActImages(sp::Painter& p, const Fonts& fonts, const sp::Image& checker,
   const float spin = t * 360.0F;
   const sp::Color white = Fade(sp::Color::White(), fade);
 
-  // --- Doku: ölçek, dönüş, tint, aynalama ---------------------------------
+  // Doku: ölçek, dönüş, tint, aynalama
   {
     const Cell cell = MakeCell(sp::Rect{kBodyX, kBodyY, top_w, top_h});
     Panel(p, cell, fade);
@@ -797,7 +784,7 @@ void ActImages(sp::Painter& p, const Fonts& fonts, const sp::Image& checker,
     Caption(p, fonts, cell, "texture · tint · flip", fade);
   }
 
-  // --- Filtre farkı: nearest vs linear ------------------------------------
+  // Filtre farkı: nearest vs linear
   {
     const Cell cell =
         MakeCell(sp::Rect{kBodyX + top_w + kGap, kBodyY, top_w, top_h});
@@ -824,7 +811,7 @@ void ActImages(sp::Painter& p, const Fonts& fonts, const sp::Image& checker,
     Caption(p, fonts, cell, "pixel art · sampling filter", fade);
   }
 
-  // --- Serbest biçimli doku ızgarası (mesh warp) --------------------------
+  // Serbest biçimli doku ızgarası (mesh warp)
   {
     const Cell cell = MakeCell(
         sp::Rect{kBodyX + 2.0F * (top_w + kGap), kBodyY, top_w, top_h});
@@ -854,7 +841,7 @@ void ActImages(sp::Painter& p, const Fonts& fonts, const sp::Image& checker,
     Caption(p, fonts, cell, "image mesh · free-form warp", fade);
   }
 
-  // --- Çizim hedefi (offscreen) -------------------------------------------
+  // Çizim hedefi (offscreen)
   {
     const Cell cell =
         MakeCell(sp::Rect{kBodyX, kBodyY + top_h + kGap, bottom_w, bottom_h});
@@ -884,7 +871,7 @@ void ActImages(sp::Painter& p, const Fonts& fonts, const sp::Image& checker,
     Caption(p, fonts, cell, "render target · draw once, stamp many", fade);
   }
 
-  // --- Metin ---------------------------------------------------------------
+  // Metin
   {
     const Cell cell = MakeCell(sp::Rect{
         kBodyX + bottom_w + kGap, kBodyY + top_h + kGap, bottom_w, bottom_h});
@@ -906,9 +893,7 @@ void ActImages(sp::Painter& p, const Fonts& fonts, const sp::Image& checker,
   }
 }
 
-// ---------------------------------------------------------------------------
 // Sabit çerçeve: başlık ve künye
-// ---------------------------------------------------------------------------
 
 void DrawChrome(sp::Painter& p, const Fonts& fonts, int32_t act, float fade,
                 float progress, const sp::FrameStats& stats) {
@@ -951,9 +936,7 @@ void DrawChrome(sp::Painter& p, const Fonts& fonts, int32_t act, float fade,
   }
 }
 
-// ---------------------------------------------------------------------------
 // Sahne
-// ---------------------------------------------------------------------------
 
 struct SceneAssets {
   const sp::Image* checker{nullptr};
@@ -1004,9 +987,7 @@ void DrawScene(sp::Painter& painter, const SceneAssets& assets,
              painter.GetFrameStats());
 }
 
-// ---------------------------------------------------------------------------
 // Kare dökümü
-// ---------------------------------------------------------------------------
 
 // GL fonksiyonları Windows'ta __stdcall (APIENTRY) kullanır; SDLCALL (__cdecl)
 // değil. x64'te tek çağırma kuralı olduğu için fark görünmez, 32-bit derlemede

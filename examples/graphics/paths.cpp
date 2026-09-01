@@ -3,19 +3,19 @@
 /// `Path`, doğru parçalarını ve Bézier eğrilerini tek bir yolda toplar.
 /// Eğriler yola eklenirken kırık çizgiye çevrilir (düzleştirme), sonra
 /// kütüphanenin mevcut kalın çizgi ve ear clipping tessellation'ı olduğu gibi
-/// kullanılır — yani kalemin **tüm** stil eksenleri (uç, birleşim, kesik) yolda
+/// kullanılır — yani kalemin tüm stil eksenleri (uç, birleşim, kesik) yolda
 /// da çalışır.
 ///
 /// Sahnede beş bölüm var:
 ///
-///   1. **Düzleştirme toleransı** — aynı eğri üç farklı toleransla; kaba
+///   1. Düzleştirme toleransı — aynı eğri üç farklı toleransla; kaba
 ///      değerde köşelenme çıplak gözle görünür. Nokta sayıları yazılı.
-///   2. **Quadratic ve cubic** — aynı uçlar, farklı kontrol noktası düzeni.
+///   2. Quadratic ve cubic — aynı uçlar, farklı kontrol noktası düzeni.
 ///      Kontrol poligonu ince çizgiyle gösterilir.
-///   3. **Kalem stilleri yolda da geçerli** — kesikli, yuvarlak uçlu bir eğri.
-///   4. **Dolgu ve çok parçalı yol** — her @ref MoveTo yeni bir alt yol açar;
-///      `FillPath` her alt yolu **bağımsız** doldurur.
-///   5. **Bilinen sınır: delik yok** — iç içe iki halka çizilir; even-odd
+///   3. Kalem stilleri yolda da geçerli — kesikli, yuvarlak uçlu bir eğri.
+///   4. Dolgu ve çok parçalı yol — her @ref MoveTo yeni bir alt yol açar;
+///      `FillPath` her alt yolu bağımsız doldurur.
+///   5. Bilinen sınır: delik yok — iç içe iki halka çizilir; even-odd
 ///      dolgu kuralı uygulanmadığı için iç halka delik açmaz, üzerine ikinci
 ///      bir dolgu biner. Bu, gizlenmesi değil gösterilmesi gereken bir sınır.
 ///

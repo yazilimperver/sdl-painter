@@ -93,10 +93,8 @@ int main() {
       painter.Begin();
       painter.Clear(sdl_painter::Color{20, 20, 30, 255});
 
-      // ----------------------------------------------------------------
-      // Bolum 1: Basit Translate
-      // Sol ust kose — farkli renkli dikdortgenler kaydirilmis
-      // ----------------------------------------------------------------
+      // Translate birikimlidir: uc dikdortgen de (0,0)'a ciziliyor,
+      // aradaki oteleme onlari merdiven gibi kaydiriyor.
       painter.SetPen(sdl_painter::Pen(sdl_painter::Color{0, 0, 0, 0}, 0.0f));
 
       painter.Save();
@@ -114,9 +112,8 @@ int main() {
       painter.FillRect(0.0f, 0.0f, 100.0f, 60.0f);
       painter.Restore();
 
-      // ----------------------------------------------------------------
-      // Bolum 2: Donus animasyonu — Save/Restore ile merkez etrafinda
-      // ----------------------------------------------------------------
+      // Once Translate sonra Rotate: donus merkezi sekil merkezi olur.
+      // Ters sirada dikdortgen ekran orijini etrafinda savrulurdu.
       painter.Save();
       painter.Translate(320.0f, 190.0f);
       painter.Rotate(angle);
@@ -128,9 +125,9 @@ int main() {
       painter.DrawRect(-55.0f, -35.0f, 110.0f, 70.0f);
       painter.Restore();
 
-      // ----------------------------------------------------------------
-      // Bolum 3: Olcekleme animasyonu
-      // ----------------------------------------------------------------
+      // Scale cizgi kalinligini da olcekler: cerceve daire buyudukce
+      // kalinlasir, cunku kalinlik tessellation sirasinda yerel koordinatta
+      // uygulanip sonra donusturulur.
       {
         constexpr float kPi = 3.14159265358979323846f;
         float scale_factor = 1.0f + 0.4f * std::sin(angle * kPi / 180.0f);
@@ -146,9 +143,8 @@ int main() {
         painter.Restore();
       }
 
-      // ----------------------------------------------------------------
-      // Bolum 4: Ic ice Save/Restore — donus + olcekleme birlestirme
-      // ----------------------------------------------------------------
+      // Uc seviye ic ice yigin: her Save bir onceki donusumun uzerine
+      // biner, her Restore tam bir seviye geri alir.
       painter.Save();
       painter.Translate(730.0f, 190.0f);
       painter.Rotate(angle * 0.7f);
@@ -173,23 +169,21 @@ int main() {
       painter.Restore();
       painter.Restore();
 
-      // ----------------------------------------------------------------
-      // Bolum 5: Scissor clip — dikdortgen kispi icine cizim
-      // ----------------------------------------------------------------
-      // Kispi alani: kispi cercevesi
+      // Kirpma bir GPU durumu (scissor): koordinatlari degistirmez,
+      // yalnizca dikdortgen disina dusen pikselleri eler.
+      // Once kirpma alaninin sinirini goruntule.
       painter.SetPen(
           sdl_painter::Pen(sdl_painter::Color{200, 200, 200, 180}, 1.5f));
       painter.DrawRect(100.0f, 380.0f, 320.0f, 200.0f);
 
-      // Kispiyi etkinlestir
       painter.SetClipRect(sdl_painter::Rect{100.0f, 380.0f, 320.0f, 200.0f});
 
-      // Kispi disina tasacak sekilde buyuk bir daire ciz
+      // Cember cerceveden tasiyor; disarida kalan kismi cizilmiyor.
       painter.SetBrush(
           sdl_painter::Brush(sdl_painter::Color{80, 160, 255, 180}));
       painter.FillCircle(260.0f, 480.0f, 150.0f);
 
-      // Kispi icinde donan dikdortgen
+      // Kirpma transform yiginindan bagimsiz: donen dikdortgen de kesiliyor.
       painter.Save();
       painter.Translate(260.0f, 480.0f);
       painter.Rotate(angle);
@@ -201,14 +195,10 @@ int main() {
       painter.DrawRect(-80.0f, -25.0f, 160.0f, 50.0f);
       painter.Restore();
 
-      // Kispiyi kaldir
       painter.ClearClip();
 
-      // ----------------------------------------------------------------
-      // Bolum 6: ResetTransform testi — mutlak koordinatlarda cizim
-      // ----------------------------------------------------------------
-      // Onceki transform durumu ne olursa olsun, reset sonrasi
-      // ekranin ortasinda sabit bir daire ciziyoruz.
+      // ResetTransform yigini bosaltmaz, yalnizca guncel matrisi
+      // birim matrise cevirir — Restore hala bir onceki duruma doner.
       painter.Save();
       painter.Translate(9999.0f, 9999.0f);  // ← yanlis transform
       painter.ResetTransform();             // ← sifirla
@@ -220,9 +210,7 @@ int main() {
       painter.DrawCircle(540.0f, 480.0f, 50.0f);
       painter.Restore();
 
-      // ----------------------------------------------------------------
-      // Bolum 7: Scale animasyonu — X ve Y bagimsiz
-      // ----------------------------------------------------------------
+      // sx ve sy bagimsiz: elips eksenleri ayri ayri nefes aliyor.
       {
         constexpr float kPi = 3.14159265358979323846f;
         float sx = 1.0f + 0.5f * std::cos(angle * kPi / 180.0f);

@@ -431,8 +431,8 @@ std::vector<std::vector<Point>> Tessellator::BuildDashRuns(
     return runs;
   }
 
-  // Desen indeksi monoton artar; "çizili mi?" sorusu indeksin **çift olup
-  // olmadığından** gelir, uzunluk ise indeksin desen boyuna göre modundan.
+  // Desen indeksi monoton artar; "çizili mi?" sorusu indeksin çift olup
+  // olmadığından gelir, uzunluk ise indeksin desen boyuna göre modundan.
   // Tek sayıda uzunlukta bu, deseni iki tur boyunca tersine çevirir — SVG'nin
   // stroke-dasharray davranışı.
   std::size_t pattern_index = 0;
@@ -502,7 +502,7 @@ std::vector<Vertex> Tessellator::TessellateDashedPolyline(
 
   // Desen geçersizse kesintisiz çiz. "Geçersiz" yalnızca boş desen değil:
   // uzunluklardan biri bile pozitif değilse yürüme döngüsü o adımda hiç
-  // ilerlemez ve **sonsuza kadar döner**. Pen::SetDashPattern pozitif olmayan
+  // ilerlemez ve sonsuza kadar döner. Pen::SetDashPattern pozitif olmayan
   // değerleri zaten eler; bu kontrol, tessellator'ı doğrudan çağıranlar için.
   bool valid = dash != nullptr && dash_count > 0;
   for (std::size_t i = 0; valid && i < dash_count; ++i) {

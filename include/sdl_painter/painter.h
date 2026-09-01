@@ -52,7 +52,7 @@ struct RenderState {
 /// IRenderer arayüzü üzerinden soyutlanır.
 ///
 /// @warning **Yaşam döngüsü sözleşmesi:** Painter'a texture yükleyen tüm
-/// @ref Image ve @ref Font nesneleri, Painter yıkılmadan **önce**
+/// @ref Image ve @ref Font nesneleri, Painter yıkılmadan önce
 /// yıkılmalıdır. Image veya Font'u global / `static` ya da daha uzun
 /// yaşayan bir konuma yerleştirmek tanımsız davranışa yol açar — yıkım
 /// sırasında dangling IRenderer pointer kullanılır. v0.2.0'da bu sözleşme
@@ -64,7 +64,7 @@ class SDLPAINTER_API Painter {
 
   /// @brief Hazır bir renderer ile pencere olmadan Painter oluştur.
   ///
-  /// Renderer'ın sahipliği devralınır; `Initialize()` çağrısı **yapılmaz**
+  /// Renderer'ın sahipliği devralınır; `Initialize()` çağrısı yapılmaz
   /// (çağıranın sorumluluğu). Pencere olmadığı için @ref Begin her karede
   /// yeniden boyutlandırma yoklaması yapmaz — viewport bu ctor'da verilen
   /// değerde sabit kalır.
@@ -99,7 +99,7 @@ class SDLPAINTER_API Painter {
 
   /// @brief Çizim yüzeyi boyutunu bildir (viewport + projeksiyon güncellenir).
   ///
-  /// Boyut **framebuffer piksel** cinsindendir. @ref Application bunu
+  /// Boyut framebuffer piksel cinsindendir. @ref Application bunu
   /// `SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED` olayında çağırır.
   ///
   /// @note Bu fonksiyon bir kez çağrıldığında Painter, boyutu artık her
@@ -114,16 +114,16 @@ class SDLPAINTER_API Painter {
   /// @brief Çizimi pencerenin bir alt dikdörtgeniyle sınırla.
   ///
   /// Bölünmüş ekran, mini harita ve kenar panelleri için. Viewport
-  /// ayarlandıktan sonra çizim koordinatları **o alt dikdörtgene göre
-  /// yereldir**: `(0, 0)` viewport'un sol üst köşesidir ve projeksiyon
+  /// ayarlandıktan sonra çizim koordinatları o alt dikdörtgene göre
+  /// yereldir: `(0, 0)` viewport'un sol üst köşesidir ve projeksiyon
   /// `width` × `height`'a göre kurulur.
   ///
-  /// @warning Bu, @ref SetClipRect ile **aynı şey değildir**. Kırpma
+  /// @warning Bu, @ref SetClipRect ile aynı şey değildir. Kırpma
   ///          koordinat sistemini değiştirmeden pikselleri maskeler; viewport
   ///          ise koordinat sisteminin kendisini yeniden tanımlar.
   ///
   /// @note Viewport bir GPU durumudur ve @ref Save / @ref Restore kapsamında
-  ///       **değildir**; değiştirmek biriken çizimleri flush eder. Tam
+  ///       değildir; değiştirmek biriken çizimleri flush eder. Tam
   ///       pencereye dönmek için @ref ResetViewport.
   ///
   /// @param x Sol kenar (framebuffer piksel, sol üst köşeden).
@@ -153,13 +153,13 @@ class SDLPAINTER_API Painter {
 
   /// @brief Sonraki çizimleri verilen hedefe yönlendir.
   ///
-  /// Çizim koordinatları hedefe **yerel** olur: `(0, 0)` hedefin sol üst
+  /// Çizim koordinatları hedefe yerel olur: `(0, 0)` hedefin sol üst
   /// köşesi, projeksiyon hedefin boyutuna göre. @ref SetViewport ile ayarlanmış
   /// bir viewport varsa hedef süresince askıya alınır ve
   /// @ref ResetRenderTarget ile geri gelir.
   ///
   /// @note Hedef seçimi bir GPU durumudur: @ref Save / @ref Restore kapsamında
-  ///       **değildir** ve değiştirmek biriken çizimleri flush eder. Seçim kare
+  ///       değildir ve değiştirmek biriken çizimleri flush eder. Seçim kare
   ///       sınırını da aşmaz — her @ref Begin ekranda başlar.
   ///
   /// @return Geçiş yapıldıysa `true`.
@@ -182,7 +182,7 @@ class SDLPAINTER_API Painter {
 
   /// @brief Hedefin piksellerini ana belleğe oku.
   ///
-  /// Sonuç sıkı paketlenmiş, **doğrusal RGBA8** ve satırlar yukarıdan aşağı —
+  /// Sonuç sıkı paketlenmiş, doğrusal RGBA8 ve satırlar yukarıdan aşağı —
   /// OpenGL ile Vulkan birebir aynı baytları verir. Ekran görüntüsü almak ve
   /// iki backend'in çıktısını karşılaştıran testler için.
   ///
@@ -227,7 +227,7 @@ class SDLPAINTER_API Painter {
 
   /// @brief Aktif font (yoksa `nullptr`).
   ///
-  /// @ref Save / @ref Restore font'u **kapsamaz** (font bir çizim durumu
+  /// @ref Save / @ref Restore font'u kapsamaz (font bir çizim durumu
   /// değil, paylaşılan bir kaynaktır). Geçici olarak başka bir fontla çizim
   /// yapan kod, önceki fontu bununla okuyup geri koyabilir.
   [[nodiscard]] const std::shared_ptr<Font>& GetFont() const noexcept {
@@ -240,7 +240,7 @@ class SDLPAINTER_API Painter {
   /// @brief Renk karıştırma modunu ayarla.
   ///
   /// @ref Save / @ref Restore kapsamındadır. Opaklık gibi bir GPU durumu
-  /// olduğu için **batch'i kırar**: mod değiştikçe bir draw call daha çıkar.
+  /// olduğu için batch'i kırar: mod değiştikçe bir draw call daha çıkar.
   /// Renk ve tint'in aksine vertex'te taşınamaz.
   ///
   /// @note Vulkan'da karıştırma pipeline'ın sabit durumudur; mod başına ayrı
@@ -269,7 +269,7 @@ class SDLPAINTER_API Painter {
   /// Arayüz çiziminin en sık kullanılan şekli; QPainter'daki
   /// `drawRoundedRect` karşılığı.
   ///
-  /// @param radius Köşe yarıçapı. `<= 0` ise @ref DrawRect ile **birebir aynı**
+  /// @param radius Köşe yarıçapı. `<= 0` ise @ref DrawRect ile birebir aynı
   ///        sonucu verir. `min(w, h) / 2`'yi aşarsa oraya kırpılır — sonuç
   ///        stadyum (kare girdide daire) şeklidir, taşma olmaz.
   ///        `w` veya `h` pozitif değilse hiçbir şey çizilmez.
@@ -294,7 +294,7 @@ class SDLPAINTER_API Painter {
 
   /// @brief Yay çiz (açık — uçları birleştirilmez).
   ///
-  /// Açı birimi **derece**. 0° = +x ekseni ve açı, @ref Rotate ile aynı yönde
+  /// Açı birimi derece. 0° = +x ekseni ve açı, @ref Rotate ile aynı yönde
   /// artar. Qt'nin 1/16 derece sözleşmesi bilinçli olarak izlenmez; kütüphane
   /// içi tutarlılık tercih edildi.
   ///
@@ -337,17 +337,17 @@ class SDLPAINTER_API Painter {
   /// yalnızca açık alt yolların iki ucuna, birleşim stili tüm köşelere
   /// uygulanır.
   ///
-  /// @note Kesikli kalemde desen **her alt yolun başında sıfırlanır**; tek bir
+  /// @note Kesikli kalemde desen her alt yolun başında sıfırlanır; tek bir
   ///       alt yol içinde ise yol boyunca sürekli ilerler (bir kesik köşenin
   ///       üzerinden geçebilir).
   void DrawPath(const Path& path);
 
   /// @brief Yolun içini doldur (ear clipping tessellation).
   ///
-  /// Açık alt yollar dolgu için **örtük olarak kapatılır** — QPainter da
+  /// Açık alt yollar dolgu için örtük olarak kapatılır — QPainter da
   /// böyle davranır.
   ///
-  /// @warning Her alt yol **bağımsız** doldurulur; even-odd veya nonzero
+  /// @warning Her alt yol bağımsız doldurulur; even-odd veya nonzero
   ///          dolgu kuralı uygulanmaz. Bir alt yolun diğerinin içinde kalması
   ///          onu delik yapmaz, üzerine ikinci bir dolgu çizer. Delikli
   ///          şekiller bu sürümün kapsamı dışındadır (bkz. @ref Path).
@@ -376,13 +376,13 @@ class SDLPAINTER_API Painter {
   /// kıvrımı, perspektif taklidi gibi efektler bunu gerektirir; bu aşırı
   /// yükleme `IRenderer::DrawTextured`'a `Painter` seviyesinden erişim verir.
   ///
-  /// Doku koordinatları ızgara konumundan **düzgün** türetilir: `(c, r)`
+  /// Doku koordinatları ızgara konumundan düzgün türetilir: `(c, r)`
   /// köşesinin UV'si `(c / cols, r / rows)`'tur. Yani deformasyon yalnızca
   /// konumdadır, dokunun kendisi ızgaraya eşit dağılır.
   ///
   /// @param cols Yatay hücre sayısı (> 0).
   /// @param rows Dikey hücre sayısı (> 0).
-  /// @param points Izgara köşeleri, **satır-major** ve tam
+  /// @param points Izgara köşeleri, satır-major ve tam
   ///        `(cols + 1) * (rows + 1)` adet. Boyut tutmuyorsa çağrı yok sayılır
   ///        ve hata loglanır — sessizce yanlış geometri çizmektense.
   /// @param tint @ref DrawImage ile aynı anlamda.
@@ -390,7 +390,7 @@ class SDLPAINTER_API Painter {
                      const std::vector<Point>& points,
                      const Color& tint = Color::White());
 
-  /// @brief Yüklenmiş bir görüntünün doku içeriğini **yerinde** güncelle.
+  /// @brief Yüklenmiş bir görüntünün doku içeriğini yerinde güncelle.
   ///
   /// Her karede değişen prosedürel dokular içindir (plazma, ısı haritası,
   /// piksel tuvali). Görüntüyü her karede yeniden yaratmaya göre farkı,
@@ -399,11 +399,11 @@ class SDLPAINTER_API Painter {
   /// Görüntü henüz yüklenmemişse bu çağrı onu yükler; sonraki çağrılar aynı
   /// dokuyu günceller.
   ///
-  /// @param image Güncellenecek görüntü. **4 kanallı (RGBA8)** olmalıdır;
+  /// @param image Güncellenecek görüntü. 4 kanallı (RGBA8) olmalıdır;
   ///        değilse çağrı yok sayılır ve hata loglanır.
   /// @param rgba Sıkı paketlenmiş `Width() * Height() * 4` baytlık veri.
   ///
-  /// @note Çağrı, biriken çizimleri **flush eder**. Doku içeriği anında
+  /// @note Çağrı, biriken çizimleri flush eder. Doku içeriği anında
   ///       değiştiği için, o karede aynı dokudan yapılmış ve henüz
   ///       gönderilmemiş çizimler eski içerikle çizilmiş olmalı — aksi halde
   ///       geriye dönük olarak yeni içerikle çizilirlerdi. Bedeli kare başına
@@ -413,17 +413,17 @@ class SDLPAINTER_API Painter {
   /// @brief Görüntünün kaynak dikdörtgenini hedef dikdörtgene çiz.
   ///
   /// @note Tint, vertex'te taşınır — aynı texture'ı farklı renklerle çizmek
-  ///       batch'i **kırmaz**. (Opaklık için aynısı geçerli değildir.)
+  ///       batch'i kırmaz. (Opaklık için aynısı geçerli değildir.)
   void DrawImage(const Image& image, const Rect& src_rect,
                  const Rect& dest_rect, const Color& tint = Color::White(),
                  ImageFlip flip = ImageFlip::kNone);
 
-  // --- Metin
+  // --- Metin ---
 
   /// @brief Noktaya metin çiz.
   ///
   /// Satır sonu karakteri (LF) satır böler; her satır bir öncekinden
-  /// @ref Font::LineHeight kadar aşağıya çizilir. `y` **ilk satırın**
+  /// @ref Font::LineHeight kadar aşağıya çizilir. `y` ilk satırın
   /// baseline'ıdır.
   void DrawText(float x, float y, const std::string& text);
 
@@ -433,7 +433,7 @@ class SDLPAINTER_API Painter {
   /// (LF) satır böler.
   ///
   /// @param wrap @ref TextWrap::kWord ise satırlar dikdörtgen genişliğini
-  ///        aşmayacak şekilde **sözcük sınırlarından** bölünür. Tek bir sözcük
+  ///        aşmayacak şekilde sözcük sınırlarından bölünür. Tek bir sözcük
   ///        bile sığmıyorsa karakter sınırından bölünür (UTF-8 güvenli).
   ///        Varsayılan @ref TextWrap::kNone: davranış eskisiyle birebir aynı,
   ///        uzun metin dikdörtgenden taşar.
@@ -483,7 +483,7 @@ class SDLPAINTER_API Painter {
   /// @brief Pencerenin framebuffer (piksel) boyutunu döndür.
   ///
   /// HiDPI ölçeklemede mantıksal pencere boyutu ile piksel boyutu ayrışır;
-  /// viewport, scissor ve projeksiyon daima **piksel** boyutunu kullanır.
+  /// viewport, scissor ve projeksiyon daima piksel boyutunu kullanır.
   /// Penceresiz Painter'da (0, 0) döner.
   void QueryDrawableSize(int32_t& out_width, int32_t& out_height) const;
 
@@ -496,10 +496,10 @@ class SDLPAINTER_API Painter {
   /// @brief Painter'ın Y ekseni ile GPU'nunki aynı yönde mi?
   ///
   /// Painter'da Y aşağı doğru artar. Vulkan'ın clip uzayı da öyledir, OpenGL'in
-  /// **ekran** framebuffer'ı ise ters yöndedir — bu yüzden GL'de projeksiyon,
+  /// ekran framebuffer'ı ise ters yöndedir — bu yüzden GL'de projeksiyon,
   /// viewport ve scissor çevrilir.
   ///
-  /// Bir çizim hedefine (FBO) çizerken GL'de bu çevirme **yapılmaz**: hedefin
+  /// Bir çizim hedefine (FBO) çizerken GL'de bu çevirme yapılmaz: hedefin
   /// 0. satırı Painter'ın `y = 0`'ına denk gelsin isteriz. Aksi halde dokunun
   /// bellekteki satır sırası ters olur ve hem ekrana basıldığında baş aşağı
   /// görünür hem de @ref ReadRenderTarget çıktısı Vulkan'ınkiyle uyuşmazdı.
@@ -572,7 +572,7 @@ class SDLPAINTER_API Painter {
   int32_t mDrawableHeight{0};
 
   /// Yürürlükteki viewport. Varsayılan olarak yüzeyin tamamıdır;
-  /// @ref SetViewport ile daraltılabilir. Projeksiyon **bunun** boyutuna
+  /// @ref SetViewport ile daraltılabilir. Projeksiyon bunun boyutuna
   /// göre kurulur, yüzeyin tamamına göre değil.
   int32_t mViewportX{0};
   int32_t mViewportY{0};

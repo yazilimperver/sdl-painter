@@ -202,7 +202,9 @@ set_target_warnings(sdl_painter)
 set_target_sanitizers(sdl_painter)
 set_target_coverage(sdl_painter)
 
-# --- Uygulama çatısı katmanı (opsiyonsuz — her zaman derlenir ve paketlenir) bağımlılık; static lib olduğundan kullanmayan tüketiciye maliyeti yoktur
+# --- Uygulama çatısı katmanı ---
+# Opsiyonsuz: her zaman derlenir ve paketlenir. Static lib olduğundan
+# kullanmayan tüketiciye maliyeti yoktur.
 add_library(sdl_painter_app
     src/app/application.cpp
     src/app/event_translator.cpp
@@ -264,12 +266,10 @@ endif()
 # uzerine biner) — hedefler tanimlandiktan SONRA.
 include(InstallRules)
 
-# Examples
 if(SDLPAINTER_BUILD_EXAMPLES)
     add_subdirectory(examples)
 endif()
 
-# Tests
 if(SDLPAINTER_BUILD_TESTS)
     enable_testing()
     find_package(GTest REQUIRED)

@@ -17,9 +17,7 @@ VulkanPipeline::~VulkanPipeline() {
   }
 }
 
-// ---------------------------------------------------------------------------
 // Yardımcı: gömülü SPIR-V'den shader modülü oluştur
-// ---------------------------------------------------------------------------
 VkShaderModule VulkanPipeline::CreateShaderModule(VkDevice device,
                                                   const uint32_t* code,
                                                   std::size_t byte_size) {
@@ -33,9 +31,7 @@ VkShaderModule VulkanPipeline::CreateShaderModule(VkDevice device,
   return mod;
 }
 
-// ---------------------------------------------------------------------------
 // Init
-// ---------------------------------------------------------------------------
 bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass) {
   // --- Shader modülleri (binary'ye gömülü SPIR-V) ---
   VkShaderModule vert_mod = CreateShaderModule(device, detail::kUntexturedVert,

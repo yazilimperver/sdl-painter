@@ -25,7 +25,7 @@ set(TEST_SOURCES
 
 include(GoogleTest)
 
-# --- Beyaz kutu birim testleri ------------------------------------------------
+# --- Beyaz kutu birim testleri ---
 #
 # Bu takim `src/` altindaki DAHILI basliklari include eder ve export EDILMEYEN
 # sembolleri (Tessellator, RenderBatcher, vk_detail::VkResultToString ...)
@@ -73,7 +73,7 @@ else()
     gtest_add_tests(TARGET sdl_painter_tests)
 endif()
 
-# --- Public ABI / DLL testleri ------------------------------------------------
+# --- Public ABI / DLL testleri ---
 #
 # AYRI bir hedef olmasinin sebebi yukaridaki takimla arasindaki tek farkta:
 # `sdl_painter_tests` DAHILI basliklari (src/) include eder ve Tessellator,

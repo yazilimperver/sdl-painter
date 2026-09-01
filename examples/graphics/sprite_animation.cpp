@@ -2,7 +2,7 @@
 ///
 /// `DrawImage(image, src_rect, dest_rect)` aşırı yüklemesinin gerçek hayattaki
 /// tek kullanımı budur: tek bir dokuda ızgara hâlinde duran kareleri sırayla
-/// göstermek. Tüm kareler **aynı dokuda** olduğu için sahnedeki bütün
+/// göstermek. Tüm kareler aynı dokuda olduğu için sahnedeki bütün
 /// karakterler tek draw call'a girer — kaç tane oldukları fark etmez.
 ///
 /// Kullanılan sheet 8 × 4'lük bir ızgara (24×32 kare):
@@ -10,10 +10,10 @@
 ///   satır 0 → izleyiciye bakan   satır 2 → sola bakan
 ///   satır 1 → sırtı dönük        satır 3 → sağa bakan
 ///
-/// **Satır 2 ile satır 3 birbirinin tam aynası** (kare kare doğrulandı). Bu
+/// Satır 2 ile satır 3 birbirinin tam aynası (kare kare doğrulandı). Bu
 /// örneğin asıl iddiası da burada: SPACE ile sağa bakan karakterleri ya
 /// sheet'in kendi 3. satırından ya da 2. satırı `ImageFlip::kHorizontal` ile
-/// çevirerek çizersin — sonuç **piksel piksel aynıdır**. Yani aynalama, bir
+/// çevirerek çizersin — sonuç piksel piksel aynıdır. Yani aynalama, bir
 /// sprite sheet'in yarısını taşımamanı sağlar.
 ///
 /// Aynalamanın `Save`/`Scale(-1,1)`/`Restore` ile yapılan hâli de M tuşunda:

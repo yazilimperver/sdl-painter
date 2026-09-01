@@ -1,7 +1,8 @@
 /// @brief minimal — kopyala-çalıştır en küçük SDLPainter uygulaması.
 ///
-/// Bu örnek çalışır minimum uygulamayı (MVP) temsil eder.
-/// README'nin ilk kod bloğu ve "projeme nasıl eklerim" sorumuzun cevabı burda.
+/// Çalışan bir uygulamanın gerektirdiği asgari iskelet: SDL kurulumu, pencere,
+/// Painter, olay döngüsü, çizim, yıkım. README'nin ilk kod bloğu bu dosyadan
+/// gelir ve "projeme nasıl eklerim" sorusunun cevabı da budur.
 ///
 /// Uygulama çatısını (`sdl_painter::app`) kullanan daha da kısa hâli için
 /// bkz. `examples/app/app_basics.cpp`.

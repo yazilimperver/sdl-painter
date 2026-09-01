@@ -7,7 +7,7 @@ namespace sdl_painter {
 /// @brief RAII sarmalayıcı — texture yaşam döngüsünü yönetir.
 ///
 /// @warning Texture, raw `IRenderer*` pointer tutar. Texture'ı oluşturan
-/// renderer (ve dolayısıyla Painter), Texture'dan **önce** yıkılmamalıdır.
+/// renderer (ve dolayısıyla Painter), Texture'dan önce yıkılmamalıdır.
 /// Aksi halde `Reset()` çağrısı dangling renderer üzerinden `DestroyTexture`
 /// çağırır — davranış tanımsızdır. Bu sözleşme @ref Image ve @ref Font
 /// içindeki Texture'lar için de geçerlidir. v0.2.0'da `weak_ptr` ile

@@ -9,7 +9,7 @@ namespace sdl_painter {
 
 namespace vk_detail {
 
-/// @brief Süreç başından beri raporlanan Vulkan validation **hatası** sayısı.
+/// @brief Süreç başından beri raporlanan Vulkan validation hatası sayısı.
 ///
 /// Debug messenger her `ERROR` seviyeli mesajda artırır. Var olma sebebi:
 /// validation mesajları yalnızca log'a yazılıyordu ve testler yeşil kalırken

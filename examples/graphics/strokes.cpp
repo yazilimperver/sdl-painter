@@ -1,19 +1,19 @@
 /// @brief strokes — kalemin tüm stil eksenleri tek sahnede.
 ///
 /// `Pen` uzun süre yalnızca renk ve kalınlıktan ibaretti. Bu örnek eklenen
-/// dört ekseni yan yana gösterir, çünkü hepsi ancak **karşılaştırıldığında**
+/// dört ekseni yan yana gösterir, çünkü hepsi ancak karşılaştırıldığında
 /// anlaşılır:
 ///
-///   1. **Uç stili (cap)** — çizginin gerçek uç noktası referans çizgisiyle
+///   1. Uç stili (cap) — çizginin gerçek uç noktası referans çizgisiyle
 ///      işaretli; `kSquare` ve `kRound` bunun yarım kalınlık kadar dışına
 ///      taşar, `kButt` taşmaz.
-///   2. **Birleşim stili (join)** — keskin bir köşede miter, bevel ve round
+///   2. Birleşim stili (join) — keskin bir köşede miter, bevel ve round
 ///      belirgin biçimde ayrışır. Çok keskin açıda miter, sivri çıkıntı
 ///      üretmemek için kendiliğinden bevel'a düşer (alt satır).
-///   3. **Kesikli çizgi (dash)** — desen yol boyunca sürekli ilerler, köşede
+///   3. Kesikli çizgi (dash) — desen yol boyunca sürekli ilerler, köşede
 ///      sıfırlanmaz; bir kesik köşenin üzerinden geçebilir ve orada birleşim
 ///      alır.
-///   4. **Yuvarlatılmış dikdörtgen ve yay** — aynı kalem stilleriyle çalışan
+///   4. Yuvarlatılmış dikdörtgen ve yay — aynı kalem stilleriyle çalışan
 ///      yeni şekiller.
 ///
 /// Kontroller:

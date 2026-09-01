@@ -1,7 +1,7 @@
 /// @brief morph — iki poligon arasında yumuşak geçiş; tessellator'ın sınavı.
 ///
 /// Şekil her karede yeniden tessellate edilir ve ara kareler bilerek zor
-/// seçilmiştir: yıldızdan haça geçerken poligon **konkav** olur, kendi
+/// seçilmiştir: yıldızdan haça geçerken poligon konkav olur, kendi
 /// üzerine yaklaşır, bazı köşeler neredeyse doğrusallaşır. Ear clipping bu
 /// durumların hepsinde ayakta kalmalı — kalmazsa ekranda üçgen kaybı veya
 /// yanıp sönme olarak görünür.

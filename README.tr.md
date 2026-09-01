@@ -24,14 +24,12 @@
 
 <div align="center">
   <sub>
-    Dört perde, her karesi SDLPainter ile çizildi: şekiller ve Bézier yolları ·
+    SDLPainter'ın maharetlerni gösteren uygulamamız: şekiller ve Bézier yolları ·
     gradient ve karıştırma modları · transform, kırpma ve viewport · doku,
     çizim hedefi ve metin. Alttaki sayaç canlı <code>FrameStats</code>.
     Kaynak: <a href="examples/hero.cpp"><code>examples/hero.cpp</code></a>
   </sub>
 </div>
-
-
 
 > SDLPainter bağımsız bir topluluk projesidir; SDL ekibiyle bir ilişkisi yoktur ve SDL ekibi tarafından onaylanmamıştır.
 
@@ -206,17 +204,6 @@ Ayrıntılı anlatım: [Hızlı Başlangıç Rehberi](doc/hizli-baslangic.md).
 
 Her biri tek bir yeteneği izole eden çalışan demolar:
 [Örnekler Rehberi](doc/sdl-painter-ornekler.md).
-
-
-## SDLPainter size uygun mu?
-
-**Uygun:** SDL3 uygulamanız varsa, üçgen birleştirmek yerine şekil çizmek
-istiyorsanız, tip güvenli modern C++ bir API istiyorsanız ya da Vulkan
-backend'ine ve kendi backend'inizi ekleyebilmeye ihtiyacınız varsa.
-
-**Başka yere bakın:** Delikli yol dolgusu (even-odd / nonzero kuralı)
-gerekiyorsa; çok duraklı veya yol boyunca gradient istiyorsanız; üst düzey
-analitik anti-aliasing arıyorsanız; D3D/Metal backend'i şartsa.
 
 ### SDL_Renderer ile ilişkisi
 

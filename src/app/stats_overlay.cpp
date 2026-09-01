@@ -17,8 +17,9 @@
 #include <utility>
 #include <vector>
 
-// spdlog (Windows'ta) Windows.h ceker ve `DrawText -> DrawTextA` makrosunu
-// tanimlar; painter.cpp'deki ile ayni gerekce.
+// spdlog burada painter.h'den SONRA include ediliyor ve Windows'ta
+// windows.h'i cekip `DrawText -> DrawTextA` makrosunu geri tanimliyor;
+// painter.h'nin kendi temizligi bu noktada gecersiz kaliyor.
 #ifdef DrawText
 #undef DrawText
 #endif

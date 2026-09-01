@@ -4,7 +4,7 @@
 /// @brief `breakout` örneğinin çarpışma matematiği (çizimden bağımsız).
 ///
 /// `tictactoe_logic.h` ile aynı kalıp: oyun mantığı SDL'den, `Painter`'dan ve
-/// pencereden **tamamen** ayrık tutulur; böylece pencere açmadan birim testi
+/// pencereden tamamen ayrık tutulur; böylece pencere açmadan birim testi
 /// yazılabilir (`tests/test_collision_logic.cpp`).
 ///
 /// Buradaki her fonksiyon saf: durum tutmaz, yalnızca girdiden çıktı üretir.

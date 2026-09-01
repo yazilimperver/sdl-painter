@@ -15,7 +15,7 @@ class GlyphAtlas;
 
 /// @brief Tek bir karakterin metrikleri ve atlas içindeki konumu.
 ///
-/// @note v1.2.0'da değişti: glyph'ler artık **ortak bir atlas texture'ında**
+/// @note v1.2.0'da değişti: glyph'ler artık ortak bir atlas texture'ında
 /// tutulur. Eskiden her glyph kendi `Texture` nesnesine sahipti ve bu, metin
 /// çiziminde karakter başına bir draw call'a yol açıyordu. Artık `texture`
 /// atlasın sayfa tanımlayıcısıdır (sahiplik atlastadır, Glyph'te değil) ve
@@ -100,7 +100,7 @@ class SDLPAINTER_API Font {
 
   /// @brief İki satır arasındaki önerilen dikey mesafe (piksel).
   ///
-  /// Fontun kendi metriğidir; `PointSize()` ile aynı şey **değildir** ve
+  /// Fontun kendi metriğidir; `PointSize()` ile aynı şey değildir ve
   /// ondan büyük olması normaldir (çıkıntılar ve satır arası boşluk dahil).
   /// Çok satırlı metinde satır başına bu kadar ilerlenir.
   [[nodiscard]] int32_t LineHeight() const;

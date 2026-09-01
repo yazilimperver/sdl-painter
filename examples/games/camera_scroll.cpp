@@ -1,7 +1,7 @@
 /// @brief camera_scroll — transform yığınının kamera olarak kullanımı.
 ///
-/// SDLPainter'da ayrı bir "kamera" sınıfı yok, bununla birlikte mevcut kabiliyetler ile bunu elde edebiliriz:
-/// kamera, temelde çizimden önce uygulanan tek bir ters ötelemedir.
+/// SDLPainter'da ayrı bir "kamera" sınıfı yok; ihtiyaç da yok. Kamera, çizimden
+/// önce uygulanan tek bir ters ötelemeden ibarettir:
 ///
 /// @code
 /// painter.Save();

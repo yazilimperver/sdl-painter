@@ -1,6 +1,9 @@
-/// @brief primitives — OpenGL backend ile tüm temel primitifleri (bunu hazırladığım zamandaki tabi) çizer.
+/// @brief primitives — temel çizim primitifleri, OpenGL backend'de tek ekranda.
 ///
 /// Geliştirme Fazı 1 demosu (eski ad: phase1_demo).
+///
+/// Faz 1'de var olan primitifleri kapsar; sonradan eklenenler (Path, gradient,
+/// karıştırma modları) kendi örneklerinde.
 ///
 /// Pencerede gösterilen şekiller:
 ///   - Dolu dikdörtgenler, daire ve elips
@@ -96,7 +99,7 @@ int main() {
       painter.Begin();
       painter.Clear(sdl_painter::Color{25, 25, 35, 255});
 
-      // --- Dolu dikdörtgenler ---
+      // Fill* cagrilari yalnizca Brush'a bakar; Pen yok sayilir.
       painter.SetBrush(
           sdl_painter::Brush(sdl_painter::Color{60, 120, 200, 200}));
       painter.FillRect(30.0f, 70.0f, 180.0f, 100.0f);
@@ -105,38 +108,37 @@ int main() {
           sdl_painter::Brush(sdl_painter::Color{200, 80, 60, 200}));
       painter.FillRect(230.0f, 70.0f, 180.0f, 100.0f);
 
-      // --- Çerçeve dikdörtgen ---
+      // Draw* cagrilari yalnizca Pen'e bakar. Kalinlik geometry-based
+      // quad ile uretilir; glLineWidth kullanilmiyor.
       painter.SetPen(
           sdl_painter::Pen(sdl_painter::Color{255, 220, 50, 255}, 3.0f));
       painter.DrawRect(430.0f, 70.0f, 180.0f, 100.0f);
 
-      // --- Dolu daire ---
+      // Segment sayisi yaricapa gore uyarlanir: max(16, radius * 0.5).
       painter.SetBrush(
           sdl_painter::Brush(sdl_painter::Color{50, 200, 120, 220}));
       painter.FillCircle(100.0f, 260.0f, 70.0f);
 
-      // --- Çerçeve daire ---
       painter.SetPen(
           sdl_painter::Pen(sdl_painter::Color{255, 180, 50, 255}, 4.0f));
       painter.DrawCircle(280.0f, 260.0f, 70.0f);
 
-      // --- Dolu elips ---
+      // Elipste rx ve ry bagimsiz; ayni adaptif segment kurali isler.
       painter.SetBrush(
           sdl_painter::Brush(sdl_painter::Color{180, 80, 220, 200}));
       painter.FillEllipse(480.0f, 260.0f, 110.0f, 55.0f);
 
-      // --- Çerçeve elips ---
       painter.SetPen(
           sdl_painter::Pen(sdl_painter::Color{100, 220, 255, 255}, 3.0f));
       painter.DrawEllipse(700.0f, 260.0f, 90.0f, 50.0f);
 
-      // --- Kalın çizgiler ---
+      // Kalin cizgi = yone dik normal boyunca genisletilmis iki ucgen.
       painter.SetPen(
           sdl_painter::Pen(sdl_painter::Color{255, 255, 255, 200}, 5.0f));
       painter.DrawLine(30.0f, 370.0f, 250.0f, 430.0f);
       painter.DrawLine(30.0f, 430.0f, 250.0f, 370.0f);
 
-      // --- Polyline ---
+      // Polyline: ardisik segmentler + kosede birlesim geometrisi.
       painter.SetPen(
           sdl_painter::Pen(sdl_painter::Color{255, 140, 60, 255}, 4.0f));
       painter.DrawPolyline({
@@ -206,7 +208,8 @@ int main() {
         painter.DrawRect(600.0f, 520.0f, 120.0f, 80.0f);
       }
 
-      // --- Yay, dilim (pie) ve kiriş (chord) ---
+      // Ayni aci taramasinin uc okunusu: yay yalniz kenari cizer, dilim
+      // merkeze kapanir, kiris uclari dogruyla birlestirir.
       {
         constexpr float kArcY = 620.0f;
 
@@ -242,7 +245,7 @@ int main() {
         painter.DrawPie(770.0f, kArcY, 55.0f, 55.0f, 300.0f, 120.0f);
       }
 
-      // --- Dolu poligon (concave — L şekli) ---
+      // Konkav poligon: triangle fan yetmez, ear clipping devreye girer.
       painter.SetBrush(
           sdl_painter::Brush(sdl_painter::Color{200, 180, 50, 210}));
       painter.FillPolygon({
@@ -254,7 +257,7 @@ int main() {
           {600.0f, 480.0f},
       });
 
-      // --- Çerçeve poligon ---
+      // Cerceve poligon kapali bir polyline gibi cizilir.
       painter.SetPen(
           sdl_painter::Pen(sdl_painter::Color{150, 230, 150, 255}, 2.5f));
       painter.DrawPolygon({
@@ -266,7 +269,7 @@ int main() {
           {600.0f, 480.0f},
       });
 
-      // --- Transform: döndürülmüş dikdörtgen ---
+      // Once Translate sonra Rotate: sekil kendi merkezinden doner.
       painter.Save();
       painter.Translate(150.0f, 580.0f);
       painter.Rotate(30.0f);
@@ -278,7 +281,7 @@ int main() {
       painter.DrawRect(-60.0f, -35.0f, 120.0f, 70.0f);
       painter.Restore();
 
-      // --- Transform: ölçeklenmiş daire ---
+      // Scale cizgi kalinligini da olcekler; cerceve daireyle kalinlasir.
       painter.Save();
       painter.Translate(400.0f, 580.0f);
       painter.Scale(1.5f, 0.6f);
@@ -287,7 +290,7 @@ int main() {
       painter.FillCircle(0.0f, 0.0f, 50.0f);
       painter.Restore();
 
-      // --- Çok kenarlı düzenli poligon (5-gen) ---
+      // Duzenli cokgen: noktalari cember uzerinde esit acilarla uretilir.
       {
         constexpr float kPi = 3.14159265358979323846f;
         std::vector<sdl_painter::Point> pentagon;

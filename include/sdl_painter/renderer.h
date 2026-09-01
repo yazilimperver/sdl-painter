@@ -29,7 +29,7 @@ using RenderTargetHandle = uint32_t;
 ///        çizim ekrana (varsayılan framebuffer'a) döner.
 constexpr RenderTargetHandle kInvalidRenderTarget = 0;
 
-// Çizim hedeflerinin piksel formatı her backend'de **doğrusal RGBA8**'dir ve
+// Çizim hedeflerinin piksel formatı her backend'de doğrusal RGBA8'dir ve
 // ekran yüzeyinin formatından (Vulkan'da tipik olarak B8G8R8A8_UNORM)
 // kasıtlı olarak ayrıştırılmıştır — gerekçe ReadRenderTarget'ta.
 
@@ -119,7 +119,7 @@ class IRenderer {
 
   /// @brief Renk karıştırma modunu ayarla.
   ///
-  /// Saf sanal **değildir**: varsayılan gövde çağrıyı yok sayar, yani bu
+  /// Saf sanal değildir: varsayılan gövde çağrıyı yok sayar, yani bu
   /// arayüzü dışarıda implemente etmiş kod derlenmeye devam eder ve standart
   /// alfa karıştırmayla çalışır. Aynı yaklaşım @ref GetLastGpuFrameMs ve
   /// filtreli @ref CreateTexture için de kullanılıyor.
@@ -138,10 +138,10 @@ class IRenderer {
 
   /// @brief Örnekleme filtresi belirterek texture oluştur.
   ///
-  /// Saf sanal **değildir**: varsayılan gövde filtreyi yok sayıp yukarıdaki
+  /// Saf sanal değildir: varsayılan gövde filtreyi yok sayıp yukarıdaki
   /// aşırı yüklemeye düşer. Böylece bu arayüzü dışarıda implemente etmiş
-  /// kod, filtre desteği gelmeden önce yazılmış olsa bile **derlenmeye devam
-  /// eder** ve doğrusal filtreyle çalışır. Aynı yaklaşım
+  /// kod, filtre desteği gelmeden önce yazılmış olsa bile derlenmeye devam
+  /// eder ve doğrusal filtreyle çalışır. Aynı yaklaşım
   /// @ref GetLastGpuFrameMs için de kullanılıyor.
   virtual TextureHandle CreateTexture(const uint8_t* data, int32_t width,
                                       int32_t height, int32_t channels,
@@ -161,10 +161,10 @@ class IRenderer {
   /// @param y Hedef bölgenin üst kenarı (piksel).
   /// @param width Bölge genişliği (piksel, > 0).
   /// @param height Bölge yüksekliği (piksel, > 0).
-  /// @param data Sıkı paketlenmiş **RGBA8** piksel verisi
+  /// @param data Sıkı paketlenmiş RGBA8 piksel verisi
   ///        (`width * height * 4` bayt).
   ///
-  /// @warning Kare ortasında çağrılabilir; ancak o kare içinde **daha önce**
+  /// @warning Kare ortasında çağrılabilir; ancak o kare içinde daha önce
   ///          çizim komutu verilmiş bir bölgenin üzerine yazmak tanımsızdır.
   ///          Yalnızca henüz kullanılmamış bölgeleri doldurun (glyph atlası
   ///          bunu şerf paketlemesiyle garanti eder).
@@ -224,7 +224,7 @@ class IRenderer {
   ///        döner.
   /// @return Geçiş yapıldıysa `true`.
   ///
-  /// @warning Bir hedefe çizerken o hedefin **kendi texture'ından okumak**
+  /// @warning Bir hedefe çizerken o hedefin kendi texture'ından okumak
   ///          tanımsızdır. Önce hedeften çıkın, sonra örnekleyin.
   virtual bool SetRenderTarget(RenderTargetHandle handle) {
     (void)handle;
@@ -233,14 +233,14 @@ class IRenderer {
 
   /// @brief Hedefin piksellerini ana belleğe oku.
   ///
-  /// Formatı **sıkı paketlenmiş, doğrusal RGBA8**'dir ve satırlar
-  /// **yukarıdan aşağı** sıralanır — iki backend'de de birebir aynı. Bu,
+  /// Formatı sıkı paketlenmiş, doğrusal RGBA8'dir ve satırlar
+  /// yukarıdan aşağı sıralanır — iki backend'de de birebir aynı. Bu,
   /// hedeflerin ekran yüzeyinin formatını devralmamasının sebebidir: yüzey
   /// formatı sürücüye göre BGRA veya sRGB olabilir ve o zaman "iki backend
   /// aynı çizimde farklı bayt üretti" bulgusu gerçek bir hatayı değil,
   /// yalnızca format farkını gösterirdi.
   ///
-  /// Çağrı **bloklar**: GPU'nun işi bitene kadar bekler. Kare döngüsünde
+  /// Çağrı bloklar: GPU'nun işi bitene kadar bekler. Kare döngüsünde
   /// değil, ekran görüntüsü alma ve test gibi yerlerde kullanılmalıdır.
   ///
   /// @param handle Okunacak hedef.
@@ -267,7 +267,7 @@ class IRenderer {
   /// @brief Model dönüşüm matrisini ayarla
   /// (3x3, sütun-major — glm::mat3 / glm::value_ptr düzeni).
   ///
-  /// @note @ref Painter bu matrisi kare başına bir kez ve daima **birim**
+  /// @note @ref Painter bu matrisi kare başına bir kez ve daima birim
   ///       olarak yazar: transform CPU'da vertex'lere gömülüyor
   ///       (bkz. `examples/benchmarks/README.md`). Arayüzde
   ///       kalmasının sebebi, kendi backend'ini yazanların matris yolunu
@@ -278,7 +278,7 @@ class IRenderer {
 
   /// @brief Son tamamlanan karenin GPU süresi (milisaniye).
   ///
-  /// Saf sanal **değildir**: ölçüm desteklemeyen backend'ler ve tüketici
+  /// Saf sanal değildir: ölçüm desteklemeyen backend'ler ve tüketici
   /// tarafındaki basit implementasyonlar bunu görmezden gelebilir.
   /// Varsayılan 0.0 = "ölçülmüyor".
   ///

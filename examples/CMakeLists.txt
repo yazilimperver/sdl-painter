@@ -1,8 +1,3 @@
-# Örnek hedefleri. Tanım yardımcısı: cmake/AddExample.cmake
-#
-# Kaynaklar kategoriye göre alt dizinlerde durur, çıktı tek dizine yazılır
-# (`build/<preset>/examples/`) — gerekçesi yardımcı modülün başında.
-
 include(AddExample)
 
 # --- Temel çizim: SDL boilerplate'i açıkta, uygulama çatısı kullanılmaz ---
@@ -61,6 +56,14 @@ sdlpainter_add_example(vulkan_text vulkan/vulkan_text.cpp VULKAN TTF)
 
 # --- README tanıtım GIF'ini üreten koreografili sahne ---
 sdlpainter_add_example(hero hero.cpp)
+
+# hero.cpp'nin dört perdesi, tek tek incelenebilsin diye ayrı ayrı. Her biri
+# kendi kendine yeter: GIF koreografisi (perde geçişi, kare dökümü) yok,
+# uygulama çatısı üzerinden tek perdeyi döngüde oynatır.
+sdlpainter_add_example(shapes_showcase    showcase/shapes_showcase.cpp    APP)
+sdlpainter_add_example(color_showcase     showcase/color_showcase.cpp     APP)
+sdlpainter_add_example(transform_showcase showcase/transform_showcase.cpp APP)
+sdlpainter_add_example(images_showcase    showcase/images_showcase.cpp    APP)
 
 # Ölçüm hedefleri (draw call / batch verimliliği) — bkz. benchmarks/README.md
 add_subdirectory(benchmarks)

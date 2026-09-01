@@ -1,23 +1,23 @@
 /// @brief render_target — ekran yerine dokuya çizmek.
 ///
 /// `RenderTarget`, çizimi ekran yerine bir dokuya yönlendirir. Bu, tek bir
-/// özellik değil bir **kapı**: bir kez dokuya çizebiliyorsanız sonucu
+/// özellik değil bir kapı: bir kez dokuya çizebiliyorsanız sonucu
 /// ölçekleyebilir, tekrar tekrar basabilir, üzerinde biriktirebilir ve geri
 /// okuyabilirsiniz.
 ///
 /// Sahne üç bölümden oluşuyor, üçü de aynı hedefi farklı biçimde kullanıyor:
 ///
-///   1. **Kaynak** — dönen bir şekil grubu bir hedefe çizilir ve olduğu gibi
+///   1. Kaynak — dönen bir şekil grubu bir hedefe çizilir ve olduğu gibi
 ///      ekrana basılır. Ekrana doğrudan çizmekten farkı görünmez; amaç
 ///      "hedefe çizim ekrana çizimle aynı sonucu verir" demek.
-///   2. **Mini harita** — aynı hedef, tek satırla küçültülüp köşeye basılır.
-///      Sahne **ikinci kez çizilmiyor**; hedef bir doku olduğu için istediğiniz
+///   2. Mini harita — aynı hedef, tek satırla küçültülüp köşeye basılır.
+///      Sahne ikinci kez çizilmiyor; hedef bir doku olduğu için istediğiniz
 ///      kadar, istediğiniz boyutta basılabilir. Pahalı bir sahnenin ikinci bir
 ///      görünümünü elde etmenin ucuz yolu bu.
-///   3. **İz (trail) efekti** — iki hedef sırayla kullanılır: yeni kare,
+///   3. İz (trail) efekti — iki hedef sırayla kullanılır: yeni kare,
 ///      *önceki* hedefin biraz soluklaştırılmış içeriğinin üzerine çizilir.
 ///      Sonuç, hareketin arkasında sönen bir iz. İki hedef gerekli çünkü bir
-///      hedefe çizerken **kendi içeriğini örnekleyemezsiniz**.
+///      hedefe çizerken kendi içeriğini örnekleyemezsiniz.
 ///
 /// Kontroller:
 ///   SPACE — animasyonu dondur / devam ettir

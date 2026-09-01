@@ -2,9 +2,9 @@
 ///
 /// Bu örnek iki kabiliyetin varlık sebebini bir arada gösterir:
 ///
-///   * **Dilim (pie)** — `FillPie` / `DrawPie` olmadan pasta grafik çizmek
+///   * Dilim (pie) — `FillPie` / `DrawPie` olmadan pasta grafik çizmek
 ///     için elle üçgen fanı kurmak gerekirdi.
-///   * **Çok satırlı metin ve sözcük kaydırma** — `TextWrap::kWord` olmadan
+///   * Çok satırlı metin ve sözcük kaydırma — `TextWrap::kWord` olmadan
 ///     bir açıklama kutusunu satırlara elle bölmek gerekirdi.
 ///
 /// Ayrıca kesikli çizgi (ızgara), yuvarlatılmış olmayan çubuklar, polyline
@@ -12,7 +12,7 @@
 /// her şey tek sahnede.
 ///
 /// SDLPainter'ın hedef kitlesinin bir kısmı tam olarak budur: oyun değil,
-/// **araç ve gösterge paneli** çizimi.
+/// araç ve gösterge paneli çizimi.
 ///
 /// Metin sistemde bulunan bir TTF fontuyla çizilir; font yoksa grafikler
 /// etiketsiz çizilir.

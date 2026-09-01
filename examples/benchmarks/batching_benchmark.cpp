@@ -105,7 +105,7 @@ std::vector<Placement> MakePlacements(int32_t count) {
   return out;
 }
 
-// --- Senaryolar -------------------------------------------------------------
+// Senaryolar
 //
 // Her senaryo aynı sayıda şekil çizer; tek fark çizim desenidir. Böylece draw
 // call farkı doğrudan desenin batch'e etkisini gösterir.
@@ -237,7 +237,7 @@ const Scenario kScenarios[] = {
      true},
 };
 
-// --- Sonuç ------------------------------------------------------------------
+// Sonuç
 
 struct Result {
   std::string name;

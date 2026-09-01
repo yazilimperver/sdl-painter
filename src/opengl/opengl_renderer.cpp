@@ -12,12 +12,7 @@
 #include <glad/glad.h>
 #include <spdlog/spdlog.h>
 
-// Phase 1'de tam implementasyon yapılacak.
-// Şimdilik OpenGL context kurulumu ve temel altyapı hazır.
-
 namespace sdl_painter {
-
-// --- OpenGLRenderer implementasyonu ---
 
 OpenGLRenderer::~OpenGLRenderer() {
   Shutdown();
@@ -37,8 +32,8 @@ bool OpenGLRenderer::Initialize(SDL_Window* window) {
     return false;
   }
 
-  if (gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress)) ==
-      0) {
+  if (0 ==
+      gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
     spdlog::error("[OpenGLRenderer] Failed to load GLAD");
     return false;
   }
@@ -263,11 +258,10 @@ void OpenGLRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
 }
 
 void OpenGLRenderer::SetBlendMode(BlendMode mode) {
-  // Neden glBlendFunc DEGIL de glBlendFuncSeparate:
-  //
+  // Neden glBlendFunc degil de glBlendFuncSeparate:
   // glBlendFunc alfa kanalina da renk faktorlerini uygular. Vulkan tarafinda
   // ise alfa faktorleri ayri alanlardir (srcAlphaBlendFactor /
-  // dstAlphaBlendFactor) ve orada bilincli olarak farkli degerler secilir.du.
+  // dstAlphaBlendFactor) ve orada bilincli olarak farkli degerler secilir.
   //
   // Secilen alfa formulu her iki backend'de de ayni (bkz. vk_blend.h):
   // aOut = aSrc + aDst * (1 - aSrc) — standart "over" bilesimi. Eski GL

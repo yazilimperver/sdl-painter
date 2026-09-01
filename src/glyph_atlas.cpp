@@ -32,7 +32,6 @@ bool GlyphAtlas::Allocate(Page& page, int32_t width, int32_t height,
 
   // Aktif rafta yatay olarak siğiyor mu?
   if (page.cursor_x + kAdvanceX > kPageSize) {
-    // Yeni rafa gec.
     page.shelf_y += page.shelf_height + kPadding;
     page.cursor_x = kPadding;
     page.shelf_height = 0;

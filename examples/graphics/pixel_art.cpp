@@ -9,7 +9,7 @@
 /// "kenarlar yumuşak görünür, filtre seçimi P1.2'de" notu vardı. Bu örnek o
 /// notun kapanışıdır.
 ///
-/// Filtrenin **doku yaratılırken** uygulandığına dikkat: `SetFilter` ilk
+/// Filtrenin doku yaratılırken uygulandığına dikkat: `SetFilter` ilk
 /// çizimden önce çağrılmalıdır, sonrası önbelleklenmiş dokuyu etkilemez.
 /// Bu yüzden iki ayrı `Image` nesnesi var — aynı dosya, iki farklı doku.
 ///

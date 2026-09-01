@@ -1,7 +1,7 @@
 /// @brief physics_rope — Verlet zinciri ve kumaş; kalın çizginin dürüst sınavı.
 ///
 /// Fizik tarafı kasıtlı olarak basit (yaklaşık 40 satır Verlet entegrasyonu);
-/// örneğin asıl konusu **çizim**. Sürekli şekil değiştiren, keskin açılar
+/// örneğin asıl konusu çizim. Sürekli şekil değiştiren, keskin açılar
 /// üreten bir polyline, kalın çizgi geometrisinin en zorlandığı durumdur:
 ///
 ///   * Birleşim (join) stili yanlışsa köşelerde boşluk ya da sivri çıkıntı

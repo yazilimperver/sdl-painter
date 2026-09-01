@@ -79,7 +79,7 @@ class SDLPAINTER_API Image {
   /// Piksel sanatı `kNearest` ister; varsayılan `kLinear` ile pikseller
   /// büyütüldüğünde bulanıklaşır.
   ///
-  /// @warning Filtre **doku oluşturulurken** uygulanır, yani ilk çizimden
+  /// @warning Filtre doku oluşturulurken uygulanır, yani ilk çizimden
   ///          (ilk @ref Upload) önce ayarlanmalıdır. Sonradan çağırmak
   ///          önbelleklenmiş dokuyu etkilemez.
   void SetFilter(TextureFilter filter) noexcept { mFilter = filter; }

@@ -7,7 +7,7 @@ namespace sdl_painter {
 /// @brief Bir karenin çizim maliyeti — profilleme ve ekran üstü gösterim için.
 ///
 /// @ref Painter her karede doldurur; @ref Painter::GetFrameStats ile okunur.
-/// Değerler **son tamamlanan** kareye aittir (`End()` çağrıldıktan sonra
+/// Değerler son tamamlanan kareye aittir (`End()` çağrıldıktan sonra
 /// geçerlidir).
 ///
 /// Bu sayaçların neden önemli olduğu `examples/benchmarks/README.md` içinde
@@ -42,7 +42,7 @@ struct FrameStats {
   /// @brief Batch'lenemeyen GPU durum değişikliği sayısı.
   ///
   /// Scissor (clip) ayarları, projeksiyon ve model matrisi yüklemeleri.
-  /// Renk ve transform bu sayaca **girmez** — ikisi de vertex verisinde
+  /// Renk ve transform bu sayaca girmez — ikisi de vertex verisinde
   /// taşındığı için durum değişikliği değildir.
   uint32_t state_changes{0};
 };

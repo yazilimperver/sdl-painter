@@ -1,11 +1,11 @@
 /// @brief breakout — gerçek zamanlı tam oyun: döngü, girdi, çarpışma, skor.
 ///
-/// `tictactoe` oyunu sıra tabanlı ve **statik** bir oyundu ve hiçbir şey kendiliğinden hareket
+/// `tictactoe` sıra tabanlı ve statik: hiçbir şey kendiliğinden hareket
 /// etmiyordu. Bu örnek eksik kalan tarafı kapatıyor — sürekli hareket, kare
-/// bağımsız fizik, sürekli çarpışma testi ve bir durum makinesi (menü → oyun
-/// → kazandın/kaybettin) bir arada.
+/// hızından bağımsız fizik, her karede çarpışma testi ve bir durum makinesi
+/// (menü → oyun → kazandın/kaybettin) bir arada.
 ///
-/// Mimari ayrımı: çarpışma matematiği çizimden **tamamen** ayrık, saf
+/// Mimari ayrımı: çarpışma matematiği çizimden tamamen ayrık, saf
 /// fonksiyonlar olarak [`collision_logic.h`](collision_logic.h) içinde. Bu
 /// sayede pencere açmadan birim testi yazılabiliyor
 /// (`tests/test_collision_logic.cpp`) — `tictactoe_logic.h` ile aynı kalıp.

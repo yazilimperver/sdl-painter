@@ -192,7 +192,7 @@ bool VkContext::CreateInstance() {
 #ifdef VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME
   // Başsız (offscreen/dummy) video sürücüsünde SDL, surface'i
   // VK_EXT_headless_surface ile oluşturur — ancak bu extension'ı
-  // SDL_Vulkan_GetInstanceExtensions() listesinde **bildirmez**; yalnızca
+  // SDL_Vulkan_GetInstanceExtensions() listesinde bildirmez; yalnızca
   // VK_KHR_surface döndürür. Sonuç: SDL_Vulkan_CreateSurface
   // "VK_EXT_headless_surface extension is not enabled" ile başarısız olur.
   //

@@ -50,7 +50,7 @@ class ShaderProgram {
   ///
   /// Driver `glGetUniformLocation` her çağrıda lineer arama yapar; sıcak yolda
   /// (per-draw uniform set) bu O(N) maliyeti önbellekleme ile O(1)'e iner.
-  /// Bulunamayan uniformlar `-1` ile önbelleğe alınır ve yalnızca **bir kez**
+  /// Bulunamayan uniformlar `-1` ile önbelleğe alınır ve yalnızca bir kez
   /// uyarı loglanır (warn-once politikası).
   int32_t GetUniformLocation(const std::string& name) const;
 

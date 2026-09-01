@@ -4,7 +4,7 @@
 #include <string_view>
 
 /// @file version.h
-/// @brief SDLPainter sürüm bilgisi — projenin **tek** sürüm kaynağı.
+/// @brief SDLPainter sürüm bilgisi — projenin tek sürüm kaynağı.
 ///
 /// Sürüm numarası yalnızca bu dosyada tutulur. `CMakeLists.txt` ve
 /// `conanfile.py` değeri buradan okur; başka hiçbir yerde tekrarlanmaz.

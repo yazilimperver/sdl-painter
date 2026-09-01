@@ -9,7 +9,7 @@
 /// Windows'ta `wglGetProcAddress` döndürmez, ama SDL `opengl32.dll`'e geri
 /// düşerek doğru adresi verir.
 ///
-/// Çağrı anı önemlidir: `SDL_GL_SwapWindow`'dan **önce** okunmalı. Bunu
+/// Çağrı anı önemlidir: `SDL_GL_SwapWindow`'dan önce okunmalı. Bunu
 /// @ref bench::CountingRenderer::CaptureBeforeNextPresent sağlar.
 
 #include <SDL3/SDL.h>

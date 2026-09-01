@@ -156,14 +156,14 @@ class VulkanRenderer final : public IRenderer {
   // Hedefler ekranınkinden farklı bir renk formatı kullanır (bkz.
   // VulkanRenderTarget::kColorFormat), bu yüzden kendi render pass'lerini ve
   // ona bağlı ikinci bir pipeline takımını gerektirirler: bir pipeline
-  // yalnızca **uyumlu** render pass ile kullanılabilir ve uyumluluk
+  // yalnızca uyumlu render pass ile kullanılabilir ve uyumluluk
   // attachment formatını kapsar.
 
   /// @brief Bir hedefin ve ona verilen texture handle'ının birlikte kaydı.
   struct RenderTargetEntry {
     std::unique_ptr<VulkanRenderTarget> target;
     /// Hedefin içeriğini örneklemek için kullanılan handle; @ref mTextures
-    /// ile **aynı** sayaçtan gelir, dolayısıyla çakışmaz.
+    /// ile aynı sayaçtan gelir, dolayısıyla çakışmaz.
     TextureHandle texture{kInvalidTexture};
   };
 
@@ -185,7 +185,7 @@ class VulkanRenderer final : public IRenderer {
 
   /// @brief Offscreen render pass'i ve ona bağlı pipeline takımını üret.
   ///
-  /// İlk @ref CreateRenderTarget çağrısında **tembel** olarak çalışır: hedef
+  /// İlk @ref CreateRenderTarget çağrısında tembel olarak çalışır: hedef
   /// kullanmayan uygulama ikinci bir pipeline takımının bedelini ödemez.
   bool EnsureOffscreenResources();
 

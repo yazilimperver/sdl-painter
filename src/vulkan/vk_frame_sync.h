@@ -32,7 +32,7 @@ class VkFrameSync {
   }
   VkCommandPool GetCommandPool() const { return mCommandPool; }
 
-  /// @brief Acquire semaphore'u — **frame_index** ile indekslenir.
+  /// @brief Acquire semaphore'u — frame_index ile indekslenir.
   ///
   /// Yeniden kullanım güvenliği in-flight fence beklemesinden gelir: frame N
   /// başında `mInFlight[N % kMaxFramesInFlight]` beklendiğinde, aynı slotu

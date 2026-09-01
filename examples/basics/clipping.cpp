@@ -98,13 +98,14 @@ int main() {
       painter.Begin();
       painter.Clear(sdl_painter::Color{20, 20, 30, 255});
 
-      // Ekran merkezini gosteren arti isareti (referans).
+      // Sabit referans artisi: dikdortgenin merkezi bununla cakismali.
       painter.SetPen(
           sdl_painter::Pen(sdl_painter::Color{200, 200, 200, 200}, 1.0f));
       painter.DrawLine(cx - 15.0f, cy, cx + 15.0f, cy);
       painter.DrawLine(cx, cy - 15.0f, cx, cy + 15.0f);
 
-      // Merkez etrafinda donen dikdortgen.
+      // Once Translate sonra Rotate: donus merkezi (0,0) oldugu icin
+      // dikdortgen kendi ortasindan doner, ekran orijininden degil.
       painter.Save();
       painter.Translate(cx, cy);
       painter.Rotate(angle);
