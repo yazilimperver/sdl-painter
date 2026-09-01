@@ -682,7 +682,7 @@ jobs:
             echo >> public/coverage/badge.json
           fi
           cat public/coverage/badge.json
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: public
       - id: deployment
