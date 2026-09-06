@@ -889,7 +889,6 @@ void Painter::DrawImage(const Image& image, const Rect& src_rect,
     return;
   }
 
-  // src_rect → UV koordinatlarina donustur [0, 1]
   const auto kImgW = static_cast<float>(image.Width());
   const auto kImgH = static_cast<float>(image.Height());
   PushTexturedQuad(handle, src_rect.x / kImgW, src_rect.y / kImgH,
@@ -908,13 +907,11 @@ void Painter::PushTexturedQuad(TextureHandle texture, float u0, float v0,
     std::swap(v0, v1);
   }
 
-  // dest_rect → ekran koordinatlari
   const float kX0 = dest_rect.x;
   const float kY0 = dest_rect.y;
   const float kX1 = dest_rect.x + dest_rect.w;
   const float kY1 = dest_rect.y + dest_rect.h;
 
-  // Iki ucgenden olusan quad (CCW)
   const std::vector<TexturedVertex> kVerts = {
       {kX0, kY0, u0, v0}, {kX1, kY0, u1, v0}, {kX1, kY1, u1, v1},
       {kX0, kY0, u0, v0}, {kX1, kY1, u1, v1}, {kX0, kY1, u0, v1},
@@ -951,9 +948,6 @@ void Painter::DrawText(float x, float y, const std::string& text) {
 }
 
 void Painter::DrawTextLine(float x, float y, const std::string& text) {
-  // Metin de diğer primitifler gibi güncel transform ile çizilir; aksi halde
-  // Translate/Rotate/Scale sonrası glyph'ler eski matrisle gönderilir.
-
   const Color& tint = mCurrentState.pen.GetColor();
   float current_x = x;
 
@@ -1255,8 +1249,6 @@ void Painter::ApplyViewport() {
   UpdateProjection();
 }
 
-// --- Çizim hedefi ----------------------------------------------------------
-
 RenderTarget Painter::CreateRenderTarget(int32_t width, int32_t height,
                                          TextureFilter filter) {
   if (mRenderer == nullptr || width <= 0 || height <= 0) {
@@ -1395,7 +1387,6 @@ void Painter::UpdateProjection() {
   const float kSy = kSameY ? (2.0F / h) : (-2.0F / h);
   const float kTy = kSameY ? -1.0F : 1.0F;
 
-  // 4x4 sütun-major ortografik matris
   // clang-format off
   std::array<float, 16> mat = {
       2.0F / w,  0.0F,  0.0F, 0.0F,

@@ -41,7 +41,6 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
     return false;
   }
 
-  // Default clear: siyah.
   mClearValue.color = {{0.0F, 0.0F, 0.0F, 1.0F}};
   mViewportW = static_cast<int32_t>(width);
   mViewportH = static_cast<int32_t>(height);
@@ -58,7 +57,6 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
     return false;
   }
 
-  // Phase 5b: untextured graphics pipeline
   // Pipeline kurulumu başarısız olursa sert hata veriyoruz. Eskiden burada
   // uyarı loglanıp devam ediliyordu; gerekçe, .spv dosyalarının çalışma
   // zamanında eksik olabilmesiydi. Shader'lar artık binary'ye gömülü olduğu
@@ -70,7 +68,7 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
     return false;
   }
 
-  // Phase 5c: textured vertex ring buffer — aynı slot mantığı.
+  // Textured vertex ring buffer — aynı slot mantığı.
   mTexturedVertexRing = std::make_unique<VulkanBuffer>();
   if (!mTexturedVertexRing->Init(
           mContext->GetDevice(), mContext->GetPhysicalDevice(), kRingSize,
@@ -79,7 +77,6 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
     return false;
   }
 
-  // Phase 5c: textured pipeline
   mTexturedPipeline = std::make_unique<VulkanTexturedPipeline>();
   if (!mTexturedPipeline->Init(mContext->GetDevice(),
                                mSwapchain->GetRenderPass())) {
@@ -87,7 +84,6 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
     return false;
   }
 
-  // Identity projection başlangıç değeri (Painter SetProjectionMatrix çağırır)
   mPushConstants = PushConstants{};
 
   spdlog::info("VulkanRenderer initialized.");
@@ -650,8 +646,6 @@ void VulkanRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
 
   vkCmdDraw(cmd, static_cast<uint32_t>(vertices.size()), 1, 0, 0);
 }
-
-// --- Çizim hedefleri ---------------------------------------------------
 
 VkExtent2D VulkanRenderer::CurrentExtent() const {
   const auto it = mRenderTargets.find(mCurrentTarget);

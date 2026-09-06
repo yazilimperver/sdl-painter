@@ -15,7 +15,7 @@ namespace sdl_painter {
 /// `DrawPolyline`. Kapalı şekillerde (dikdörtgen, daire, poligon çerçevesi)
 /// uç yoktur, yalnızca birleşim vardır.
 enum class LineCap : uint8_t {
-  kButt,    ///< Düz kesik — çizgi uç noktasında biter. **Varsayılan.**
+  kButt,    ///< Düz kesik — çizgi uç noktasında biter, varsayılan.
   kSquare,  ///< Kare — kalınlığın yarısı kadar uzatılır.
   kRound,   ///< Yuvarlak — uca yarım kalınlık yarıçaplı disk.
 };
@@ -25,7 +25,7 @@ enum class LineCap : uint8_t {
 /// Segmentler bağımsız quad'lar olarak üretildiği için her köşede kama biçimli
 /// bir boşluk kalır; birleşim bu boşluğu doldurur.
 enum class LineJoin : uint8_t {
-  kRound,  ///< Yuvarlak — köşeye disk. Keskin açılarda sivrilmez. **Varsayılan.**
+  kRound,  ///< Yuvarlak — köşeye disk. Keskin açılarda sivrilmez, varsayılan.
   kMiter,  ///< Sivri — dış kenarlar kesişene dek uzatılır; keskin açılarda
            ///< miter sınırı aşılırsa kendiliğinden bevel'a düşer.
   kBevel,  ///< Kesik köşe — iki dış nokta tek üçgenle birleştirilir.

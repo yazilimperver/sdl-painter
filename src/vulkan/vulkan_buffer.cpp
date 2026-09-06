@@ -25,7 +25,6 @@ bool VulkanBuffer::Init(VkDevice device, VkPhysicalDevice phys_device,
   mSlotCapacity = capacity / frame_slot_count;
   mHeads.assign(frame_slot_count, 0);
 
-  // Buffer oluştur.
   VkBufferCreateInfo buf_info{};
   buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
   buf_info.size = capacity;
@@ -37,7 +36,6 @@ bool VulkanBuffer::Init(VkDevice device, VkPhysicalDevice phys_device,
     return false;
   }
 
-  // Bellek gereksinimleri sorgula.
   VkMemoryRequirements mem_req{};
   vkGetBufferMemoryRequirements(device, mBuffer, &mem_req);
 
@@ -85,7 +83,6 @@ bool VulkanBuffer::Init(VkDevice device, VkPhysicalDevice phys_device,
   }
 
   spdlog::debug("VulkanBuffer initialized: {} bytes", capacity);
-  // RAII için device'i sakla (destructor başarılı bir Init sonrası yıkar).
   mDevice = device;
   return true;
 }
@@ -126,12 +123,10 @@ bool VulkanBuffer::Write(const void* data, VkDeviceSize byte_size,
     return false;
   }
 
-  // Slot'un mutlak başlangıç ve bitiş offset'leri.
   const VkDeviceSize kSlotStart = frame_slot * mSlotCapacity;
   const VkDeviceSize kSlotEnd = kSlotStart + mSlotCapacity;
   // Slot içinde geçerli mutlak head.
   const VkDeviceSize kAbsHead = kSlotStart + mHeads[frame_slot];
-  // Hizala.
   const VkDeviceSize kAlignedHead =
       (kAbsHead + alignment - 1) & ~(alignment - 1);
 

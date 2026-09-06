@@ -104,7 +104,6 @@ class Brush {
   /// @brief Dolgu rengini ayarla.
   void SetColor(const Color& color) noexcept { mColor = color; }
 
-  /// @brief Fırça görünür mü? (alpha > 0)
   /// @brief Fırça görünür mü?
   ///
   /// Gradient'te iki uçtan biri bile opaksa görünürdür; yalnızca başlangıç

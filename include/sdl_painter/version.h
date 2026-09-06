@@ -11,15 +11,6 @@
 /// Sürüm yükseltirken dört sabiti birlikte güncelle — CMake, metin ile sayısal
 /// bileşenlerin tutarlılığını configure aşamasında doğrular.
 ///
-/// Bilinçli olarak önişlemci makrosu kullanılmaz; sabitler tip güvenlidir ve
-/// `sdl_painter` namespace'i içindedir. Bunun bedeli, sürümün `#if` içinde
-/// kullanılamamasıdır — tüketici tarafında sürüm kısıtı CMake üzerinden
-/// ifade edilir:
-///
-/// @code
-/// find_package(sdl_painter 1.1 CONFIG REQUIRED)
-/// @endcode
-///
 /// Kod içinde kullanım:
 ///
 /// @code

@@ -56,17 +56,14 @@ bool OpenGLRenderer::Initialize(SDL_Window* window) {
 }
 
 void OpenGLRenderer::SetupBuffers() {
-  // Temel VAO/VBO
   glGenVertexArrays(1, &mVao);
   glGenBuffers(1, &mVbo);
   glBindVertexArray(mVao);
   glBindBuffer(GL_ARRAY_BUFFER, mVbo);
 
-  // Position (Location 0)
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(Vertex),
                         reinterpret_cast<void*>(static_cast<uintptr_t>(0)));
-  // Color (Location 1) - Normalized uint8 -> float [0, 1]
   glEnableVertexAttribArray(1);
   glVertexAttribPointer(
       1, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(Vertex),
@@ -74,22 +71,18 @@ void OpenGLRenderer::SetupBuffers() {
 
   glBindVertexArray(0);
 
-  // Textured VAO/VBO
   glGenVertexArrays(1, &mTexturedVao);
   glGenBuffers(1, &mTexturedVbo);
   glBindVertexArray(mTexturedVao);
   glBindBuffer(GL_ARRAY_BUFFER, mTexturedVbo);
 
-  // Position (Location 0)
   glEnableVertexAttribArray(0);
   glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(TexturedVertex),
                         reinterpret_cast<void*>(static_cast<uintptr_t>(0)));
-  // TexCoord (Location 1)
   glEnableVertexAttribArray(1);
   glVertexAttribPointer(
       1, 2, GL_FLOAT, GL_FALSE, sizeof(TexturedVertex),
       reinterpret_cast<void*>(static_cast<uintptr_t>(2 * sizeof(float))));
-  // Color (Location 2)
   glEnableVertexAttribArray(2);
   glVertexAttribPointer(
       2, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(TexturedVertex),
@@ -418,8 +411,6 @@ void OpenGLRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
   glBindVertexArray(0);
   glBindTexture(GL_TEXTURE_2D, 0);
 }
-
-// --- Çizim hedefleri (FBO) -------------------------------------------------
 
 RenderTargetHandle OpenGLRenderer::CreateRenderTarget(int32_t width,
                                                       int32_t height,

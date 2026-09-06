@@ -42,7 +42,7 @@ class Painter;
 /// olsun. @ref Painter::ReadRenderTarget bu yüzden her platformda aynı baytları
 /// döndürür.
 ///
-/// @warning **Yaşam döngüsü sözleşmesi:** Bir RenderTarget, onu üreten
+/// @warning  Bir RenderTarget, onu üreten
 /// @ref Painter yaşıyorken yıkılmalıdır — @ref Image ve @ref Font ile aynı
 /// kural. Painter yok olduktan sonra yıkılırsa sahip pointer dangling olur.
 ///

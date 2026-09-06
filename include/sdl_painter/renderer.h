@@ -7,7 +7,6 @@
 #include <memory>
 #include <vector>
 
-// SDL forward declaration
 struct SDL_Window;
 
 namespace sdl_painter {
@@ -84,8 +83,6 @@ class IRenderer {
   IRenderer(IRenderer&&) = delete;
   IRenderer& operator=(IRenderer&&) = delete;
 
-  // --- Yaşam döngüsü ---
-
   /// @brief Renderer'ı verilen pencere için başlat.
   virtual bool Initialize(SDL_Window* window) = 0;
 
@@ -97,8 +94,6 @@ class IRenderer {
 
   /// @brief Frame'i tamamla ve ekrana sun.
   virtual void EndFrame() = 0;
-
-  // --- Durum ---
 
   /// @brief Viewport'u ayarla (piksel koordinatları).
   virtual void SetViewport(int32_t x, int32_t y, int32_t width,
@@ -125,12 +120,8 @@ class IRenderer {
   /// filtreli @ref CreateTexture için de kullanılıyor.
   virtual void SetBlendMode(BlendMode mode) { (void)mode; }
 
-  // --- Çizim primitifleri (tessellated vertex'ler) ---
-
   /// @brief Üçgenler çiz. Vertex listesi 3'ün katı olmalı. Renk vertex'te taşınır.
   virtual void DrawTriangles(const std::vector<Vertex>& vertices) = 0;
-
-  // --- Texture işlemleri ---
 
   /// @brief Ham piksel verisinden texture oluştur. Başarısızlıkta kInvalidTexture döner.
   virtual TextureHandle CreateTexture(const uint8_t* data, int32_t width,
@@ -179,7 +170,6 @@ class IRenderer {
   virtual void DrawTextured(const std::vector<TexturedVertex>& vertices,
                             TextureHandle texture) = 0;
 
-  // --- Çizim hedefleri (offscreen render target) ---
   //
   // Aşağıdakilerin hiçbiri saf sanal DEĞİLDİR; varsayılan gövdeler "hedef
   // desteklenmiyor" anlamına gelir. Böylece bu arayüzü dışarıda implemente
@@ -256,8 +246,6 @@ class IRenderer {
     return false;
   }
 
-  // --- Transform ---
-
   /// @brief Backend tipini döndür — projeksiyon yönü için kullanılır.
   [[nodiscard]] virtual RendererBackend GetBackend() const = 0;
 
@@ -273,8 +261,6 @@ class IRenderer {
   ///       kalmasının sebebi, kendi backend'ini yazanların matris yolunu
   ///       hâlâ kullanabilmesi ve mevcut shader'ların değişmemesidir.
   virtual void SetModelMatrix(const float* mat3) = 0;
-
-  // --- Profilleme (isteğe bağlı) ---
 
   /// @brief Son tamamlanan karenin GPU süresi (milisaniye).
   ///

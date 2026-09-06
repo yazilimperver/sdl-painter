@@ -95,8 +95,6 @@ struct AppConfig {
   /// @note Host uygulama kendi logger'ını kullanacaksa `false` yapın.
   bool init_logger{true};
 
-  // --- Ekran üstü istatistik göstergesi ---
-
   /// @brief Başlangıçtaki gösterge modu.
   ///
   /// Çalışma zamanında @ref AppConfig::stats_overlay_key ile döngüsel olarak

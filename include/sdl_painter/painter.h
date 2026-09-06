@@ -22,7 +22,6 @@
 #include <string>
 #include <vector>
 
-// SDL forward declaration
 struct SDL_Window;
 
 // Windows.h DrawText makrosu (DrawTextA/DrawTextW) ile ad çakışmasını önle.
@@ -51,7 +50,7 @@ struct RenderState {
 /// Painter, SDL penceresi üzerinde 2B çizim yapar. Backend (OpenGL/Vulkan)
 /// IRenderer arayüzü üzerinden soyutlanır.
 ///
-/// @warning **Yaşam döngüsü sözleşmesi:** Painter'a texture yükleyen tüm
+/// @warning  Painter'a texture yükleyen tüm
 /// @ref Image ve @ref Font nesneleri, Painter yıkılmadan önce
 /// yıkılmalıdır. Image veya Font'u global / `static` ya da daha uzun
 /// yaşayan bir konuma yerleştirmek tanımsız davranışa yol açar — yıkım
@@ -89,8 +88,6 @@ class SDLPAINTER_API Painter {
   /// @brief Renderer başarıyla başlatıldı mı?
   [[nodiscard]] bool IsValid() const noexcept { return mRenderer != nullptr; }
 
-  // --- Yaşam döngüsü ---
-
   /// @brief Frame başlangıcı — her frame başında çağrılmalı.
   void Begin();
 
@@ -108,8 +105,6 @@ class SDLPAINTER_API Painter {
   ///       yeniden boyutlandırmada çağırmalı ya da hiç çağırmamalıdır
   ///       (o zaman otomatik yoklama sürer).
   void SetDrawableSize(int32_t width, int32_t height);
-
-  // --- Görüntü alanı (viewport) ---
 
   /// @brief Çizimi pencerenin bir alt dikdörtgeniyle sınırla.
   ///
@@ -134,8 +129,6 @@ class SDLPAINTER_API Painter {
 
   /// @brief Viewport'u tüm çizim yüzeyine geri al.
   void ResetViewport();
-
-  // --- Çizim hedefi (dokuya çizim) ---
 
   /// @brief Ekran yerine çizilebilen offscreen bir yüzey oluştur.
   ///
@@ -196,12 +189,8 @@ class SDLPAINTER_API Painter {
   bool ReadRenderTarget(const RenderTarget& target,
                         std::vector<uint8_t>& out_rgba);
 
-  // --- Temizlik ---
-
   /// @brief Ekranı belirtilen renkle temizle.
   void Clear(const Color& color);
-
-  // --- Profilleme ---
 
   /// @brief Son tamamlanan karenin çizim istatistikleri.
   ///
@@ -213,8 +202,6 @@ class SDLPAINTER_API Painter {
   [[nodiscard]] const FrameStats& GetFrameStats() const noexcept {
     return mLastStats;
   }
-
-  // --- Stil ---
 
   /// @brief Aktif kalemi ayarla (çizgi rengi ve kalınlığı).
   void SetPen(const Pen& pen);
@@ -252,8 +239,6 @@ class SDLPAINTER_API Painter {
   [[nodiscard]] BlendMode GetBlendMode() const noexcept {
     return mCurrentState.blend_mode;
   }
-
-  // --- Primitifler ---
 
   /// @brief İki nokta arasına çizgi çiz.
   void DrawLine(float x1, float y1, float x2, float y2);
@@ -328,8 +313,6 @@ class SDLPAINTER_API Painter {
   /// @brief Açık çizgi dizisi çiz.
   void DrawPolyline(const std::vector<Point>& points);
 
-  // --- Yol (path) ---
-
   /// @brief Yolun çerçevesini çiz.
   ///
   /// Her alt yol ayrı çizilir: kapalı olanlar (@ref Path::Close) kapalı
@@ -352,8 +335,6 @@ class SDLPAINTER_API Painter {
   ///          onu delik yapmaz, üzerine ikinci bir dolgu çizer. Delikli
   ///          şekiller bu sürümün kapsamı dışındadır (bkz. @ref Path).
   void FillPath(const Path& path);
-
-  // --- Görüntü ---
 
   /// @brief Görüntüyü orijinal boyutuyla çiz.
   /// @param tint Doku rengiyle çarpılacak renk. Varsayılan beyaz = değişiklik
@@ -418,8 +399,6 @@ class SDLPAINTER_API Painter {
                  const Rect& dest_rect, const Color& tint = Color::White(),
                  ImageFlip flip = ImageFlip::kNone);
 
-  // --- Metin ---
-
   /// @brief Noktaya metin çiz.
   ///
   /// Satır sonu karakteri (LF) satır böler; her satır bir öncekinden
@@ -451,8 +430,6 @@ class SDLPAINTER_API Painter {
                                            float max_width,
                                            TextWrap wrap) const;
 
-  // --- Transform stack ---
-
   /// @brief Mevcut render durumunu stack'e kaydet.
   void Save();
 
@@ -470,8 +447,6 @@ class SDLPAINTER_API Painter {
 
   /// @brief Transform'u birim matrise sıfırla.
   void ResetTransform();
-
-  // --- Kırpma ---
 
   /// @brief Scissor kırpma dikdörtgeni ayarla.
   void SetClipRect(const Rect& rect);

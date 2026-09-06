@@ -40,6 +40,7 @@ struct Color {
   }
 
   // Yaygın renkler
+  /// @todo Renklerin adetlerini arttıralım
   [[nodiscard]] static constexpr Color Black() noexcept { return {0, 0, 0}; }
   [[nodiscard]] static constexpr Color White() noexcept {
     return {255, 255, 255};

@@ -16,7 +16,6 @@ VulkanTexture::~VulkanTexture() {
   }
 }
 
-// Upload — ana giriş noktası
 bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
                            const uint8_t* data, int32_t width, int32_t height,
                            int32_t channels, VkDescriptorSet descriptor_set,
@@ -61,7 +60,6 @@ bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
 
   const auto kImageSize = static_cast<VkDeviceSize>(kPixelCount * 4);
 
-  // 1. Staging buffer
   VkBuffer staging_buf = VK_NULL_HANDLE;
   VkDeviceMemory staging_mem = VK_NULL_HANDLE;
   if (!CreateStagingBuffer(device, phys_device, rgba_data, kImageSize,
@@ -69,7 +67,6 @@ bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
     return false;
   }
 
-  // 2. Device-local image + view
   if (!CreateImage(device, phys_device, mWidth_u, mHeight_u)) {
     vkDestroyBuffer(device, staging_buf, nullptr);
     vkFreeMemory(device, staging_mem, nullptr);
@@ -79,7 +76,6 @@ bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
   // Bu noktadan itibaren nesne Vulkan kaynagi sahipleniyor.
   mDevice = device;
 
-  // 3. Upload: layout geçişi + copy + son layout
   VkBufferImageCopy full_region{};
   full_region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
   full_region.imageSubresource.layerCount = 1;
@@ -96,19 +92,16 @@ bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
   vkDestroyBuffer(device, staging_buf, nullptr);
   vkFreeMemory(device, staging_mem, nullptr);
 
-  // 4. Sampler
   if (!CreateSampler(device, filter)) {
     return false;
   }
 
-  // 5. Descriptor set güncelle
   UpdateDescriptorSet(device, descriptor_set_layout);
 
   spdlog::debug("VulkanTexture: {}x{} yuklendi.", width, height);
   return true;
 }
 
-// UpdateRegion — var olan image'ın bir dikdörtgenini yeniden yükle
 bool VulkanTexture::UpdateRegion(VkContext* context, VkCommandPool cmd_pool,
                                  int32_t x, int32_t y, int32_t width,
                                  int32_t height, const uint8_t* data) {
@@ -153,7 +146,6 @@ bool VulkanTexture::UpdateRegion(VkContext* context, VkCommandPool cmd_pool,
   return kOk;
 }
 
-// Staging buffer
 bool VulkanTexture::CreateStagingBuffer(VkDevice device,
                                         VkPhysicalDevice phys_device,
                                         const uint8_t* rgba_data,
@@ -215,7 +207,6 @@ bool VulkanTexture::CreateStagingBuffer(VkDevice device,
   return true;
 }
 
-// Device-local image
 bool VulkanTexture::CreateImage(VkDevice device, VkPhysicalDevice phys_device,
                                 uint32_t width, uint32_t height) {
   VkImageCreateInfo img_ci{};
@@ -311,7 +302,6 @@ bool VulkanTexture::CreateSampler(VkDevice device, TextureFilter filter) {
   return true;
 }
 
-// Upload komut kaydı
 void VulkanTexture::TransitionImageLayout(VkCommandBuffer cmd, VkImage image,
                                           VkImageLayout old_layout,
                                           VkImageLayout new_layout) {
@@ -393,7 +383,6 @@ bool VulkanTexture::RecordAndSubmitCopy(VkDevice device, VkQueue queue,
   vkCmdCopyBufferToImage(cmd, staging_buf, mImage,
                          VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-  // TRANSFER_DST → SHADER_READ_ONLY
   TransitionImageLayout(cmd, mImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
@@ -426,7 +415,6 @@ bool VulkanTexture::RecordAndSubmitCopy(VkDevice device, VkQueue queue,
   return cleanup(true);
 }
 
-// Descriptor set güncelle
 void VulkanTexture::UpdateDescriptorSet(VkDevice device,
                                         VkDescriptorSetLayout /*layout*/) {
   VkDescriptorImageInfo image_info{};
@@ -446,7 +434,6 @@ void VulkanTexture::UpdateDescriptorSet(VkDevice device,
   vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
 }
 
-// Destroy
 void VulkanTexture::Destroy(VkDevice device) {
   VkDevice d = (mDevice != VK_NULL_HANDLE) ? mDevice : device;
   if (d == VK_NULL_HANDLE) {

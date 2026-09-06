@@ -85,8 +85,6 @@ class SDLPAINTER_APP_API Application {
   /// @brief Alttaki SDL penceresi — belgelenmiş kaçış kapısı (ileri kullanım).
   [[nodiscard]] SDL_Window* GetWindow() const noexcept { return mWindow; }
 
-  // --- Kare hızı ve istatistik göstergesi ---
-
   /// @brief Yumuşatılmış kare hızı (kare/saniye).
   ///
   /// Çeyrek saniyelik pencerede ortalanır; ham `1/dt` değerinden çok daha
@@ -191,7 +189,6 @@ class SDLPAINTER_APP_API Application {
   int32_t mWidth{0};
   int32_t mHeight{0};
 
-  // --- Istatistik gostergesi ---
   std::unique_ptr<app_detail::StatsOverlay> mStatsOverlay;
   StatsOverlayMode mStatsMode{StatsOverlayMode::kNone};
   uint64_t mTitleUpdateNs{0};

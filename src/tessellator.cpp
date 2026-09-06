@@ -11,11 +11,8 @@ namespace {
 constexpr float kTwoPi = 2.0F * 3.14159265358979323846F;
 }  // namespace
 
-// --- Dolu şekiller ---
-
 std::vector<Vertex> Tessellator::TessellateFilledRect(float x, float y, float w,
                                                       float h) {
-  // İki üçgen, 6 vertex
   // clang-format off
   return {
       {x,     y    },
@@ -115,8 +112,6 @@ std::vector<Point> Tessellator::BuildRoundedRectPoints(float x, float y,
   return pts;
 }
 
-// --- Yay tabanlı şekiller ---
-
 std::vector<Point> Tessellator::BuildArcPoints(float cx, float cy, float rx,
                                                float ry, float start_degrees,
                                                float sweep_degrees) {
@@ -191,8 +186,6 @@ std::vector<Vertex> Tessellator::TessellateFilledChord(float cx, float cy,
   return result;
 }
 
-// --- Çerçeve şekiller ---
-
 std::vector<Vertex> Tessellator::TessellateStrokedRect(
     float x, float y, float w, float h, float line_width, LineJoin join,
     const float* dash, std::size_t dash_count, LineCap cap) {
@@ -252,12 +245,10 @@ std::vector<Vertex> Tessellator::TessellateThickLine(float x1, float y1,
     return {};
   }
 
-  // Dike normal vektör (normalize edilmiş)
   float nx = -dy / len;
   float ny = dx / len;
   float hw = line_width * 0.5F;
 
-  // Quad'ın 4 köşesi
   // clang-format off
   float p0x = x1 + hw * nx;  float p0y = y1 + hw * ny;  // A üst
   float p1x = x1 - hw * nx;  float p1y = y1 - hw * ny;  // A alt
@@ -607,8 +598,6 @@ std::vector<TexturedVertex> Tessellator::TessellateTexturedRect(
   // clang-format on
 }
 
-// --- Yardımcı iç fonksiyonlar ---
-
 bool Tessellator::IsClockwise(const Point& a, const Point& b, const Point& c) {
   float cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
   return cross < 0.0F;
@@ -666,7 +655,6 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& raw) {
     return {};
   }
 
-  // Basit üçgen durumu
   if (points.size() == 3) {
     return {{points[0].x, points[0].y},
             {points[1].x, points[1].y},
@@ -691,7 +679,6 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& raw) {
   std::vector<Vertex> result;
   result.reserve((points.size() - 2) * 3);
 
-  // O(n²) ear clipping
   while (indices.size() > 3) {
     bool found_ear = false;
     std::size_t n = indices.size();
@@ -710,7 +697,6 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& raw) {
         continue;  // içbükey (reflex) köşe, kulak değil
       }
 
-      // Diğer hiçbir nokta bu üçgenin içinde olmamalı
       bool is_ear = true;
       for (std::size_t j = 0; j < n; ++j) {
         if (j == iprev || j == i || j == inext) {
@@ -746,7 +732,6 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& raw) {
     }
   }
 
-  // Son üçgeni ekle
   if (indices.size() == 3) {
     result.emplace_back(points[static_cast<std::size_t>(indices[0])].x,
                         points[static_cast<std::size_t>(indices[0])].y);

@@ -21,8 +21,6 @@ namespace sdl_painter {
 ///       ve testlerin tamamını değiştirmemek için böyle bırakıldı.
 class Tessellator {
  public:
-  // --- Dolu şekiller (üçgen listeleri) ---
-
   /// @brief Dolu dikdörtgen için vertex üret (2 üçgen, 6 vertex).
   static std::vector<Vertex> TessellateFilledRect(float x, float y, float w,
                                                   float h);
@@ -56,8 +54,6 @@ class Tessellator {
   static std::vector<Point> BuildRoundedRectPoints(float x, float y, float w,
                                                    float h, float radius);
 
-  // --- Yay (arc) tabanlı şekiller ---
-  //
   // Açı birimi derece. 0° = +x ekseni; açı, @ref Painter::Rotate ile aynı
   // yönde artar (dolayısıyla dolu daire tessellation'ıyla da aynı yönde).
   // Bilinçli olarak Qt'nin 1/16 derece + ters yön sözleşmesi izlenmez;
@@ -85,8 +81,6 @@ class Tessellator {
                                                    float ry,
                                                    float start_degrees,
                                                    float sweep_degrees);
-
-  // --- Çerçeve şekiller (quad tabanlı kalın çizgi) ---
 
   /// @brief Dikdörtgen çerçevesi için vertex üret (4 kenar quad).
   ///
@@ -162,8 +156,6 @@ class Tessellator {
   static std::vector<Vertex> TessellateStrokedPolygon(
       const std::vector<Point>& points, float line_width,
       LineJoin join = LineJoin::kRound);
-
-  // --- Texture koordinatlı vertex'ler ---
 
   /// @brief Texture'lı dikdörtgen için TexturedVertex üret.
   static std::vector<TexturedVertex> TessellateTexturedRect(float x, float y,

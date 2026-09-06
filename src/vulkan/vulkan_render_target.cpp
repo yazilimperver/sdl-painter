@@ -198,7 +198,6 @@ bool VulkanRenderTarget::ReadPixels(VkContext* context, VkCommandPool cmd_pool,
   // senkronizasyon noktasi oldugundan burada tam bekleme en yalin dogru yol.
   vkDeviceWaitIdle(device);
 
-  // --- Host-visible hedef tampon ---
   VkBuffer buffer = VK_NULL_HANDLE;
   VkDeviceMemory memory = VK_NULL_HANDLE;
 
@@ -240,7 +239,6 @@ bool VulkanRenderTarget::ReadPixels(VkContext* context, VkCommandPool cmd_pool,
     return cleanup(false);
   }
 
-  // --- Kopyalama ---
   VkCommandBuffer cmd = BeginOneShot(device, cmd_pool);
   if (cmd == VK_NULL_HANDLE) {
     return cleanup(false);

@@ -144,8 +144,6 @@ const Glyph* Font::GetGlyph(IRenderer& renderer, char32_t codepoint) const {
   // Beyaz render edilir: renk vertex'te tasindigi icin glyph notr bir
   // taban olmali, aksi halde Pen rengiyle carpim yanlis sonuc verir.
   SDL_Color white = {255, 255, 255, 255};
-  // TTF_RenderGlyph_Blended, karakterin sıkıca kırpılmış (tightly cropped)
-  // bir yüzeyini verir.
   SDL_Surface* surface = TTF_RenderGlyph_Blended(font, codepoint, white);
   if (surface == nullptr) {
     return nullptr;

@@ -29,7 +29,7 @@ enum class ImageFlip : uint8_t {
 ///
 /// stb_image üzerinden dosya yükler. Texture, renderer üzerinden oluşturulur.
 ///
-/// @warning **Yaşam döngüsü sözleşmesi:** Bir Image, ona ait texture'ı yükleyen
+/// @warning  Bir Image, ona ait texture'ı yükleyen
 /// Painter (ve dolayısıyla IRenderer) yaşıyorken yıkılmalıdır. Painter yok
 /// olduktan sonra Image yıkılırsa, sahip pointer (raw IRenderer*) dangling
 /// olur ve `~Image()` davranışı tanımsızdır. Pratikte: Image'ı Painter

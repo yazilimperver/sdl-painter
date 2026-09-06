@@ -21,8 +21,6 @@ class OpenGLRenderer final : public IRenderer {
   OpenGLRenderer(const OpenGLRenderer&) = delete;
   OpenGLRenderer& operator=(const OpenGLRenderer&) = delete;
 
-  // --- IRenderer arayüzü ---
-
   bool Initialize(SDL_Window* window) override;
   void Shutdown() override;
   void BeginFrame() override;
@@ -100,25 +98,19 @@ class OpenGLRenderer final : public IRenderer {
   SDL_Window* mWindow{nullptr};
   void* mGLContext{nullptr};
 
-  // Shader programları
   ShaderProgram mBasicShader;
   ShaderProgram mTexturedShader;
 
-  // VAO / VBO
   uint32_t mVao{0};
   uint32_t mVbo{0};
 
-  // Textured VAO / VBO
   uint32_t mTexturedVao{0};
   uint32_t mTexturedVbo{0};
 
-  // Aktif projeksiyon ve model matrisleri
   float mProjection[16]{};
   float mModel[9]{};
   float mOpacity{1.0F};
 
-  // --- GPU zaman ölçümü ---
-  //
   // Cift tamponlu: bu karenin sorgusu yazilirken bir onceki karenin sonucu
   // okunur. Ayni karenin sonucunu beklemek CPU'yu GPU'ya kilitler ve
   // olculmek istenen seyi bozar.

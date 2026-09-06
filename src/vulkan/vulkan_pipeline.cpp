@@ -17,7 +17,6 @@ VulkanPipeline::~VulkanPipeline() {
   }
 }
 
-// Yardımcı: gömülü SPIR-V'den shader modülü oluştur
 VkShaderModule VulkanPipeline::CreateShaderModule(VkDevice device,
                                                   const uint32_t* code,
                                                   std::size_t byte_size) {
@@ -31,9 +30,7 @@ VkShaderModule VulkanPipeline::CreateShaderModule(VkDevice device,
   return mod;
 }
 
-// Init
 bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass) {
-  // --- Shader modülleri (binary'ye gömülü SPIR-V) ---
   VkShaderModule vert_mod = CreateShaderModule(device, detail::kUntexturedVert,
                                                sizeof(detail::kUntexturedVert));
   VkShaderModule frag_mod = CreateShaderModule(device, detail::kUntexturedFrag,
@@ -60,19 +57,16 @@ bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass) {
   shader_stages[1].module = frag_mod;
   shader_stages[1].pName = "main";
 
-  // --- Vertex input — Vertex struct layout ---
   VkVertexInputBindingDescription binding{};
   binding.binding = 0;
   binding.stride = static_cast<uint32_t>(sizeof(Vertex));
   binding.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
   std::array<VkVertexInputAttributeDescription, 2> attrs{};
-  // location=0: position (vec2 float)
   attrs[0].binding = 0;
   attrs[0].location = 0;
   attrs[0].format = VK_FORMAT_R32G32_SFLOAT;
   attrs[0].offset = static_cast<uint32_t>(offsetof(Vertex, x));
-  // location=1: color (uint8 RGBA → normalize [0,1])
   attrs[1].binding = 0;
   attrs[1].location = 1;
   attrs[1].format = VK_FORMAT_R8G8B8A8_UNORM;
@@ -86,14 +80,12 @@ bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass) {
   vertex_input.vertexAttributeDescriptionCount = 2;
   vertex_input.pVertexAttributeDescriptions = attrs.data();
 
-  // --- Input assembly ---
   VkPipelineInputAssemblyStateCreateInfo input_assembly{};
   input_assembly.sType =
       VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
   input_assembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
   input_assembly.primitiveRestartEnable = VK_FALSE;
 
-  // --- Dynamic viewport + scissor ---
   std::array<VkDynamicState, 2> dyn_states = {VK_DYNAMIC_STATE_VIEWPORT,
                                               VK_DYNAMIC_STATE_SCISSOR};
   VkPipelineDynamicStateCreateInfo dynamic_state{};
@@ -107,7 +99,6 @@ bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass) {
   viewport_state.scissorCount = 1;
   // pViewports/pScissors null — dinamik state ile set edilir.
 
-  // --- Rasterization ---
   VkPipelineRasterizationStateCreateInfo rasterization{};
   rasterization.sType =
       VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -119,14 +110,12 @@ bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass) {
   rasterization.depthBiasEnable = VK_FALSE;
   rasterization.lineWidth = 1.0F;
 
-  // --- Multisampling ---
   VkPipelineMultisampleStateCreateInfo multisampling{};
   multisampling.sType =
       VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
   multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
   multisampling.sampleShadingEnable = VK_FALSE;
 
-  // --- Karistirma: mod basina bir pipeline varyanti ---
   // Vulkan 1.1'de blend pipeline'in sabit durumu; calisma zamaninda
   // degistirilemez (bkz. vk_blend.h). Dizilerin omru
   // vkCreateGraphicsPipelines cagrisini kapsamali.
@@ -141,7 +130,6 @@ bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass) {
     blends[i].pAttachments = &attachments[i];
   }
 
-  // --- Pipeline layout (push constants) ---
   VkPushConstantRange push_range{};
   push_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
   push_range.offset = 0;
@@ -161,7 +149,6 @@ bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass) {
     return false;
   }
 
-  // --- Graphics pipeline ---
   VkGraphicsPipelineCreateInfo pipeline_ci{};
   pipeline_ci.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
   pipeline_ci.stageCount = 2;
@@ -203,7 +190,6 @@ bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass) {
   }
 
   spdlog::info("VulkanPipeline initialized (untextured).");
-  // RAII için device'i sakla.
   mDevice = device;
   return true;
 }

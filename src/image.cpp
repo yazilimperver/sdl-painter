@@ -15,6 +15,7 @@
 // STBI_MAX_DIMENSIONS: güvenilmeyen bir PNG/JPG'nin devasa boyut bildirerek
 // belleği tüketmesini (decompression bomb) önler. stb bunu kendi içinde,
 // piksel verisi ayrılmadan ÖNCE kontrol eder.
+// TODO: İleride Vulkan gibi SDL_Image'i de kullanır hale gelebiliriz ya da DevIL gibi kütüphane desteği ekleriz.
 // clang-format off
 #define STBI_MAX_DIMENSIONS 32768
 #define STB_IMAGE_IMPLEMENTATION
@@ -85,7 +86,6 @@ Image::~Image() = default;
 Image::Image(Image&&) noexcept = default;
 Image& Image::operator=(Image&&) noexcept = default;
 
-// static
 Image Image::CreateFromData(const uint8_t* data, int32_t width, int32_t height,
                             int32_t channels) {
   Image img;

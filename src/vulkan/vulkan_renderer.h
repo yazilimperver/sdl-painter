@@ -30,8 +30,6 @@ class VulkanRenderer final : public IRenderer {
   VulkanRenderer(const VulkanRenderer&) = delete;
   VulkanRenderer& operator=(const VulkanRenderer&) = delete;
 
-  // --- IRenderer arayüzü ---
-
   bool Initialize(SDL_Window* window) override;
   void Shutdown() override;
   void BeginFrame() override;
@@ -106,7 +104,6 @@ class VulkanRenderer final : public IRenderer {
   // Aktif frame clear değeri — Clear() çağrısından EndFrame'e taşınır.
   VkClearValue mClearValue{};
 
-  // Viewport/scissor
   int32_t mViewportX{0};
   int32_t mViewportY{0};
   int32_t mViewportW{0};
@@ -123,12 +120,12 @@ class VulkanRenderer final : public IRenderer {
   /// seçilir (Vulkan'da blend dinamik değildir, bkz. vk_blend.h).
   BlendMode mBlendMode{BlendMode::kAlpha};
 
-  // Phase 5b: untextured pipeline + vertex ring buffer
+  // Untextured pipeline + vertex ring buffer
   std::unique_ptr<VulkanPipeline> mPipeline;
   std::unique_ptr<VulkanBuffer> mVertexRing;
   PushConstants mPushConstants{};
 
-  // Phase 5c: textured pipeline + texture registry
+  // Textured pipeline + texture registry
   std::unique_ptr<VulkanTexturedPipeline> mTexturedPipeline;
   std::unique_ptr<VulkanBuffer> mTexturedVertexRing;
   std::unordered_map<TextureHandle, std::unique_ptr<VulkanTexture>> mTextures;
@@ -151,8 +148,6 @@ class VulkanRenderer final : public IRenderer {
   /// @brief Monoton artan kare sayacı (gecikmeli silme zamanlaması için).
   uint64_t mFrameCounter{0};
 
-  // --- Çizim hedefleri ---
-  //
   // Hedefler ekranınkinden farklı bir renk formatı kullanır (bkz.
   // VulkanRenderTarget::kColorFormat), bu yüzden kendi render pass'lerini ve
   // ona bağlı ikinci bir pipeline takımını gerektirirler: bir pipeline
@@ -180,8 +175,6 @@ class VulkanRenderer final : public IRenderer {
   /// @brief Süresi dolan gecikmeli silmeleri işle.
   /// @param force `true` ise süre gözetmeksizin hepsi yıkılır (Shutdown).
   void ProcessPendingTextureDeletes(bool force);
-
-  // --- Çizim hedefleri ---
 
   /// @brief Offscreen render pass'i ve ona bağlı pipeline takımını üret.
   ///

@@ -168,14 +168,12 @@ bool VkSwapchain::Recreate(uint32_t width, uint32_t height) {
   mImageViews.clear();
   mImages.clear();
 
-  // Yeni swapchain'i eski referansıyla oluştur.
   if (!CreateSwapchainWithOld(width, height, old)) {
     if (old != VK_NULL_HANDLE) {
       vkDestroySwapchainKHR(device, old, nullptr);
     }
     return false;
   }
-  // Eski swapchain artık kullanılmıyor — yok et.
   if (old != VK_NULL_HANDLE) {
     vkDestroySwapchainKHR(device, old, nullptr);
   }
