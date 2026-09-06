@@ -6,7 +6,7 @@ namespace sdl_painter {
 
 /// @brief Bir karenin çizim maliyeti — profilleme ve ekran üstü gösterim için.
 ///
-/// @ref Painter her karede doldurur; @ref Painter::GetFrameStats ile okunur.
+/// @ref Painter her frame'de doldurur; @ref Painter::GetFrameStats ile okunur.
 /// Değerler son tamamlanan kareye aittir (`End()` çağrıldıktan sonra
 /// geçerlidir).
 ///

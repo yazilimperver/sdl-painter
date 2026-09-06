@@ -8,6 +8,7 @@
 namespace sdl_painter {
 
 /// @brief Fırçanın dolgu türü.
+/// @todo Diğer olası stillere bakalım
 enum class BrushType : uint8_t {
   kSolid,   ///< Tek düz renk. **Varsayılan.**
   kLinear,  ///< İki nokta arasında doğrusal geçiş.
@@ -104,6 +105,7 @@ class Brush {
   /// @brief Dolgu rengini ayarla.
   void SetColor(const Color& color) noexcept { mColor = color; }
 
+  /// @brief Fırça görünür mü? (alpha > 0)
   /// @brief Fırça görünür mü?
   ///
   /// Gradient'te iki uçtan biri bile opaksa görünürdür; yalnızca başlangıç

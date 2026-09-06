@@ -53,8 +53,6 @@ Font::Font(const std::string& file_path, int32_t point_size)
 }
 
 Font::~Font() {
-  // Atlas sayfalarinin texture'lari IRenderer uzerinden yikilir; Font
-  // yasarken renderer da yasiyor olmali (bkz. sinif belgesindeki sozlesme).
   mGlyphCache.clear();
   mAtlas.reset();
   if (mHandle != nullptr) {
@@ -71,18 +69,11 @@ Font::Font(Font&& other) noexcept
       mAtlas(std::move(other.mAtlas)) {
   other.mHandle = nullptr;
   other.mPointSize = 0;
-  // Taşınmış nesnede artık glyph kalmamalı: aksi halde `other` üzerinden
-  // yapılan GetGlyph çağrıları kapatılmış bir fonta ait texture döndürür.
   other.mGlyphCache.clear();
 }
 
 Font& Font::operator=(Font&& other) noexcept {
   if (this != &other) {
-    // Hedefin ESKİ glyph önbelleği, eski fonta aittir ve mutlaka atılmalıdır.
-    // Aksi halde yeni fontun kod noktaları için eski fontun (farklı punto /
-    // farklı yüz) texture'ları döndürülür — ekranda yanlış karakterler.
-    // Texture yıkımı IRenderer'ı kullandığından bu, renderer hâlâ hayattayken
-    // yapılmalıdır
     mGlyphCache.clear();
     mAtlas.reset();
     if (mHandle != nullptr) {
@@ -144,6 +135,8 @@ const Glyph* Font::GetGlyph(IRenderer& renderer, char32_t codepoint) const {
   // Beyaz render edilir: renk vertex'te tasindigi icin glyph notr bir
   // taban olmali, aksi halde Pen rengiyle carpim yanlis sonuc verir.
   SDL_Color white = {255, 255, 255, 255};
+  // TTF_RenderGlyph_Blended, karakterin sıkıca kırpılmış (tightly cropped)
+  // bir yüzeyini verir.
   SDL_Surface* surface = TTF_RenderGlyph_Blended(font, codepoint, white);
   if (surface == nullptr) {
     return nullptr;

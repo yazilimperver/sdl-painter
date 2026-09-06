@@ -16,9 +16,7 @@ class GlyphAtlas;
 /// @brief Tek bir karakterin metrikleri ve atlas içindeki konumu.
 ///
 /// @note v1.2.0'da değişti: glyph'ler artık ortak bir atlas texture'ında
-/// tutulur. Eskiden her glyph kendi `Texture` nesnesine sahipti ve bu, metin
-/// çiziminde karakter başına bir draw call'a yol açıyordu. Artık `texture`
-/// atlasın sayfa tanımlayıcısıdır (sahiplik atlastadır, Glyph'te değil) ve
+/// tutulur. Artık `texture` atlasın sayfa tanımlayıcısıdır (sahiplik atlastadır, Glyph'te değil) ve
 /// `u0/v0/u1/v1` glyph'in o sayfadaki bölgesini verir.
 struct Glyph {
   /// @brief Glyph'i içeren atlas sayfasının texture'ı (sahiplik atlasta).
@@ -51,17 +49,14 @@ enum class Alignment : uint8_t {
 
 /// @brief Dikdörtgen içine çizilen metnin sarmalama (word wrap) davranışı.
 enum class TextWrap : uint8_t {
-  /// @brief Sarmalama yok — uzun satır dikdörtgenden taşar. **Varsayılan**,
-  ///        çünkü sarmalamayı varsayılan yapmak mevcut çizimlerin görünümünü
-  ///        sessizce değiştirirdi.
-  kNone,
+  /// @brief Sarmalama yok — uzun satır dikdörtgenden taşar. 
   /// @brief Sözcük sınırlarından böl. Tek bir sözcük bile sığmıyorsa
   ///        karakter sınırından bölünür (UTF-8 güvenli).
   kWord,
 };
 
 /// @brief Font sarmalayıcı — SDL_ttf üzerinden
-/// @warning **Yaşam döngüsü sözleşmesi:** Font, glyph önbelleğindeki
+/// @warning Font, glyph önbelleğindeki
 /// texture'ları yükleyen Painter (ve dolayısıyla IRenderer) yaşıyorken
 /// yıkılmalıdır. Painter yok olduktan sonra Font yıkılırsa, glyph
 /// önbelleğindeki her `Texture` raw IRenderer pointer'ı dangling olur ve
