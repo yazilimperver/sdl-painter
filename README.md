@@ -41,12 +41,9 @@ triangulation, adaptive tessellation, a transform stack and batching — so you
 can think in **shapes** instead of vertices.
 
 - **One API, two backends** — the same code produces the same result on OpenGL
-  3.3 and Vulkan 1.1, and that is measured rather than asserted: a test draws
-  one scene through both backends and compares every pixel. Switching is a
-  one-line change, and adding a third backend means implementing `IRenderer`
-  only. Anti-aliasing is the one place the two differ — see the table below.
-- **Correct geometry** — thick lines are quad-based rather than `glLineWidth`
-  (consistent across platforms), concave polygons are filled via ear clipping,
+  3.3 and Vulkan 1.1. Switching is a
+  one-line change.
+- **Correct geometry** — thick lines are quad-based rather than `glLineWidth`, concave polygons are filled via ear clipping,
   and circle segment counts adapt to the radius.
 - **Batches draw calls** — `RenderBatcher` merges draws sharing
   mode/texture/opacity, so thousands of small shapes stay cheap.
@@ -71,7 +68,7 @@ can think in **shapes** instead of vertices.
 | **Text** | SDL_ttf 3.x, glyph cache, left/center/right alignment, multi-line and word wrap |
 | **Backend** | OpenGL 3.3 Core and Vulkan 1.1 — interchangeable through `IRenderer` |
 
-## Blog Post
+## Blog Posts
 
 You can find my blog posts about this library, SDL3 and much more on [my page](www.yazilimperver.net) at the following links:
 
@@ -190,17 +187,7 @@ cmake --preset linux-debug && cmake --build --preset linux-debug
 
 Full instructions: [Building from source](doc/building.md).
 
-## Gallery
-
-| | |
-|:---:|:---:|
-| ![Primitives](doc/screenshots/primitifler.png) | ![Texture](doc/screenshots/texture.png) |
-| **Basic primitives** — stroke/fill, thick lines, concave polygon (`primitives`) | **Image / texture** — scaling, atlas slicing, rotation (`images`) |
-| ![Text](doc/screenshots/metin.png) | ![Application](doc/screenshots/uygulama.png) |
-| **Text** — SDL_ttf, alignment, layout inside a rect (`text`) | **Application framework** — tic-tac-toe via `sdl_painter_app` (`tictactoe`) |
-
-Runnable demos, each isolating one capability:
-[examples/README.md](examples/README.md).
+You can check out other examples given at **[Examples](examples/README.md)**.
 
 ### How it relates to SDL_Renderer
 
@@ -226,8 +213,6 @@ picks a backend per platform. SDLPainter takes on the shape-level work you would
 
 ## Architecture
 
-![SDLPainter architecture](doc/sdl-painter-architecture-en.png)
-
 Five layers, each with a single responsibility:
 
 1. **Application** *(optional)* — window, event loop, timing ([ADR-008](adr/ADR-008-application-framework-layer.md))
@@ -239,6 +224,8 @@ Five layers, each with a single responsibility:
 Adding a backend only requires implementing `IRenderer`; Painter code stays
 untouched. Every decision that shaped these layers is recorded as an
 [Architecture Decision Record](adr/README.md).
+
+![SDLPainter architecture](doc/sdl-painter-architecture-en.png)
 
 ## Supported platforms
 

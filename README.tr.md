@@ -40,11 +40,8 @@ verir. SDLPainter bunun üzerine bir katman ekler — kalın çizgi geometrisi,
 poligon triangulation'ı, adaptif tessellation, transform stack ve batching —
 böylece vertex yerine **şekil** düşünebilirsiniz.
 
-- **Tek API, iki backend** — Aynı kod OpenGL 3.3 ve Vulkan 1.1'de aynı sonucu
-  üretir; bu bir iddia değil, **ölçüm**: bir test aynı sahneyi iki backend'de
-  çizip pikselleri karşılaştırıyor. Backend değiştirmek tek satır, üçüncüsünü
-  eklemek yalnızca `IRenderer` implemente etmek anlamına geliyor. İkisinin
-  ayrıştığı tek yer kenar yumuşatma — aşağıdaki tabloya bakın.
+- **Tek API, iki backend** — Aynı kod hem OpenGL 3.3 ve Vulkan 1.1'de aynı sonucu
+  üretir. Backend değiştirmek tek satır.
 - **Doğru geometri** — Kalın çizgiler `glLineWidth` yerine quad tabanlı
   (platformlar arası tutarlı), konkav çokgenler "ear clipping" ile doğru
   dolduruluyor, daire segment sayısı yarıçapa göre uyarlanabiliyor.
@@ -71,7 +68,7 @@ böylece vertex yerine **şekil** düşünebilirsiniz.
 | **Metin** | SDL_ttf 3.x, glyph cache, left/center/right hizalama, çok satırlı ve sözcük kaydırmalı |
 | **Backend** | OpenGL 3.3 Core ve Vulkan 1.1 — `IRenderer` ile değiştirilebilir |
 
-## Blog Post
+## Blog Yazıları
 
 Aşağıdaki bağlantıda [Yazilimperver](www.yazilimperver.net) sayfamda, bu kütüphane ile ilgili yayınlamış olduğum yazıları bulabilirsiniz:
 
@@ -193,17 +190,7 @@ cmake --preset linux-debug && cmake --build --preset linux-debug
 
 Ayrıntılı anlatım: [Hızlı Başlangıç Rehberi](doc/hizli-baslangic.md).
 
-## Örnek Ekran Görüntüleri
-
-| | |
-|:---:|:---:|
-| ![Primitifler](doc/screenshots/primitifler.png) | ![Texture](doc/screenshots/texture.png) |
-| **Temel primitifler** — stroke/fill, kalın çizgiler, konkav poligon (`primitives`) | **Image / texture** — ölçekleme, atlas dilimleme, döndürme (`images`) |
-| ![Metin](doc/screenshots/metin.png) | ![Uygulama](doc/screenshots/uygulama.png) |
-| **Metin** — SDL_ttf, hizalama, rect içine yerleştirme (`text`) | **Uygulama çatısı** — `sdl_painter_app` ile tic-tac-toe (`tictactoe`) |
-
-Her biri tek bir yeteneği izole eden çalışan demolar:
-[Örnekler Rehberi](doc/sdl-painter-ornekler.md).
+Diğer örnekler için **[Examples](examples/README.md)**'e başvurabilirsiniz. 
 
 ### SDL_Renderer ile ilişkisi
 
@@ -220,11 +207,9 @@ SDL3'ün `SDL_Renderer`'ı ile üçgenlerden oluşan şekilleri çizebilirsiniz,
 
 ## Mimari
 
-![SDLPainter mimarisi](doc/sdl-painter-architecture.png)
+Mimari temel olarak beş katman üzerine kurulu, her biri tek bir sorumluluğa odaklı:
 
-Beş katman, her biri tek bir sorumluluğa odaklı:
-
-1. **Application** *(opsiyonel)* — pencere, olay döngüsü, zamanlama ([ADR-008](adr/ADR-008-application-framework-layer.md))
+1. **Application** *(opsiyonel)* — pencere, olay döngüsü, zamanlama gibi işler ([ADR-008](adr/ADR-008-application-framework-layer.md))
 2. **Painter** — public API; çizim komutlarını toplar, güncel state'i uygular
 3. **RenderState + Tessellator** — transform/pen/brush/opacity/clip yığını; şekilleri vertex'e çevirir. Transform 3×3 affine `glm::mat3`, column-major ([ADR-007](adr/ADR-007-glm-transform-matrix.md))
 4. **RenderBatcher → IRenderer** — draw call'ları birleştirip backend'e iletir
@@ -233,6 +218,9 @@ Beş katman, her biri tek bir sorumluluğa odaklı:
 Yeni bir backend eklemek yalnızca `IRenderer`'ı implemente etmeyi gerektirir;
 Painter kodu değişmez. Bu katmanları şekillendiren her karar bir
 [Mimari Karar Kaydı](adr/README.md) olarak tutuluyor.
+
+
+![SDLPainter mimarisi](doc/sdl-painter-architecture.png)
 
 ## Desteklenen platformlar
 
