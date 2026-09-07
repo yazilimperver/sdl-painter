@@ -49,7 +49,8 @@ enum class Alignment : uint8_t {
 
 /// @brief Dikdörtgen içine çizilen metnin sarmalama (word wrap) davranışı.
 enum class TextWrap : uint8_t {
-  /// @brief Sarmalama yok — uzun satır dikdörtgenden taşar. 
+  /// @brief Sarmalama yok — uzun satır dikdörtgenden taşar, varsayılan.
+  kNone,
   /// @brief Sözcük sınırlarından böl. Tek bir sözcük bile sığmıyorsa
   ///        karakter sınırından bölünür (UTF-8 güvenli).
   kWord,
