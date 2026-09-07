@@ -23,11 +23,12 @@ enum class BrushType : uint8_t {
 /// hiçbir backend değişikliği gerektirmez ve batch'i kırmaz — opaklığın
 /// aksine.
 ///
-/// Bunun bedeli, geçişin şeklin köşe yoğunluğu kadar hassas olmasıdır:
-/// iki üçgenden ibaret bir dikdörtgende doğrusal geçiş kusursuzdur (tam da
-/// donanımın enterpole ettiği şey), ama az segmentli bir şekilde ışınsal
-/// geçiş bantlanabilir. Daire ve elips segment sayısı yarıçapa göre
-/// uyarlandığı için pratikte sorun çıkarmaz.
+/// Geçişin şeklin köşe yoğunluğuna bağlı kalmaması için dolgu üçgenleri
+/// gradient sınırlarında bölünür. Doğrusal geçişte rengin doğrusallığını
+/// yitirdiği tek yer parametrenin kırpıldığı iki sınırdır; orada bölmek
+/// sonucu tam doğru yapar. Işınsal geçiş mesafeye bağlı olduğu için
+/// doğrusal değildir, üçgenler hata ölçüsüne göre bölünür; kırpılmış
+/// bölgelerde hata sıfır olduğundan maliyet geçiş bandıyla sınırlı kalır.
 ///
 /// Gradient koordinatları çizim koordinatlarıyla aynı uzaydadır (şekil
 /// yerel), yani transform yığınından etkilenir — Qt'nin `QLinearGradient`

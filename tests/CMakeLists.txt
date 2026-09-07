@@ -21,16 +21,15 @@ set(TEST_SOURCES
     test_app_config.cpp
     test_tictactoe_logic.cpp
     test_collision_logic.cpp
+    test_regression_findings.cpp
 )
 
 include(GoogleTest)
 
-# --- Beyaz kutu birim testleri ---
-#
-# Bu takim `src/` altindaki DAHILI basliklari include eder ve export EDILMEYEN
+# Bu takim `src/` altindaki dahili basliklari include eder ve export EDILMEYEN
 # sembolleri (Tessellator, RenderBatcher, vk_detail::VkResultToString ...)
 # dogrudan cagirir. Paylasimli derlemede bunlar DLL'den disari verilmedigi icin
-# hedef link EDILEMEZ — ve edilmemeli: dahili detaylar ABI yuzeyine cikmamali.
+# hedef link edilemez — ve edilmemeli: dahili detaylar ABI yuzeyine cikmamali.
 #
 # Bu yuzden paylasimli derlemede bu takim atlanir; public yuzeyi dogrulayan
 # `sdl_painter_abi_tests` her iki modda da derlenir ve kosar.
@@ -75,19 +74,19 @@ endif()
 
 # --- Public ABI / DLL testleri ---
 #
-# AYRI bir hedef olmasinin sebebi yukaridaki takimla arasindaki tek farkta:
+# Ayri bir hedef olmasinin sebebi yukaridaki takimla arasindaki tek farkta:
 # `sdl_painter_tests` DAHILI basliklari (src/) include eder ve Tessellator,
-# RenderBatcher, vk_detail::VkResultToString gibi export EDILMEYEN sembolleri
+# RenderBatcher, vk_detail::VkResultToString gibi export edilmeyen sembolleri
 # cagirir. Bu bilincli — dahili detaylar ABI yuzeyine cikmamali. Sonucu ise
-# `BUILD_SHARED_LIBS=ON` ile o hedefin link EDILEMEMESI.
+# `BUILD_SHARED_LIBS=ON` ile o hedefin link edilememesi.
 #
 # Bu hedef yalnizca public basliklari kullanir ve `src/` include yoluna sahip
-# DEGILDIR; yani kutuphaneye tuketicinin gordugu yuzeyden baglanir. Shared
+# degildir; yani kutuphaneye tuketicinin gordugu yuzeyden baglanir. Shared
 # derlemede bir public sembol SDLPAINTER_API ile isaretlenmeyi unutulursa
 # LNK2019 ile duser.
 add_executable(sdl_painter_abi_tests test_public_abi.cpp)
 
-# DIKKAT: buraya ${PROJECT_SOURCE_DIR}/src EKLENMEYECEK. Testin degeri, public
+# DIKKAT: buraya ${PROJECT_SOURCE_DIR}/src eklenmeyecek. Testin degeri, public
 # yuzeyle sinirli kalmasindan geliyor.
 target_include_directories(sdl_painter_abi_tests PRIVATE
     # mock_renderer.h — yalnizca public basliklari include eder, IRenderer'i

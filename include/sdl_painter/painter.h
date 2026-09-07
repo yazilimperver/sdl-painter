@@ -480,8 +480,18 @@ class SDLPAINTER_API Painter {
   /// görünür hem de @ref ReadRenderTarget çıktısı Vulkan'ınkiyle uyuşmazdı.
   [[nodiscard]] bool YAxisMatchesGpu() const;
 
+  /// @brief Yürürlükteki çizim yüzeyinin genişliği (hedef bağlıysa onunki).
+  [[nodiscard]] int32_t SurfaceWidth() const;
+
   /// @brief Yürürlükteki çizim yüzeyinin yüksekliği (hedef bağlıysa onunki).
   [[nodiscard]] int32_t SurfaceHeight() const;
+
+  /// @brief Hedef bu Painter'ın renderer'ına mı ait?
+  ///
+  /// Sayısal handle'lar renderer'a yereldir; iki farklı renderer'ın ilk hedefi
+  /// aynı handle'ı alabilir. Sahibi doğrulanmazsa yabancı bir hedef sessizce
+  /// bu Painter'ın kendi hedefine dönüşür.
+  [[nodiscard]] bool OwnsTarget(const RenderTarget& target) const;
 
   /// @brief Viewport'u GPU'ya yaz (Y çevirmesi dahil) ve projeksiyonu güncelle.
   void ApplyViewport();

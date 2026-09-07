@@ -172,12 +172,11 @@ Color LerpColor(const Color& a, const Color& b, float t) {
   return Color{mix(a.r, b.r), mix(a.g, b.g), mix(a.b, b.b), mix(a.a, b.a)};
 }
 
-/// @brief Vertex renklerini fircaya gore yaz.
+/// @brief Noktanin gradient parametresi; kirpilmamis haliyle doner.
 ///
-/// Gradient burada, tessellation SONRASI ama transform ONCESI uygulanir:
-/// vertex konumlari hala sekil-yerel oldugu icin gradient koordinatlari da
-/// cizim koordinatlariyla ayni uzayda kalir.
-void ApplyBrushColors(std::vector<Vertex>& verts, const Brush& brush) {
+/// Sifir uzunluklu eksen ve pozitif olmayan yaricap 0 verir, yani duz
+/// baslangic rengi (sifira bolme yok).
+float GradientT(const Brush& brush, float x, float y) {
   if (brush.GetType() == BrushType::kLinear) {
     const Point s = brush.GetStart();
     const Point e = brush.GetEnd();
@@ -185,36 +184,139 @@ void ApplyBrushColors(std::vector<Vertex>& verts, const Brush& brush) {
     const float dy = e.y - s.y;
     const float len_sq = dx * dx + dy * dy;
     if (len_sq < 1e-12F) {
-      // Sifir uzunluklu gradient: duz baslangic rengi (sifira bolme yok).
-      for (auto& v : verts) {
-        const Color c = brush.GetColor();
-        v.r = c.r;
-        v.g = c.g;
-        v.b = c.b;
-        v.a = c.a;
-      }
-      return;
+      return 0.0F;
     }
-    for (auto& v : verts) {
-      // Noktanin gradient ekseni uzerindeki izdusumu.
-      const float t = ((v.x - s.x) * dx + (v.y - s.y) * dy) / len_sq;
-      const Color c = LerpColor(brush.GetColor(), brush.GetColor2(), t);
-      v.r = c.r;
-      v.g = c.g;
-      v.b = c.b;
-      v.a = c.a;
-    }
-    return;
+    return ((x - s.x) * dx + (y - s.y) * dy) / len_sq;
   }
-
   if (brush.GetType() == BrushType::kRadial) {
-    const Point c0 = brush.GetStart();
+    const Point c = brush.GetStart();
     const float r = brush.GetRadius();
+    if (!(r > 0.0F)) {
+      return 0.0F;
+    }
+    const float dx = x - c.x;
+    const float dy = y - c.y;
+    return std::sqrt(dx * dx + dy * dy) / r;
+  }
+  return 0.0F;
+}
+
+float ClampUnit(float t) noexcept {
+  return t < 0.0F ? 0.0F : (t > 1.0F ? 1.0F : t);
+}
+
+/// @brief Cokgeni `t = limit` sinirina gore kirp (yalnizca linear gradient).
+///
+/// Linear'de esit-t yerleri dogru oldugu icin bu bir yari-duzlem kirpmasidir.
+/// Sinirin uzerindeki noktalar alt parcaya verilir; boylece iki parca
+/// geometriyi tekrarlamadan bolusur.
+std::vector<Vertex> ClipToGradientLine(const std::vector<Vertex>& poly,
+                                       const Brush& brush, float limit,
+                                       bool keep_below) {
+  std::vector<Vertex> out;
+  const std::size_t n = poly.size();
+  for (std::size_t i = 0; i < n; ++i) {
+    const Vertex& a = poly[i];
+    const Vertex& b = poly[(i + 1) % n];
+    const float da = GradientT(brush, a.x, a.y) - limit;
+    const float db = GradientT(brush, b.x, b.y) - limit;
+    const bool in_a = keep_below ? (da <= 0.0F) : (da > 0.0F);
+    const bool in_b = keep_below ? (db <= 0.0F) : (db > 0.0F);
+    if (in_a) {
+      out.push_back(a);
+    }
+    if (in_a != in_b) {
+      const float denom = da - db;
+      const float s = std::fabs(denom) < 1e-12F ? 0.0F : da / denom;
+      out.emplace_back(a.x + (b.x - a.x) * s, a.y + (b.y - a.y) * s);
+    }
+  }
+  return out;
+}
+
+/// @brief Konveks bir cokgeni ucgen yelpazesi olarak yaz.
+void EmitFan(const std::vector<Vertex>& poly, std::vector<Vertex>& out) {
+  for (std::size_t i = 1; i + 1 < poly.size(); ++i) {
+    out.push_back(poly[0]);
+    out.push_back(poly[i]);
+    out.push_back(poly[i + 1]);
+  }
+}
+
+/// @brief Kenarin orta noktasinda gercek renk ile enterpolasyonun farki.
+float EdgeError(const Vertex& a, const Vertex& b, const Brush& brush) {
+  const float t_mid =
+      ClampUnit(GradientT(brush, (a.x + b.x) * 0.5F, (a.y + b.y) * 0.5F));
+  const float t_lerp = 0.5F * (ClampUnit(GradientT(brush, a.x, a.y)) +
+                               ClampUnit(GradientT(brush, b.x, b.y)));
+  return std::fabs(t_mid - t_lerp);
+}
+
+/// @brief Radial gradient icin ucgeni hata olcusune gore ozyinelemeli bol.
+///
+/// Renk mesafeye bagli oldugu icin dogrusal degildir; kirpilmis bolgelerde
+/// hata sifir cikar ve bolme hemen durur, yani maliyet gecis bandiyla
+/// sinirlidir.
+void SubdivideRadial(const Vertex& a, const Vertex& b, const Vertex& c,
+                     const Brush& brush, int32_t depth,
+                     std::vector<Vertex>& out) {
+  constexpr float kTolerance = 0.02F;
+  const bool refine = depth > 0 && (EdgeError(a, b, brush) > kTolerance ||
+                                    EdgeError(b, c, brush) > kTolerance ||
+                                    EdgeError(c, a, brush) > kTolerance);
+  if (!refine) {
+    out.push_back(a);
+    out.push_back(b);
+    out.push_back(c);
+    return;
+  }
+  const Vertex ab{(a.x + b.x) * 0.5F, (a.y + b.y) * 0.5F};
+  const Vertex bc{(b.x + c.x) * 0.5F, (b.y + c.y) * 0.5F};
+  const Vertex ca{(c.x + a.x) * 0.5F, (c.y + a.y) * 0.5F};
+  SubdivideRadial(a, ab, ca, brush, depth - 1, out);
+  SubdivideRadial(ab, b, bc, brush, depth - 1, out);
+  SubdivideRadial(ca, bc, c, brush, depth - 1, out);
+  SubdivideRadial(ab, bc, ca, brush, depth - 1, out);
+}
+
+/// @brief Gradient dolgu icin ucgenleri gradient sinirlarinda bol.
+///
+/// Renk vertex'lerde tasindigi icin GPU yalnizca dogrusal enterpolasyon
+/// yapar. Sekil, gradient sinirlarini gormeyecek kadar az vertex'ten
+/// olusuyorsa (dikdortgen: iki ucgen) sekil icindeki gecis kose renklerinin
+/// karisimina indirgenir; bu bolme onu duzeltir.
+std::vector<Vertex> SubdivideForGradient(const std::vector<Vertex>& verts,
+                                         const Brush& brush) {
+  constexpr int32_t kMaxDepth = 4;
+  std::vector<Vertex> out;
+  out.reserve(verts.size());
+  for (std::size_t i = 0; i + 2 < verts.size(); i += 3) {
+    if (brush.GetType() == BrushType::kRadial) {
+      SubdivideRadial(verts[i], verts[i + 1], verts[i + 2], brush, kMaxDepth,
+                      out);
+      continue;
+    }
+    // Linear: renk yalnizca t'nin kirpildigi t=0 ve t=1 dogrularinda
+    // dogrusalligini yitirir. O iki dogruda bolmek sonucu tam dogru yapar.
+    const std::vector<Vertex> tri = {verts[i], verts[i + 1], verts[i + 2]};
+    const std::vector<Vertex> rest =
+        ClipToGradientLine(tri, brush, 0.0F, false);
+    EmitFan(ClipToGradientLine(tri, brush, 0.0F, true), out);
+    EmitFan(ClipToGradientLine(rest, brush, 1.0F, true), out);
+    EmitFan(ClipToGradientLine(rest, brush, 1.0F, false), out);
+  }
+  return out;
+}
+
+/// @brief Vertex renklerini fircaya gore yaz.
+///
+/// Gradient burada, tessellation sonrasi ama transform oncesi uygulanir:
+/// vertex konumlari hala sekil-yerel oldugu icin gradient koordinatlari da
+/// cizim koordinatlariyla ayni uzayda kalir.
+void ApplyBrushColors(std::vector<Vertex>& verts, const Brush& brush) {
+  if (!brush.IsGradient()) {
+    const Color c = brush.GetColor();
     for (auto& v : verts) {
-      const float dx = v.x - c0.x;
-      const float dy = v.y - c0.y;
-      const float t = (r > 0.0F) ? (std::sqrt(dx * dx + dy * dy) / r) : 0.0F;
-      const Color c = LerpColor(brush.GetColor(), brush.GetColor2(), t);
       v.r = c.r;
       v.g = c.g;
       v.b = c.b;
@@ -222,9 +324,9 @@ void ApplyBrushColors(std::vector<Vertex>& verts, const Brush& brush) {
     }
     return;
   }
-
-  const Color c = brush.GetColor();
   for (auto& v : verts) {
+    const Color c = LerpColor(brush.GetColor(), brush.GetColor2(),
+                              GradientT(brush, v.x, v.y));
     v.r = c.r;
     v.g = c.g;
     v.b = c.b;
@@ -333,15 +435,35 @@ Painter::Painter(Painter&& other) noexcept
       mViewportY(other.mViewportY),
       mViewportWidth(other.mViewportWidth),
       mViewportHeight(other.mViewportHeight),
-      mCustomViewport(other.mCustomViewport) {
+      mCustomViewport(other.mCustomViewport),
+      mStats(other.mStats),
+      mLastStats(other.mLastStats),
+      mFrameStartNs(other.mFrameStartNs),
+      mActiveTarget(other.mActiveTarget),
+      mTargetWidth(other.mTargetWidth),
+      mTargetHeight(other.mTargetHeight),
+      mSavedViewportX(other.mSavedViewportX),
+      mSavedViewportY(other.mSavedViewportY),
+      mSavedViewportWidth(other.mSavedViewportWidth),
+      mSavedViewportHeight(other.mSavedViewportHeight),
+      mSavedCustomViewport(other.mSavedCustomViewport),
+      mAutoDrawableSize(other.mAutoDrawableSize) {
   other.mWindow = nullptr;
+  other.mActiveTarget = kInvalidRenderTarget;
 }
 
 Painter& Painter::operator=(Painter&& other) noexcept {
   if (this != &other) {
+    // Renderer'a bagli kaynaklar renderer'dan önce birakilmali. Font atlasi ve
+    // batcher, yikilirken renderer uzerinden GPU kaynagi serbest birakiyor;
+    // renderer once yok edilirse bu cagrilar dangling pointer uzerinden gider.
+    mCurrentFont.reset();
+    mBatcher.reset();
     if (mRenderer != nullptr) {
       mRenderer->Shutdown();
     }
+    mRenderer.reset();
+
     mWindow = other.mWindow;
     mRenderer = std::move(other.mRenderer);
     mBatcher = std::move(other.mBatcher);
@@ -355,7 +477,21 @@ Painter& Painter::operator=(Painter&& other) noexcept {
     mViewportWidth = other.mViewportWidth;
     mViewportHeight = other.mViewportHeight;
     mCustomViewport = other.mCustomViewport;
+    mStats = other.mStats;
+    mLastStats = other.mLastStats;
+    mFrameStartNs = other.mFrameStartNs;
+    mActiveTarget = other.mActiveTarget;
+    mTargetWidth = other.mTargetWidth;
+    mTargetHeight = other.mTargetHeight;
+    mSavedViewportX = other.mSavedViewportX;
+    mSavedViewportY = other.mSavedViewportY;
+    mSavedViewportWidth = other.mSavedViewportWidth;
+    mSavedViewportHeight = other.mSavedViewportHeight;
+    mSavedCustomViewport = other.mSavedCustomViewport;
+    mAutoDrawableSize = other.mAutoDrawableSize;
+
     other.mWindow = nullptr;
+    other.mActiveTarget = kInvalidRenderTarget;
   }
   return *this;
 }
@@ -364,9 +500,9 @@ void Painter::Begin() {
   if (mRenderer == nullptr) {
     return;
   }
-  // Boyut degisimini yoklama: yalnizca uygulama SetDrawableSize ile acik bir
+  // Boyut degisimini kontrol edelim: yalnizca uygulama SetDrawableSize ile acik bir
   // bildirim yapmiyorsa. Olay tabanli bildirim hem daha ucuz hem de dogru
-  // zamanda gelir; yoklama, kendi olay dongusunu yazan basit uygulamalar
+  // zamanda gelir; kendi olay dongusunu yazan basit uygulamalar
   // icin geriye donuk uyumlu bir emniyet agi olarak duruyor.
   if (mAutoDrawableSize && mWindow != nullptr) {
     int32_t w = 0;
@@ -394,6 +530,10 @@ void Painter::End() {
   if (mRenderer == nullptr) {
     return;
   }
+  // Hedef secimi kare sinirini asmaz: her Begin ekranda baslar. Bunu kareyi
+  // bitirirken uygulamak, hedef gecisinin backend'in kare icinde kalmasini da
+  // saglar. Biriken cizimler hedef hala bagliyken flush edilir.
+  ResetRenderTarget();
   if (mBatcher != nullptr) {
     mBatcher->Flush();
     mStats.draw_calls = mBatcher->DrawCallCount();
@@ -443,8 +583,9 @@ void Painter::ResetViewport() {
   mCustomViewport = false;
   mViewportX = 0;
   mViewportY = 0;
-  mViewportWidth = mDrawableWidth;
-  mViewportHeight = mDrawableHeight;
+  // Hedef bagliysa varsayilan viewport hedefin tamamidir, pencerenin degil.
+  mViewportWidth = SurfaceWidth();
+  mViewportHeight = SurfaceHeight();
   ApplyViewport();
 }
 
@@ -1165,18 +1306,31 @@ void Painter::ApplyDrawableSize(int32_t width, int32_t height) {
   mDrawableWidth = width;
   mDrawableHeight = height;
 
+  // Hedef bagliyken pencere boyutu cizim yuzeyini degistirmez; yalnizca ekrana
+  // donuldugunde kullanilacak viewport guncellenir.
+  if (mActiveTarget != kInvalidRenderTarget) {
+    if (!mSavedCustomViewport) {
+      mSavedViewportX = 0;
+      mSavedViewportY = 0;
+      mSavedViewportWidth = width;
+      mSavedViewportHeight = height;
+    }
+    return;
+  }
+
   // Kullanici acik bir viewport sectiyse yeniden boyutlandirma onu ezmez;
   // kendi yerlesimini yeniden hesaplayip SetViewport'u tekrar cagirmasi
-  // beklenir (bolunmus ekranda dogru olan davranis budur).
+  // beklenir (bolunmus ekranda dogru olan davranis budur). Yuzey yuksekligi
+  // degistigi icin GL'de Y ofseti ve kirpma yine de yeniden hesaplanmali.
   if (mCustomViewport) {
+    ApplyViewport();
     return;
   }
   mViewportX = 0;
   mViewportY = 0;
   mViewportWidth = width;
   mViewportHeight = height;
-  mRenderer->SetViewport(0, 0, width, height);
-  UpdateProjection();
+  ApplyViewport();
 }
 
 void Painter::QueryDrawableSize(int32_t& out_width, int32_t& out_height) const {
@@ -1217,8 +1371,9 @@ void Painter::PushFilled(std::vector<Vertex>& verts) {
                             mCurrentState.opacity);
     return;
   }
-  ApplyBrushColors(verts, brush);
-  mBatcher->PushTrianglesPreColored(verts, mCurrentState.transform,
+  std::vector<Vertex> shaded = SubdivideForGradient(verts, brush);
+  ApplyBrushColors(shaded, brush);
+  mBatcher->PushTrianglesPreColored(shaded, mCurrentState.transform,
                                     mCurrentState.opacity);
 }
 
@@ -1230,16 +1385,29 @@ bool Painter::YAxisMatchesGpu() const {
          mActiveTarget != kInvalidRenderTarget;
 }
 
+int32_t Painter::SurfaceWidth() const {
+  return mActiveTarget != kInvalidRenderTarget ? mTargetWidth : mDrawableWidth;
+}
+
 int32_t Painter::SurfaceHeight() const {
   return mActiveTarget != kInvalidRenderTarget ? mTargetHeight
                                                : mDrawableHeight;
+}
+
+bool Painter::OwnsTarget(const RenderTarget& target) const {
+  return target.mOwner != nullptr && target.mOwner == mRenderer.get();
 }
 
 void Painter::ApplyViewport() {
   if (mRenderer == nullptr) {
     return;
   }
-  // OpenGL viewport'unun orijini ekranda sol ALT kosededir; Vulkan'da ve bir
+  // Viewport bir GPU durumu: biriken cizimler eski viewport'a aitti, once
+  // onlar gonderilmeli.
+  if (mBatcher != nullptr) {
+    mBatcher->Flush();
+  }
+  // OpenGL viewport'unun orijini ekranda sol alt kosededir; Vulkan'da ve bir
   // hedefe cizerken sol ust (bkz. YAxisMatchesGpu).
   const int32_t kGpuY = YAxisMatchesGpu()
                             ? mViewportY
@@ -1247,6 +1415,12 @@ void Painter::ApplyViewport() {
   mRenderer->SetViewport(mViewportX, kGpuY, mViewportWidth, mViewportHeight);
   ++mStats.state_changes;
   UpdateProjection();
+
+  // Scissor kutusu viewport ofsetine, yuzey yuksekligine ve Y yonune bagli
+  // hesaplaniyor; ucu de burada degismis olabilir.
+  if (mCurrentState.has_clip) {
+    ApplyScissor(mCurrentState.clip_rect);
+  }
 }
 
 RenderTarget Painter::CreateRenderTarget(int32_t width, int32_t height,
@@ -1268,6 +1442,10 @@ RenderTarget Painter::CreateRenderTarget(int32_t width, int32_t height,
 
 bool Painter::SetRenderTarget(const RenderTarget& target) {
   if (mRenderer == nullptr || !target.IsValid()) {
+    return false;
+  }
+  if (!OwnsTarget(target)) {
+    spdlog::error("[Painter] SetRenderTarget: hedef baska bir renderer'a ait.");
     return false;
   }
   if (mActiveTarget == target.Handle()) {
@@ -1339,6 +1517,11 @@ void Painter::DrawRenderTarget(const RenderTarget& target,
   if (mRenderer == nullptr || mBatcher == nullptr || !target.IsValid()) {
     return;
   }
+  if (!OwnsTarget(target)) {
+    spdlog::error(
+        "[Painter] DrawRenderTarget: hedef baska bir renderer'a ait.");
+    return;
+  }
   if (mActiveTarget == target.Handle()) {
     spdlog::error(
         "[Painter] DrawRenderTarget: hedef kendi icerigini ornekleyemez; "
@@ -1356,6 +1539,11 @@ void Painter::DrawRenderTarget(const RenderTarget& target,
 bool Painter::ReadRenderTarget(const RenderTarget& target,
                                std::vector<uint8_t>& out_rgba) {
   if (mRenderer == nullptr || !target.IsValid()) {
+    return false;
+  }
+  if (!OwnsTarget(target)) {
+    spdlog::error(
+        "[Painter] ReadRenderTarget: hedef baska bir renderer'a ait.");
     return false;
   }
   const auto kNeeded = static_cast<std::size_t>(target.Width()) *
@@ -1378,7 +1566,7 @@ void Painter::UpdateProjection() {
   }
   // Ortografik projeksiyon: [0, width] x [0, height] → NDC
   // OpenGL ekranda: Y ekseni clip space'de yukarı pozitif → ters çevir (-2/h).
-  // Vulkan'da ve GL'de bir HEDEFE çizerken ters çevirme gerekmez (+2/h);
+  // Vulkan'da ve GL'de bir hedefe çizerken ters çevirme gerekmez (+2/h);
   // gerekçesi YAxisMatchesGpu() belgesinde.
   auto w = static_cast<float>(mViewportWidth);
   auto h = static_cast<float>(mViewportHeight);
@@ -1408,14 +1596,14 @@ void Painter::ClearScissorCounted() {
 }
 
 void Painter::ApplyScissor(const Rect& rect) {
-  // Kirpma dikdortgeni cagirana VIEWPORT-YEREL gelir (cizim koordinatlariyla
-  // ayni sistem), ama scissor kutusu PENCERE koordinatindadir. Viewport
+  // Kirpma dikdortgeni cagirana viewport-yerel gelir (cizim koordinatlariyla
+  // ayni sistem), ama scissor kutusu pencere koordinatindadir. Viewport
   // ozellestirilmisse ofset eklenmeli; aksi halde bolunmus ekranda kirpma
   // yanlis panele duser.
   const int32_t kWindowX = mViewportX + static_cast<int32_t>(rect.x);
   const int32_t kWindowY = mViewportY + static_cast<int32_t>(rect.y);
 
-  // OpenGL scissor Y=0 altta; Vulkan Y=0 üstte. Ters cevirme YUZEYIN
+  // OpenGL scissor Y=0 altta; Vulkan Y=0 üstte. Ters cevirme yuzeyin
   // tamamina gore yapilir, viewport'a gore degil. Bir hedefe cizerken GL de
   // cevirmez (bkz. YAxisMatchesGpu).
   const int32_t kScissorY =
