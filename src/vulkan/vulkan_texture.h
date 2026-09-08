@@ -58,6 +58,19 @@ class VulkanTexture {
                     int32_t y, int32_t width, int32_t height,
                     const uint8_t* data);
 
+  /// @brief Bölge güncellemesini verilen komut buffer'ına kaydeder.
+  ///
+  /// Gönderim yapmaz; böylece güncelleme, aynı buffer'a daha önce kaydedilmiş
+  /// çizimlerden sonra çalışır. Komut buffer'ı render pass dışında olmalıdır.
+  /// Staging tamponunun ömrü çağırana aittir: frame tamamlanana kadar
+  /// yaşatılmalı, sonra serbest bırakılmalıdır.
+  ///
+  /// @return Başarı durumunda true; `out_*` yalnızca o zaman doldurulur.
+  bool RecordUpdateRegion(VkContext* context, VkCommandBuffer cmd, int32_t x,
+                          int32_t y, int32_t width, int32_t height,
+                          const uint8_t* data, VkBuffer& out_staging,
+                          VkDeviceMemory& out_memory);
+
   /// @brief Tüm Vulkan kaynaklarını serbest bırak. Idempotent; destructor da çağırır.
   void Destroy(VkDevice device);
 

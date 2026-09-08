@@ -25,7 +25,7 @@
 #include <vector>
 
 #include "mock_renderer.h"
-#include "test_support.h"
+#include "pixel_test_support.h"
 
 namespace {
 
@@ -37,85 +37,13 @@ using sdl_painter::Pen;
 using sdl_painter::Rect;
 using sdl_painter::RendererBackend;
 using sdl_painter::RenderTarget;
+using sdl_painter::testing::AvailableBackends;
+using sdl_painter::testing::Backend;
+using sdl_painter::testing::ColorNear;
+using sdl_painter::testing::PixelAt;
 
 constexpr int32_t kTargetW = 64;
 constexpr int32_t kTargetH = 48;
-
-/// @brief Bu derlemede sınanabilecek backend'ler.
-///
-/// Vulkan yalnızca `SDLPAINTER_WITH_VULKAN` ile derlendiyse listeye girer;
-/// önişlemci koşulu makro argümanı içinde yazılamadığı için burada toplanır.
-std::vector<RendererBackend> AvailableBackends() {
-  std::vector<RendererBackend> backends{RendererBackend::kOpenGL};
-#ifdef SDLPAINTER_HAS_VULKAN
-  backends.push_back(RendererBackend::kVulkan);
-#endif
-  return backends;
-}
-
-/// @brief Geri okunan tamponda bir pikselin rengi.
-Color PixelAt(const std::vector<uint8_t>& rgba, int32_t width, int32_t x,
-              int32_t y) {
-  const std::size_t i =
-      ((static_cast<std::size_t>(y) * static_cast<std::size_t>(width)) +
-       static_cast<std::size_t>(x)) *
-      4U;
-  return Color{rgba[i], rgba[i + 1], rgba[i + 2], rgba[i + 3]};
-}
-
-/// @brief İki renk kanal başına verilen toleransta eşit mi?
-::testing::AssertionResult ColorNear(const Color& actual, const Color& expected,
-                                     int32_t tolerance) {
-  const auto diff = [](uint8_t a, uint8_t b) {
-    return a > b ? static_cast<int32_t>(a - b) : static_cast<int32_t>(b - a);
-  };
-  if (diff(actual.r, expected.r) <= tolerance &&
-      diff(actual.g, expected.g) <= tolerance &&
-      diff(actual.b, expected.b) <= tolerance &&
-      diff(actual.a, expected.a) <= tolerance) {
-    return ::testing::AssertionSuccess();
-  }
-  return ::testing::AssertionFailure()
-         << "beklenen (" << static_cast<int32_t>(expected.r) << ","
-         << static_cast<int32_t>(expected.g) << ","
-         << static_cast<int32_t>(expected.b) << ","
-         << static_cast<int32_t>(expected.a) << ") — gelen ("
-         << static_cast<int32_t>(actual.r) << ","
-         << static_cast<int32_t>(actual.g) << ","
-         << static_cast<int32_t>(actual.b) << ","
-         << static_cast<int32_t>(actual.a) << ")";
-}
-
-/// @brief Gerçek bir backend + Painter ayağa kaldırır; olmazsa testi atlar.
-struct Backend {
-  sdl_painter::testing::HiddenWindow window;
-  std::unique_ptr<Painter> painter;
-  std::string skip_reason;
-
-  explicit Backend(RendererBackend backend) : window(backend, 128, 96) {
-    if (window.Get() == nullptr) {
-      skip_reason = std::string("Pencere olusturulamadi: ") + window.Error();
-      return;
-    }
-    painter = std::make_unique<Painter>(window.Get(), backend);
-    if (!painter->IsValid()) {
-      painter.reset();
-      skip_reason = "Backend baslatilamadi (uygun surucu/ICD yok olabilir).";
-    }
-  }
-
-  [[nodiscard]] bool Ready() const { return painter != nullptr; }
-};
-
-/// @brief Backend'i ayaga kaldirir, yoksa testi atlar; ayrica test boyunca
-///        yeni bir Vulkan validation hatasi cikmadigini garanti eder.
-#define REQUIRE_BACKEND(var, backend)                      \
-  const sdl_painter::testing::ValidationGuard var##_guard; \
-  Backend var(backend);                                    \
-  if (!(var).Ready()) {                                    \
-    GTEST_SKIP() << (var).skip_reason;                     \
-  }                                                        \
-  static_assert(true, "")
 
 /// @brief Bilinen bir sahneyi hedefe çizer: mavi zemin, ÜST-SOL çeyrek kırmızı.
 ///
@@ -132,10 +60,6 @@ void DrawOrientationScene(Painter& painter, const RenderTarget& target) {
   painter.ResetRenderTarget();
   painter.End();
 }
-
-// ---------------------------------------------------------------------------
-// Painter yüzeyi — backend gerektirmeyen davranış
-// ---------------------------------------------------------------------------
 
 TEST(RenderTargetTest, DefaultConstructedIsInvalid) {
   const RenderTarget target;
@@ -164,10 +88,6 @@ TEST(RenderTargetTest, MoveTransfersOwnership) {
   c = std::move(b);
   EXPECT_FALSE(c.IsValid());
 }
-
-// ---------------------------------------------------------------------------
-// Gerçek backend — parametreli
-// ---------------------------------------------------------------------------
 
 class RenderTargetBackend : public ::testing::TestWithParam<RendererBackend> {};
 

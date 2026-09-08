@@ -131,7 +131,7 @@ class VulkanRenderer final : public IRenderer {
   std::unordered_map<TextureHandle, std::unique_ptr<VulkanTexture>> mTextures;
   TextureHandle mNextTextureHandle{1};  // 0 = kInvalidTexture
 
-  /// @brief Silinmeyi bekleyen texture — uçuştaki kareler bitince yıkılır.
+  /// @brief Silinmeyi bekleyen texture — uçuştaki frameler bitince yıkılır.
   struct PendingTextureDelete {
     std::unique_ptr<VulkanTexture> texture;
     uint64_t delete_after_frame{0};
@@ -145,7 +145,17 @@ class VulkanRenderer final : public IRenderer {
   /// yoldan gider ve GPU durdurulmaz.
   std::vector<PendingTextureDelete> mPendingTextureDeletes;
 
-  /// @brief Monoton artan kare sayacı (gecikmeli silme zamanlaması için).
+  /// @brief Frame komut buffer'ına kaydedilmiş bir yüklemenin staging tamponu.
+  struct PendingStagingBuffer {
+    VkBuffer buffer{VK_NULL_HANDLE};
+    VkDeviceMemory memory{VK_NULL_HANDLE};
+    uint64_t delete_after_frame{0};
+  };
+
+  /// @brief Frame tamamlanana kadar yaşatılacak staging tamponları.
+  std::vector<PendingStagingBuffer> mPendingStagingBuffers;
+
+  /// @brief Monoton artan frame sayacı (gecikmeli silme zamanlaması için).
   uint64_t mFrameCounter{0};
 
   // Hedefler ekranınkinden farklı bir renk formatı kullanır (bkz.
@@ -160,6 +170,9 @@ class VulkanRenderer final : public IRenderer {
     /// Hedefin içeriğini örneklemek için kullanılan handle; @ref mTextures
     /// ile aynı sayaçtan gelir, dolayısıyla çakışmaz.
     TextureHandle texture{kInvalidTexture};
+    /// Hedefe en az bir kez bağlanıldı mı? İlk bağlanma içeriği tanımlı hale
+    /// getirmek için temizler, sonrakiler korur.
+    bool initialized{false};
   };
 
   std::unordered_map<RenderTargetHandle, RenderTargetEntry> mRenderTargets;
@@ -169,12 +182,17 @@ class VulkanRenderer final : public IRenderer {
   RenderTargetHandle mCurrentTarget{kInvalidRenderTarget};
 
   VkRenderPass mOffscreenRenderPass{VK_NULL_HANDLE};
+  /// @brief İçeriği koruyan ikiz (bkz. @ref VkSwapchain::GetResumeRenderPass).
+  VkRenderPass mOffscreenResumeRenderPass{VK_NULL_HANDLE};
   std::unique_ptr<VulkanPipeline> mOffscreenPipeline;
   std::unique_ptr<VulkanTexturedPipeline> mOffscreenTexturedPipeline;
 
   /// @brief Süresi dolan gecikmeli silmeleri işle.
   /// @param force `true` ise süre gözetmeksizin hepsi yıkılır (Shutdown).
   void ProcessPendingTextureDeletes(bool force);
+
+  /// @brief Süresi dolan staging tamponlarını serbest bırak.
+  void ProcessPendingStagingBuffers(bool force);
 
   /// @brief Offscreen render pass'i ve ona bağlı pipeline takımını üret.
   ///
@@ -184,6 +202,9 @@ class VulkanRenderer final : public IRenderer {
 
   /// @brief Yürürlükteki render pass'i bitirip verilen hedefinkini başlat.
   void BeginTargetRenderPass(RenderTargetHandle handle);
+
+  /// @brief @ref mCurrentTarget için render pass'i başlat (bitirmez).
+  void BeginCurrentRenderPass(VkCommandBuffer cmd);
 
   /// @brief Yürürlükteki çizim yüzeyinin boyutu (hedef bağlıysa onunki).
   ///

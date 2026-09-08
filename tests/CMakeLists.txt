@@ -22,6 +22,7 @@ set(TEST_SOURCES
     test_tictactoe_logic.cpp
     test_collision_logic.cpp
     test_regression_findings.cpp
+    test_regression_gpu.cpp
 )
 
 include(GoogleTest)

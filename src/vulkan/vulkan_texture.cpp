@@ -146,6 +146,47 @@ bool VulkanTexture::UpdateRegion(VkContext* context, VkCommandPool cmd_pool,
   return kOk;
 }
 
+bool VulkanTexture::RecordUpdateRegion(VkContext* context, VkCommandBuffer cmd,
+                                       int32_t x, int32_t y, int32_t width,
+                                       int32_t height, const uint8_t* data,
+                                       VkBuffer& out_staging,
+                                       VkDeviceMemory& out_memory) {
+  if (!IsValid() || data == nullptr || width <= 0 || height <= 0) {
+    return false;
+  }
+  if (x < 0 || y < 0 || x + width > mWidth || y + height > mHeight) {
+    spdlog::error("VulkanTexture::RecordUpdateRegion: bölge sınır dışı.");
+    return false;
+  }
+
+  const auto kSize = static_cast<VkDeviceSize>(
+      static_cast<std::size_t>(width) * static_cast<std::size_t>(height) * 4);
+  if (!CreateStagingBuffer(context->GetDevice(), context->GetPhysicalDevice(),
+                           data, kSize, out_staging, out_memory)) {
+    return false;
+  }
+
+  VkBufferImageCopy region{};
+  region.bufferOffset = 0;
+  region.bufferRowLength = 0;
+  region.bufferImageHeight = 0;
+  region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  region.imageSubresource.mipLevel = 0;
+  region.imageSubresource.baseArrayLayer = 0;
+  region.imageSubresource.layerCount = 1;
+  region.imageOffset = {x, y, 0};
+  region.imageExtent = {static_cast<uint32_t>(width),
+                        static_cast<uint32_t>(height), 1};
+
+  TransitionImageLayout(cmd, mImage, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+  vkCmdCopyBufferToImage(cmd, out_staging, mImage,
+                         VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+  TransitionImageLayout(cmd, mImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  return true;
+}
+
 bool VulkanTexture::CreateStagingBuffer(VkDevice device,
                                         VkPhysicalDevice phys_device,
                                         const uint8_t* rgba_data,
@@ -326,6 +367,14 @@ void VulkanTexture::TransitionImageLayout(VkCommandBuffer cmd, VkImage image,
     barrier.srcAccessMask = 0;
     barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  } else if (old_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL &&
+             new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+    // Ayni komut buffer'ina kaydedilen guncellemede sart: daha once
+    // kaydedilmis ornekleme bitmeden yazmaya baslanmamali.
+    barrier.srcAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    src_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
     dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
   } else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
              new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {

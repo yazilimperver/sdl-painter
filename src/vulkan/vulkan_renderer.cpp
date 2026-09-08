@@ -95,6 +95,7 @@ void VulkanRenderer::Shutdown() {
     vkDeviceWaitIdle(mContext->GetDevice());
     // Silinmeyi bekleyenleri zorla temizle (device idle, güvenli).
     ProcessPendingTextureDeletes(/*force=*/true);
+    ProcessPendingStagingBuffers(/*force=*/true);
     // Texture'ları önce sil (descriptor set pool mTexturedPipeline'da)
     for (auto& [handle, tex] : mTextures) {
       tex->Destroy(mContext->GetDevice());
@@ -113,6 +114,11 @@ void VulkanRenderer::Shutdown() {
     if (mOffscreenPipeline) {
       mOffscreenPipeline->Destroy(mContext->GetDevice());
       mOffscreenPipeline.reset();
+    }
+    if (mOffscreenResumeRenderPass != VK_NULL_HANDLE) {
+      vkDestroyRenderPass(mContext->GetDevice(), mOffscreenResumeRenderPass,
+                          nullptr);
+      mOffscreenResumeRenderPass = VK_NULL_HANDLE;
     }
     if (mOffscreenRenderPass != VK_NULL_HANDLE) {
       vkDestroyRenderPass(mContext->GetDevice(), mOffscreenRenderPass, nullptr);
@@ -288,6 +294,7 @@ void VulkanRenderer::EndFrame() {
 
   // Silinmeyi bekleyen texture'lardan süresi dolanları serbest bırak.
   ProcessPendingTextureDeletes(/*force=*/false);
+  ProcessPendingStagingBuffers(/*force=*/false);
 }
 
 void VulkanRenderer::SubmitAndPresent() {
@@ -536,13 +543,32 @@ void VulkanRenderer::UpdateTexture(TextureHandle handle, int32_t x, int32_t y,
   if (it == mTextures.end() || data == nullptr) {
     return;
   }
-  // Not: kare ortasında çağrılabilir. Kendi tek seferlik komut buffer'ını
-  // gönderip bekler; hâlâ kaydedilmekte olan frame komut buffer'ı henüz
-  // submit edilmediğinden çakışma olmaz. Aynı karede daha önce çizilmiş
-  // glyph'lerin bölgeleri asla üzerine yazılmaz (atlas yalnızca kullanılmamış
-  // alana ekler), dolayısıyla eski UV'ler geçerli kalır.
-  it->second->UpdateRegion(mContext.get(), mFrameSync->GetCommandPool(), x, y,
-                           width, height, data);
+  if (!mFrameActive) {
+    it->second->UpdateRegion(mContext.get(), mFrameSync->GetCommandPool(), x, y,
+                             width, height, data);
+    return;
+  }
+
+  // Frame ortasinda: kopya, o ana kadar kaydedilmis cizimlerden sonra
+  // calismali. Ayri bir komut buffer'i ile gonderilseydi frame henuz submit
+  // edilmedigi icin once calisir ve eski cizimler de yeni icerigi ornekierdi.
+  // Kopya render pass icinde kaydedilemez; pass bitirilip yeniden acilir.
+  VkCommandBuffer cmd = mFrameSync->GetCommandBuffer(mCurrentFrame);
+  VkBuffer staging = VK_NULL_HANDLE;
+  VkDeviceMemory memory = VK_NULL_HANDLE;
+
+  vkCmdEndRenderPass(cmd);
+  const bool kOk = it->second->RecordUpdateRegion(
+      mContext.get(), cmd, x, y, width, height, data, staging, memory);
+  BeginCurrentRenderPass(cmd);
+
+  if (kOk) {
+    // Sayac frame sonunda artiyor; bu kayit frame icinde yapildigi icin bir
+    // frame fazlasi gerekiyor. Aksi halde tampon, onu kullanan submit hala
+    // ucustayken serbest birakilir.
+    mPendingStagingBuffers.push_back(
+        {staging, memory, mFrameCounter + VkFrameSync::kMaxFramesInFlight + 1});
+  }
 }
 
 void VulkanRenderer::DestroyTexture(TextureHandle handle) {
@@ -562,6 +588,35 @@ void VulkanRenderer::DestroyTexture(TextureHandle handle) {
   mPendingTextureDeletes.push_back(
       {std::move(it->second), mFrameCounter + VkFrameSync::kMaxFramesInFlight});
   mTextures.erase(it);
+}
+
+void VulkanRenderer::ProcessPendingStagingBuffers(bool force) {
+  if (mContext == nullptr || mContext->GetDevice() == VK_NULL_HANDLE) {
+    mPendingStagingBuffers.clear();
+    return;
+  }
+  VkDevice device = mContext->GetDevice();
+
+  auto expired = [&](const PendingStagingBuffer& p) {
+    return force || mFrameCounter >= p.delete_after_frame;
+  };
+
+  for (auto& pending : mPendingStagingBuffers) {
+    if (!expired(pending)) {
+      continue;
+    }
+    vkDestroyBuffer(device, pending.buffer, nullptr);
+    vkFreeMemory(device, pending.memory, nullptr);
+    pending.buffer = VK_NULL_HANDLE;
+    pending.memory = VK_NULL_HANDLE;
+  }
+  mPendingStagingBuffers.erase(
+      std::remove_if(mPendingStagingBuffers.begin(),
+                     mPendingStagingBuffers.end(),
+                     [](const PendingStagingBuffer& p) {
+                       return p.buffer == VK_NULL_HANDLE;
+                     }),
+      mPendingStagingBuffers.end());
 }
 
 void VulkanRenderer::ProcessPendingTextureDeletes(bool force) {
@@ -633,7 +688,7 @@ void VulkanRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
                     pipeline->GetPipeline(mBlendMode));
 
   // Not: descriptor set birincil pipeline'in havuzundan gelmis olabilir. Iki
-  // pipeline layout'u AYNI SEKILDE tanimlandigi icin Vulkan onlari set 0 icin
+  // pipeline layout'u aynı şekilde tanimlandigi icin Vulkan onlari set 0 icin
   // uyumlu sayar; baglama gecerlidir.
   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           pipeline->GetLayout(), 0, 1, &desc_set, 0, nullptr);
@@ -741,6 +796,14 @@ bool VulkanRenderer::EnsureOffscreenResources() {
   ci.pDependencies = deps.data();
   VK_CHECK(vkCreateRenderPass(device, &ci, nullptr, &mOffscreenRenderPass));
 
+  // Ikinci pass'in asil pass'ten tek farki bu iki satir: yeniden baglanmada
+  // icerik silinmez, korunur. Hedef pass disinda orneklenebilir durumda
+  // bulundugu icin initialLayout da onu yansitir.
+  color.loadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+  color.initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+  VK_CHECK(
+      vkCreateRenderPass(device, &ci, nullptr, &mOffscreenResumeRenderPass));
+
   // Pipeline yalnizca UYUMLU render pass ile kullanilabilir ve uyumluluk
   // attachment formatini kapsar; hedeflerin formati ekranınkinden farkli
   // oldugu icin ikinci bir takim sart.
@@ -846,6 +909,11 @@ void VulkanRenderer::BeginTargetRenderPass(RenderTargetHandle handle) {
   // ice olamaz: once yururlukteki bitirilir.
   vkCmdEndRenderPass(cmd);
   mCurrentTarget = handle;
+  BeginCurrentRenderPass(cmd);
+}
+
+void VulkanRenderer::BeginCurrentRenderPass(VkCommandBuffer cmd) {
+  const RenderTargetHandle handle = mCurrentTarget;
 
   VkRenderPassBeginInfo rp{};
   rp.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -853,13 +921,18 @@ void VulkanRenderer::BeginTargetRenderPass(RenderTargetHandle handle) {
 
   const auto it = mRenderTargets.find(handle);
   if (it != mRenderTargets.end()) {
-    rp.renderPass = mOffscreenRenderPass;
+    // Ilk baglanmada icerik tanimsiz; temizleyip tanimli hale getiriyoruz.
+    // Sonraki baglanmalar koruyan ikizi kullanir, yoksa hedefe iki asamada
+    // cizmek imkansiz olurdu.
+    const bool kFirst = !it->second.initialized;
+    it->second.initialized = true;
+    rp.renderPass = kFirst ? mOffscreenRenderPass : mOffscreenResumeRenderPass;
     rp.framebuffer = it->second.target->GetFramebuffer();
     rp.renderArea.extent = it->second.target->GetExtent();
-    rp.clearValueCount = 1;
-    rp.pClearValues = &mClearValue;
+    rp.clearValueCount = kFirst ? 1U : 0U;
+    rp.pClearValues = kFirst ? &mClearValue : nullptr;
   } else {
-    // Ekrana donus: CLEAR yerine LOAD yapan ikiz pass kullanilir, yoksa bu
+    // Ekrana donus: clear yerine load yapan ikiz pass kullanilir, yoksa bu
     // karede o ana kadar cizilen her sey silinirdi (bkz. GetResumeRenderPass).
     rp.renderPass = mSwapchain->GetResumeRenderPass();
     rp.framebuffer = mSwapchain->GetFramebuffer(mCurrentImageIndex);
