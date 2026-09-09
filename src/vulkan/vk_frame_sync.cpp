@@ -11,7 +11,7 @@ VkFrameSync::~VkFrameSync() {
   Shutdown();
 }
 
-bool VkFrameSync::Initialize(VkContext *context,
+bool VkFrameSync::Initialize(VkContext* context,
                              uint32_t swapchain_image_count) {
   mContext = context;
   mSwapchainImageCount = swapchain_image_count;
@@ -45,21 +45,21 @@ void VkFrameSync::Shutdown() {
   // ama VkFrameSync tek başına da güvenli olmalı.
   vkDeviceWaitIdle(device);
 
-  for (auto *f : mInFlight) {
+  for (auto* f : mInFlight) {
     if (f != VK_NULL_HANDLE) {
       vkDestroyFence(device, f, nullptr);
     }
   }
   mInFlight.clear();
 
-  for (auto *s : mRenderFinished) {
+  for (auto* s : mRenderFinished) {
     if (s != VK_NULL_HANDLE) {
       vkDestroySemaphore(device, s, nullptr);
     }
   }
   mRenderFinished.clear();
 
-  for (auto *s : mImageAvailable) {
+  for (auto* s : mImageAvailable) {
     if (s != VK_NULL_HANDLE) {
       vkDestroySemaphore(device, s, nullptr);
     }

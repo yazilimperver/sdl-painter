@@ -106,7 +106,12 @@ class IRenderer {
   /// @brief Scissor kırpmasını kaldır.
   virtual void ClearScissor() = 0;
 
-  /// @brief Ekranı belirtilen renkle temizle.
+  /// @brief Yürürlükteki çizim yüzeyini belirtilen renkle temizle.
+  ///
+  /// Yüzeyin tamamını siler: @ref SetScissor ile kurulmuş kırpma ve
+  /// @ref SetViewport ile daraltılmış viewport onu sınırlamaz. OpenGL'de
+  /// `glClear` scissor testine tabi olduğu için implementasyon testi geçici
+  /// olarak kapatmak zorundadır.
   virtual void Clear(const Color& color) = 0;
 
   /// @brief Global opaklığı ayarla [0.0, 1.0].

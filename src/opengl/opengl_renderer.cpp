@@ -154,23 +154,27 @@ void OpenGLRenderer::SetupTimerQueries() {
 }
 
 void OpenGLRenderer::CollectGpuTime() {
-  // Bu karenin sorgusunu DEGIL, siradaki (yani en eski) sorguyu yokla.
-  // Cift tamponda "siradaki" bir onceki karenin sorgusudur ve sonucu
-  // muhtemelen hazirdir; hazir degilse beklemeden geciyoruz.
-  const int32_t oldest = (mTimerQueryIndex + 1) % kTimerQueryCount;
-  if (!mTimerQueryPending[oldest]) {
-    return;
+  // TUM bekleyen slotlar yoklanir, en eskiden en yeniye. Eskiden yalnizca
+  // (index + 1) yoklaniyordu; sonucu o anda hazir olmayan bir slot, indeks
+  // ilerledikten sonra bir daha hic sorgulanmiyor ve olcum kalici olarak
+  // duruyordu (400 karenin 396'sinda ayni deger). Yoklama bloklamaz:
+  // hazir olmayan slot atlanir, sonraki karede yeniden denenir.
+  for (int32_t step = 1; step <= kTimerQueryCount; ++step) {
+    const int32_t slot = (mTimerQueryIndex + step) % kTimerQueryCount;
+    if (!mTimerQueryPending[slot]) {
+      continue;
+    }
+    GLint available = 0;
+    glGetQueryObjectiv(mTimerQueries[slot], GL_QUERY_RESULT_AVAILABLE,
+                       &available);
+    if (available == GL_FALSE) {
+      continue;
+    }
+    GLuint64 elapsed_ns = 0;
+    glGetQueryObjectui64v(mTimerQueries[slot], GL_QUERY_RESULT, &elapsed_ns);
+    mLastGpuFrameMs = static_cast<double>(elapsed_ns) / 1.0e6;
+    mTimerQueryPending[slot] = false;
   }
-  GLint available = 0;
-  glGetQueryObjectiv(mTimerQueries[oldest], GL_QUERY_RESULT_AVAILABLE,
-                     &available);
-  if (available == GL_FALSE) {
-    return;
-  }
-  GLuint64 elapsed_ns = 0;
-  glGetQueryObjectui64v(mTimerQueries[oldest], GL_QUERY_RESULT, &elapsed_ns);
-  mLastGpuFrameMs = static_cast<double>(elapsed_ns) / 1.0e6;
-  mTimerQueryPending[oldest] = false;
 }
 
 void OpenGLRenderer::BeginFrame() {
@@ -180,8 +184,11 @@ void OpenGLRenderer::BeginFrame() {
   CollectGpuTime();
 
   // Bu slotun onceki sonucu hala toplanmadiysa uzerine yazmak sorguyu
-  // kaybettirir; o kareyi olcmeden gec.
+  // kaybettirir; o kareyi olcmeden gec. INDEKS YINE DE ILERLER: yerinde
+  // saymak, ayni slotu sonsuza kadar bekleyip olcumu kalici olarak
+  // durduruyordu.
   if (mTimerQueryPending[mTimerQueryIndex]) {
+    mTimerQueryIndex = (mTimerQueryIndex + 1) % kTimerQueryCount;
     return;
   }
   glBeginQuery(GL_TIME_ELAPSED, mTimerQueries[mTimerQueryIndex]);
@@ -214,8 +221,19 @@ void OpenGLRenderer::ClearScissor() {
 }
 
 void OpenGLRenderer::Clear(const Color& color) {
+  // Clear TUM yuzeyi siler; kirpma ve viewport onu sinirlamaz (bkz.
+  // Painter::Clear ve SDL_RenderClear'in ayni sozlesmesi). glClear scissor
+  // testine tabi oldugu icin test gecici kapatilir — aksi halde ayni cagri
+  // Vulkan'da tum hedefi, OpenGL'de yalnizca kirpma kutusunu siliyordu.
+  const GLboolean kScissorWasOn = glIsEnabled(GL_SCISSOR_TEST);
+  if (kScissorWasOn == GL_TRUE) {
+    glDisable(GL_SCISSOR_TEST);
+  }
   glClearColor(color.RedF(), color.GreenF(), color.BlueF(), color.AlphaF());
   glClear(GL_COLOR_BUFFER_BIT);
+  if (kScissorWasOn == GL_TRUE) {
+    glEnable(GL_SCISSOR_TEST);
+  }
 }
 
 void OpenGLRenderer::SetOpacity(float alpha) {
@@ -443,6 +461,28 @@ RenderTargetHandle OpenGLRenderer::CreateRenderTarget(int32_t width,
                          target.texture, 0);
 
   const GLenum kStatus = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+  if (kStatus == GL_FRAMEBUFFER_COMPLETE) {
+    // Yeni hedefin baslangic icerigi (0,0,0,0)'dır. glTexImage2D'ye nullptr
+    // verilince icerik tanimsiz kalir; surucu pratikte sifirlasa da bu
+    // garanti degil. Vulkan tarafi da ayni degeri kullaniyor
+    // (bkz. VulkanRenderer::BeginCurrentRenderPass), sozlesme iki backend'de
+    // ayni: render_target.h.
+    //
+    // Scissor gecici kapatilir: glClear kirpma testine tabidir ve hedef kare
+    // ortasinda, bir kirpma kutusu yururlukteyken olusturulabilir.
+    const GLboolean kScissorWasOn = glIsEnabled(GL_SCISSOR_TEST);
+    std::array<GLfloat, 4> prev_clear{};
+    glGetFloatv(GL_COLOR_CLEAR_VALUE, prev_clear.data());
+    if (kScissorWasOn == GL_TRUE) {
+      glDisable(GL_SCISSOR_TEST);
+    }
+    glClearColor(0.0F, 0.0F, 0.0F, 0.0F);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glClearColor(prev_clear[0], prev_clear[1], prev_clear[2], prev_clear[3]);
+    if (kScissorWasOn == GL_TRUE) {
+      glEnable(GL_SCISSOR_TEST);
+    }
+  }
   // Yururlukteki hedefe geri don; kurulum arada gecici olarak baglamisti.
   BindTargetFramebuffer(mCurrentTarget);
 

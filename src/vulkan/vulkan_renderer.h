@@ -72,6 +72,22 @@ class VulkanRenderer final : public IRenderer {
   void SetModelMatrix(const float* mat3) override;
 
  private:
+  /// @brief Kare içinde büyüyebilen vertex ring'i — zincirlenmiş tamponlar.
+  ///
+  /// Tek bir @ref VulkanBuffer kullanıldığında slot kapasitesi dolar dolmaz
+  /// çizim komutu sessizce düşüyordu; aynı sahne OpenGL'de eksiksiz, Vulkan'da
+  /// eksik çiziliyordu.
+  ///
+  /// Her halka kendi içinde frame slotlarına bölünür (bkz. VulkanBuffer),
+  /// yani uçuştaki bir frame hâlâ kendi slotunu okurken yeni frame aynı halkanın
+  /// başka slotuna yazabilir.
+  struct VertexChain {
+    /// Halkalar; ilki @ref Initialize içinde üretilir.
+    std::vector<std::unique_ptr<VulkanBuffer>> chunks;
+    /// Bu framede yazılmakta olan halkanın indeksi.
+    std::size_t active{0};
+  };
+
   /// @brief Pencerenin anlık drawable boyutunu döndürür.
   void QueryWindowDrawableSize(uint32_t& width, uint32_t& height) const;
 
@@ -87,6 +103,28 @@ class VulkanRenderer final : public IRenderer {
 
   /// @brief Frame sonunda komutları submit edip present yap.
   void SubmitAndPresent();
+
+  /// @brief Zincire yeni bir halka ekle.
+  /// @param min_slot_bytes Halkanın slot başına taşıması gereken asgari bayt.
+  /// @return Tahsis başarılıysa `true`.
+  bool AppendVertexChunk(VertexChain& chain, VkDeviceSize min_slot_bytes);
+
+  /// @brief Verilen slotun tüm halkalardaki yazma konumunu sıfırla.
+  void ResetVertexChain(VertexChain& chain, uint32_t frame_slot);
+
+  /// @brief Zincire vertex verisi yaz; halka dolduysa bir sonrakine geç.
+  ///
+  /// @param out_buffer [out] Verinin yazıldığı `VkBuffer`.
+  /// @param out_offset [out] O tampon içindeki bayt ofseti.
+  /// @return Yazma başarılıysa `true`; yalnızca bellek tahsisi başarısız
+  ///         olduğunda `false` döner (o zaman çizim atlanır ve hata loglanır).
+  bool WriteVertices(VertexChain& chain, const void* data,
+                     VkDeviceSize byte_size, VkDeviceSize alignment,
+                     uint32_t frame_slot, VkBuffer& out_buffer,
+                     VkDeviceSize& out_offset);
+
+  /// @brief Zincirin tüm halkalarını yık.
+  void DestroyVertexChain(VertexChain& chain, VkDevice device);
 
   SDL_Window* mWindow{nullptr};
 
@@ -122,12 +160,12 @@ class VulkanRenderer final : public IRenderer {
 
   // Untextured pipeline + vertex ring buffer
   std::unique_ptr<VulkanPipeline> mPipeline;
-  std::unique_ptr<VulkanBuffer> mVertexRing;
+  VertexChain mVertexChain;
   PushConstants mPushConstants{};
 
   // Textured pipeline + texture registry
   std::unique_ptr<VulkanTexturedPipeline> mTexturedPipeline;
-  std::unique_ptr<VulkanBuffer> mTexturedVertexRing;
+  VertexChain mTexturedChain;
   std::unordered_map<TextureHandle, std::unique_ptr<VulkanTexture>> mTextures;
   TextureHandle mNextTextureHandle{1};  // 0 = kInvalidTexture
 

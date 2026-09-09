@@ -15,7 +15,15 @@ namespace sdl_painter {
 /// @brief VulkanRenderer'ın DrawTriangles çağrıları için push constant bloğu.
 ///
 /// Vertex shader'daki PushConstants layout'u ile byte-for-byte eşleşmeli.
-/// Toplam boyut: 64 + 64 + 16 + 4 = 148 byte (Vulkan garantili 256 byte limiti içinde).
+///
+/// Toplam boyut: 64 + 64 + 16 + 4 = 148 bayt. Dikkat: Vulkan'ın her
+/// implementasyonda garanti ettiği `maxPushConstantsSize` 128 bayt,
+/// 256 değil — bu blok o asgari sınırı aşar. 128 bildiren bir sürücüde
+/// (örn. bazı tümleşik GPU'lar) `vkCreatePipelineLayout` geçersiz olur;
+/// @ref VulkanRenderer::Initialize bu yüzden limiti başlangıçta sorgular ve
+/// açık bir hata verir. Kalıcı çözüm bloğu küçültmektir: `model` matrisi
+/// Painter tarafından daima birim yazılıyor (dönüşüm CPU'da vertex'e
+/// gömülüyor), yani 64 baytı bedelsiz geri alınabilir.
 struct alignas(4) PushConstants {
   float projection[16]{};  ///< mat4 ortografik projeksiyon (column-major)
   float model

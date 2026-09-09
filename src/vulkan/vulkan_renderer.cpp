@@ -15,6 +15,17 @@
 
 namespace sdl_painter {
 
+namespace {
+
+/// @brief Bir vertex zinciri halkasının frame slotu başına kapasitesi.
+///
+/// Toplam halka boyutu bunun `kMaxFramesInFlight` katıdır. Değer bir tavan
+/// değil, büyüme0 adımıdır: frame bundan fazlasını isterse zincire yeni bir
+/// halka eklenir.
+constexpr VkDeviceSize kVertexChunkSlotSize = 4 * 1024 * 1024;  // 4 MB
+
+}  // namespace
+
 VulkanRenderer::~VulkanRenderer() {
   Shutdown();
 }
@@ -41,18 +52,27 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
     return false;
   }
 
+  // Push constant blogu 148 bayt; Vulkan'in her implementasyonda GARANTI
+  // ettigi asgari sinir ise 128 bayt (bkz. PushConstants). Limit
+  // sorgulanmazsa 128 bildiren bir surucude vkCreatePipelineLayout gecersiz
+  // olur ve hata, sebebi belirsiz bicimde pipeline kurulumunda ortaya cikar.
+  VkPhysicalDeviceProperties props{};
+  vkGetPhysicalDeviceProperties(mContext->GetPhysicalDevice(), &props);
+  if (props.limits.maxPushConstantsSize < sizeof(PushConstants)) {
+    spdlog::error(
+        "VulkanRenderer: bu cihaz {} bayt push constant destekliyor, {} bayt "
+        "gerekiyor ({}). Vulkan backend kullanilamaz.",
+        props.limits.maxPushConstantsSize, sizeof(PushConstants),
+        props.deviceName);
+    return false;
+  }
+
   mClearValue.color = {{0.0F, 0.0F, 0.0F, 1.0F}};
   mViewportW = static_cast<int32_t>(width);
   mViewportH = static_cast<int32_t>(height);
 
   // (CPU/GPU paralelliği için RAW hazard'ı önler; bkz. K1).
-  constexpr VkDeviceSize kPerSlotSize = 4 * 1024 * 1024;  // 4 MB / slot
-  constexpr VkDeviceSize kRingSize =
-      kPerSlotSize * VkFrameSync::kMaxFramesInFlight;
-  mVertexRing = std::make_unique<VulkanBuffer>();
-  if (!mVertexRing->Init(mContext->GetDevice(), mContext->GetPhysicalDevice(),
-                         kRingSize, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                         VkFrameSync::kMaxFramesInFlight)) {
+  if (!AppendVertexChunk(mVertexChain, kVertexChunkSlotSize)) {
     spdlog::error("VulkanRenderer: VulkanBuffer init failed.");
     return false;
   }
@@ -68,11 +88,8 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
     return false;
   }
 
-  // Textured vertex ring buffer — aynı slot mantığı.
-  mTexturedVertexRing = std::make_unique<VulkanBuffer>();
-  if (!mTexturedVertexRing->Init(
-          mContext->GetDevice(), mContext->GetPhysicalDevice(), kRingSize,
-          VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VkFrameSync::kMaxFramesInFlight)) {
+  // Textured vertex ring buffer — aynı slot ve büyüme mantığı.
+  if (!AppendVertexChunk(mTexturedChain, kVertexChunkSlotSize)) {
     spdlog::error("VulkanRenderer: textured VulkanBuffer init failed.");
     return false;
   }
@@ -128,23 +145,80 @@ void VulkanRenderer::Shutdown() {
       mTexturedPipeline->Destroy(mContext->GetDevice());
       mTexturedPipeline.reset();
     }
-    if (mTexturedVertexRing) {
-      mTexturedVertexRing->Destroy(mContext->GetDevice());
-      mTexturedVertexRing.reset();
-    }
+    DestroyVertexChain(mTexturedChain, mContext->GetDevice());
     if (mPipeline) {
       mPipeline->Destroy(mContext->GetDevice());
       mPipeline.reset();
     }
-    if (mVertexRing) {
-      mVertexRing->Destroy(mContext->GetDevice());
-      mVertexRing.reset();
-    }
+    DestroyVertexChain(mVertexChain, mContext->GetDevice());
   }
   mFrameSync.reset();
   mSwapchain.reset();
   mContext.reset();
   mWindow = nullptr;
+}
+
+bool VulkanRenderer::AppendVertexChunk(VertexChain& chain,
+                                       VkDeviceSize min_slot_bytes) {
+  if (mContext == nullptr) {
+    return false;
+  }
+  const VkDeviceSize kSlotBytes =
+      std::max(kVertexChunkSlotSize, min_slot_bytes);
+  auto chunk = std::make_unique<VulkanBuffer>();
+  if (!chunk->Init(mContext->GetDevice(), mContext->GetPhysicalDevice(),
+                   kSlotBytes * VkFrameSync::kMaxFramesInFlight,
+                   VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                   VkFrameSync::kMaxFramesInFlight)) {
+    return false;
+  }
+  chain.chunks.push_back(std::move(chunk));
+  return true;
+}
+
+void VulkanRenderer::ResetVertexChain(VertexChain& chain, uint32_t frame_slot) {
+  // Yalnızca bu framenin slotu sıfırlanır; diğer slot hâlâ GPU'da olabilir.
+  // Zincirin tamamı gezilir: geçen frame ikinci halkaya taşmış olabilir.
+  for (auto& chunk : chain.chunks) {
+    chunk->ResetRing(frame_slot);
+  }
+  chain.active = 0;
+}
+
+bool VulkanRenderer::WriteVertices(VertexChain& chain, const void* data,
+                                   VkDeviceSize byte_size,
+                                   VkDeviceSize alignment, uint32_t frame_slot,
+                                   VkBuffer& out_buffer,
+                                   VkDeviceSize& out_offset) {
+  while (true) {
+    if (chain.active >= chain.chunks.size()) {
+      // Halka kalmadı: büyüt. Tek bir yazma bir slota sığmalı, bu yüzden
+      // asgari boyut istenen veriden küçük olamaz.
+      if (!AppendVertexChunk(chain, byte_size + alignment)) {
+        spdlog::error(
+            "VulkanRenderer: vertex tamponu buyutulemedi ({} bayt istendi); "
+            "cizim atlandi.",
+            byte_size);
+        return false;
+      }
+      spdlog::debug("VulkanRenderer: vertex zinciri {} halkaya buyudu.",
+                    chain.chunks.size());
+    }
+    VulkanBuffer& chunk = *chain.chunks[chain.active];
+    if (chunk.Write(data, byte_size, alignment, frame_slot, out_offset)) {
+      out_buffer = chunk.GetBuffer();
+      return true;
+    }
+    ++chain.active;
+  }
+}
+
+void VulkanRenderer::DestroyVertexChain(VertexChain& chain, VkDevice device) {
+  for (auto& chunk : chain.chunks) {
+    chunk->Destroy(device);
+  }
+  chain.chunks.clear();
+  chain.active = 0;
 }
 
 void VulkanRenderer::QueryWindowDrawableSize(uint32_t& width,
@@ -210,7 +284,7 @@ bool VulkanRenderer::AcquireNextImage() {
 void VulkanRenderer::BeginFrame() {
   mSwapchainOutOfDate = false;
   mFrameActive = false;
-  // Hedef secimi kare sinirini asmaz: her kare ekranda baslar.
+  // Hedef secimi frame sinirini asmaz: her frame ekranda baslar.
   mCurrentTarget = kInvalidRenderTarget;
 
   // Pencere simge durumuna küçültüldüğünde yüzey 0x0 olur. Bu durumda
@@ -244,12 +318,8 @@ void VulkanRenderer::BeginFrame() {
   vkResetCommandBuffer(cmd, 0);
 
   // Sadece bu frame'in slot'unu sıfırla — diğer slot hâlâ GPU'da kullanılabilir.
-  if (mVertexRing != nullptr) {
-    mVertexRing->ResetRing(mCurrentFrame);
-  }
-  if (mTexturedVertexRing != nullptr) {
-    mTexturedVertexRing->ResetRing(mCurrentFrame);
-  }
+  ResetVertexChain(mVertexChain, mCurrentFrame);
+  ResetVertexChain(mTexturedChain, mCurrentFrame);
 
   VkCommandBufferBeginInfo bi{};
   bi.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -275,7 +345,7 @@ void VulkanRenderer::EndFrame() {
     return;
   }
 
-  // Kullanici hedefte biraktiysa ekrana don: aksi halde bu karede swapchain
+  // Kullanici hedefte biraktiysa ekrana don: aksi halde bu framede swapchain
   // image'ina hic yazilmaz ve resume pass'in initialLayout beklentisi de
   // karsilanmaz.
   if (mCurrentTarget != kInvalidRenderTarget) {
@@ -462,7 +532,7 @@ void VulkanRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
     return;
   }
   const VulkanPipeline* pipeline = ActivePipeline();
-  if (pipeline == nullptr || mVertexRing == nullptr) {
+  if (pipeline == nullptr) {
     return;
   }
 
@@ -470,9 +540,10 @@ void VulkanRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
       static_cast<VkDeviceSize>(vertices.size() * sizeof(Vertex));
   constexpr VkDeviceSize kAlignment = 4;
   VkDeviceSize offset_bytes = 0;
+  VkBuffer vertex_buffer = VK_NULL_HANDLE;
 
-  if (!mVertexRing->Write(vertices.data(), kByteSize, kAlignment, mCurrentFrame,
-                          offset_bytes)) {
+  if (!WriteVertices(mVertexChain, vertices.data(), kByteSize, kAlignment,
+                     mCurrentFrame, vertex_buffer, offset_bytes)) {
     return;
   }
 
@@ -488,8 +559,7 @@ void VulkanRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                     pipeline->GetPipeline(mBlendMode));
 
-  VkBuffer buf = mVertexRing->GetBuffer();
-  vkCmdBindVertexBuffers(cmd, 0, 1, &buf, &offset_bytes);
+  vkCmdBindVertexBuffers(cmd, 0, 1, &vertex_buffer, &offset_bytes);
 
   vkCmdPushConstants(cmd, pipeline->GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0,
                      static_cast<uint32_t>(sizeof(PushConstants)),
@@ -577,12 +647,12 @@ void VulkanRenderer::DestroyTexture(TextureHandle handle) {
     return;
   }
 
-  // Texture, hâlâ uçuşta olan karelerin komut buffer'larından referans
+  // Texture, hâlâ uçuşta olan framelerin komut buffer'larından referans
   // ediliyor olabilir. Eskiden burada `vkDeviceWaitIdle` çağrılıyordu — bu,
   // her texture yıkımında GPU'yu tamamen durduruyordu (bir font kapatılırken
   // glyph sayısı kadar tam stall).
   //
-  // Bunun yerine gecikmeli silme: texture, kMaxFramesInFlight kare boyunca
+  // Bunun yerine gecikmeli silme: texture, kMaxFramesInFlight frame boyunca
   // bekletilir. O süre dolduğunda onu kullanmış olabilecek tüm submit'ler
   // tamamlanmıştır (in-flight fence bekleme döngüsü bunu garanti eder).
   mPendingTextureDeletes.push_back(
@@ -654,7 +724,7 @@ void VulkanRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
     return;
   }
   const VulkanTexturedPipeline* pipeline = ActiveTexturedPipeline();
-  if (pipeline == nullptr || mTexturedVertexRing == nullptr) {
+  if (pipeline == nullptr) {
     return;
   }
 
@@ -668,9 +738,10 @@ void VulkanRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
       static_cast<VkDeviceSize>(vertices.size() * sizeof(TexturedVertex));
   constexpr VkDeviceSize kAlignment = 4;
   VkDeviceSize offset_bytes = 0;
+  VkBuffer vertex_buffer = VK_NULL_HANDLE;
 
-  if (!mTexturedVertexRing->Write(vertices.data(), kByteSize, kAlignment,
-                                  mCurrentFrame, offset_bytes)) {
+  if (!WriteVertices(mTexturedChain, vertices.data(), kByteSize, kAlignment,
+                     mCurrentFrame, vertex_buffer, offset_bytes)) {
     return;
   }
 
@@ -693,8 +764,7 @@ void VulkanRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
   vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
                           pipeline->GetLayout(), 0, 1, &desc_set, 0, nullptr);
 
-  VkBuffer buf = mTexturedVertexRing->GetBuffer();
-  vkCmdBindVertexBuffers(cmd, 0, 1, &buf, &offset_bytes);
+  vkCmdBindVertexBuffers(cmd, 0, 1, &vertex_buffer, &offset_bytes);
 
   vkCmdPushConstants(cmd, pipeline->GetLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0,
                      static_cast<uint32_t>(sizeof(PushConstants)), &pc);
@@ -768,7 +838,7 @@ bool VulkanRenderer::EnsureOffscreenResources() {
 
   // Iki bagimlilik: girerken onceki ornekleme bitmis olmali, cikarken renk
   // yazimlari fragment shader okumasindan ONCE gorunur olmali. Ikincisi,
-  // hedefin ayni karede ekrana basilabilmesinin sarti.
+  // hedefin ayni framede ekrana basilabilmesinin sarti.
   std::array<VkSubpassDependency, 2> deps{};
   deps[0].srcSubpass = VK_SUBPASS_EXTERNAL;
   deps[0].dstSubpass = 0;
@@ -870,7 +940,7 @@ void VulkanRenderer::DestroyRenderTarget(RenderTargetHandle handle) {
   }
   // Texture'lardaki gecikmeli silme burada uygulanamaz: hedefin framebuffer'i
   // da yikiliyor ve o, ucustaki komut buffer'larindan referans ediliyor.
-  // Hedef yaratma/yikma kare dongusunde degil, kurulum sirasinda yapilir;
+  // Hedef yaratma/yikma frame dongusunde degil, kurulum sirasinda yapilir;
   // burada tam bekleme kabul edilebilir bir bedel.
   vkDeviceWaitIdle(mContext->GetDevice());
   mTexturedPipeline->FreeDescriptorSet(mContext->GetDevice(),
@@ -919,6 +989,12 @@ void VulkanRenderer::BeginCurrentRenderPass(VkCommandBuffer cmd) {
   rp.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
   rp.renderArea.offset = {0, 0};
 
+  VkClearValue target_init{};
+  target_init.color.float32[0] = 0.0F;
+  target_init.color.float32[1] = 0.0F;
+  target_init.color.float32[2] = 0.0F;
+  target_init.color.float32[3] = 0.0F;
+
   const auto it = mRenderTargets.find(handle);
   if (it != mRenderTargets.end()) {
     // Ilk baglanmada icerik tanimsiz; temizleyip tanimli hale getiriyoruz.
@@ -930,10 +1006,10 @@ void VulkanRenderer::BeginCurrentRenderPass(VkCommandBuffer cmd) {
     rp.framebuffer = it->second.target->GetFramebuffer();
     rp.renderArea.extent = it->second.target->GetExtent();
     rp.clearValueCount = kFirst ? 1U : 0U;
-    rp.pClearValues = kFirst ? &mClearValue : nullptr;
+    rp.pClearValues = kFirst ? &target_init : nullptr;
   } else {
     // Ekrana donus: clear yerine load yapan ikiz pass kullanilir, yoksa bu
-    // karede o ana kadar cizilen her sey silinirdi (bkz. GetResumeRenderPass).
+    // framede o ana kadar cizilen her sey silinirdi (bkz. GetResumeRenderPass).
     rp.renderPass = mSwapchain->GetResumeRenderPass();
     rp.framebuffer = mSwapchain->GetFramebuffer(mCurrentImageIndex);
     rp.renderArea.extent = mSwapchain->GetExtent();
