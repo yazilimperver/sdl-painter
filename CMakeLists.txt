@@ -198,6 +198,12 @@ else()
     target_link_libraries(sdl_painter PRIVATE SDL3_ttf::SDL3_ttf)
 endif()
 
+# Dil gereksinimi hedefin uzerinde tasinmali. Yukaridaki CMAKE_CXX_STANDARD
+# yalnizca bu dizinde tanimlanan hedefleri etkiler, export edilen hedefe
+# islemez. Public basliklar C++17 gerektirdigi icin (inline constexpr,
+# std::string_view) tuketici kendi standardini ayarlamak zorunda kalmamali.
+target_compile_features(sdl_painter PUBLIC cxx_std_17)
+
 set_target_warnings(sdl_painter)
 set_target_sanitizers(sdl_painter)
 set_target_coverage(sdl_painter)
@@ -233,6 +239,10 @@ target_link_libraries(sdl_painter_app
     PUBLIC  sdl_painter
     PRIVATE ${SDLPAINTER_SPDLOG_TARGET}
 )
+# sdl_painter uzerinden de gelirdi; acikca yazmak hedefi kendi basina dogru
+# kilar (baglanti PUBLIC olmaktan cikarsa gereksinim kaybolmasin).
+target_compile_features(sdl_painter_app PUBLIC cxx_std_17)
+
 set_target_warnings(sdl_painter_app)
 set_target_sanitizers(sdl_painter_app)
 set_target_coverage(sdl_painter_app)

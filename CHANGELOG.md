@@ -1,5 +1,86 @@
 # Changelog
 
+## [Yayımlanmamış]
+
+### Düzeltildi
+
+- **Painter durum yönetimi ve kaynak sahipliği.** Move işlemleri artık çizim
+  durumunun tamamını taşıyor; frame, hedefe bağlı bitmiyor; viewport ve yüzey
+  değişiminde kırpma yeniden hesaplanıyor; hedefler renderer sahipliğine göre
+  doğrulanıyor. Gradient dolgular geçiş sınırlarında bölünerek şekil içinde
+  doğru rengi üretiyor.
+- **Move constructor başlatma sırası** üye bildirim sırasıyla hizalandı.
+- **Vulkan'da hedefe yeniden bağlanma ve frame içi doku güncelleme sırası**
+  düzeltildi.
+- **`font.h`** düzeltildi.
+
+- **Vulkan frame başına ~4 MB'tan sonraki geometriyi sessizce düşürüyordu.**
+  Vertex ring'i frame slotu başına 4 MB idi; dolduğunda `VulkanBuffer::Write`
+  `false` dönüyor ve çizim komutu hiç kaydedilmiyordu. Kullanıcıya giden tek
+  işaret bir log satırıydı; OpenGL'de böyle bir tavan olmadığı için **aynı
+  sahne bir backend'de eksik çiziliyordu** (ölçüm: 70.000 dikdörtgen). Ring
+  artık zincirlenmiş tamponlardan oluşuyor ve dolduğunda büyüyor; taşan ilk
+  frame tahsis bedelini öder, sonrakiler aynı zinciri yeniden kullanır.
+- **`Clear` kırpma etkinken iki backend'de farklı alanı siliyordu.** `glClear`
+  scissor testine tabidir, `vkCmdClearAttachments`'a verilen dikdörtgen ise
+  tüm yüzeydi. Sözleşme netleşti: **`Clear` yüzeyin tamamını siler**, kırpma
+  ve viewport onu sınırlamaz (`SDL_RenderClear` ile aynı anlam). Alt bölge
+  boyamak için `FillRect` kullanılmalı.
+- **Vulkan'da ekranın temizleme rengi yeni bir çizim hedefine sızıyordu.**
+  Offscreen render pass ilk bağlanmada `loadOp = CLEAR` ile `mClearValue`
+  kullanıyordu ve o değer en son `Clear` çağrısından kalıyordu. Yeni hedefin
+  başlangıç içeriği artık iki backend'de de (0, 0, 0, 0); OpenGL tarafında
+  FBO oluşturulurken açıkça temizleniyor.
+- **Aynı `Font` ikinci bir renderer'da birincinin doku handle'ını
+  veriyordu.** Glyph önbelleği yalnızca kod noktasına göre tutuluyordu; doku
+  tanımlayıcıları ise renderer'a yereldir. Bir Font tek
+  bir Painter'a ait olacka şekilde güncelleme yapıldı; yabancı renderer ile çağrı `nullptr` döner ve hata loglar.
+- **Aktif çizim hedefi yok edilince Painter hâlâ hedefe çizdiğini
+  sanıyordu** — viewport hedefin boyutunda, projeksiyon hedefin Y yönünde
+  kalıyor ve frame sonuna kadar ekrana o durumla çiziliyordu. `RenderTarget`
+  artık yıkılırken Painter'a haber veriyor. Aynı mekanizma, Painter'dan sonra
+  yıkılan bir hedefin ölü renderer'a dokunmasını da engelliyor.
+- **OpenGL GPU süre ölçümü birkaç frame sonra kalıcı olarak donuyordu.**
+  `CollectGpuTime` yalnızca tek bir sorgu slotunu yokluyor, `BeginFrame` ise
+  slot doluyken indeksi ilerletmiyordu; senkron bir kez kayınca o slot bir
+  daha hiç sorgulanmıyordu (400 framenin 396'sında aynı değer). Artık tüm
+  slotlar yoklanıyor ve indeks her durumda ilerliyor.
+- **Fare koordinatları HiDPI'da çizim koordinatlarıyla aynı uzayda
+  değildi.** SDL olayları mantıksal pencere koordinatı verir, `Painter` ise
+  piksel çizer; `high_dpi` açıkken tıklama testi ekran ölçeği kadar
+  kayıyordu. `Application` olayları piksel yoğunluğuyla ölçekliyor (HiDPI
+  kapalıyken çarpan 1.0, davranış değişmiyor).
+- **`SetOpacity` ve `SetClipRect` arayüzlerini doğrulamıyordu.** Opaklık
+  artık `[0, 1]` aralığına kırpılıyor (başlık zaten bunu vaat ediyordu);
+  negatif boyutlu kırpma dikdörtgeni boş kırpmaya dönüşüyor — ham hâli
+  OpenGL'de `GL_INVALID_VALUE` üretip önceki scissor'ı yürürlükte bırakıyor,
+  Vulkan'da ise her şeyi kırpıyordu.
+- **Vulkan push constant bloğu (148 bayt), Vulkan'ın garanti ettiği asgari
+  `maxPushConstantsSize` değerini (128 bayt) aşıyor.** Limit hiç
+  sorgulanmıyordu; 128 bildiren bir sürücüde hata, sebebi belirsiz biçimde
+  pipeline kurulumunda ortaya çıkardı. `VulkanRenderer::Initialize` artık
+  limiti başlangıçta sorgulayıp açık bir hata veriyor. (Bloğun küçültülmesi
+  ayrı bir iş olarak duruyor: `model` matrisi daima birim yazıldığı için
+  64 bayt bedelsiz geri alınabilir.)
+
+### Değişti
+
+- `Painter::Clear` ve `IRenderer::Clear` belgelerine kapsam beklentileri
+  yazıldı; `RenderTarget` belgesine başlangıç içeriği eklendi; `Font`
+  belgesine tek-renderer kuralı eklendi.
+- `Tessellator::IsClockwise` kaldırıldı.
+  `Painter::PushTexturedQuad` dokulu dörtgeni elle kurmak yerine
+  `Tessellator::TessellateTexturedRect` kullanacak hale getirildi.
+- `.claude/rules/shaders.md` tek kaynak kuralına çevrildi.
+
+### Test
+
+- Yeni regresyon testleri: `FreshTargetStartsTransparent`,
+  `LargeFrameKeepsAllGeometry`, `ClearIgnoresClipRect` (üçü de iki backend
+  için), `DestroyingActiveTargetRestoresScreenState`,
+  `TargetOutlivingPainterDoesNotTouchRenderer`, `OpacityIsClampedToUnitRange`,
+  `NegativeClipSizeBecomesEmptyClip`, `FontOwnership.*`.
+
 ## [1.3.0] - 2026-08-28
 
 ### Performans

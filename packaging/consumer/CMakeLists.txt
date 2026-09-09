@@ -24,7 +24,6 @@ endif()
 
 add_executable(consumer main.cpp)
 target_link_libraries(consumer PRIVATE sdl_painter::sdl_painter)
-target_compile_features(consumer PRIVATE cxx_std_17)
 
 # Windows'ta calisma zamani DLL'leri (SDL3.dll vb.) exe'nin yaninda olmali.
 # sdlpainter_copy_runtime_dlls() SDLPainter'in CMakeLists'inde tanimli bir
