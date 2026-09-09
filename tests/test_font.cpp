@@ -218,12 +218,19 @@ TEST(FontOwnership, SecondRendererIsRejected) {
 /// @brief Sahiplik ilk GetGlyph ile kurulur; ölçüm renderer gerektirmez.
 TEST(FontOwnership, MeasurementWorksBeforeAnyRenderer) {
   SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
+  // Renderer, Font'tan ÖNCE bildirilir: yıkım ters sırada olduğu için aksi
+  // halde ~Font, glyph atlasını çoktan yok edilmiş bir renderer üzerinden
+  // bırakmaya çalışır. Sahiplik yine de burada değil, ilk GetGlyph
+  // çağrısında kurulur — testin ölçtüğü şey o.
+  MockRenderer renderer;
   Font font(path, 24);
+
   int32_t w = 0;
   int32_t h = 0;
   EXPECT_TRUE(font.MeasureText("AV", w, h));
   EXPECT_GT(w, 0);
+  EXPECT_EQ(renderer.create_texture_count, 0)
+      << "Ölçüm renderer'a dokunmamalı.";
 
-  MockRenderer renderer;
   EXPECT_NE(font.GetGlyph(renderer, U'A'), nullptr);
 }
