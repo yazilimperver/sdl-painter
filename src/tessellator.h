@@ -231,9 +231,6 @@ class Tessellator {
   /// @brief Ear clipping iç implementasyonu.
   static std::vector<Vertex> EarClipping(const std::vector<Point>& raw);
 
-  /// @brief Üçgenin saat yönünde mi olduğunu kontrol et.
-  static bool IsClockwise(const Point& a, const Point& b, const Point& c);
-
   /// @brief Nokta üçgenin içinde mi?
   static bool PointInTriangle(const Point& p, const Point& a, const Point& b,
                               const Point& c);

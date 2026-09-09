@@ -174,6 +174,8 @@ class SDLPAINTER_APP_API Application {
   void ProcessEvents();
 
   /// @brief mWidth/mHeight'i pencerenin framebuffer (piksel) boyutuna eşitle.
+  ///
+  /// @ref mPixelDensity de burada tazelenir; ikisi aynı olayla değişir.
   void UpdateDrawableSize();
 
   /// @brief Pencere başlığındaki FPS'i (gerekiyorsa) güncelle.
@@ -188,6 +190,13 @@ class SDLPAINTER_APP_API Application {
   uint64_t mLastTickNs{0};
   int32_t mWidth{0};
   int32_t mHeight{0};
+
+  /// @brief Mantıksal pencere koordinatını piksele çeviren çarpan.
+  ///
+  /// SDL fare olayları mantıksal koordinat verir, @ref Painter ise piksel
+  /// çizer; `high_dpi` açıkken ikisi ayrışıyor.
+  /// HiDPI kapalıyken değer 1.0'dır ve hiçbir şeyi değiştirmez.
+  float mPixelDensity{1.0F};
 
   std::unique_ptr<app_detail::StatsOverlay> mStatsOverlay;
   StatsOverlayMode mStatsMode{StatsOverlayMode::kNone};

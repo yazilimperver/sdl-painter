@@ -5,6 +5,7 @@
 
 #include "sdl_painter/font.h"
 
+#include <cstdint>
 #include <gtest/gtest.h>
 #include <memory>
 #include <string>
@@ -186,4 +187,43 @@ TEST(FontMove, MovedFromFontIsSafeToDestroy) {
   // src burada yıkılır — taşınmış nesne üzerinde ikinci bir serbest bırakma
   // olmamalı. Toplam destroy sayısı oluşturulan texture sayısını aşmamalı.
   EXPECT_LE(r.destroy_texture_count, r.create_texture_count);
+}
+
+// ─── Renderer sahipliği ─────────────────────────────────────────────────────
+
+/// @brief Bir Font tek bir renderer'a aittir.
+///
+/// Önbellek yalnızca kod noktasına göre tutulduğu için ikinci bir renderer
+/// ile yapılan çağrı, önbellek isabetinde BİRİNCİ renderer'ın texture
+/// handle'ını döndürüyordu. Handle'lar renderer'a yereldir; o handle ikinci
+/// renderer'da başka bir texture'a işaret eder ya da hiç etmez.
+TEST(FontOwnership, SecondRendererIsRejected) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
+  MockRenderer first;
+  MockRenderer second;
+  Font font(path, 24);
+  ASSERT_TRUE(font.IsValid());
+
+  ASSERT_NE(font.GetGlyph(first, U'A'), nullptr);
+  EXPECT_GT(first.create_texture_count, 0);
+
+  // Önbellek isabeti: eskiden birincinin glyph'ini döndürüyordu.
+  EXPECT_EQ(font.GetGlyph(second, U'A'), nullptr);
+  // Önbellekte olmayan bir karakter de yabancı atlasa yazılmamalı.
+  EXPECT_EQ(font.GetGlyph(second, U'B'), nullptr);
+  EXPECT_EQ(second.create_texture_count, 0);
+  EXPECT_EQ(second.update_texture_count, 0);
+}
+
+/// @brief Sahiplik ilk GetGlyph ile kurulur; ölçüm renderer gerektirmez.
+TEST(FontOwnership, MeasurementWorksBeforeAnyRenderer) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
+  Font font(path, 24);
+  int32_t w = 0;
+  int32_t h = 0;
+  EXPECT_TRUE(font.MeasureText("AV", w, h));
+  EXPECT_GT(w, 0);
+
+  MockRenderer renderer;
+  EXPECT_NE(font.GetGlyph(renderer, U'A'), nullptr);
 }

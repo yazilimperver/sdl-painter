@@ -598,11 +598,6 @@ std::vector<TexturedVertex> Tessellator::TessellateTexturedRect(
   // clang-format on
 }
 
-bool Tessellator::IsClockwise(const Point& a, const Point& b, const Point& c) {
-  float cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
-  return cross < 0.0F;
-}
-
 bool Tessellator::PointInTriangle(const Point& p, const Point& a,
                                   const Point& b, const Point& c) {
   auto sign = [](const Point& p1, const Point& p2, const Point& p3) {

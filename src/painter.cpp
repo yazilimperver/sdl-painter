@@ -7,6 +7,7 @@
 
 #include <SDL3/SDL.h>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <glm/gtc/type_ptr.hpp>
@@ -376,7 +377,9 @@ std::vector<Vertex> StrokeSubPath(const SubPath& sub, float width,
 }  // namespace
 
 Painter::Painter(SDL_Window* window, RendererBackend backend)
-    : mWindow(window), mRenderer(CreateRenderer(backend)) {
+    : mWindow(window),
+      mRenderer(CreateRenderer(backend)),
+      mSelf(std::make_shared<Painter*>(this)) {
   if (window == nullptr) {
     spdlog::error("Painter: window pointer null, Painter geçersiz durumda.");
     mRenderer.reset();
@@ -406,7 +409,8 @@ Painter::Painter(std::unique_ptr<IRenderer> renderer, int32_t viewport_width,
       mDrawableWidth(viewport_width),
       mDrawableHeight(viewport_height),
       mViewportWidth(viewport_width),
-      mViewportHeight(viewport_height) {
+      mViewportHeight(viewport_height),
+      mSelf(std::make_shared<Painter*>(this)) {
   if (mRenderer == nullptr) {
     spdlog::error("Painter: renderer null, Painter geçersiz durumda.");
     return;
@@ -417,6 +421,11 @@ Painter::Painter(std::unique_ptr<IRenderer> renderer, int32_t viewport_width,
 }
 
 Painter::~Painter() {
+  // Kutu ILK once bosaltilir: bundan sonra yikilan bir RenderTarget, Painter'a
+  // da renderer'a da dokunmadan sessizce kapanir (bkz. RenderTarget::Reset).
+  if (mSelf != nullptr) {
+    *mSelf = nullptr;
+  }
   if (mRenderer != nullptr) {
     mRenderer->Shutdown();
   }
@@ -447,7 +456,12 @@ Painter::Painter(Painter&& other) noexcept
       mSavedViewportWidth(other.mSavedViewportWidth),
       mSavedViewportHeight(other.mSavedViewportHeight),
       mSavedCustomViewport(other.mSavedCustomViewport),
-      mAutoDrawableSize(other.mAutoDrawableSize) {
+      mAutoDrawableSize(other.mAutoDrawableSize),
+      mSelf(std::move(other.mSelf)) {
+  // Kutu yeni adresi gostersin; hedefler eski adrese bakiyordu.
+  if (mSelf != nullptr) {
+    *mSelf = this;
+  }
   other.mWindow = nullptr;
   other.mActiveTarget = kInvalidRenderTarget;
 }
@@ -459,6 +473,10 @@ Painter& Painter::operator=(Painter&& other) noexcept {
     // renderer once yok edilirse bu cagrilar dangling pointer uzerinden gider.
     mCurrentFont.reset();
     mBatcher.reset();
+    // Bu Painter'in verdigi hedefler artik sahipsiz: renderer kapaniyor.
+    if (mSelf != nullptr) {
+      *mSelf = nullptr;
+    }
     if (mRenderer != nullptr) {
       mRenderer->Shutdown();
     }
@@ -489,6 +507,10 @@ Painter& Painter::operator=(Painter&& other) noexcept {
     mSavedViewportHeight = other.mSavedViewportHeight;
     mSavedCustomViewport = other.mSavedCustomViewport;
     mAutoDrawableSize = other.mAutoDrawableSize;
+    mSelf = std::move(other.mSelf);
+    if (mSelf != nullptr) {
+      *mSelf = this;
+    }
 
     other.mWindow = nullptr;
     other.mActiveTarget = kInvalidRenderTarget;
@@ -616,7 +638,11 @@ void Painter::SetOpacity(float alpha) {
   // Opaklik uniform'unun tek sahibi RenderBatcher'dir: her Flush oncesi
   // o batch'in opakligini yazar. Burada ayrica yazmak, degeri bir sonraki
   // flush'ta nasil olsa ezilecek gereksiz bir GPU cagrisi olurdu.
-  mCurrentState.opacity = alpha;
+  //
+  // Aralik disi deger kirpilir. Kirpilmamis deger shader'a gidip yalnizca sabit fonksiyon
+  // asamasinda kelepceleniyor, ayrica batcher'in opaklik anahtarini gereksiz
+  // yere bolüyordu.
+  mCurrentState.opacity = ClampUnit(alpha);
 }
 
 void Painter::DrawLine(float x1, float y1, float x2, float y2) {
@@ -1048,15 +1074,9 @@ void Painter::PushTexturedQuad(TextureHandle texture, float u0, float v0,
     std::swap(v0, v1);
   }
 
-  const float kX0 = dest_rect.x;
-  const float kY0 = dest_rect.y;
-  const float kX1 = dest_rect.x + dest_rect.w;
-  const float kY1 = dest_rect.y + dest_rect.h;
-
-  const std::vector<TexturedVertex> kVerts = {
-      {kX0, kY0, u0, v0}, {kX1, kY0, u1, v0}, {kX1, kY1, u1, v1},
-      {kX0, kY0, u0, v0}, {kX1, kY1, u1, v1}, {kX0, kY1, u0, v1},
-  };
+  const std::vector<TexturedVertex> kVerts =
+      Tessellator::TessellateTexturedRect(dest_rect.x, dest_rect.y, dest_rect.w,
+                                          dest_rect.h, u0, v0, u1, v1);
 
   mBatcher->SetBlendMode(mCurrentState.blend_mode);
   mBatcher->PushTexturedTriangles(kVerts, mCurrentState.transform, texture,
@@ -1437,7 +1457,13 @@ RenderTarget Painter::CreateRenderTarget(int32_t width, int32_t height,
         width, height);
     return {};
   }
-  return RenderTarget(mRenderer.get(), kHandle, width, height);
+  return RenderTarget(mRenderer.get(), kHandle, width, height, mSelf);
+}
+
+void Painter::OnRenderTargetDestroyed(RenderTargetHandle handle) {
+  if (handle != kInvalidRenderTarget && mActiveTarget == handle) {
+    ResetRenderTarget();
+  }
 }
 
 bool Painter::SetRenderTarget(const RenderTarget& target) {
@@ -1603,16 +1629,20 @@ void Painter::ApplyScissor(const Rect& rect) {
   const int32_t kWindowX = mViewportX + static_cast<int32_t>(rect.x);
   const int32_t kWindowY = mViewportY + static_cast<int32_t>(rect.y);
 
+  // Negatif boyut bos kirpma demektir. Ham gonderilseydi glScissor
+  // GL_INVALID_VALUE uretip ONCEKI scissor'i yururlukte birakirdi; Vulkan ise
+  // 0'a kelepceleyip her seyi kirpardi. Ayni girdi iki backend'de iki farkli
+  // sonuc veriyordu.
+  const int32_t kWidth = std::max(0, static_cast<int32_t>(rect.w));
+  const int32_t kHeight = std::max(0, static_cast<int32_t>(rect.h));
+
   // OpenGL scissor Y=0 altta; Vulkan Y=0 üstte. Ters cevirme yuzeyin
   // tamamina gore yapilir, viewport'a gore degil. Bir hedefe cizerken GL de
   // cevirmez (bkz. YAxisMatchesGpu).
   const int32_t kScissorY =
-      YAxisMatchesGpu()
-          ? kWindowY
-          : (SurfaceHeight() - kWindowY - static_cast<int32_t>(rect.h));
+      YAxisMatchesGpu() ? kWindowY : (SurfaceHeight() - kWindowY - kHeight);
   ++mStats.state_changes;
-  mRenderer->SetScissor(kWindowX, kScissorY, static_cast<int32_t>(rect.w),
-                        static_cast<int32_t>(rect.h));
+  mRenderer->SetScissor(kWindowX, kScissorY, kWidth, kHeight);
 }
 
 }  // namespace sdl_painter

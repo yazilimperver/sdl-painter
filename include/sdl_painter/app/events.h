@@ -136,7 +136,6 @@ struct KeyEvent {
   KeyModifier modifiers{KeyModifier::kNone};
   bool repeat{false};  ///< Basılı tutmadan üretilen tekrar olayı mı?
 };
-
 /// @brief Fare düğmesi olayı.
 struct MouseButtonEvent {
   MouseButton button{MouseButton::kUnknown};

@@ -4,6 +4,7 @@
 #include "sdl_painter/renderer.h"
 
 #include <cstdint>
+#include <memory>
 
 namespace sdl_painter {
 
@@ -41,6 +42,11 @@ class Painter;
 /// Hedefler daima doğrusal RGBA8 tutar — ekran yüzeyinin formatı ne olursa
 /// olsun. @ref Painter::ReadRenderTarget bu yüzden her platformda aynı baytları
 /// döndürür.
+///
+/// @par Başlangıç içeriği
+/// Yeni bir hedef `(0, 0, 0, 0)` olarak ilklenir ve bu iki backend'de de
+/// aynıdır. Ekranın veya başka bir hedefin temizleme rengi buraya sızmaz;
+/// hedefe geçmeden önce @ref Painter::Clear çağırmak zorunlu değildir.
 ///
 /// @warning  Bir RenderTarget, onu üreten
 /// @ref Painter yaşıyorken yıkılmalıdır — @ref Image ve @ref Font ile aynı
@@ -85,14 +91,30 @@ class SDLPAINTER_API RenderTarget {
   friend class Painter;
 
   /// @brief Painter tarafından çağrılır; kullanıcıya kapalı.
+  ///
+  /// @param painter Üreten Painter'ın "kendini gösteren kutusu". Painter
+  ///        taşınabilir olduğu için doğrudan `Painter*` tutmak yetmez: kutu
+  ///        taşımada güncellenir, Painter yıkılınca `nullptr` olur.
   RenderTarget(IRenderer* owner, RenderTargetHandle handle, int32_t width,
-               int32_t height) noexcept
-      : mOwner(owner), mHandle(handle), mWidth(width), mHeight(height) {}
+               int32_t height, std::shared_ptr<Painter*> painter) noexcept
+      : mOwner(owner),
+        mHandle(handle),
+        mWidth(width),
+        mHeight(height),
+        mPainter(std::move(painter)) {}
 
   IRenderer* mOwner{nullptr};
   RenderTargetHandle mHandle{kInvalidRenderTarget};
   int32_t mWidth{0};
   int32_t mHeight{0};
+
+  /// @brief Üreten Painter'a dolaylı işaretçi (bkz. private ctor).
+  ///
+  /// @ref Reset bunu iki şey için kullanır: hedef o an bağlıysa Painter'ın
+  /// ekrana dönmesini sağlamak (aksi halde Painter ölü bir hedefe çizdiğini
+  /// sanmayı sürdürürdü) ve Painter zaten yıkılmışsa `mOwner` üzerinden
+  /// yıkım çağrısı yapmamak.
+  std::shared_ptr<Painter*> mPainter;
 };
 
 }  // namespace sdl_painter

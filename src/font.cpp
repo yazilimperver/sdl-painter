@@ -66,10 +66,13 @@ Font::Font(Font&& other) noexcept
     : mHandle(other.mHandle),
       mPointSize(other.mPointSize),
       mGlyphCache(std::move(other.mGlyphCache)),
-      mAtlas(std::move(other.mAtlas)) {
+      mAtlas(std::move(other.mAtlas)),
+      mOwner(other.mOwner) {
   other.mHandle = nullptr;
   other.mPointSize = 0;
   other.mGlyphCache.clear();
+  // Onbellek ve atlas tasindi; kaynagin artik bir sahibi yok.
+  other.mOwner = nullptr;
 }
 
 Font& Font::operator=(Font&& other) noexcept {
@@ -84,9 +87,11 @@ Font& Font::operator=(Font&& other) noexcept {
     mPointSize = other.mPointSize;
     mGlyphCache = std::move(other.mGlyphCache);
     mAtlas = std::move(other.mAtlas);
+    mOwner = other.mOwner;
     other.mHandle = nullptr;
     other.mPointSize = 0;
     other.mGlyphCache.clear();
+    other.mOwner = nullptr;
   }
   return *this;
 }
@@ -121,13 +126,25 @@ bool Font::MeasureText(const std::string& text, int32_t& out_width,
 }
 
 const Glyph* Font::GetGlyph(IRenderer& renderer, char32_t codepoint) const {
+  if (mHandle == nullptr) {
+    return nullptr;
+  }
+
+  // Font ilk cagrida bir renderer'a baglanir. Onbellekteki texture
+  // tanimlayicilari o renderer'a yereldir; sahibi karsilastirmadan onbellek
+  // isabetini dondurmek, ikinci bir renderer'a bir handle vermek anlamına geliyor.
+  if (mOwner == nullptr) {
+    mOwner = &renderer;
+  } else if (mOwner != &renderer) {
+    spdlog::error(
+        "Font: bu font baska bir renderer'a bagli; her Painter icin ayri bir "
+        "Font acin (bkz. font.h).");
+    return nullptr;
+  }
+
   auto it = mGlyphCache.find(codepoint);
   if (it != mGlyphCache.end()) {
     return &it->second;
-  }
-
-  if (mHandle == nullptr) {
-    return nullptr;
   }
 
   auto* font = static_cast<TTF_Font*>(mHandle);

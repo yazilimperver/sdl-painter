@@ -65,6 +65,14 @@ enum class TextWrap : uint8_t {
 /// genelde sözleşme kendiliğinden sağlanır; ancak kullanıcı font'u
 /// Painter'dan bağımsız olarak `static` veya global tutarsa bu garanti
 /// kaybolur.
+///
+/// @warning **Bir Font tek bir Painter'a aittir.** İlk @ref GetGlyph çağrısı
+/// fontu o çağrının renderer'ına bağlar; glyph atlası o renderer'ın
+/// texture'larından oluşur ve texture tanımlayıcıları renderer'a yereldir.
+/// Aynı Font ikinci bir Painter ile kullanılırsa @ref GetGlyph `nullptr`
+/// döner ve hata loglanır — birincinin texture handle'ını ikinciye vermek
+/// sessizce yanlış (veya hiç) çizerdi. Çok pencereli uygulamalar Painter
+/// başına ayrı bir Font açmalıdır.
 class SDLPAINTER_API Font {
  public:
   // Govde .cpp'de: sinif dllexport edildiginde derleyici bu ctor'u her
@@ -113,6 +121,9 @@ class SDLPAINTER_API Font {
                    int32_t& out_height) const;
 
   /// @brief Karakter için Glyph al; yoksa oluşturur.
+  ///
+  /// İlk çağrı fontu @p renderer'a bağlar. Sonraki çağrılar başka bir
+  /// renderer ile gelirse `nullptr` döner (bkz. sınıf belgesindeki uyarı).
   const Glyph* GetGlyph(IRenderer& renderer, char32_t codepoint) const;
 
   /// @brief Glyph atlasının açtığı sayfa sayısı (teşhis/test).
@@ -128,6 +139,13 @@ class SDLPAINTER_API Font {
   /// @brief Glyph görüntülerini toplayan ortak texture atlası.
   /// İlk @ref GetGlyph çağrısında oluşturulur.
   mutable std::unique_ptr<GlyphAtlas> mAtlas;
+
+  /// @brief Fontu ilk @ref GetGlyph çağrısında bağlayan renderer.
+  ///
+  /// Önbellekteki glyph'lerin texture tanımlayıcıları buna yereldir; sahibi
+  /// karşılaştırmadan önbellek isabetini döndürmek, ikinci bir renderer'a
+  /// yabancı bir handle vermek demekti.
+  mutable IRenderer* mOwner{nullptr};
 };
 
 }  // namespace sdl_painter

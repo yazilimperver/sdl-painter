@@ -189,7 +189,17 @@ class SDLPAINTER_API Painter {
   bool ReadRenderTarget(const RenderTarget& target,
                         std::vector<uint8_t>& out_rgba);
 
-  /// @brief Ekranı belirtilen renkle temizle.
+  /// @brief Çizim yüzeyini belirtilen renkle temizle.
+  ///
+  /// Yüzeyin **tamamını** siler: @ref SetClipRect ile kurulmuş kırpma ve
+  /// @ref SetViewport ile daraltılmış viewport onu sınırlamaz. Aynı sözleşme
+  /// `SDL_RenderClear`'da da geçerlidir ve iki backend'de birebir aynı
+  /// davranır.
+  ///
+  /// Alt bir bölgeyi boyamak için @ref FillRect kullanın; o kırpmaya,
+  /// viewport'a ve dönüşüm yığınına uyar.
+  ///
+  /// @note Bir çizim hedefi bağlıysa temizlenen şey hedeftir, ekran değil.
   void Clear(const Color& color);
 
   /// @brief Son tamamlanan karenin çizim istatistikleri.
@@ -221,7 +231,8 @@ class SDLPAINTER_API Painter {
     return mCurrentFont;
   }
 
-  /// @brief Global opaklığı ayarla [0.0, 1.0].
+  /// @brief Global opaklığı ayarla.
+  /// @param alpha `[0.0, 1.0]` aralığına kırpılır.
   void SetOpacity(float alpha);
 
   /// @brief Renk karıştırma modunu ayarla.
@@ -449,12 +460,28 @@ class SDLPAINTER_API Painter {
   void ResetTransform();
 
   /// @brief Scissor kırpma dikdörtgeni ayarla.
+  ///
+  /// Dikdörtgen viewport-yereldir: `(0, 0)` yürürlükteki viewport'un sol üst
+  /// köşesidir. Genişlik veya yükseklik negatifse kırpma **boş** kabul edilir
+  /// (hiçbir şey çizilmez), iki backend'de de aynı.
+  ///
+  /// @note @ref Clear kırpmadan etkilenmez; alt bölge boyamak için
+  ///       @ref FillRect kullanın.
   void SetClipRect(const Rect& rect);
 
   /// @brief Kırpma dikdörtgenini kaldır.
   void ClearClip();
 
  private:
+  friend class RenderTarget;
+
+  /// @brief Yıkılan bir @ref RenderTarget bunu çağırır.
+  ///
+  /// Hedef o an bağlıysa ekrana dönülür: biriken çizimler hedef hâlâ
+  /// yaşarken flush edilir ve viewport/projeksiyon ekranınkine geri alınır.
+  /// Bağlı değilse hiçbir şey yapılmaz.
+  void OnRenderTargetDestroyed(RenderTargetHandle handle);
+
   /// @brief Pencerenin framebuffer (piksel) boyutunu döndür.
   ///
   /// HiDPI ölçeklemede mantıksal pencere boyutu ile piksel boyutu ayrışır;
@@ -583,6 +610,14 @@ class SDLPAINTER_API Painter {
   /// @brief Boyut her karede pencereden okunsun mu?
   /// @ref SetDrawableSize ilk çağrıldığında `false` olur.
   bool mAutoDrawableSize{true};
+
+  /// @brief Bu Painter'ı gösteren, ondan bağımsız yaşayan kutu.
+  ///
+  /// @ref RenderTarget nesneleri Painter'a bu kutu üzerinden ulaşır. Doğrudan
+  /// `Painter*` tutulamazdı: Painter taşınabilir, dolayısıyla adresi
+  /// değişebilir. Kutu taşımada yeni adrese güncellenir, yıkımda `nullptr`
+  /// olur; böylece hem taşıma hem de Painter'ın önce ölmesi güvenlidir.
+  std::shared_ptr<Painter*> mSelf;
 };
 
 }  // namespace sdl_painter

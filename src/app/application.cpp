@@ -160,6 +160,8 @@ void Application::UpdateDrawableSize() {
   SDL_GetWindowSizeInPixels(mWindow, &w, &h);
   mWidth = w;
   mHeight = h;
+  const float kDensity = SDL_GetWindowPixelDensity(mWindow);
+  mPixelDensity = kDensity > 0.0F ? kDensity : 1.0F;
 }
 
 void Application::Teardown() noexcept {
@@ -210,24 +212,30 @@ void Application::ProcessEvents() {
 
       case SDL_EVENT_MOUSE_BUTTON_DOWN:
         OnMouseButtonDown(MouseButtonEvent{
-            internal::TranslateMouseButton(event.button.button), event.button.x,
-            event.button.y, event.button.clicks});
+            internal::TranslateMouseButton(event.button.button),
+            event.button.x * mPixelDensity, event.button.y * mPixelDensity,
+            event.button.clicks});
         break;
 
       case SDL_EVENT_MOUSE_BUTTON_UP:
         OnMouseButtonUp(MouseButtonEvent{
-            internal::TranslateMouseButton(event.button.button), event.button.x,
-            event.button.y, event.button.clicks});
+            internal::TranslateMouseButton(event.button.button),
+            event.button.x * mPixelDensity, event.button.y * mPixelDensity,
+            event.button.clicks});
         break;
 
       case SDL_EVENT_MOUSE_MOTION:
-        OnMouseMove(MouseMoveEvent{event.motion.x, event.motion.y,
-                                   event.motion.xrel, event.motion.yrel});
+        OnMouseMove(MouseMoveEvent{event.motion.x * mPixelDensity,
+                                   event.motion.y * mPixelDensity,
+                                   event.motion.xrel * mPixelDensity,
+                                   event.motion.yrel * mPixelDensity});
         break;
 
       case SDL_EVENT_MOUSE_WHEEL:
+        // dx/dy tekerlek adimidir, konum degil: olceklenmez.
         OnMouseWheel(MouseWheelEvent{event.wheel.x, event.wheel.y,
-                                     event.wheel.mouse_x, event.wheel.mouse_y});
+                                     event.wheel.mouse_x * mPixelDensity,
+                                     event.wheel.mouse_y * mPixelDensity});
         break;
 
       // Piksel boyutu değişimi hem yeniden boyutlandırmada hem de pencere
@@ -236,6 +244,12 @@ void Application::ProcessEvents() {
       case SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED:
         mWidth = event.window.data1;
         mHeight = event.window.data2;
+        // Pencere farkli olcekli bir ekrana tasinmis olabilir; yogunluk
+        // carpani fare olaylarini hizali tutmak icin tazelenmeli.
+        {
+          const float kDensity = SDL_GetWindowPixelDensity(mWindow);
+          mPixelDensity = kDensity > 0.0F ? kDensity : 1.0F;
+        }
         // Painter'a acikca bildir: boylece kare basina pencere boyutu
         // yoklamasi yapmasina gerek kalmaz (bkz. Painter::SetDrawableSize).
         if (mPainter != nullptr) {

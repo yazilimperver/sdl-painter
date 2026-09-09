@@ -582,3 +582,88 @@ TEST(PainterGradient, LinearRectClampsOutsideSegment) {
       << "BULGU 11: gradient bitisinin saginda renk sabit `to` olmaliydi.";
   EXPECT_LT(kRight.r, 10.0F);
 }
+
+// Aktif hedef yok edilirse Painter ekrana geri donmeli.
+//
+// RenderTarget::Reset renderer'in DestroyRenderTarget'ini cagiriyor; renderer
+// kendi aktif hedefini birakiyordu ama Painter haberdar edilmiyordu.
+// mActiveTarget olu handle'da kaliyor, dolayisiyla viewport hedefin
+// boyutunda, projeksiyon hedefin Y yonunde kaliyor ve kare sonuna kadar
+// EKRANA o durumla ciziliyordu.
+TEST(RegressionFindings, DestroyingActiveTargetRestoresScreenState) {
+  TargetHarness h;
+  RenderTarget target = h.painter.CreateRenderTarget(64, 64);
+  ASSERT_TRUE(target.IsValid());
+
+  h.painter.Begin();
+  ASSERT_TRUE(h.painter.SetRenderTarget(target));
+  target.Reset();  // kullanici hedefi kare ortasinda birakti
+
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.FillRect(0.0F, 0.0F, 10.0F, 10.0F);
+  h.painter.End();
+
+  ASSERT_FALSE(h.mock->draws.empty());
+  const auto& snap = h.mock->draws.back();
+  EXPECT_EQ(snap.target, kInvalidRenderTarget);
+  EXPECT_EQ(snap.viewport.w, kScreenW)
+      << "BULGU 5: hedef yok edildikten sonra viewport hedefinki kaldi.";
+  EXPECT_EQ(snap.viewport.h, kScreenH);
+  // Ekrana cizerken (OpenGL) projeksiyonun Y'si ters cevrilmeli.
+  EXPECT_LT(snap.projection[5], 0.0F)
+      << "BULGU 5: ekrana cizim hedefin Y yonuyle gitti.";
+}
+
+// Painter yikildiktan sonra yikilan bir hedef renderer'a dokunmamali.
+//
+// Sozlesme hedefin Painter'dan once yikilmasini istiyor; ihlal edilirse
+// eskiden ham IRenderer* uzerinden DestroyRenderTarget cagriliyordu.
+TEST(RegressionFindings, TargetOutlivingPainterDoesNotTouchRenderer) {
+  LifetimeJournal journal;
+  RenderTarget target;
+  {
+    auto renderer = std::make_unique<RecordingTargetRenderer>();
+    renderer->SetJournal(&journal);
+    Painter painter(std::move(renderer), kScreenW, kScreenH);
+    target = painter.CreateRenderTarget(32, 32);
+    ASSERT_TRUE(target.IsValid());
+  }
+  ASSERT_TRUE(journal.renderer_destroyed);
+  // Yikim burada, Painter oldukten SONRA calisir.
+  EXPECT_NO_FATAL_FAILURE(target.Reset());
+  EXPECT_EQ(journal.destroy_after_death, 0);
+}
+
+// SetOpacity sozlesmesi [0, 1]; aralik disi deger kirpilmali.
+TEST(RegressionFindings, OpacityIsClampedToUnitRange) {
+  TargetHarness h;
+  h.painter.Begin();
+  h.painter.SetOpacity(4.0F);
+  h.painter.SetBrush(Brush(Color::Red()));
+  h.painter.FillRect(0.0F, 0.0F, 10.0F, 10.0F);
+  h.painter.End();
+  EXPECT_FLOAT_EQ(h.mock->last_opacity, 1.0F);
+
+  h.mock->Reset();
+  h.painter.Begin();
+  h.painter.SetOpacity(-2.0F);
+  h.painter.FillRect(0.0F, 0.0F, 10.0F, 10.0F);
+  h.painter.End();
+  EXPECT_FLOAT_EQ(h.mock->last_opacity, 0.0F);
+}
+
+// Negatif boyutlu kirpma bos kirpmaya donusmeli.
+//
+// Ham gonderilseydi glScissor GL_INVALID_VALUE uretip ONCEKI scissor'i
+// yururlukte birakir, Vulkan ise 0'a kelepceleyip her seyi kirpardi.
+TEST(RegressionFindings, NegativeClipSizeBecomesEmptyClip) {
+  TargetHarness h;
+  h.painter.Begin();
+  h.painter.SetClipRect(Rect{10.0F, 10.0F, -50.0F, -20.0F});
+  h.painter.End();
+
+  ASSERT_FALSE(h.mock->scissor_calls.empty());
+  const auto& s = h.mock->scissor_calls.front();
+  EXPECT_EQ(s.w, 0);
+  EXPECT_EQ(s.h, 0);
+}

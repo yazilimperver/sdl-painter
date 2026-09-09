@@ -194,6 +194,109 @@ TEST_P(RegressionGpu, ControlBothDrawsBlueWhenUpdatedFirst) {
   EXPECT_TRUE(ColorNear(PixelAt(px, kW, 48, 16), kBlue, kTolerance));
 }
 
+// Yeni bir hedefin baslangic icerigi saydam siyah olmali; ekranin temizleme
+// rengi oraya sizmamali.
+//
+// Vulkan'da offscreen pass ilk baglanmada loadOp=CLEAR ile mClearValue'yu
+// kullaniyordu ve o deger en son Clear cagrisindan kaliyordu; OpenGL'de FBO
+// baglamak icerigi hic degistirmiyordu. Ayni cagri dizisi iki backend'de
+// farkli zemin veriyordu.
+TEST_P(RegressionGpu, FreshTargetStartsTransparent) {
+  REQUIRE_BACKEND(be, GetParam());
+  Painter& p = *be.painter;
+
+  RenderTarget t = p.CreateRenderTarget(kW, kH);
+  ASSERT_TRUE(t.IsValid());
+
+  p.Begin();
+  p.Clear(kRed);                      // EKRAN temizligi
+  ASSERT_TRUE(p.SetRenderTarget(t));  // hedefe ilk gecis, Clear YOK
+  p.SetPen(Pen::NoPen());
+  p.SetBrush(Brush(kBlue));
+  p.FillRect(0.0F, 0.0F, 8.0F, 8.0F);
+  p.ResetRenderTarget();
+  p.End();
+
+  std::vector<uint8_t> px;
+  ASSERT_TRUE(p.ReadRenderTarget(t, px));
+  DumpRgba("fresh_target_" + Tag(), px, kW, kH);
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 4, 4), kBlue, kTolerance));
+  // Cizilmemis bolge: saydam siyah, ekranin kirmizisi degil.
+  EXPECT_TRUE(
+      ColorNear(PixelAt(px, kW, 40, 20), Color::Transparent(), kTolerance));
+}
+
+// Bir karede uretilen geometri hicbir backend'de sessizce dusurulmemeli.
+//
+// Vulkan vertex ring'i kare slotu basina 4 MB ile sinirliydi; dolunca
+// VulkanBuffer::Write false donuyor ve cizim komutu hic kaydedilmiyordu.
+// OpenGL'de boyle bir tavan yok (glBufferData her draw'da yeniden tahsis
+// eder), dolayisiyla ayni sahne bir backend'de eksik ciziliyordu.
+TEST_P(RegressionGpu, LargeFrameKeepsAllGeometry) {
+  REQUIRE_BACKEND(be, GetParam());
+  Painter& p = *be.painter;
+
+  RenderTarget t = p.CreateRenderTarget(kW, kH);
+  ASSERT_TRUE(t.IsValid());
+
+  // Eski tavan 4 MB / 12 bayt = ~350 bin vertex idi. 70 bin dikdortgen
+  // (420 bin vertex) onu asar. Isaret dikdortgeni tam ortada cizilir ki
+  // tavan asildiktan sonraki bir batch'e dussun.
+  constexpr int32_t kRectCount = 70000;
+  constexpr int32_t kMarkerAt = kRectCount / 2;
+
+  p.Begin();
+  ASSERT_TRUE(p.SetRenderTarget(t));
+  p.Clear(kBlack);
+  p.SetPen(Pen::NoPen());
+  for (int32_t i = 0; i < kRectCount; ++i) {
+    if (i == kMarkerAt) {
+      p.SetBrush(Brush(kBlue));
+      p.FillRect(32.0F, 8.0F, 16.0F, 16.0F);
+      continue;
+    }
+    p.SetBrush(Brush(kRed));
+    p.FillRect(0.0F, 0.0F, 4.0F, 4.0F);
+  }
+  p.ResetRenderTarget();
+  p.End();
+
+  std::vector<uint8_t> px;
+  ASSERT_TRUE(p.ReadRenderTarget(t, px));
+  DumpRgba("large_frame_" + Tag(), px, kW, kH);
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 40, 16), kBlue, kTolerance));
+}
+
+// Clear TUM yuzeyi siler; kirpma onu sinirlamaz ve iki backend ayni sonucu
+// verir.
+//
+// glClear scissor testine tabidir, vkCmdClearAttachments'a verilen rect ise
+// tum yuzeydi: ayni cagri dizisi OpenGL'de yalnizca kirpma kutusunu,
+// Vulkan'da tum hedefi siliyordu.
+TEST_P(RegressionGpu, ClearIgnoresClipRect) {
+  REQUIRE_BACKEND(be, GetParam());
+  Painter& p = *be.painter;
+
+  RenderTarget t = p.CreateRenderTarget(kW, kH);
+  ASSERT_TRUE(t.IsValid());
+
+  p.Begin();
+  ASSERT_TRUE(p.SetRenderTarget(t));
+  p.Clear(kRed);
+  p.SetClipRect(Rect{0.0F, 0.0F, 8.0F, 8.0F});
+  p.Clear(kBlue);
+  p.ClearClip();
+  p.ResetRenderTarget();
+  p.End();
+
+  std::vector<uint8_t> px;
+  ASSERT_TRUE(p.ReadRenderTarget(t, px));
+  DumpRgba("clear_ignores_clip_" + Tag(), px, kW, kH);
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 4, 4), kBlue, kTolerance));
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 40, 20), kBlue, kTolerance))
+      << "Clear kirpma disini silmedi.";
+}
+
 INSTANTIATE_TEST_SUITE_P(
     Backends, RegressionGpu, ::testing::ValuesIn(AvailableBackends()),
     [](const ::testing::TestParamInfo<RendererBackend>& i) {
