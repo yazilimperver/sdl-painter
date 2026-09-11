@@ -239,6 +239,8 @@ TEST_P(RegressionGpu, LargeFrameKeepsAllGeometry) {
   RenderTarget t = p.CreateRenderTarget(kW, kH);
   ASSERT_TRUE(t.IsValid());
 
+  // FIXME: Isaret 35 000. dikdortgende (2.52 MB), eski 4 MB tavanin
+  // altinda ciziliyor; asagidaki iddia saglanmiyor, regresyon yakalanmiyor.
   // Eski tavan 4 MB / 12 bayt = ~350 bin vertex idi. 70 bin dikdortgen
   // (420 bin vertex) onu asar. Isaret dikdortgeni tam ortada cizilir ki
   // tavan asildiktan sonraki bir batch'e dussun.

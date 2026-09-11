@@ -277,6 +277,8 @@ void Tessellator::AppendCap(std::vector<Vertex>& out, const Point& tip,
     return;
   }
   if (cap == LineCap::kRound) {
+    // FIXME: Diskin yarısı quad ile örtüşüyor; yarı saydam renkte bu
+    // bölge iki kez blend ediliyor. outward yönünde yarım disk üretelim.
     // Tam disk: yarısı zaten quad'ın altında kalır. Yarım disk üretmek
     // vertex sayısını yarıya indirirdi ama açı aralığını yön vektöründen
     // hesaplamayı gerektirir; kazanç, birkaç üçgen için karmaşıklığa değmez.
@@ -557,6 +559,8 @@ std::vector<Vertex> Tessellator::TessellatePolyline(
     const std::size_t kFirst = closed ? 0 : 1;
     const std::size_t kLast = closed ? points.size() : points.size() - 1;
     for (std::size_t i = kFirst; i < kLast; ++i) {
+      // FIXME: Tam disk, iki segment quad'ının zaten örtüştüğü köşeye
+      // biniyor; yarı saydam renkte köşe üç kez blend ediliyor.
       if (join == LineJoin::kRound) {
         AppendRoundJoin(result, points[i], kRadius);
       } else {
@@ -603,6 +607,9 @@ bool Tessellator::PointInTriangle(const Point& p, const Point& a,
   auto sign = [](const Point& p1, const Point& p2, const Point& p3) {
     return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
   };
+  // FIXME: Sınırdaki noktayı her durumda dışarıda saymak, aday kulağın
+  // iç diyagonali üzerindeki reflex köşeyi kaçırıyor. (0,0),(4,0),(4,4),
+  // (2,2),(0,4) için üçgen alanı 12 yerine 20 çıkıyor.
   // Kesin (strict) iç test: kenar üzerindeki noktalar "dışarıda" sayılır.
   // Kulak testinde sınır noktalarını içeride saymak, geçerli kulakları
   // reddedip triangulation'ı erken durduruyordu (bkz. K4).
@@ -633,6 +640,8 @@ std::vector<Point> Tessellator::RemoveDuplicatePoints(
       result.push_back(p);
     }
   }
+  // FIXME: Koşul kapalılığı sorgulamıyor; başlangıca dönen açık
+  // polyline'ın son segmenti de siliniyor. closed bilgisini de alalım.
   // Kapalı poligonda son nokta ilkiyle çakışıyorsa o da tekrardır.
   while (result.size() > 1 && same(result.front(), result.back())) {
     result.pop_back();

@@ -47,6 +47,9 @@ bool VulkanRenderTarget::Create(VkContext* context, VkRenderPass render_pass,
   fb.layers = 1;
   VK_CHECK(vkCreateFramebuffer(device, &fb, nullptr, &mFramebuffer));
 
+  // FIXME: Layout gecisi icerigi sifirlamiyor; ilk SetRenderTarget'tan
+  // once orneklenen veya okunan hedef belgelenen (0,0,0,0) garantisini
+  // saglamiyor. OpenGL olustururken temizliyor.
   // Hicbir sey cizilmeden orneklenmesi gecerli bir kullanim; UNDEFINED
   // layout'undan ornekleme tanimsiz olurdu.
   VkCommandBuffer cmd = BeginOneShot(device, cmd_pool);

@@ -159,6 +159,9 @@ struct Backend {
 
 }  // namespace sdl_painter::testing
 
+// FIXME: Backend kurulamazsa kosulsuz atlıyor; CI'da GPU testleri sessizce
+// atlaniyor ve ctest yine basarili donuyor. SDLPAINTER_REQUIRE_FONT benzeri
+// zorunlu kosum anahtari ekleyelim.
 /// @brief Backend'i ayaga kaldirir, yoksa testi atlar; ayrica test boyunca
 ///        yeni bir Vulkan validation hatasi cikmadigini garanti eder.
 #define REQUIRE_BACKEND(var, backend)                      \

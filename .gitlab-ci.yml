@@ -22,7 +22,7 @@ build:linux:debug:
         -c tools.system.package_manager:sudo=False
     - cmake --preset linux-debug
     - cmake --build --preset linux-debug
-  # Artifact YOK — GitHub'dan bilinçli fark (orada aynı çıktılar
+  # Artifact yok — GitHub'dan bilinçli fark (orada aynı çıktılar
   # `upload-artifact` ile saklanıyor). Gerekçe: Debug'da 47 örnek
   # executable'ının her biri ~61 MB statik binary, toplamı ~2.1 GB; GitLab
   # koordinatörü bunu 413 (Request Entity Too Large) ile reddediyor.
@@ -141,7 +141,7 @@ test:unit:asan:
 #     - ctest --preset windows-mingw-debug --output-on-failure
 #     - if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-# Kod kapsama olcumu. Esik ZORLANMAZ (allow_failure): amac kapsami gorunur
+# Kod kapsama olcumu. Esik olması durumunda hata olmayacak (allow_failure): amac kapsami gorunur
 # kilmak. gcovr'in "lines: N%" ciktisi GitLab'in kapsam rozetini besler.
 # NOT: gcovr imajda apt ile zaten kurulu (bkz. Dockerfile ci stage).
 quality:coverage:
@@ -211,12 +211,12 @@ quality:coverage:
 
 # --- Paketleme yolu ---------------------------------------------------------
 #
-# Aşağıdaki dört job uzun süre YALNIZCA GitHub'da vardı. Sonuç: GitLab
+# Aşağıdaki dört job uzun süre yalnızca GitHub'da vardı. Sonuç: GitLab
 # pipeline'ı paketleme yolunu hiç doğrulamıyordu ve "iki pipeline aynı şeyi
 # kontrol ediyor" varsayımı yanlıştı. Yeni bir job eklerken "yalnızca birine
 # eklemek yeterli mi?" sorusunu açıkça cevaplayın (bkz. .claude/rules/ci-cd.md).
 
-# Preset KULLANMADAN, örnek/test KAPALI derleme + install + find_package ile
+# Preset kullanmadan, örnek/test kapalı derleme + install + find_package ile
 # tüketici doğrulaması. Kütüphaneyi dışarıdan kullanmanın gerçek yolu bu; preset
 # üzerinden derlemek onu doğrulamıyor.
 build:standalone-cmake:
@@ -252,7 +252,7 @@ build:standalone-cmake:
       ./build/standalone/consumer/consumer
 
 # Paylaşımlı (shared) kütüphane yolu. Bu job olmadan sessizce bozuluyordu:
-# Windows/MSVC export işaretlemesi olmadan .dll üretip .lib ÜRETMİYOR, yani
+# Windows/MSVC export işaretlemesi olmadan .dll üretip .lib üretmiyor, yani
 # hiçbir tüketici link edemiyor. Linux'ta varsayılan sembol görünürlüğü bunu
 # gizlediği için fark edilmemişti. Conan Center shared derlemeyi zorunlu
 # olarak test ediyor.
@@ -311,7 +311,7 @@ package:conan-create:
         -c tools.system.package_manager:sudo=False
 
 # SPIR-V çıktılarının GLSL kaynağıyla senkron olduğunu doğrular.
-# glslc GEREKTİRMEZ: karşılaştırma sources.sha256 manifesti üzerinden yapılır.
+# glslc gerektirmez: karşılaştırma sources.sha256 manifesti üzerinden yapılır.
 quality:shader-freshness:
   stage: quality
   image: $CI_REGISTRY_IMAGE
@@ -324,7 +324,7 @@ quality:clang-format:
   image: $CI_REGISTRY_IMAGE
   # Hiçbir build çıktısına ihtiyacı yok (yalnız kaynak lint). needs: [] →
   # pipeline başında hemen çalışsın; alakasız bir build/test fail'i bunu
-  # SKIP ettirmesin (allow_failure gate'lenince işe yaramaz).
+  # atlamasın (allow_failure gate'lenince işe yaramaz).
   needs: []
   # clang-format-18 base imajda zaten kurulu (bkz. Dockerfile builder stage);
   # apt ile yeniden kurmaya gerek yok (imajda apt list'leri silinmiş durumda).
@@ -431,6 +431,8 @@ pages:
 release:publish:
   stage: release
   image: registry.gitlab.com/gitlab-org/release-cli:latest
+  # FIXME: needs: [] hicbir job'u beklemiyor; etiket push'u dogrulamasiz
+  # surum yayinliyor.
   needs: []
   rules:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/

@@ -24,6 +24,8 @@ namespace sdl_painter {
 /// açık bir hata verir. Kalıcı çözüm bloğu küçültmektir: `model` matrisi
 /// Painter tarafından daima birim yazılıyor (dönüşüm CPU'da vertex'e
 /// gömülüyor), yani 64 baytı bedelsiz geri alınabilir.
+// FIXME: 148 bayt, Vulkan'ın garanti ettiği 128 baytı aşıyor; model
+// alanını shader, SPIR-V ve manifest ile birlikte çıkaralım.
 struct alignas(4) PushConstants {
   float projection[16]{};  ///< mat4 ortografik projeksiyon (column-major)
   float model

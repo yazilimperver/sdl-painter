@@ -99,6 +99,8 @@ WORKDIR C:\workspace
 # sonda silinir — imaj şişmez. cppstd=17 install satırında verilir (proje C++17).
 # conanfile.py configure(): Vulkan'ı yalnız compiler==gcc iken kapatır; MSVC'de
 # Vulkan SORUNSUZ desteklenir.
+# FIXME: set_version() include/sdl_painter/version.h okuyor; yalnız
+# conanfile.py kopyalanınca aşağıdaki conan install recipe'i yükleyemiyor.
 COPY conanfile.py C:\workspace\
 
 RUN call "%VCVARS%" && `

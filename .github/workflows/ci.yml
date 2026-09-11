@@ -113,9 +113,8 @@ jobs:
         run: |
           cmake --preset windows-debug
           cmake --build --preset windows-debug
-      # Windows'ta testler daha once HIC kosmuyordu; yalnizca derleniyordu.
       # NOT: offscreen surucusu Windows'ta EGL yukleyemedigi icin renderer
-      # smoke testleri burada SKIP olur — Linux tarafinda gercekten kosuyorlar.
+      # smoke testleri burada atlanıyor — Linux tarafinda gercekten kosuyorlar.
       - name: ctest
         env:
           SDL_VIDEODRIVER: offscreen
@@ -162,16 +161,16 @@ jobs:
     env:
       CONAN_HOME: /root/.conan2
       SDL_VIDEODRIVER: offscreen
-      # Font yoksa metin testleri sessizce atlanmasin, HATA versin.
+      # Font yoksa metin testleri sessizce atlanmasin, hata versin.
       SDLPAINTER_REQUIRE_FONT: "1"
     steps:
       - uses: actions/checkout@v7
         with:
           submodules: recursive
       # lavapipe ICD dosyasinin adi mesa surumune gore degisiyor
-      # (lvp_icd.json / lvp_icd.x86_64.json). Sabit yol yanlissa loader HIC
+      # (lvp_icd.json / lvp_icd.x86_64.json). Sabit yol yanlissa loader hic
       # surucu yuklemiyor, surface extension'lari kayboluyor ve Vulkan
-      # testleri sessizce SKIP oluyor. Bu yuzden yolu calisma aninda cozuyoruz;
+      # testleri sessizce atlanıyor. Bu yuzden yolu calisma aninda cozuyoruz;
       # bulunamazsa degisken bos kalir ve loader varsayilanina duser.
       - name: Resolve lavapipe ICD
         run: |
@@ -219,14 +218,14 @@ jobs:
     env:
       CONAN_HOME: /root/.conan2
       SDL_VIDEODRIVER: offscreen
-      # Font yoksa metin testleri sessizce atlanmasin, HATA versin.
+      # Font yoksa metin testleri sessizce atlanmasin, hata versin.
       SDLPAINTER_REQUIRE_FONT: "1"
     steps:
       - uses: actions/checkout@v7
         with:
           submodules: recursive
       # lavapipe ICD dosyasinin adi mesa surumune gore degisiyor
-      # (lvp_icd.json / lvp_icd.x86_64.json). Sabit yol yanlissa loader HIC
+      # (lvp_icd.json / lvp_icd.x86_64.json). Sabit yol yanlissa loader hic
       # surucu yuklemiyor, surface extension'lari kayboluyor ve Vulkan
       # testleri sessizce SKIP oluyor. Bu yuzden yolu calisma aninda cozuyoruz;
       # bulunamazsa degisken bos kalir ve loader varsayilanina duser.
@@ -266,15 +265,13 @@ jobs:
           cmake --build --preset linux-debug-asan
           ctest --preset linux-debug-asan --output-on-failure
 
-  # Kod kapsama olcumu. Esik ZORLANMAZ (allow-fail): amac, kapsami gorunur
+  # Kod kapsama olcumu. Esik zorlamıyoruz (allow-fail): amac, kapsami gorunur
   # kilmak ve regresyonu fark edilebilir yapmak. Ozet is akisi ozetine yazilir,
-  # HTML raporu artifact olarak yuklenir.
+  # html raporu artifact olarak yuklenir. İleride bunu fail ettirebiliriz
   coverage:
     name: quality:coverage
     runs-on: ubuntu-latest
-    needs: []
-    # Kapsama bir KAPI degil, gorunurluk aracidir: basarisizligi pipeline'i
-    # kirmiz yapmamali (GitLab tarafindaki allow_failure ile ayni davranis).
+    needs: [].
     continue-on-error: true
     container:
       image: yazilimperver/sdl-painter:ci-v1.0
@@ -314,7 +311,7 @@ jobs:
           cmake --preset linux-debug-coverage
           cmake --build --preset linux-debug-coverage
           ctest --preset linux-debug-coverage --output-on-failure
-      # gcov, .gcda dosyalarini ureten derleyiciyle AYNI ana surumden olmali.
+      # gcov, .gcda dosyalarini ureten derleyiciyle aynı ana surumden olmali.
       # CI imaji Debian 13 tabanli: build-essential GCC 14 getiriyor ve
       # /usr/bin/gcov gcov-14 oluyor; ancak Dockerfile gcc/g++'i 13'e
       # sabitliyor (gcov'u sabitlemiyor). Uyusmazlikta gcov cikis kodu 3
@@ -399,7 +396,7 @@ jobs:
           path: coverage/
           retention-days: 7
 
-  # Faz 1.3 — Conan Center CMake'i preset kullanmadan surer. Preset'ler Conan
+  # Conan Center CMake'i preset kullanmadan surer. Preset'ler Conan
   # toolchain yolunu hardcode ettigi icin bu yol ayrica dogrulanmali; kirilirsa
   # paketleme kirilir ama normal build yesil kalir.
   build-standalone-cmake:
@@ -445,12 +442,12 @@ jobs:
           ./build/standalone/consumer/consumer
 
   # Paylasimli (shared) kutuphane yolu. Bu job olmadan sessizce bozuluyordu:
-  # Windows/MSVC export isaretlemesi olmadan .dll uretip .lib URETMIYOR, yani
+  # Windows/MSVC export isaretlemesi olmadan .dll uretip .lib üretmiyor, yani
   # hicbir tuketici link edemiyor. Linux'ta varsayilan sembol gorunurlugu bunu
   # gizledigi icin fark edilmemisti. Conan Center shared derlemeyi zorunlu
   # olarak test ediyor.
   #
-  # sdl_painter_tests bu modda bilincli olarak ATLANIR (dahili sembollere
+  # sdl_painter_tests bu modda bilincli olarak atlanır (dahili sembollere
   # eriser); public yuzeyi sdl_painter_abi_tests dogrular.
   build-shared:
     name: build:shared
@@ -499,8 +496,8 @@ jobs:
           LD_LIBRARY_PATH="$PWD/build/shared/prefix/lib:$LD_LIBRARY_PATH" \
             ./build/shared/consumer/consumer
 
-  # Faz 1.5 — SPIR-V ciktilarinin GLSL kaynagiyla senkron oldugunu dogrular.
-  # glslc GEREKTIRMEZ: karsilastirma sources.sha256 manifesti uzerinden yapilir.
+  # SPIR-V ciktilarinin GLSL kaynagiyla senkron oldugunu dogrular.
+  # glslc gerektirmez: karsilastirma sources.sha256 manifesti uzerinden yapilir.
   quality-shader-freshness:
     name: quality:shader-freshness
     runs-on: ubuntu-latest
@@ -509,7 +506,7 @@ jobs:
       - name: SPIR-V guncel mi
         run: cmake -P cmake/CheckShaderFreshness.cmake
 
-  # Faz 1.5 — paketleme yolunun erken uyari sistemi. Conan Center'a gitmeden
+  # Paketleme yolunun erken uyari sistemi. Conan Center'a gitmeden
   # once `conan create` + test_package burada kirilirsa gorulur.
   package-conan-create:
     name: package:conan-create
@@ -540,8 +537,6 @@ jobs:
       image: yazilimperver/sdl-painter:ci-v1.0
     steps:
       - uses: actions/checkout@v7
-      # Zorunlu: CONTRIBUTING.md "format kontrolu zorunludur" diyor, CI de
-      # oyle davranmali. Duzeltmek icin: ./scripts/format-check.sh --fix
       # Kapsam bilincli olarak include/ + src/ ile sinirli. tests/ altindaki
       # dosyalar bugune kadar hic kontrol edilmedigi icin 8 dosyada 67 ihlal
       # birikmis; kapsami genisletmek once o dosyalarin formatlanmasini
@@ -577,7 +572,7 @@ jobs:
   docs:
     name: docs
     runs-on: ubuntu-latest
-    # coverage burada yalnizca RAPORU tasimak icin; kapi degil. Kapsama job'i
+    # coverage burada yalnizca raporu tasimak icin; kapi degil. Kapsama job'i
     # job seviyesinde continue-on-error oldugu icin sonucu ne olursa olsun
     # dokuman yayinlanmali — bu yuzden always() ve kapi olarak yalnizca iki
     # kalite job'inin acikca basarili olmasi sarti. Duz `needs` yazmak,
@@ -691,14 +686,14 @@ jobs:
   release:
     name: release:publish
     runs-on: ubuntu-latest
+    # FIXME: Windows build, standalone-cmake, shared, conan-create ve
+    # shader-freshness job'larini beklemiyor; bunlar dusse de surum cikiyor.
     needs: [quality-clang-format, quality-clang-tidy]
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
     steps:
       - uses: actions/checkout@v7
-      # Release notu olarak CHANGELOG'un TAMAMI kullaniliyordu; 1.1.0 notunda
-      # 1.0.0 ve bos "Yayinlanmadi" basliklari da goruntuleniyordu. Artik
       # yalnizca etiketlenen surumun bolumu cikariliyor. Bolum bulunamazsa
       # script hata verir — bos release notu yayinlanmasin.
       - name: Release notunu hazirla

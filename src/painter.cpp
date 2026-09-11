@@ -253,6 +253,9 @@ float EdgeError(const Vertex& a, const Vertex& b, const Brush& brush) {
   return std::fabs(t_mid - t_lerp);
 }
 
+// FIXME: Bolme karari yalniz kenar orta noktalarindan veriliyor. Koseler
+// ve orta noktalar yaricap disindaysa ucgenin icindeki kucuk gradient diski
+// kayboluyor; asagidaki "hata sifir cikar" varsayimi bu durumda yanlis.
 /// @brief Radial gradient icin ucgeni hata olcusune gore ozyinelemeli bol.
 ///
 /// Renk mesafeye bagli oldugu icin dogrusal degildir; kirpilmis bolgelerde
@@ -628,6 +631,8 @@ void Painter::SetBrush(const Brush& brush) {
   mCurrentState.brush = brush;
 }
 void Painter::SetFont(std::shared_ptr<Font> font) {
+  // FIXME: Flush yok; Painter eski fontun son sahibiyse atlas hemen
+  // siliniyor ve kuyruktaki metin silinmis texture ile ciziliyor.
   mCurrentFont = std::move(font);
 }
 void Painter::SetBlendMode(BlendMode mode) {
@@ -1559,6 +1564,9 @@ void Painter::DrawRenderTarget(const RenderTarget& target,
   if (kTexture == kInvalidTexture) {
     return;
   }
+  // FIXME: Hedefte premultiplied renk birikiyor ama burada normal Image
+  // gibi straight-alpha ile tekrar alfa carpiliyor; alfa 128 kirmizi dogrudan
+  // 128, hedef uzerinden 64 veriyor. Hedef icin ayri bir blend yolu ekleyelim.
   PushTexturedQuad(kTexture, 0.0F, 0.0F, 1.0F, 1.0F, dest_rect, tint, flip);
 }
 

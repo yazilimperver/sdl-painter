@@ -938,6 +938,9 @@ void VulkanRenderer::DestroyRenderTarget(RenderTargetHandle handle) {
   if (mCurrentTarget == handle) {
     SetRenderTarget(kInvalidRenderTarget);
   }
+  // FIXME: Hedef kare icinde silinince asagidaki varsayim bozuluyor.
+  // vkDeviceWaitIdle henuz submit edilmemis, kayit halindeki command
+  // buffer'i korumuyor. Hedefi de texture'lar gibi gecikmeli silelim.
   // Texture'lardaki gecikmeli silme burada uygulanamaz: hedefin framebuffer'i
   // da yikiliyor ve o, ucustaki komut buffer'larindan referans ediliyor.
   // Hedef yaratma/yikma frame dongusunde degil, kurulum sirasinda yapilir;

@@ -110,6 +110,9 @@ int32_t Font::LineHeight() const {
   return TTF_GetFontHeight(static_cast<TTF_Font*>(mHandle));
 }
 
+// FIXME: Olcum TTF_GetStringSize ile kerning uyguluyor, DrawTextLine ise
+// ham advance topluyor; Arial "AVAVAVAVAV" 288'e karsi 320 px. Hizalama ve
+// wrap bu yuzden cizimden farkli genislik kullaniyor, buna bakalım.
 bool Font::MeasureText(const std::string& text, int32_t& out_width,
                        int32_t& out_height) const {
   if (mHandle == nullptr || text.empty()) {

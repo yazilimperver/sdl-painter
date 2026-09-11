@@ -178,6 +178,8 @@ void OpenGLRenderer::CollectGpuTime() {
 }
 
 void OpenGLRenderer::BeginFrame() {
+  // Not: Kendi context'ini secmiyor; ikinci bir Painter olusturulunca
+  // bu renderer'in GL cagrilari onun context'ine gidiyor. Şu an için kararırımız tek piantered yaşaması.
   if (mTimerQueries[0] == 0) {
     return;
   }

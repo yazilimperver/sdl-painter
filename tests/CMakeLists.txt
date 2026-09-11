@@ -70,6 +70,9 @@ else()
 
     sdlpainter_copy_runtime_dlls(sdl_painter_tests)
 
+    # FIXME: gtest_add_tests kaynak metnini tariyor; #if ile derlenmeyen
+    # testler de (BackendParity.SkippedWithoutVulkan) kaydediliyor ve 0 test
+    # calistirip basarili gorunuyor.
     gtest_add_tests(TARGET sdl_painter_tests)
 endif()
 

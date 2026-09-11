@@ -48,6 +48,8 @@ WORKDIR /workspace
 # conanfile.py kopyalanır ve bağımlılıklar Conan cache'e indirilir.
 # Proje build'i (cmake configure/build) çalışma zamanında yapılır.
 
+# FIXME: set_version() include/sdl_painter/version.h okuyor; yalnız
+# conanfile.py kopyalanınca aşağıdaki conan install recipe'i yükleyemiyor.
 COPY conanfile.py /workspace/
 
 RUN conan install . \
