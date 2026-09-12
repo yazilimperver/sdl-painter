@@ -271,7 +271,7 @@ jobs:
   coverage:
     name: quality:coverage
     runs-on: ubuntu-latest
-    needs: [].
+    needs: []
     continue-on-error: true
     container:
       image: yazilimperver/sdl-painter:ci-v1.0
