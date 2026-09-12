@@ -94,14 +94,13 @@ RUN call "%VCVARS%" && conan profile detect --force
 WORKDIR C:\workspace
 
 # ─── 6. Conan Cache Ön-Isıtma ────────────────────────────────────────────────
-# Linux Dockerfile'daki gibi: yalnız conanfile.py kopyalanır, bağımlılıklar
+# Linux Dockerfile'daki gibi: conanfile.py ve version.h kopyalanır, bağımlılıklar
 # Conan cache'ine (C:\conan2) indirilip MSVC ile derlenir. output-folder geçici;
 # sonda silinir — imaj şişmez. cppstd=17 install satırında verilir (proje C++17).
 # conanfile.py configure(): Vulkan'ı yalnız compiler==gcc iken kapatır; MSVC'de
 # Vulkan SORUNSUZ desteklenir.
-# FIXME: set_version() include/sdl_painter/version.h okuyor; yalnız
-# conanfile.py kopyalanınca aşağıdaki conan install recipe'i yükleyemiyor.
 COPY conanfile.py C:\workspace\
+COPY include/sdl_painter/version.h C:\workspace\include\sdl_painter\version.h
 
 RUN call "%VCVARS%" && `
     conan install . --output-folder=C:\precache --build=missing -s build_type=Debug   -s compiler.cppstd=17 && `

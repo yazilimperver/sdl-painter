@@ -686,9 +686,21 @@ jobs:
   release:
     name: release:publish
     runs-on: ubuntu-latest
-    # FIXME: Windows build, standalone-cmake, shared, conan-create ve
-    # shader-freshness job'larini beklemiyor; bunlar dusse de surum cikiyor.
-    needs: [quality-clang-format, quality-clang-tidy]
+    # Ilan edilen platformlar ve paketleme yollari dogrulanmadan surum cikmaz.
+    # coverage ve quality-clang-tidy basarisizligi yutan yumusak job'lar, docs
+    # yalniz varsayilan branch'te kosar; ucu de bilerek kapi disinda.
+    needs:
+      - build-linux-debug
+      - build-linux-release
+      - build-windows-debug
+      - build-windows-release
+      - test-unit
+      - test-unit-asan
+      - build-standalone-cmake
+      - build-shared
+      - package-conan-create
+      - quality-shader-freshness
+      - quality-clang-format
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write

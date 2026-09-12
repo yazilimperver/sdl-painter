@@ -431,9 +431,22 @@ pages:
 release:publish:
   stage: release
   image: registry.gitlab.com/gitlab-org/release-cli:latest
-  # FIXME: needs: [] hicbir job'u beklemiyor; etiket push'u dogrulamasiz
-  # surum yayinliyor.
-  needs: []
+  # GitHub'daki kapiyla ayni kontroller. stage sirasi tek basina yetmez:
+  # needs: [] onu da atladigi icin release hicbir seyi beklemiyordu.
+  # quality:coverage ve quality:clang-tidy allow_failure, pages yalniz
+  # varsayilan branch'te kosar; ucu de bilerek kapi disinda.
+  needs:
+    - build:linux:debug
+    - build:linux:release
+    - build:windows:debug
+    - build:windows:release
+    - test:unit
+    - test:unit:asan
+    - build:standalone-cmake
+    - build:shared
+    - package:conan-create
+    - quality:shader-freshness
+    - quality:clang-format
   rules:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
   script:

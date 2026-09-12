@@ -45,12 +45,12 @@ RUN conan profile detect
 WORKDIR /workspace
 
 # ─── Conan Cache Ön Isıtma ───────────────────────────────────────────────────
-# conanfile.py kopyalanır ve bağımlılıklar Conan cache'e indirilir.
+# conanfile.py ve sürümünü okuduğu include/sdl_painter/version.h kopyalanır,
+# bağımlılıklar Conan cache'e indirilir.
 # Proje build'i (cmake configure/build) çalışma zamanında yapılır.
 
-# FIXME: set_version() include/sdl_painter/version.h okuyor; yalnız
-# conanfile.py kopyalanınca aşağıdaki conan install recipe'i yükleyemiyor.
 COPY conanfile.py /workspace/
+COPY include/sdl_painter/version.h /workspace/include/sdl_painter/version.h
 
 RUN conan install . \
     --output-folder=build/linux-debug/generators \
