@@ -427,16 +427,42 @@ TEST_P(RegressionGpu, DISABLED_TranslucentRoundCapBlendsOnce) {
       << "Uc ile govdenin kesistigi bolge";
 }
 
+// Doku olarak cizilen hedef, cizim gonderilmeden silinse de cizim kaybolmamali.
+TEST_P(RegressionGpu, TargetDestroyedAfterBeingDrawnKeepsTheDraw) {
+  REQUIRE_BACKEND(be, GetParam());
+  Painter& p = *be.painter;
+
+  RenderTarget layer = p.CreateRenderTarget(32, 32);
+  RenderTarget out = p.CreateRenderTarget(kW, kH);
+  ASSERT_TRUE(layer.IsValid());
+  ASSERT_TRUE(out.IsValid());
+
+  p.Begin();
+  ASSERT_TRUE(p.SetRenderTarget(layer));
+  p.Clear(kRed);
+  ASSERT_TRUE(p.SetRenderTarget(out));
+  p.Clear(kBlack);
+  p.DrawRenderTarget(layer, 0.0F, 0.0F);
+  layer.Reset();
+  p.ResetRenderTarget();
+  p.End();
+
+  std::vector<uint8_t> px;
+  ASSERT_TRUE(p.ReadRenderTarget(out, px));
+  DumpRgba("target_destroyed_after_draw_" + Tag(), px, kW, kH);
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 16, 16), kRed, kTolerance))
+      << "Silinen hedefin cizimi kayboldu.";
+}
+
 INSTANTIATE_TEST_SUITE_P(
     Backends, RegressionGpu, ::testing::ValuesIn(AvailableBackends()),
     [](const ::testing::TestParamInfo<RendererBackend>& i) {
       return i.param == RendererBackend::kOpenGL ? "OpenGL" : "Vulkan";
     });
 
-// Bulgu A02: kare icinde silinen hedefin framebuffer'i, henuz submit
-// edilmemis command buffer'dan referans edilirken yikiliyor. Duzeltmeyle
-// birlikte DISABLED_ kaldirilacak.
-TEST(RegressionVulkan, DISABLED_DestroyingBoundTargetMidFrameIsSafe) {
+// Kare icinde silinen hedefin framebuffer'i, henuz gonderilmemis komut
+// buffer'indan referans edilirken yikilmamali; sonraki kareler de etkilenmemeli.
+TEST(RegressionVulkan, DestroyingBoundTargetMidFrameIsSafe) {
   REQUIRE_BACKEND(be, RendererBackend::kVulkan);
   Painter& p = *be.painter;
 
@@ -447,6 +473,18 @@ TEST(RegressionVulkan, DISABLED_DestroyingBoundTargetMidFrameIsSafe) {
   p.Clear(kRed);
   t.Reset();
   p.End();
+
+  RenderTarget next = p.CreateRenderTarget(kW, kH);
+  ASSERT_TRUE(next.IsValid());
+  p.Begin();
+  ASSERT_TRUE(p.SetRenderTarget(next));
+  p.Clear(kBlue);
+  p.ResetRenderTarget();
+  p.End();
+
+  std::vector<uint8_t> px;
+  ASSERT_TRUE(p.ReadRenderTarget(next, px));
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 8, 8), kBlue, kTolerance));
 }
 
 // Kare icinde silinen doku, onu kullanan kare GPU'da bitene kadar yasamali.

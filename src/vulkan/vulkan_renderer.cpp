@@ -113,6 +113,7 @@ void VulkanRenderer::Shutdown() {
     // Silinmeyi bekleyenleri zorla temizle (device idle, güvenli).
     ProcessPendingTextureDeletes(/*force=*/true);
     ProcessPendingStagingBuffers(/*force=*/true);
+    ProcessPendingTargetDeletes(/*force=*/true);
     // Texture'ları önce sil (descriptor set pool mTexturedPipeline'da)
     for (auto& [handle, tex] : mTextures) {
       tex->Destroy(mContext->GetDevice());
@@ -362,9 +363,10 @@ void VulkanRenderer::EndFrame() {
   ++mFrameCounter;
   mFrameActive = false;
 
-  // Silinmeyi bekleyen texture'lardan süresi dolanları serbest bırak.
+  // Silinmeyi bekleyen kaynaklardan süresi dolanları serbest bırak.
   ProcessPendingTextureDeletes(/*force=*/false);
   ProcessPendingStagingBuffers(/*force=*/false);
+  ProcessPendingTargetDeletes(/*force=*/false);
 }
 
 void VulkanRenderer::SubmitAndPresent() {
@@ -641,6 +643,14 @@ void VulkanRenderer::UpdateTexture(TextureHandle handle, int32_t x, int32_t y,
   }
 }
 
+uint64_t VulkanRenderer::DeferredDeleteFrame() const {
+  // Kare içinde silinen kaynak o karenin komut buffer'ında olabilir; sayaç
+  // kare sonunda arttığı için bir kare fazlası gerekir (staging tamponlarıyla
+  // aynı gerekçe).
+  return mFrameCounter + VkFrameSync::kMaxFramesInFlight +
+         (mFrameActive ? 1U : 0U);
+}
+
 void VulkanRenderer::DestroyTexture(TextureHandle handle) {
   auto it = mTextures.find(handle);
   if (it == mTextures.end()) {
@@ -655,14 +665,8 @@ void VulkanRenderer::DestroyTexture(TextureHandle handle) {
   // Bunun yerine gecikmeli silme: texture, kMaxFramesInFlight frame boyunca
   // bekletilir. O süre dolduğunda onu kullanmış olabilecek tüm submit'ler
   // tamamlanmıştır (in-flight fence bekleme döngüsü bunu garanti eder).
-  //
-  // Kare içinde silinen texture o karenin komut buffer'ında olabilir; sayaç
-  // kare sonunda arttığı için bir kare fazlası gerekir (staging tamponlarıyla
-  // aynı gerekçe).
-  const uint64_t kFramesToWait =
-      VkFrameSync::kMaxFramesInFlight + (mFrameActive ? 1U : 0U);
   mPendingTextureDeletes.push_back(
-      {std::move(it->second), mFrameCounter + kFramesToWait});
+      {std::move(it->second), DeferredDeleteFrame()});
   mTextures.erase(it);
 }
 
@@ -722,6 +726,32 @@ void VulkanRenderer::ProcessPendingTextureDeletes(bool force) {
           mPendingTextureDeletes.begin(), mPendingTextureDeletes.end(),
           [](const PendingTextureDelete& p) { return p.texture == nullptr; }),
       mPendingTextureDeletes.end());
+}
+
+void VulkanRenderer::ProcessPendingTargetDeletes(bool force) {
+  if (mContext == nullptr || mContext->GetDevice() == VK_NULL_HANDLE) {
+    mPendingTargetDeletes.clear();
+    return;
+  }
+  VkDevice device = mContext->GetDevice();
+
+  for (auto& pending : mPendingTargetDeletes) {
+    if (!(force || mFrameCounter >= pending.delete_after_frame) ||
+        pending.target == nullptr) {
+      continue;
+    }
+    if (mTexturedPipeline != nullptr) {
+      mTexturedPipeline->FreeDescriptorSet(device,
+                                           pending.target->GetDescriptorSet());
+    }
+    pending.target->Destroy(device);
+    pending.target.reset();
+  }
+  mPendingTargetDeletes.erase(
+      std::remove_if(
+          mPendingTargetDeletes.begin(), mPendingTargetDeletes.end(),
+          [](const PendingTargetDelete& p) { return p.target == nullptr; }),
+      mPendingTargetDeletes.end());
 }
 
 void VulkanRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
@@ -944,17 +974,12 @@ void VulkanRenderer::DestroyRenderTarget(RenderTargetHandle handle) {
   if (mCurrentTarget == handle) {
     SetRenderTarget(kInvalidRenderTarget);
   }
-  // FIXME: Hedef kare icinde silinince asagidaki varsayim bozuluyor.
-  // vkDeviceWaitIdle henuz submit edilmemis, kayit halindeki command
-  // buffer'i korumuyor. Hedefi de texture'lar gibi gecikmeli silelim.
-  // Texture'lardaki gecikmeli silme burada uygulanamaz: hedefin framebuffer'i
-  // da yikiliyor ve o, ucustaki komut buffer'larindan referans ediliyor.
-  // Hedef yaratma/yikma frame dongusunde degil, kurulum sirasinda yapilir;
-  // burada tam bekleme kabul edilebilir bir bedel.
-  vkDeviceWaitIdle(mContext->GetDevice());
-  mTexturedPipeline->FreeDescriptorSet(mContext->GetDevice(),
-                                       it->second.target->GetDescriptorSet());
-  it->second.target->Destroy(mContext->GetDevice());
+  // Hedefin framebuffer'i, image'i ve descriptor set'i bu karenin veya
+  // uctaki karelerin komut buffer'larindan referans ediliyor olabilir;
+  // vkDeviceWaitIdle henuz gonderilmemis kaydi korumaz. Texture'lar gibi
+  // gecikmeli silinir, handle ise hemen gecersiz olur.
+  mPendingTargetDeletes.push_back(
+      {std::move(it->second.target), DeferredDeleteFrame()});
   mRenderTargets.erase(it);
 }
 

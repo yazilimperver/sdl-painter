@@ -216,6 +216,16 @@ class VulkanRenderer final : public IRenderer {
   std::unordered_map<RenderTargetHandle, RenderTargetEntry> mRenderTargets;
   RenderTargetHandle mNextRenderTarget{1};  // 0 = kInvalidRenderTarget
 
+  /// @brief Silinmeyi bekleyen hedef; framebuffer'ı ve image'ı uçuştaki komut
+  ///        buffer'larından referans ediliyor olabilir.
+  struct PendingTargetDelete {
+    std::unique_ptr<VulkanRenderTarget> target;
+    uint64_t delete_after_frame{0};
+  };
+
+  /// @brief Hedeflerin gecikmeli silme kuyruğu.
+  std::vector<PendingTargetDelete> mPendingTargetDeletes;
+
   /// @brief Yürürlükteki hedef (kInvalidRenderTarget = ekran).
   RenderTargetHandle mCurrentTarget{kInvalidRenderTarget};
 
@@ -231,6 +241,16 @@ class VulkanRenderer final : public IRenderer {
 
   /// @brief Süresi dolan staging tamponlarını serbest bırak.
   void ProcessPendingStagingBuffers(bool force);
+
+  /// @brief Süresi dolan gecikmeli hedef silmelerini işle.
+  /// @param force `true` ise süre gözetmeksizin hepsi yıkılır (Shutdown).
+  void ProcessPendingTargetDeletes(bool force);
+
+  /// @brief Şimdi silinen bir kaynağın serbest bırakılabileceği kare sayacı.
+  ///
+  /// O ana kadar, kaynağı kullanmış olabilecek bütün submit'lerin fence'i
+  /// beklenmiş olur.
+  [[nodiscard]] uint64_t DeferredDeleteFrame() const;
 
   /// @brief Offscreen render pass'i ve ona bağlı pipeline takımını üret.
   ///

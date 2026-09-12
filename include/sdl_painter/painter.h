@@ -477,9 +477,9 @@ class SDLPAINTER_API Painter {
 
   /// @brief Yıkılan bir @ref RenderTarget bunu çağırır.
   ///
-  /// Hedef o an bağlıysa ekrana dönülür: biriken çizimler hedef hâlâ
-  /// yaşarken flush edilir ve viewport/projeksiyon ekranınkine geri alınır.
-  /// Bağlı değilse hiçbir şey yapılmaz.
+  /// Biriken çizimler hedef hâlâ yaşarken önce gönderilir; hedef bekleyen bir
+  /// çizimde doku olarak kullanılmış olabilir. Hedef o an bağlıysa ardından
+  /// ekrana dönülür ve viewport/projeksiyon ekranınkine geri alınır.
   void OnRenderTargetDestroyed(RenderTargetHandle handle);
 
   /// @brief Pencerenin framebuffer (piksel) boyutunu döndür.

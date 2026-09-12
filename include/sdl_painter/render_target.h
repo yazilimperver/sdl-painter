@@ -84,7 +84,9 @@ class SDLPAINTER_API RenderTarget {
   /// @brief Hedefi kaynaklarıyla birlikte serbest bırak.
   ///
   /// Yıkıcı da bunu çağırır; erken serbest bırakmak isteyen kod için ayrıca
-  /// açıktır. İkinci çağrı etkisizdir.
+  /// açıktır. İkinci çağrı etkisizdir. Frame içinde de çağrılabilir: hedefi
+  /// kullanan bekleyen çizimler önce gönderilir, GPU kaynakları o çizimler
+  /// tamamlanınca serbest bırakılır.
   void Reset() noexcept;
 
  private:
@@ -110,10 +112,10 @@ class SDLPAINTER_API RenderTarget {
 
   /// @brief Üreten Painter'a dolaylı işaretçi (bkz. private ctor).
   ///
-  /// @ref Reset bunu iki şey için kullanır: hedef o an bağlıysa Painter'ın
-  /// ekrana dönmesini sağlamak (aksi halde Painter ölü bir hedefe çizdiğini
-  /// sanmayı sürdürürdü) ve Painter zaten yıkılmışsa `mOwner` üzerinden
-  /// yıkım çağrısı yapmamak.
+  /// @ref Reset bunu iki şey için kullanır: Painter'a bekleyen çizimleri
+  /// göndertip hedef o an bağlıysa ekrana döndürmek (aksi halde Painter ölü
+  /// bir hedefe çizdiğini sanmayı sürdürürdü) ve Painter zaten yıkılmışsa
+  /// `mOwner` üzerinden yıkım çağrısı yapmamak.
   std::shared_ptr<Painter*> mPainter;
 };
 

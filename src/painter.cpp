@@ -1472,7 +1472,15 @@ RenderTarget Painter::CreateRenderTarget(int32_t width, int32_t height,
 }
 
 void Painter::OnRenderTargetDestroyed(RenderTargetHandle handle) {
-  if (handle != kInvalidRenderTarget && mActiveTarget == handle) {
+  if (handle == kInvalidRenderTarget) {
+    return;
+  }
+  // Hedef bekleyen bir cizimde doku olarak orneklenmis olabilir; handle
+  // gecersiz olmadan once gonderilmeli.
+  if (mBatcher != nullptr) {
+    mBatcher->Flush();
+  }
+  if (mActiveTarget == handle) {
     ResetRenderTarget();
   }
 }
