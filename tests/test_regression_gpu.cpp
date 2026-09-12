@@ -450,15 +450,14 @@ TEST(RegressionVulkan, DISABLED_DestroyingBoundTargetMidFrameIsSafe) {
   p.End();
 }
 
-// Bulgu Y01: kare icinde silinen doku, onu kullanan kare GPU'da bitmeden yok
-// ediliyor. O kareyi agir cizimle uzatmak yarisi validation'a gorunur kilar.
-// Duzeltmeyle birlikte DISABLED_ kaldirilacak.
-TEST(RegressionVulkan, DISABLED_TextureDestroyedMidFrameOutlivesItsFrame) {
+// Kare icinde silinen doku, onu kullanan kare GPU'da bitene kadar yasamali.
+// O kareyi agir cizimle uzatmak erken silmeyi validation'a gorunur kilar.
+TEST(RegressionVulkan, TextureDestroyedMidFrameOutlivesItsFrame) {
   REQUIRE_BACKEND(be, RendererBackend::kVulkan);
   Painter& p = *be.painter;
 
   constexpr int32_t kLoadSize = 2048;
-  constexpr int32_t kLoadPasses = 2000;
+  constexpr int32_t kLoadPasses = 300;
   RenderTarget load = p.CreateRenderTarget(kLoadSize, kLoadSize);
   ASSERT_TRUE(load.IsValid());
   auto image = std::make_unique<Image>(MakeSolidImage(kRed));

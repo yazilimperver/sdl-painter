@@ -655,8 +655,14 @@ void VulkanRenderer::DestroyTexture(TextureHandle handle) {
   // Bunun yerine gecikmeli silme: texture, kMaxFramesInFlight frame boyunca
   // bekletilir. O süre dolduğunda onu kullanmış olabilecek tüm submit'ler
   // tamamlanmıştır (in-flight fence bekleme döngüsü bunu garanti eder).
+  //
+  // Kare içinde silinen texture o karenin komut buffer'ında olabilir; sayaç
+  // kare sonunda arttığı için bir kare fazlası gerekir (staging tamponlarıyla
+  // aynı gerekçe).
+  const uint64_t kFramesToWait =
+      VkFrameSync::kMaxFramesInFlight + (mFrameActive ? 1U : 0U);
   mPendingTextureDeletes.push_back(
-      {std::move(it->second), mFrameCounter + VkFrameSync::kMaxFramesInFlight});
+      {std::move(it->second), mFrameCounter + kFramesToWait});
   mTextures.erase(it);
 }
 
