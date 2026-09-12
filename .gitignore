@@ -26,6 +26,7 @@ cmake-build-*/
 # AI
 .claude/
 .localllm/
+.codex/
 
 # OS
 .DS_Store

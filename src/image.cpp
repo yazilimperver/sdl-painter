@@ -40,7 +40,7 @@ void Image::StbDeleter::operator()(uint8_t* ptr) const {
 }
 
 Image::Image(const std::string& file_path) {
-  // Piksel verisini ayırmadan ÖNCE başlığı okuyup boyutu doğrula: güvenilmeyen
+  // Piksel verisini ayırmadan önce başlığı okuyup boyutu doğrula: güvenilmeyen
   // bir dosya devasa boyut bildirip belleği tüketebilir (decompression bomb).
   int probe_w = 0;
   int probe_h = 0;
