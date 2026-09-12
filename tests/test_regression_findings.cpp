@@ -2,38 +2,52 @@
 ///
 /// @brief Kritik görülen bir takım hatalara yönelik refresyon testleri.
 
+#include "sdl_painter/app/app_config.h"
+#include "sdl_painter/app/application.h"
 #include "sdl_painter/brush.h"
 #include "sdl_painter/color.h"
 #include "sdl_painter/font.h"
 #include "sdl_painter/frame_stats.h"
 #include "sdl_painter/geometry.h"
+#include "sdl_painter/image.h"
 #include "sdl_painter/painter.h"
 #include "sdl_painter/render_target.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <gtest/gtest.h>
+#include <limits>
 #include <memory>
+#include <set>
 #include <utility>
 #include <vector>
 
 #include "recording_target_renderer.h"
 #include "test_support.h"
 
+using sdl_painter::Alignment;
+using sdl_painter::AppConfig;
+using sdl_painter::Application;
 using sdl_painter::Brush;
 using sdl_painter::Color;
 using sdl_painter::Font;
 using sdl_painter::FrameStats;
+using sdl_painter::Image;
 using sdl_painter::kInvalidRenderTarget;
+using sdl_painter::MockRenderer;
 using sdl_painter::Painter;
 using sdl_painter::Point;
 using sdl_painter::Rect;
 using sdl_painter::RendererBackend;
 using sdl_painter::RenderTarget;
+using sdl_painter::TexturedVertex;
+using sdl_painter::TextureHandle;
 using sdl_painter::Vertex;
 using sdl_painter::testing::FramePolicy;
+using sdl_painter::testing::HiddenWindow;
 using sdl_painter::testing::LifetimeJournal;
 using sdl_painter::testing::RecordingTargetRenderer;
 
@@ -666,4 +680,146 @@ TEST(RegressionFindings, NegativeClipSizeBecomesEmptyClip) {
   const auto& s = h.mock->scissor_calls.front();
   EXPECT_EQ(s.w, 0);
   EXPECT_EQ(s.h, 0);
+}
+
+namespace {
+
+/// @brief Silinmiş bir texture ile yapılan çizimleri sayan renderer.
+class DeletedTextureTracker : public MockRenderer {
+ public:
+  int32_t draws_with_deleted_texture{0};
+
+  void DestroyTexture(TextureHandle handle) override {
+    mDeleted.insert(handle);
+    MockRenderer::DestroyTexture(handle);
+  }
+
+  void DrawTextured(const std::vector<TexturedVertex>& vertices,
+                    TextureHandle texture) override {
+    if (mDeleted.count(texture) != 0U) {
+      ++draws_with_deleted_texture;
+    }
+    MockRenderer::DrawTextured(vertices, texture);
+  }
+
+ private:
+  std::set<TextureHandle> mDeleted;
+};
+
+/// @brief Kaydedilen dokulu çizimlerin en sağdaki x koordinatı.
+float RightmostTexturedX(const RecordingTargetRenderer& renderer) {
+  float right = -std::numeric_limits<float>::infinity();
+  for (const auto& draw : renderer.draws) {
+    for (const TexturedVertex& v : draw.textured_vertices) {
+      right = std::max(right, v.x);
+    }
+  }
+  return right;
+}
+
+/// @brief Üye Image'ını OnInit'te GPU'ya yükleyip başlatmayı reddeden uygulama.
+class FailingInitApp : public Application {
+ public:
+  explicit FailingInitApp(AppConfig config)
+      : Application(std::move(config)), mImage(MakeImage()) {}
+
+  [[nodiscard]] bool ImageUploaded() const noexcept { return mUploaded; }
+
+ protected:
+  bool OnInit() override {
+    GetPainter().Begin();
+    GetPainter().DrawImage(mImage, 0.0F, 0.0F);
+    GetPainter().End();
+    mUploaded = true;
+    return false;
+  }
+
+ private:
+  static Image MakeImage() {
+    const std::vector<uint8_t> pixels(2U * 2U * 4U, 255U);
+    return Image::CreateFromData(pixels.data(), 2, 2, 4);
+  }
+
+  Image mImage;
+  bool mUploaded{false};
+};
+
+}  // namespace
+
+// Bulgu A03: SetFont eski fontu hemen bırakıyor. Painter fontun tek sahibiyse
+// atlas, kuyruktaki metin çizilmeden siliniyor. Düzeltmeyle birlikte
+// DISABLED_ kaldırılacak.
+TEST(PainterFont, DISABLED_ReplacingFontKeepsQueuedGlyphsAlive) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
+  auto renderer = std::make_unique<DeletedTextureTracker>();
+  DeletedTextureTracker* tracker = renderer.get();
+  Painter painter(std::move(renderer), kScreenW, kScreenH);
+  painter.SetFont(std::make_shared<Font>(font_path, 24));
+  ASSERT_TRUE(painter.GetFont()->IsValid());
+
+  painter.Begin();
+  painter.DrawText(0.0F, 30.0F, "A");
+  painter.SetFont(nullptr);
+  painter.End();
+
+  ASSERT_GT(tracker->CountCalls("DrawTextured"), 0);
+  EXPECT_EQ(tracker->draws_with_deleted_texture, 0);
+}
+
+// Bulgu A11: ölçüm kerning uyguluyor, çizim uygulamıyor; sağa hizalı metin
+// dikdörtgenin dışına taşıyor. Düzeltmeyle birlikte DISABLED_ kaldırılacak.
+TEST(PainterText, DISABLED_RightAlignedTextEndsAtRectEdge) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
+  TargetHarness h;
+  h.painter.SetFont(std::make_shared<Font>(font_path, 48));
+  ASSERT_TRUE(h.painter.GetFont()->IsValid());
+
+  // Tek glyph'te kerning olmadığı için son glyph'in görünen sağ kenarı ile
+  // ölçülen genişlik arasındaki fark buradan alınır.
+  int32_t glyph_w = 0;
+  int32_t glyph_h = 0;
+  ASSERT_TRUE(h.painter.GetFont()->MeasureText("V", glyph_w, glyph_h));
+  h.painter.Begin();
+  h.painter.DrawText(0.0F, 60.0F, "V");
+  h.painter.End();
+  const float kInkOffset =
+      RightmostTexturedX(*h.mock) - static_cast<float>(glyph_w);
+
+  h.mock->draws.clear();
+  constexpr float kRectRight = 400.0F;
+  h.painter.Begin();
+  h.painter.DrawText(Rect{0.0F, 0.0F, kRectRight, 100.0F}, "AVAVAVAVAV",
+                     Alignment::kRight);
+  h.painter.End();
+
+  EXPECT_NEAR(RightmostTexturedX(*h.mock), kRectRight + kInkOffset, 2.0F);
+}
+
+// Bulgu A04: OnInit false dönünce Painter hemen yıkılıyor; türeyen sınıfın
+// Image üyesi sonra ölü renderer üzerinden serbest bırakılıyor. Düzeltmeyle
+// birlikte DISABLED_ kaldırılacak.
+TEST(ApplicationLifecycleDeathTest,
+     DISABLED_FailedOnInitReleasesMemberImageSafely) {
+  if (HiddenWindow(RendererBackend::kOpenGL).Get() == nullptr) {
+    GTEST_SKIP() << "OpenGL penceresi oluşturulamadı.";
+  }
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+
+  EXPECT_EXIT(
+      {
+        AppConfig config;
+        config.width = 64;
+        config.height = 64;
+        config.resizable = false;
+        config.init_logger = false;
+        {
+          FailingInitApp app(config);
+          if (app.Run() != 1 || !app.ImageUploaded()) {
+            std::fprintf(stderr, "onkosul: OnInit calismadi\n");
+            std::exit(3);
+          }
+        }
+        std::exit(0);
+      },
+      ::testing::ExitedWithCode(0), "");
 }

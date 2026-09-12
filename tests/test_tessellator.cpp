@@ -9,11 +9,15 @@
 
 // Tessellator dahili başlık (src/ altında)
 #include "../src/tessellator.h"
+#include "geometry_oracle.h"
 
 using sdl_painter::Point;
 using sdl_painter::Tessellator;
 using sdl_painter::TexturedVertex;
 using sdl_painter::Vertex;
+using sdl_painter::testing::CoverageCount;
+using sdl_painter::testing::ShoelaceArea;
+using sdl_painter::testing::TriangleListArea;
 
 namespace {
 
@@ -927,4 +931,60 @@ TEST(TessellateStrokedCircle, SegmentCountIsCapped) {
   // 512 segment * 6 vertex (quad) + 512 birlesim diski * en fazla 24 * 3.
   EXPECT_LE(v.size(), 512u * 6u + 512u * 24u * 3u);
   EXPECT_GT(v.size(), 0u);
+}
+
+// Bulgu A01: aday kulağın iç diyagonali üzerindeki reflex köşe görülmüyor ve
+// çentik dolduruluyor. Düzeltmeyle birlikte DISABLED_ kaldırılacak.
+TEST(TessellateFilledPolygon, DISABLED_ReflexVertexOnDiagonalKeepsArea) {
+  const std::vector<Point> ccw = {
+      {0.0f, 0.0f}, {4.0f, 0.0f}, {4.0f, 4.0f}, {2.0f, 2.0f}, {0.0f, 4.0f},
+  };
+  const std::vector<Point> cw(ccw.rbegin(), ccw.rend());
+  EXPECT_NEAR(TriangleListArea(Tessellator::TessellateFilledPolygon(ccw)),
+              ShoelaceArea(ccw), 1e-3);
+  EXPECT_NEAR(TriangleListArea(Tessellator::TessellateFilledPolygon(cw)),
+              ShoelaceArea(cw), 1e-3)
+      << "Saat yönündeki girdi";
+}
+
+TEST(TessellateFilledPolygon, DISABLED_NotchOfConcavePolygonStaysEmpty) {
+  const std::vector<Point> pts = {
+      {0.0f, 0.0f}, {4.0f, 0.0f}, {4.0f, 4.0f}, {2.0f, 2.0f}, {0.0f, 4.0f},
+  };
+  const auto v = Tessellator::TessellateFilledPolygon(pts);
+  EXPECT_EQ(CoverageCount(v, 1.0f, 1.0f), 1);
+  EXPECT_EQ(CoverageCount(v, 2.0f, 3.5f), 0) << "Çentik poligonun dışında.";
+}
+
+// Bulgu A10: tekrar temizliği açık polyline'da da son noktayı siliyor.
+// Düzeltmeyle birlikte DISABLED_ kaldırılacak.
+TEST(TessellateThickPolyline,
+     DISABLED_OpenPolylineReturningToStartKeepsLastSegment) {
+  const std::vector<Point> pts = {
+      {10.0f, 10.0f}, {80.0f, 10.0f}, {80.0f, 80.0f}, {10.0f, 10.0f}};
+  const auto v = Tessellator::TessellateThickPolyline(pts, 1.0f);
+  EXPECT_EQ(CoverageCount(v, 45.3f, 10.2f), 1);
+  EXPECT_EQ(CoverageCount(v, 45.3f, 45.1f), 1)
+      << "Başlangıca dönen son segment çizilmedi.";
+}
+
+// Bulgu A09: round cap ve round join tam disk; komşu quad'larla örtüşen bölge
+// yarı saydam renkte birden fazla blend ediliyor. Düzeltmeyle birlikte
+// DISABLED_ kaldırılacak.
+TEST(LineCap, DISABLED_RoundCapDoesNotOverlapLineBody) {
+  const auto v = Tessellator::TessellateThickLine(
+      20.0f, 50.0f, 80.0f, 50.0f, 20.0f, sdl_painter::LineCap::kRound);
+  EXPECT_EQ(CoverageCount(v, 12.37f, 46.13f), 1);
+  EXPECT_EQ(CoverageCount(v, 22.37f, 52.91f), 1)
+      << "Uç ile gövdenin kesiştiği bölge";
+}
+
+TEST(LineJoin, DISABLED_RoundJoinDoesNotOverlapSegments) {
+  const std::vector<Point> pts = {
+      {20.0f, 20.0f}, {80.0f, 20.0f}, {80.0f, 80.0f}};
+  const auto v = Tessellator::TessellateThickPolyline(
+      pts, 20.0f, sdl_painter::LineCap::kButt, sdl_painter::LineJoin::kRound);
+  EXPECT_EQ(CoverageCount(v, 84.71f, 14.63f), 1);
+  EXPECT_EQ(CoverageCount(v, 75.37f, 25.91f), 1)
+      << "İç köşede iki segment ve birleşim diski üst üste";
 }

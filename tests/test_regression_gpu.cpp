@@ -13,6 +13,7 @@
 
 #include <cstdint>
 #include <gtest/gtest.h>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -23,6 +24,7 @@ namespace {
 using sdl_painter::Brush;
 using sdl_painter::Color;
 using sdl_painter::Image;
+using sdl_painter::LineCap;
 using sdl_painter::Painter;
 using sdl_painter::Pen;
 using sdl_painter::Rect;
@@ -299,10 +301,190 @@ TEST_P(RegressionGpu, ClearIgnoresClipRect) {
       << "Clear kirpma disini silmedi.";
 }
 
+// Bulgu A01: konkav poligonun centigi boyaniyor. Duzeltmeyle birlikte
+// DISABLED_ kaldirilacak.
+TEST_P(RegressionGpu, DISABLED_ConcavePolygonNotchStaysEmpty) {
+  REQUIRE_BACKEND(be, GetParam());
+  Painter& p = *be.painter;
+
+  constexpr int32_t kSize = 100;
+  RenderTarget t = p.CreateRenderTarget(kSize, kSize);
+  ASSERT_TRUE(t.IsValid());
+
+  p.Begin();
+  ASSERT_TRUE(p.SetRenderTarget(t));
+  p.Clear(kBlack);
+  p.SetPen(Pen::NoPen());
+  p.SetBrush(Brush(kRed));
+  p.FillPolygon({{10.0F, 10.0F},
+                 {90.0F, 10.0F},
+                 {90.0F, 90.0F},
+                 {50.0F, 50.0F},
+                 {10.0F, 90.0F}});
+  p.ResetRenderTarget();
+  p.End();
+
+  std::vector<uint8_t> px;
+  ASSERT_TRUE(p.ReadRenderTarget(t, px));
+  DumpRgba("concave_notch_" + Tag(), px, kSize, kSize);
+  EXPECT_TRUE(ColorNear(PixelAt(px, kSize, 30, 30), kRed, kTolerance));
+  EXPECT_TRUE(ColorNear(PixelAt(px, kSize, 50, 80), kBlack, kTolerance))
+      << "Centik boyandi.";
+}
+
+// Bulgu A07: saydam hedefte premultiplied renk birikiyor, kompozisyonda alfa
+// ikinci kez carpiliyor. Duzeltmeyle birlikte DISABLED_ kaldirilacak.
+TEST_P(RegressionGpu, DISABLED_TranslucentTargetComposesLikeDirectDraw) {
+  REQUIRE_BACKEND(be, GetParam());
+  Painter& p = *be.painter;
+
+  RenderTarget layer = p.CreateRenderTarget(32, 32);
+  RenderTarget out = p.CreateRenderTarget(kW, kH);
+  ASSERT_TRUE(layer.IsValid());
+  ASSERT_TRUE(out.IsValid());
+  const Color kHalfRed{255, 0, 0, 128};
+  // Siyah zemine alfa 128 kirmizi: 255 * 128 / 255 = 128.
+  const Color kExpected{128, 0, 0, 255};
+
+  p.Begin();
+  p.SetPen(Pen::NoPen());
+  p.SetBrush(Brush(kHalfRed));
+  ASSERT_TRUE(p.SetRenderTarget(layer));
+  p.Clear(Color{0, 0, 0, 0});
+  p.FillRect(0.0F, 0.0F, 32.0F, 32.0F);
+  ASSERT_TRUE(p.SetRenderTarget(out));
+  p.Clear(kBlack);
+  p.FillRect(0.0F, 0.0F, 32.0F, 32.0F);
+  p.DrawRenderTarget(layer, 32.0F, 0.0F);
+  p.ResetRenderTarget();
+  p.End();
+
+  std::vector<uint8_t> px;
+  ASSERT_TRUE(p.ReadRenderTarget(out, px));
+  DumpRgba("translucent_target_" + Tag(), px, kW, kH);
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 16, 16), kExpected, kTolerance))
+      << "Dogrudan cizim";
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 48, 16), kExpected, kTolerance))
+      << "Ara hedef uzerinden cizim";
+}
+
+// Bulgu A08: bolme karari yalniz kenar orta noktalarindan veriliyor; ucgenin
+// icindeki kucuk gradient diski kayboluyor. Duzeltmeyle birlikte DISABLED_
+// kaldirilacak.
+TEST_P(RegressionGpu, DISABLED_SmallOffCentreRadialGradientKeepsItsCentre) {
+  REQUIRE_BACKEND(be, GetParam());
+  Painter& p = *be.painter;
+
+  constexpr int32_t kSize = 100;
+  RenderTarget t = p.CreateRenderTarget(kSize, kSize);
+  ASSERT_TRUE(t.IsValid());
+
+  p.Begin();
+  ASSERT_TRUE(p.SetRenderTarget(t));
+  p.Clear(kBlack);
+  p.SetPen(Pen::NoPen());
+  p.SetBrush(Brush::RadialGradient({25.5F, 50.5F}, 8.0F, kRed, kBlue));
+  p.FillRect(0.0F, 0.0F, 100.0F, 100.0F);
+  p.ResetRenderTarget();
+  p.End();
+
+  std::vector<uint8_t> px;
+  ASSERT_TRUE(p.ReadRenderTarget(t, px));
+  DumpRgba("small_radial_" + Tag(), px, kSize, kSize);
+  EXPECT_TRUE(ColorNear(PixelAt(px, kSize, 25, 50), kRed, 20))
+      << "Gradient merkezi kayboldu.";
+  EXPECT_TRUE(ColorNear(PixelAt(px, kSize, 80, 50), kBlue, kTolerance));
+}
+
+// Bulgu A09: round cap tam disk; govdeyle ortusen bolge yari saydam renkte
+// iki kez blend ediliyor. Duzeltmeyle birlikte DISABLED_ kaldirilacak.
+TEST_P(RegressionGpu, DISABLED_TranslucentRoundCapBlendsOnce) {
+  REQUIRE_BACKEND(be, GetParam());
+  Painter& p = *be.painter;
+
+  constexpr int32_t kSize = 100;
+  RenderTarget t = p.CreateRenderTarget(kSize, kSize);
+  ASSERT_TRUE(t.IsValid());
+  const Color kExpected{128, 0, 0, 255};
+
+  p.Begin();
+  ASSERT_TRUE(p.SetRenderTarget(t));
+  p.Clear(kBlack);
+  Pen pen(Color{255, 0, 0, 128}, 20.0F);
+  pen.SetCapStyle(LineCap::kRound);
+  p.SetPen(pen);
+  p.DrawLine(20.0F, 50.0F, 80.0F, 50.0F);
+  p.ResetRenderTarget();
+  p.End();
+
+  std::vector<uint8_t> px;
+  ASSERT_TRUE(p.ReadRenderTarget(t, px));
+  DumpRgba("round_cap_" + Tag(), px, kSize, kSize);
+  EXPECT_TRUE(ColorNear(PixelAt(px, kSize, 50, 50), kExpected, kTolerance))
+      << "Govde";
+  EXPECT_TRUE(ColorNear(PixelAt(px, kSize, 12, 50), kExpected, kTolerance))
+      << "Uc";
+  EXPECT_TRUE(ColorNear(PixelAt(px, kSize, 22, 52), kExpected, kTolerance))
+      << "Uc ile govdenin kesistigi bolge";
+}
+
 INSTANTIATE_TEST_SUITE_P(
     Backends, RegressionGpu, ::testing::ValuesIn(AvailableBackends()),
     [](const ::testing::TestParamInfo<RendererBackend>& i) {
       return i.param == RendererBackend::kOpenGL ? "OpenGL" : "Vulkan";
     });
+
+// Bulgu A02: kare icinde silinen hedefin framebuffer'i, henuz submit
+// edilmemis command buffer'dan referans edilirken yikiliyor. Duzeltmeyle
+// birlikte DISABLED_ kaldirilacak.
+TEST(RegressionVulkan, DISABLED_DestroyingBoundTargetMidFrameIsSafe) {
+  REQUIRE_BACKEND(be, RendererBackend::kVulkan);
+  Painter& p = *be.painter;
+
+  RenderTarget t = p.CreateRenderTarget(kW, kH);
+  ASSERT_TRUE(t.IsValid());
+  p.Begin();
+  ASSERT_TRUE(p.SetRenderTarget(t));
+  p.Clear(kRed);
+  t.Reset();
+  p.End();
+}
+
+// Bulgu Y01: kare icinde silinen doku, onu kullanan kare GPU'da bitmeden yok
+// ediliyor. O kareyi agir cizimle uzatmak yarisi validation'a gorunur kilar.
+// Duzeltmeyle birlikte DISABLED_ kaldirilacak.
+TEST(RegressionVulkan, DISABLED_TextureDestroyedMidFrameOutlivesItsFrame) {
+  REQUIRE_BACKEND(be, RendererBackend::kVulkan);
+  Painter& p = *be.painter;
+
+  constexpr int32_t kLoadSize = 2048;
+  constexpr int32_t kLoadPasses = 2000;
+  RenderTarget load = p.CreateRenderTarget(kLoadSize, kLoadSize);
+  ASSERT_TRUE(load.IsValid());
+  auto image = std::make_unique<Image>(MakeSolidImage(kRed));
+
+  p.Begin();
+  ASSERT_TRUE(p.SetRenderTarget(load));
+  p.SetPen(Pen::NoPen());
+  p.SetBrush(Brush(Color{255, 255, 255, 8}));
+  for (int32_t i = 0; i < kLoadPasses; ++i) {
+    p.FillRect(0.0F, 0.0F, static_cast<float>(kLoadSize),
+               static_cast<float>(kLoadSize));
+  }
+  p.ResetRenderTarget();
+  p.DrawImage(*image, 0.0F, 0.0F);
+  // Hedef degisimi bekleyen cizimi gonderir; doku artik bu karenin komut
+  // buffer'inda.
+  ASSERT_TRUE(p.SetRenderTarget(load));
+  image.reset();
+  p.ResetRenderTarget();
+  p.End();
+
+  // Gecikmeli silme bir sonraki karenin sonunda calisiyor.
+  p.Begin();
+  p.End();
+  p.Begin();
+  p.End();
+}
 
 }  // namespace
