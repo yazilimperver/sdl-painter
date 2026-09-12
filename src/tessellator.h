@@ -182,9 +182,11 @@ class Tessellator {
     return std::max(kMinSegments, static_cast<int32_t>(kScaled));
   }
 
-  /// @brief Ardışık (ve kapanıştaki) çakışan noktaları eleyerek kopya döndür.
+  /// @brief Ardışık çakışan noktaları eleyerek kopya döndür.
+  /// @param closed `true` ise ilk noktayla çakışan son nokta da elenir; açık
+  ///        yolda başlangıca dönüş korunur.
   static std::vector<Point> RemoveDuplicatePoints(
-      const std::vector<Point>& points);
+      const std::vector<Point>& points, bool closed);
 
   /// @brief Açık/kapalı polyline için ortak kalın çizgi + birleşim üretimi.
   /// @param closed `true` ise son nokta ilkine bağlanır ve tüm köşelere
@@ -231,7 +233,10 @@ class Tessellator {
   /// @brief Ear clipping iç implementasyonu.
   static std::vector<Vertex> EarClipping(const std::vector<Point>& raw);
 
-  /// @brief Nokta üçgenin içinde mi?
+  /// @brief Nokta üçgenin içinde veya kenarında mı?
+  ///
+  /// Üçgenin köşeleriyle çakışan nokta dışarıda sayılır: kulak testinde
+  /// poligonun başka yerinde tekrar eden köşe kulağı engellememeli.
   static bool PointInTriangle(const Point& p, const Point& a, const Point& b,
                               const Point& c);
 };

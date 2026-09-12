@@ -33,6 +33,8 @@
 
 ```cpp
 // Ear: P[i-1], P[i], P[i+1] üçgeni konveks ve diğer noktaları içermiyorsa.
+//      Kenar üzerindeki nokta içeride sayılır (diyagonal sınıra değiyorsa kulak
+//      değildir); üçgenin köşesiyle çakışan tekrarlı köşe sayılmaz.
 // 1. Nokta listesini döngüsel linked list'e al.
 // 2. Her iterasyonda bir "ear" bul (IsEar kontrolü).
 // 3. Ear üçgenini kaydet, listedan çıkar.

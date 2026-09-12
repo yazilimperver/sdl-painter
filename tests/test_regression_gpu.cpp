@@ -301,9 +301,8 @@ TEST_P(RegressionGpu, ClearIgnoresClipRect) {
       << "Clear kirpma disini silmedi.";
 }
 
-// Bulgu A01: konkav poligonun centigi boyaniyor. Duzeltmeyle birlikte
-// DISABLED_ kaldirilacak.
-TEST_P(RegressionGpu, DISABLED_ConcavePolygonNotchStaysEmpty) {
+// Konkav poligonun centigi bos kalmali.
+TEST_P(RegressionGpu, ConcavePolygonNotchStaysEmpty) {
   REQUIRE_BACKEND(be, GetParam());
   Painter& p = *be.painter;
 

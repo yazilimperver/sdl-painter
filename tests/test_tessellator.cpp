@@ -933,39 +933,60 @@ TEST(TessellateStrokedCircle, SegmentCountIsCapped) {
   EXPECT_GT(v.size(), 0u);
 }
 
-// Bulgu A01: aday kulağın iç diyagonali üzerindeki reflex köşe görülmüyor ve
-// çentik dolduruluyor. Düzeltmeyle birlikte DISABLED_ kaldırılacak.
-TEST(TessellateFilledPolygon, DISABLED_ReflexVertexOnDiagonalKeepsArea) {
+// Aday kulağın iç diyagonali üzerinde duran reflex köşe kulağı geçersiz
+// kılmalı; aksi halde çentik dolduruluyor.
+TEST(TessellateFilledPolygon, ReflexVertexOnDiagonalKeepsArea) {
   const std::vector<Point> ccw = {
       {0.0f, 0.0f}, {4.0f, 0.0f}, {4.0f, 4.0f}, {2.0f, 2.0f}, {0.0f, 4.0f},
   };
-  const std::vector<Point> cw(ccw.rbegin(), ccw.rend());
-  EXPECT_NEAR(TriangleListArea(Tessellator::TessellateFilledPolygon(ccw)),
-              ShoelaceArea(ccw), 1e-3);
-  EXPECT_NEAR(TriangleListArea(Tessellator::TessellateFilledPolygon(cw)),
-              ShoelaceArea(cw), 1e-3)
-      << "Saat yönündeki girdi";
+  const auto transformed = [&ccw](float scale, float dx, float dy) {
+    std::vector<Point> out;
+    for (const Point& p : ccw) {
+      out.push_back({p.x * scale + dx, p.y * scale + dy});
+    }
+    return out;
+  };
+  const auto expect_area_kept = [](const std::vector<Point>& pts,
+                                   const char* name) {
+    const double kExpected = ShoelaceArea(pts);
+    EXPECT_NEAR(TriangleListArea(Tessellator::TessellateFilledPolygon(pts)),
+                kExpected, kExpected * 1e-6)
+        << name;
+  };
+  expect_area_kept(ccw, "CCW");
+  expect_area_kept(std::vector<Point>(ccw.rbegin(), ccw.rend()), "CW");
+  expect_area_kept(transformed(1.0f, 1000.3f, 1000.7f), "ötelenmiş");
+  expect_area_kept(transformed(37.5f, 0.0f, 0.0f), "ölçeklenmiş");
 }
 
-TEST(TessellateFilledPolygon, DISABLED_NotchOfConcavePolygonStaysEmpty) {
+TEST(TessellateFilledPolygon, NotchOfConcavePolygonStaysEmpty) {
   const std::vector<Point> pts = {
       {0.0f, 0.0f}, {4.0f, 0.0f}, {4.0f, 4.0f}, {2.0f, 2.0f}, {0.0f, 4.0f},
   };
   const auto v = Tessellator::TessellateFilledPolygon(pts);
-  EXPECT_EQ(CoverageCount(v, 1.0f, 1.0f), 1);
+  EXPECT_EQ(CoverageCount(v, 1.37f, 0.41f), 1);
   EXPECT_EQ(CoverageCount(v, 2.0f, 3.5f), 0) << "Çentik poligonun dışında.";
 }
 
-// Bulgu A10: tekrar temizliği açık polyline'da da son noktayı siliyor.
-// Düzeltmeyle birlikte DISABLED_ kaldırılacak.
-TEST(TessellateThickPolyline,
-     DISABLED_OpenPolylineReturningToStartKeepsLastSegment) {
+// Açık yol başlangıca dönebilir; son nokta tekrar sayılıp silinmemeli. Kapalı
+// çerçevede ise tekrarlanan kapanış noktası ikinci bir segment üretmemeli.
+TEST(TessellateThickPolyline, OpenPolylineReturningToStartKeepsLastSegment) {
   const std::vector<Point> pts = {
       {10.0f, 10.0f}, {80.0f, 10.0f}, {80.0f, 80.0f}, {10.0f, 10.0f}};
-  const auto v = Tessellator::TessellateThickPolyline(pts, 1.0f);
-  EXPECT_EQ(CoverageCount(v, 45.3f, 10.2f), 1);
-  EXPECT_EQ(CoverageCount(v, 45.3f, 45.1f), 1)
+  const auto open = Tessellator::TessellateThickPolyline(pts, 1.0f);
+  EXPECT_EQ(CoverageCount(open, 45.3f, 10.2f), 1);
+  EXPECT_EQ(CoverageCount(open, 45.3f, 45.1f), 1)
       << "Başlangıca dönen son segment çizilmedi.";
+
+  constexpr float kLongDash[] = {1000.0f, 1.0f};
+  const auto dashed = Tessellator::TessellateDashedPolyline(
+      pts, 1.0f, kLongDash, 2, /*closed=*/false);
+  EXPECT_EQ(CoverageCount(dashed, 45.3f, 45.1f), 1)
+      << "Kesikli yolda başlangıca dönen son segment çizilmedi.";
+
+  const auto closed = Tessellator::TessellateStrokedPolygon(pts, 1.0f);
+  EXPECT_EQ(CoverageCount(closed, 45.3f, 45.1f), 1)
+      << "Kapalı çerçevede kapanış segmenti tekrarlandı.";
 }
 
 // Bulgu A09: round cap ve round join tam disk; komşu quad'larla örtüşen bölge

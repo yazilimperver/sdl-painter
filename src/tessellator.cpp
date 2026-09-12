@@ -9,6 +9,14 @@ namespace sdl_painter {
 
 namespace {
 constexpr float kTwoPi = 2.0F * 3.14159265358979323846F;
+
+/// @brief İki nokta kayan nokta toleransıyla aynı konumda mı?
+bool SamePoint(const Point& a, const Point& b) {
+  constexpr float kEpsSq = 1e-12F;
+  const float dx = a.x - b.x;
+  const float dy = a.y - b.y;
+  return (dx * dx + dy * dy) <= kEpsSq;
+}
 }  // namespace
 
 std::vector<Vertex> Tessellator::TessellateFilledRect(float x, float y, float w,
@@ -488,7 +496,7 @@ std::vector<std::vector<Point>> Tessellator::BuildDashRuns(
 std::vector<Vertex> Tessellator::TessellateDashedPolyline(
     const std::vector<Point>& points, float line_width, const float* dash,
     std::size_t dash_count, bool closed, LineCap cap, LineJoin join) {
-  const std::vector<Point> cleaned = RemoveDuplicatePoints(points);
+  const std::vector<Point> cleaned = RemoveDuplicatePoints(points, closed);
   if (cleaned.size() < 2 || !(line_width > 0.0F)) {
     return {};
   }
@@ -528,7 +536,7 @@ std::vector<Vertex> Tessellator::TessellatePolyline(
     LineJoin join) {
   // Çakışan ardışık noktalar sıfır uzunluklu segment üretir; hem quad hem de
   // birleşim hesabını bozar.
-  const std::vector<Point> points = RemoveDuplicatePoints(raw);
+  const std::vector<Point> points = RemoveDuplicatePoints(raw, closed);
   if (points.size() < 2) {
     return {};
   }
@@ -604,46 +612,40 @@ std::vector<TexturedVertex> Tessellator::TessellateTexturedRect(
 
 bool Tessellator::PointInTriangle(const Point& p, const Point& a,
                                   const Point& b, const Point& c) {
+  // Üçgenin köşesiyle çakışan nokta, poligonun başka yerinde tekrar eden bir
+  // köşedir; kulağı engellemez (bkz. K4).
+  if (SamePoint(p, a) || SamePoint(p, b) || SamePoint(p, c)) {
+    return false;
+  }
   auto sign = [](const Point& p1, const Point& p2, const Point& p3) {
     return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
   };
-  // FIXME: Sınırdaki noktayı her durumda dışarıda saymak, aday kulağın
-  // iç diyagonali üzerindeki reflex köşeyi kaçırıyor. (0,0),(4,0),(4,4),
-  // (2,2),(0,4) için üçgen alanı 12 yerine 20 çıkıyor.
-  // Kesin (strict) iç test: kenar üzerindeki noktalar "dışarıda" sayılır.
-  // Kulak testinde sınır noktalarını içeride saymak, geçerli kulakları
-  // reddedip triangulation'ı erken durduruyordu (bkz. K4).
+  // Kenar üzerindeki nokta içeride sayılır: aday kulağın diyagonali üzerinde
+  // duran bir köşe, diyagonalin poligon sınırına değdiğini gösterir. Tolerans
+  // üçgenin alanıyla ölçeklenir; sabit olsaydı büyük koordinatlarda yuvarlama
+  // böyle bir köşeyi dışarıda gösterebilirdi.
   const float d1 = sign(p, a, b);
   const float d2 = sign(p, b, c);
   const float d3 = sign(p, c, a);
-  constexpr float kEps = 1e-6F;
+  const float kEps = 1e-4F * std::fabs(sign(a, b, c));
   const bool has_neg = (d1 < -kEps) || (d2 < -kEps) || (d3 < -kEps);
   const bool has_pos = (d1 > kEps) || (d2 > kEps) || (d3 > kEps);
-  return !(has_neg && has_pos) &&
-         !(std::fabs(d1) <= kEps || std::fabs(d2) <= kEps ||
-           std::fabs(d3) <= kEps);
+  return !(has_neg && has_pos);
 }
 
 std::vector<Point> Tessellator::RemoveDuplicatePoints(
-    const std::vector<Point>& points) {
-  auto same = [](const Point& a, const Point& b) {
-    constexpr float kEpsSq = 1e-12F;
-    const float dx = a.x - b.x;
-    const float dy = a.y - b.y;
-    return (dx * dx + dy * dy) <= kEpsSq;
-  };
-
+    const std::vector<Point>& points, bool closed) {
   std::vector<Point> result;
   result.reserve(points.size());
   for (const Point& p : points) {
-    if (result.empty() || !same(result.back(), p)) {
+    if (result.empty() || !SamePoint(result.back(), p)) {
       result.push_back(p);
     }
   }
-  // FIXME: Koşul kapalılığı sorgulamıyor; başlangıca dönen açık
-  // polyline'ın son segmenti de siliniyor. closed bilgisini de alalım.
-  // Kapalı poligonda son nokta ilkiyle çakışıyorsa o da tekrardır.
-  while (result.size() > 1 && same(result.front(), result.back())) {
+  // Kapalı konturda ilk noktayla çakışan son nokta tekrardır. Açık yolda ise
+  // başlangıca dönen geçerli bir son segmenttir.
+  while (closed && result.size() > 1 &&
+         SamePoint(result.front(), result.back())) {
     result.pop_back();
   }
   return result;
@@ -653,7 +655,7 @@ std::vector<Point> Tessellator::RemoveDuplicatePoints(
 std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& raw) {
   // Tekrarlı (çakışan) köşeleri ele: sıfır uzunluklu kenarlar kulak testini
   // bozup triangulation'ın sessizce yarıda kesilmesine yol açıyordu (K4).
-  const std::vector<Point> points = RemoveDuplicatePoints(raw);
+  const std::vector<Point> points = RemoveDuplicatePoints(raw, /*closed=*/true);
 
   if (points.size() < 3) {
     return {};
