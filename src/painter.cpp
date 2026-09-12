@@ -631,8 +631,14 @@ void Painter::SetBrush(const Brush& brush) {
   mCurrentState.brush = brush;
 }
 void Painter::SetFont(std::shared_ptr<Font> font) {
-  // FIXME: Flush yok; Painter eski fontun son sahibiyse atlas hemen
-  // siliniyor ve kuyruktaki metin silinmis texture ile ciziliyor.
+  if (font == mCurrentFont) {
+    return;
+  }
+  // Painter eski fontun son sahibiyse atlas bu atamada silinir; kuyruktaki
+  // metin ondan once gonderilmeli.
+  if (mBatcher != nullptr) {
+    mBatcher->Flush();
+  }
   mCurrentFont = std::move(font);
 }
 void Painter::SetBlendMode(BlendMode mode) {

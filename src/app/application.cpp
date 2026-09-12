@@ -279,9 +279,8 @@ int Application::Run() {
   }
   if (!OnInit()) {
     OnShutdown();
-    // FIXME: Painter burada, türeyen sınıfın Image/Font üyelerinden önce
-    // yıkılıyor. Başarılı yoldaki gibi yıkımı ~Application'a bırakalım.
-    Teardown();
+    // Başarılı yoldaki gibi yıkım ~Application'a kalır: Painter, türeyen
+    // sınıfın Image/Font üyelerinden sonra yok edilmeli.
     return 1;
   }
 

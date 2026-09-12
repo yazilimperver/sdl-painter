@@ -746,10 +746,9 @@ class FailingInitApp : public Application {
 
 }  // namespace
 
-// Bulgu A03: SetFont eski fontu hemen bırakıyor. Painter fontun tek sahibiyse
-// atlas, kuyruktaki metin çizilmeden siliniyor. Düzeltmeyle birlikte
-// DISABLED_ kaldırılacak.
-TEST(PainterFont, DISABLED_ReplacingFontKeepsQueuedGlyphsAlive) {
+// Painter fontun tek sahibi olsa bile font değişince kuyruktaki metin, atlas
+// silinmeden çizilmeli.
+TEST(PainterFont, ReplacingFontKeepsQueuedGlyphsAlive) {
   SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
   auto renderer = std::make_unique<DeletedTextureTracker>();
   DeletedTextureTracker* tracker = renderer.get();
@@ -764,6 +763,23 @@ TEST(PainterFont, DISABLED_ReplacingFontKeepsQueuedGlyphsAlive) {
 
   ASSERT_GT(tracker->CountCalls("DrawTextured"), 0);
   EXPECT_EQ(tracker->draws_with_deleted_texture, 0);
+}
+
+// Aynı font tekrar seçilince batch bölünmemeli.
+TEST(PainterFont, SelectingSameFontDoesNotSplitBatch) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
+  TargetHarness h;
+  const auto font = std::make_shared<Font>(font_path, 24);
+  ASSERT_TRUE(font->IsValid());
+  h.painter.SetFont(font);
+
+  h.painter.Begin();
+  h.painter.DrawText(0.0F, 30.0F, "A");
+  h.painter.SetFont(font);
+  h.painter.DrawText(20.0F, 30.0F, "A");
+  h.painter.End();
+
+  EXPECT_EQ(h.mock->draws.size(), 1U);
 }
 
 // Bulgu A11: ölçüm kerning uyguluyor, çizim uygulamıyor; sağa hizalı metin
@@ -795,11 +811,9 @@ TEST(PainterText, DISABLED_RightAlignedTextEndsAtRectEdge) {
   EXPECT_NEAR(RightmostTexturedX(*h.mock), kRectRight + kInkOffset, 2.0F);
 }
 
-// Bulgu A04: OnInit false dönünce Painter hemen yıkılıyor; türeyen sınıfın
-// Image üyesi sonra ölü renderer üzerinden serbest bırakılıyor. Düzeltmeyle
-// birlikte DISABLED_ kaldırılacak.
-TEST(ApplicationLifecycleDeathTest,
-     DISABLED_FailedOnInitReleasesMemberImageSafely) {
+// OnInit false dönse de türeyen sınıfın Image üyesi, Painter'ın renderer'ı
+// yıkılmadan önce serbest bırakılmalı.
+TEST(ApplicationLifecycleDeathTest, FailedOnInitReleasesMemberImageSafely) {
   if (HiddenWindow(RendererBackend::kOpenGL).Get() == nullptr) {
     GTEST_SKIP() << "OpenGL penceresi oluşturulamadı.";
   }
