@@ -253,9 +253,54 @@ float EdgeError(const Vertex& a, const Vertex& b, const Brush& brush) {
   return std::fabs(t_mid - t_lerp);
 }
 
-// FIXME: Bolme karari yalniz kenar orta noktalarindan veriliyor. Koseler
-// ve orta noktalar yaricap disindaysa ucgenin icindeki kucuk gradient diski
-// kayboluyor; asagidaki "hata sifir cikar" varsayimi bu durumda yanlis.
+/// @brief `(b - a) x (p - a)`; ucgen alaninin iki kati, isaretli.
+float Orientation(const Vertex& a, const Vertex& b, float px, float py) {
+  return (b.x - a.x) * (py - a.y) - (b.y - a.y) * (px - a.x);
+}
+
+/// @brief Noktanin ab dogru parcasina mesafesi.
+float DistanceToSegment(float px, float py, const Vertex& a, const Vertex& b) {
+  const float abx = b.x - a.x;
+  const float aby = b.y - a.y;
+  const float len_sq = abx * abx + aby * aby;
+  const float s =
+      len_sq > 0.0F ? ClampUnit(((px - a.x) * abx + (py - a.y) * aby) / len_sq)
+                    : 0.0F;
+  const float dx = a.x + abx * s - px;
+  const float dy = a.y + aby * s - py;
+  return std::sqrt(dx * dx + dy * dy);
+}
+
+/// @brief Ucgendeki gercek en kucuk t ile koselerdeki en kucuk t'nin farki.
+///
+/// Mesafe konveks oldugu icin ucgendeki en buyuk t daima bir kosededir; en
+/// kucuk t ise gradient merkezine en yakin noktadadir. O nokta kose veya kenar
+/// orta noktasi degilse @ref EdgeError onu goremez ve ucgenin icine dusen
+/// kucuk bir gradient diski tamamen kaybolur.
+float HiddenMinimumError(const Vertex& a, const Vertex& b, const Vertex& c,
+                         const Brush& brush) {
+  const float r = brush.GetRadius();
+  if (!(r > 0.0F) || Orientation(a, b, c.x, c.y) == 0.0F) {
+    return 0.0F;
+  }
+  const Point centre = brush.GetStart();
+  const float d1 = Orientation(a, b, centre.x, centre.y);
+  const float d2 = Orientation(b, c, centre.x, centre.y);
+  const float d3 = Orientation(c, a, centre.x, centre.y);
+  const bool has_neg = d1 < 0.0F || d2 < 0.0F || d3 < 0.0F;
+  const bool has_pos = d1 > 0.0F || d2 > 0.0F || d3 > 0.0F;
+  const float distance =
+      (has_neg && has_pos)
+          ? std::min({DistanceToSegment(centre.x, centre.y, a, b),
+                      DistanceToSegment(centre.x, centre.y, b, c),
+                      DistanceToSegment(centre.x, centre.y, c, a)})
+          : 0.0F;
+  const float t_corner = ClampUnit(
+      std::min({GradientT(brush, a.x, a.y), GradientT(brush, b.x, b.y),
+                GradientT(brush, c.x, c.y)}));
+  return t_corner - ClampUnit(distance / r);
+}
+
 /// @brief Radial gradient icin ucgeni hata olcusune gore ozyinelemeli bol.
 ///
 /// Renk mesafeye bagli oldugu icin dogrusal degildir; kirpilmis bolgelerde
@@ -265,9 +310,11 @@ void SubdivideRadial(const Vertex& a, const Vertex& b, const Vertex& c,
                      const Brush& brush, int32_t depth,
                      std::vector<Vertex>& out) {
   constexpr float kTolerance = 0.02F;
-  const bool refine = depth > 0 && (EdgeError(a, b, brush) > kTolerance ||
-                                    EdgeError(b, c, brush) > kTolerance ||
-                                    EdgeError(c, a, brush) > kTolerance);
+  const bool refine =
+      depth > 0 && (EdgeError(a, b, brush) > kTolerance ||
+                    EdgeError(b, c, brush) > kTolerance ||
+                    EdgeError(c, a, brush) > kTolerance ||
+                    HiddenMinimumError(a, b, c, brush) > kTolerance);
   if (!refine) {
     out.push_back(a);
     out.push_back(b);
@@ -283,6 +330,77 @@ void SubdivideRadial(const Vertex& a, const Vertex& b, const Vertex& c,
   SubdivideRadial(ab, bc, ca, brush, depth - 1, out);
 }
 
+/// @brief Radial bolmenin ucgen basina derinlik siniri.
+///
+/// Sabit bir sinir, buyuk bir sekildeki kucuk gradient'i birkac yaprak ucgene
+/// sigdiriyordu. Sinir, yaprak kenari yaricapin dortte birine inene kadar
+/// artar. Bolme yine yalniz hatanin buyuk oldugu yerde yapildigi icin maliyet
+/// disk ve gecis bandiyla sinirli kalir.
+int32_t RadialDepthLimit(const Vertex& a, const Vertex& b, const Vertex& c,
+                         float radius) {
+  constexpr int32_t kMinDepth = 4;
+  constexpr int32_t kMaxDepth = 10;
+  const auto edge = [](const Vertex& p, const Vertex& q) {
+    return std::hypot(q.x - p.x, q.y - p.y);
+  };
+  float leaf = std::max({edge(a, b), edge(b, c), edge(c, a)}) /
+               static_cast<float>(1 << kMinDepth);
+  int32_t depth = kMinDepth;
+  while (depth < kMaxDepth && leaf > radius * 0.25F) {
+    leaf *= 0.5F;
+    ++depth;
+  }
+  return depth;
+}
+
+/// @brief Gradient merkezini iceren ucgeni merkezden bolup sonra bol.
+///
+/// Mesafenin tepe noktasi dogrusal enterpolasyonla temsil edilemez; merkez
+/// bir kose olmadikca, en derin bolmede bile merkezdeki renk komsu koselerin
+/// karisimi olarak kalir. Merkez ucgenin icindeyse ucgen merkezde uce bolunur;
+/// kenara veya koseye cok yakinsa oraya oturtulur, boylece sifir alanli
+/// parca uretilmez.
+void SubdivideRadialAtCentre(const Vertex& a, const Vertex& b, const Vertex& c,
+                             const Brush& brush, int32_t depth,
+                             std::vector<Vertex>& out) {
+  const Point centre = brush.GetStart();
+  const float area = Orientation(a, b, c.x, c.y);
+  if (!(brush.GetRadius() > 0.0F) || area == 0.0F) {
+    SubdivideRadial(a, b, c, brush, depth, out);
+    return;
+  }
+  // Baricentrik agirliklar: her biri, o kosenin yerine merkez konunca kalan
+  // parcanin alan orani.
+  float wa = Orientation(b, c, centre.x, centre.y) / area;
+  float wb = Orientation(c, a, centre.x, centre.y) / area;
+  float wc = Orientation(a, b, centre.x, centre.y) / area;
+  if (wa < 0.0F || wb < 0.0F || wc < 0.0F) {
+    SubdivideRadial(a, b, c, brush, depth, out);
+    return;
+  }
+  constexpr float kSnap = 1e-3F;
+  wa = wa < kSnap ? 0.0F : wa;
+  wb = wb < kSnap ? 0.0F : wb;
+  wc = wc < kSnap ? 0.0F : wc;
+  const float sum = wa + wb + wc;
+  const Vertex p{(a.x * wa + b.x * wb + c.x * wc) / sum,
+                 (a.y * wa + b.y * wb + c.y * wc) / sum};
+  // Merkezden bolmek de bir bolme adimidir; parcalar bir seviye harcar.
+  // Merkez bir koseye oturduysa ucgen bolunmemistir.
+  const int32_t kParts =
+      (wa > 0.0F ? 1 : 0) + (wb > 0.0F ? 1 : 0) + (wc > 0.0F ? 1 : 0);
+  const int32_t kChildDepth = kParts > 1 ? depth - 1 : depth;
+  if (wa > 0.0F) {
+    SubdivideRadial(p, b, c, brush, kChildDepth, out);
+  }
+  if (wb > 0.0F) {
+    SubdivideRadial(a, p, c, brush, kChildDepth, out);
+  }
+  if (wc > 0.0F) {
+    SubdivideRadial(a, b, p, brush, kChildDepth, out);
+  }
+}
+
 /// @brief Gradient dolgu icin ucgenleri gradient sinirlarinda bol.
 ///
 /// Renk vertex'lerde tasindigi icin GPU yalnizca dogrusal enterpolasyon
@@ -291,13 +409,14 @@ void SubdivideRadial(const Vertex& a, const Vertex& b, const Vertex& c,
 /// karisimina indirgenir; bu bolme onu duzeltir.
 std::vector<Vertex> SubdivideForGradient(const std::vector<Vertex>& verts,
                                          const Brush& brush) {
-  constexpr int32_t kMaxDepth = 4;
   std::vector<Vertex> out;
   out.reserve(verts.size());
   for (std::size_t i = 0; i + 2 < verts.size(); i += 3) {
     if (brush.GetType() == BrushType::kRadial) {
-      SubdivideRadial(verts[i], verts[i + 1], verts[i + 2], brush, kMaxDepth,
-                      out);
+      SubdivideRadialAtCentre(verts[i], verts[i + 1], verts[i + 2], brush,
+                              RadialDepthLimit(verts[i], verts[i + 1],
+                                               verts[i + 2], brush.GetRadius()),
+                              out);
       continue;
     }
     // Linear: renk yalnizca t'nin kirpildigi t=0 ve t=1 dogrularinda

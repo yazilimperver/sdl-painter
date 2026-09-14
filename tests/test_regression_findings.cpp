@@ -566,6 +566,68 @@ TEST(PainterGradient, RadialRectHasCenterColor) {
   EXPECT_GT(kCorner.b, 245.0F);
 }
 
+// Bölme kararı yalnız köşelere ve kenar orta noktalarına bakınca, onlara
+// düşmeyen küçük bir gradient diski üçgenin içinde kayboluyordu.
+TEST(PainterGradient, SmallRadialDiscIsNotLostInsideLargeTriangles) {
+  static constexpr float kRadius = 8.0F;
+  // Kırmızıdan maviye: t, mavi kanaldan okunur.
+  const auto sample = [](Point centre, float scale_x, float scale_y,
+                         const Rect& rect, float px, float py) {
+    TargetHarness h;
+    h.painter.SetBrush(Brush::RadialGradient(centre, kRadius, Color::Red(),
+                                             Color::Blue()));
+    h.painter.Begin();
+    h.painter.Scale(scale_x, scale_y);
+    h.painter.FillRect(rect.x, rect.y, rect.w, rect.h);
+    h.painter.End();
+    EXPECT_EQ(h.mock->draws.size(), 1U);
+    return h.mock->draws.empty()
+               ? SampledColor{}
+               : SampleTriangleList(h.mock->draws[0].vertices, px, py);
+  };
+  const auto expect_t = [](const SampledColor& c, float expected_t,
+                           const char* name) {
+    constexpr float kTolerance = 0.05F;
+    ASSERT_TRUE(c.found) << name;
+    EXPECT_NEAR(c.b / 255.0F, expected_t, kTolerance) << name;
+    EXPECT_NEAR(c.r / 255.0F, 1.0F - expected_t, kTolerance) << name;
+  };
+  const Rect kSquare{0.0F, 0.0F, 100.0F, 100.0F};
+
+  // Merkez, köşegenin altındaki üçgenin içinde; hiçbir köşe veya kenar orta
+  // noktası yarıçapın içinde değil.
+  const SampledColor kCentre =
+      sample({25.5F, 50.5F}, 1.0F, 1.0F, kSquare, 25.5F, 50.5F);
+  ASSERT_TRUE(kCentre.found);
+  EXPECT_GT(kCentre.r, 245.0F) << "Merkez kayboldu.";
+  expect_t(sample({25.5F, 50.5F}, 1.0F, 1.0F, kSquare, 29.5F, 50.5F), 0.5F,
+           "merkezden yarıçapın yarısı kadar sağda");
+  expect_t(sample({25.5F, 50.5F}, 1.0F, 1.0F, kSquare, 80.0F, 50.0F), 1.0F,
+           "yarıçapın dışında");
+
+  // Merkez bir üçgende, disk köşegeni geçip komşu üçgene taşıyor.
+  expect_t(sample({25.0F, 32.0F}, 1.0F, 1.0F, kSquare, 28.6F, 28.4F),
+           std::hypot(3.6F, 3.6F) / kRadius, "komşu üçgene taşan disk");
+
+  // Merkez şeklin dışında, disk sol kenarı kesiyor.
+  expect_t(sample({-3.0F, 30.5F}, 1.0F, 1.0F, kSquare, 0.5F, 30.5F),
+           3.5F / kRadius, "şekil kenarını kesen disk");
+
+  // Eşit olmayan ölçek: gradient şekil-yerel uzayda uygulanır, ekranda
+  // yatayda iki kat geniş, dikeyde yarı yüksek bir elips olur.
+  const Rect kTall{0.0F, 0.0F, 50.0F, 200.0F};
+  const SampledColor kScaledCentre =
+      sample({12.75F, 101.0F}, 2.0F, 0.5F, kTall, 25.5F, 50.5F);
+  ASSERT_TRUE(kScaledCentre.found);
+  EXPECT_GT(kScaledCentre.r, 245.0F) << "Ölçekli merkez kayboldu.";
+  expect_t(sample({12.75F, 101.0F}, 2.0F, 0.5F, kTall, 33.5F, 50.5F), 0.5F,
+           "ölçekli, yatay eksen");
+  expect_t(sample({12.75F, 101.0F}, 2.0F, 0.5F, kTall, 25.5F, 52.5F), 0.5F,
+           "ölçekli, dikey eksen");
+  expect_t(sample({12.75F, 101.0F}, 2.0F, 0.5F, kTall, 25.5F, 55.5F), 1.0F,
+           "ölçekli, dikey eksende yarıçapın dışında");
+}
+
 TEST(PainterGradient, LinearRectClampsOutsideSegment) {
   TargetHarness h;
   // Gradient ekseni şeklin içinde bitiyor: 0–25 arası sabit `from`,
