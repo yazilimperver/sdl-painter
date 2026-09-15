@@ -367,10 +367,9 @@ TEST_P(RegressionGpu, DISABLED_TranslucentTargetComposesLikeDirectDraw) {
       << "Ara hedef uzerinden cizim";
 }
 
-// Bulgu A08: bolme karari yalniz kenar orta noktalarindan veriliyor; ucgenin
-// icindeki kucuk gradient diski kayboluyor. Duzeltmeyle birlikte DISABLED_
-// kaldirilacak.
-TEST_P(RegressionGpu, DISABLED_SmallOffCentreRadialGradientKeepsItsCentre) {
+// Bolme karari yalniz kenar orta noktalarina bakinca ucgenin icindeki kucuk
+// gradient diski kayboluyordu.
+TEST_P(RegressionGpu, SmallOffCentreRadialGradientKeepsItsCentre) {
   REQUIRE_BACKEND(be, GetParam());
   Painter& p = *be.painter;
 
@@ -395,9 +394,9 @@ TEST_P(RegressionGpu, DISABLED_SmallOffCentreRadialGradientKeepsItsCentre) {
   EXPECT_TRUE(ColorNear(PixelAt(px, kSize, 80, 50), kBlue, kTolerance));
 }
 
-// Bulgu A09: round cap tam disk; govdeyle ortusen bolge yari saydam renkte
-// iki kez blend ediliyor. Duzeltmeyle birlikte DISABLED_ kaldirilacak.
-TEST_P(RegressionGpu, DISABLED_TranslucentRoundCapBlendsOnce) {
+// Round cap tam disk oldugunda govdeyle ortusen bolge yari saydam renkte iki
+// kez karisiyordu.
+TEST_P(RegressionGpu, TranslucentRoundCapBlendsOnce) {
   REQUIRE_BACKEND(be, GetParam());
   Painter& p = *be.painter;
 

@@ -117,10 +117,13 @@ class Tessellator {
 
   /// @brief Çok noktalı polyline için kalın quad vertex üret.
   ///
-  /// Segmentler bağımsız quad'lar olarak üretilir; iç köşelerde kalan kama
-  /// biçimli boşluklar `join` stiline göre doldurulur. Bu nedenle vertex
-  /// sayısı segment sayısının katı değildir. Kalınlık 1.5 pikselin altındaysa
-  /// birleşim eklenmez (görünmez, israf).
+  /// Her segment bir quad'dır; iç köşelerde gövdeler iç kenarlarının kesişim
+  /// noktasında kırpılır ve dış taraftaki boşluk `join` stiline göre
+  /// doldurulur. Böylece yarı saydam çizgide köşe tek kez karışır. Kırpma
+  /// payı komşu segmentlerden birinin yarısını aşarsa (çok keskin köşe veya
+  /// kısa segment) o köşede gövdeler kırpılmaz ve iç tarafta örtüşür.
+  /// Vertex sayısı segment sayısının katı değildir. Kalınlık 1.5 pikselin
+  /// altındaysa birleşim ve kırpma yapılmaz (görünmez, israf).
   ///
   /// @param cap Yalnızca ilk ve son noktaya uygulanır; ara noktalarda uç
   ///        yoktur, orada birleşim vardır.
@@ -196,14 +199,18 @@ class Tessellator {
                                                 LineCap cap, LineJoin join);
 
   /// @brief Köşeye yuvarlak birleşim diski ekle (merkez + çevre üçgen fanı).
+  ///
+  /// Yalnızca iç tarafta kırpılamayan köşelerde kullanılır (bkz.
+  /// @ref TessellateThickPolyline).
   static void AppendRoundJoin(std::vector<Vertex>& out, const Point& center,
                               float radius);
 
   /// @brief Köşeye miter veya bevel birleşim ekle.
   ///
-  /// Boşluk yalnızca dönüşün dış tarafındadır; iç taraf zaten iki quad'ın
-  /// üst üste binmesiyle doludur. Bu yüzden dış taraf çapraz çarpımın
-  /// işaretinden bulunur ve tek taraf doldurulur.
+  /// Yalnızca iç tarafta kırpılamayan köşelerde kullanılır. Orada boşluk
+  /// yalnızca dönüşün dış tarafındadır; iç taraf iki quad'ın üst üste
+  /// binmesiyle doludur. Bu yüzden dış taraf çapraz çarpımın işaretinden
+  /// bulunur ve tek taraf doldurulur.
   ///
   /// @param prev Köşeden önceki nokta.
   /// @param corner Birleşimin uygulanacağı köşe.
@@ -223,12 +230,17 @@ class Tessellator {
 
   /// @brief Açık uca `cap` stiline göre geometri ekle.
   ///
+  /// Uç geometrisi gövdenin uçtaki iki köşesinden başlar ve gövdeyle yalnızca
+  /// o kenarı paylaşır; yarı saydam renkte örtüşen bölge kalmaz.
+  ///
   /// @param tip Uç noktası.
-  /// @param outward_x `tip`'ten dışarı bakan yön (normalize edilmesi gerekmez).
+  /// @param outward_x `tip`'ten dışarı bakan birim yön.
   /// @param outward_y Aynı yönün y bileşeni.
+  /// @param left Gövdenin uçtaki köşelerinden biri.
+  /// @param right Diğer köşe.
   static void AppendCap(std::vector<Vertex>& out, const Point& tip,
-                        float outward_x, float outward_y, float half_width,
-                        LineCap cap);
+                        float outward_x, float outward_y, const Point& left,
+                        const Point& right, float half_width, LineCap cap);
 
   /// @brief Ear clipping iç implementasyonu.
   static std::vector<Vertex> EarClipping(const std::vector<Point>& raw);

@@ -1,7 +1,10 @@
 #include <gtest/gtest.h>
 
+#include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
+#include <string>
 #include <vector>
 
 #include "sdl_painter/geometry.h"
@@ -989,10 +992,9 @@ TEST(TessellateThickPolyline, OpenPolylineReturningToStartKeepsLastSegment) {
       << "Kapalı çerçevede kapanış segmenti tekrarlandı.";
 }
 
-// Bulgu A09: round cap ve round join tam disk; komşu quad'larla örtüşen bölge
-// yarı saydam renkte birden fazla blend ediliyor. Düzeltmeyle birlikte
-// DISABLED_ kaldırılacak.
-TEST(LineCap, DISABLED_RoundCapDoesNotOverlapLineBody) {
+// Round cap ve round join tam disk olduğunda komşu quad'larla örtüşen bölge
+// yarı saydam renkte birden fazla karışıyordu.
+TEST(LineCap, RoundCapDoesNotOverlapLineBody) {
   const auto v = Tessellator::TessellateThickLine(
       20.0f, 50.0f, 80.0f, 50.0f, 20.0f, sdl_painter::LineCap::kRound);
   EXPECT_EQ(CoverageCount(v, 12.37f, 46.13f), 1);
@@ -1000,7 +1002,7 @@ TEST(LineCap, DISABLED_RoundCapDoesNotOverlapLineBody) {
       << "Uç ile gövdenin kesiştiği bölge";
 }
 
-TEST(LineJoin, DISABLED_RoundJoinDoesNotOverlapSegments) {
+TEST(LineJoin, RoundJoinDoesNotOverlapSegments) {
   const std::vector<Point> pts = {
       {20.0f, 20.0f}, {80.0f, 20.0f}, {80.0f, 80.0f}};
   const auto v = Tessellator::TessellateThickPolyline(
@@ -1008,4 +1010,151 @@ TEST(LineJoin, DISABLED_RoundJoinDoesNotOverlapSegments) {
   EXPECT_EQ(CoverageCount(v, 84.71f, 14.63f), 1);
   EXPECT_EQ(CoverageCount(v, 75.37f, 25.91f), 1)
       << "İç köşede iki segment ve birleşim diski üst üste";
+}
+
+namespace {
+
+/// @brief Noktanın ab doğru parçasına mesafesi.
+/// @param beside En yakın nokta parçanın uçlarından biri değilse true olur.
+double SegmentDistance(double px, double py, const Point& a, const Point& b,
+                       bool* beside) {
+  const double abx = static_cast<double>(b.x) - a.x;
+  const double aby = static_cast<double>(b.y) - a.y;
+  const double s =
+      ((px - a.x) * abx + (py - a.y) * aby) / (abx * abx + aby * aby);
+  *beside = s > 0.0 && s < 1.0;
+  const double t = std::min(1.0, std::max(0.0, s));
+  return std::hypot(a.x + abx * t - px, a.y + aby * t - py);
+}
+
+/// @brief Kalın çizgi mesh'ini bir nokta ızgarasında tarayıp hataları say.
+struct StrokeScan {
+  int32_t overlaps{0};  ///< Birden fazla üçgende kalan nokta.
+  int32_t gaps{0};      ///< Çizginin içinde olup hiçbir üçgende olmayan nokta.
+  int32_t strays{0};    ///< Çizginin erişebileceği mesafenin dışında boyanan.
+};
+
+StrokeScan ScanStroke(const std::vector<Vertex>& v,
+                      const std::vector<Point>& path, float width, bool closed,
+                      sdl_painter::LineCap cap, sdl_painter::LineJoin join) {
+  constexpr double kMargin = 0.5;
+  const double half = width * 0.5;
+  // Miter ucu ve kare ucun köşesi yarım kalınlıktan uzağa erişir.
+  const double reach =
+      half * (join == sdl_painter::LineJoin::kMiter
+                  ? static_cast<double>(sdl_painter::kMiterLimit)
+                  : (cap == sdl_painter::LineCap::kSquare ? std::sqrt(2.0)
+                                                          : 1.0)) +
+      kMargin;
+  const std::size_t kSegments = closed ? path.size() : path.size() - 1;
+
+  StrokeScan scan;
+  // Adımlar ve kaydırma, noktaların üçgen kenarlarına denk gelmemesi için
+  // tam sayı olmayan değerler.
+  for (int32_t iy = 0; iy < 87; ++iy) {
+    for (int32_t ix = 0; ix < 105; ++ix) {
+      const double px = -30.0 + ix * 2.3 + 0.37;
+      const double py = -30.0 + iy * 2.3 + 0.61;
+      double distance = 1e9;
+      bool inside = false;
+      for (std::size_t i = 0; i < kSegments; ++i) {
+        bool beside = false;
+        const double d = SegmentDistance(px, py, path[i],
+                                         path[(i + 1) % path.size()], &beside);
+        distance = std::min(distance, d);
+        inside = inside || (beside && d < half - kMargin);
+      }
+      for (std::size_t k = 0; k < path.size(); ++k) {
+        const bool end = !closed && (k == 0 || k + 1 == path.size());
+        const bool round = end ? cap == sdl_painter::LineCap::kRound
+                               : join == sdl_painter::LineJoin::kRound;
+        inside = inside || (round && std::hypot(px - path[k].x,
+                                                py - path[k].y) <
+                                         half - kMargin);
+      }
+      const int32_t count =
+          CoverageCount(v, static_cast<float>(px), static_cast<float>(py));
+      scan.overlaps += count > 1 ? 1 : 0;
+      scan.gaps += (inside && count == 0) ? 1 : 0;
+      scan.strays += (count > 0 && distance > reach) ? 1 : 0;
+    }
+  }
+  return scan;
+}
+
+}  // namespace
+
+// Gövde, birleşim ve uç parçaları birbirine binmemeli; yarı saydam çizgide her
+// nokta tek kez karışmalı. Aynı taramada çizginin içinde boşluk kalmadığı ve
+// dışına taşan üçgen olmadığı da sınanır.
+TEST(StrokeCoverage, PartsDoNotOverlapOrLeaveGaps) {
+  using sdl_painter::LineCap;
+  using sdl_painter::LineJoin;
+  constexpr float kWidth = 20.0f;
+  const LineJoin kJoins[] = {LineJoin::kMiter, LineJoin::kBevel,
+                             LineJoin::kRound};
+  const LineCap kCaps[] = {LineCap::kButt, LineCap::kSquare, LineCap::kRound};
+  // Dar ve geniş açılı köşeler; hepsinde kırpma payı segmentin yarısından az.
+  const std::vector<Point> kOpen = {
+      {20.0f, 20.0f}, {120.0f, 20.0f}, {60.0f, 90.0f}, {160.0f, 120.0f}};
+  const std::vector<Point> kTriangle = {
+      {20.0f, 20.0f}, {120.0f, 20.0f}, {60.0f, 90.0f}};
+  // Boşluk, komşu kesiklerin uçları köşe çevresinde bile birbirine
+  // değmeyecek kadar uzun.
+  const std::vector<Point> kGentle = {
+      {20.0f, 40.0f}, {120.0f, 40.0f}, {180.0f, 100.0f}};
+  constexpr float kDash[] = {30.0f, 40.0f};
+
+  for (const LineJoin join : kJoins) {
+    for (const LineCap cap : kCaps) {
+      const std::string name = "join=" + std::to_string(static_cast<int>(join)) +
+                               " cap=" + std::to_string(static_cast<int>(cap));
+
+      const StrokeScan open = ScanStroke(
+          Tessellator::TessellateThickPolyline(kOpen, kWidth, cap, join), kOpen,
+          kWidth, false, cap, join);
+      EXPECT_EQ(open.overlaps, 0) << "açık, " << name;
+      EXPECT_EQ(open.gaps, 0) << "açık, " << name;
+      EXPECT_EQ(open.strays, 0) << "açık, " << name;
+
+      const StrokeScan dashed =
+          ScanStroke(Tessellator::TessellateDashedPolyline(
+                         kGentle, kWidth, kDash, 2, false, cap, join),
+                     kGentle, kWidth, false, cap, join);
+      EXPECT_EQ(dashed.overlaps, 0) << "kesikli, " << name;
+      EXPECT_EQ(dashed.strays, 0) << "kesikli, " << name;
+    }
+
+    const std::string name = "join=" + std::to_string(static_cast<int>(join));
+    const StrokeScan closed = ScanStroke(
+        Tessellator::TessellateStrokedPolygon(kTriangle, kWidth, join),
+        kTriangle, kWidth, true, LineCap::kButt, join);
+    EXPECT_EQ(closed.overlaps, 0) << "kapalı, " << name;
+    EXPECT_EQ(closed.gaps, 0) << "kapalı, " << name;
+    EXPECT_EQ(closed.strays, 0) << "kapalı, " << name;
+  }
+}
+
+// Kırpma payı segmentin yarısını aşan köşe örtüşen geometriye düşer; komşu
+// köşe yine kırpılır. İki yol bir arada boşluk bırakmamalı.
+TEST(StrokeCoverage, UntrimmedCornerNextToTrimmedCornerLeavesNoGap) {
+  using sdl_painter::LineCap;
+  using sdl_painter::LineJoin;
+  constexpr float kWidth = 20.0f;
+  // İlk köşe 90°, ardından 18 birimlik segment: kırpma payı 10 > 9. İkinci
+  // köşe 45°: kırpma payı yaklaşık 4.1.
+  const std::vector<Point> kPath = {
+      {20.0f, 50.0f}, {120.0f, 50.0f}, {120.0f, 68.0f}, {150.0f, 98.0f}};
+  for (const LineJoin join :
+       {LineJoin::kMiter, LineJoin::kBevel, LineJoin::kRound}) {
+    for (const LineCap cap : {LineCap::kButt, LineCap::kRound}) {
+      const StrokeScan scan = ScanStroke(
+          Tessellator::TessellateThickPolyline(kPath, kWidth, cap, join), kPath,
+          kWidth, false, cap, join);
+      EXPECT_EQ(scan.gaps, 0) << "join=" << static_cast<int>(join)
+                              << " cap=" << static_cast<int>(cap);
+      EXPECT_EQ(scan.strays, 0) << "join=" << static_cast<int>(join)
+                                << " cap=" << static_cast<int>(cap);
+    }
+  }
 }

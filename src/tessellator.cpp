@@ -17,6 +17,177 @@ bool SamePoint(const Point& a, const Point& b) {
   const float dy = a.y - b.y;
   return (dx * dx + dy * dy) <= kEpsSq;
 }
+
+/// @brief Kalın çizginin tek segmenti: birim yön ve gövdenin dört köşesi.
+///
+/// Sol, yönün +90° döndürülmüş hâlidir. Köşeler birleşimde kırpılabilsin diye
+/// gövde yazılmadan önce burada tutulur.
+struct StrokeSegment {
+  float ux{0.0F};
+  float uy{0.0F};
+  float length{0.0F};
+  Point start_left;
+  Point start_right;
+  Point end_left;
+  Point end_right;
+};
+
+/// @brief a'dan b'ye segmentin yönünü ve kırpılmamış köşelerini hesapla.
+StrokeSegment MakeSegment(const Point& a, const Point& b, float half_width) {
+  const float dx = b.x - a.x;
+  const float dy = b.y - a.y;
+  StrokeSegment s;
+  s.length = std::sqrt(dx * dx + dy * dy);
+  if (s.length < 1e-6F) {
+    return s;
+  }
+  s.ux = dx / s.length;
+  s.uy = dy / s.length;
+  const float nx = -dy / s.length;
+  const float ny = dx / s.length;
+  s.start_left = {a.x + half_width * nx, a.y + half_width * ny};
+  s.start_right = {a.x - half_width * nx, a.y - half_width * ny};
+  s.end_left = {b.x + half_width * nx, b.y + half_width * ny};
+  s.end_right = {b.x - half_width * nx, b.y - half_width * ny};
+  return s;
+}
+
+/// @brief Segment gövdesini iki üçgen olarak yaz.
+///
+/// Kırpılmış gövde de yamuktur (sol ve sağ kenar paralel kalır), yani
+/// konvekstir; aynı köşegenle bölmek her durumda geçerlidir.
+void EmitSegment(const StrokeSegment& s, std::vector<Vertex>& out) {
+  out.emplace_back(s.start_left.x, s.start_left.y);
+  out.emplace_back(s.start_right.x, s.start_right.y);
+  out.emplace_back(s.end_left.x, s.end_left.y);
+  out.emplace_back(s.start_right.x, s.start_right.y);
+  out.emplace_back(s.end_right.x, s.end_right.y);
+  out.emplace_back(s.end_left.x, s.end_left.y);
+}
+
+/// @brief Yuvarlak geometrinin tam tur için segment sayısı.
+///
+/// Yarıçapla ölçeklenir; ince çizgilerde 6 segment yeterli.
+int32_t RoundSegments(float radius) {
+  constexpr int32_t kMinSegments = 6;
+  constexpr int32_t kMaxSegments = 24;
+  return std::clamp(static_cast<int32_t>(radius * 2.0F), kMinSegments,
+                    kMaxSegments);
+}
+
+/// @brief `pivot`'tan bir yaya üçgen fanı ekle.
+///
+/// Yay `centre` merkezli ve `radius` yarıçaplıdır; `first`'ten başlar,
+/// `tangent` yönünde `sweep` radyan döner ve `last`'te biter. Uç noktalar
+/// yeniden hesaplanmaz, verildiği gibi yazılır: komşu gövdeyle ortak kenar
+/// birebir aynı köşelerden geçer, arada boşluk veya örtüşme kalmaz.
+void AppendArcFan(std::vector<Vertex>& out, const Point& pivot,
+                  const Point& centre, const Point& first, const Point& last,
+                  float tangent_x, float tangent_y, float radius, float sweep) {
+  // Küçük pay, tam yarım turda yuvarlamanın fazladan segment eklemesini önler.
+  const int32_t kSegments = std::max(
+      1,
+      static_cast<int32_t>(std::ceil(
+          static_cast<float>(RoundSegments(radius)) * sweep / kTwoPi - 1e-4F)));
+  const float dir_x = (first.x - centre.x) / radius;
+  const float dir_y = (first.y - centre.y) / radius;
+  Point prev = first;
+  for (int32_t i = 1; i <= kSegments; ++i) {
+    Point next = last;
+    if (i < kSegments) {
+      const float a =
+          sweep * static_cast<float>(i) / static_cast<float>(kSegments);
+      const float c = std::cos(a);
+      const float s = std::sin(a);
+      next = {centre.x + radius * (c * dir_x + s * tangent_x),
+              centre.y + radius * (c * dir_y + s * tangent_y)};
+    }
+    out.emplace_back(pivot.x, pivot.y);
+    out.emplace_back(prev.x, prev.y);
+    out.emplace_back(next.x, next.y);
+    prev = next;
+  }
+}
+
+/// @brief Köşeyi iç tarafta kırpıp birleşimi örtüşmeden ekle.
+///
+/// İki gövde köşenin iç tarafında üst üste biner; yarı saydam renkte o bölge
+/// iki kez karışır. Gövdeler iç kenarlarının kesişim noktasında kesilir ve
+/// birleşim bu noktadan dış kenara bir fan olarak eklenir; köşedeki her nokta
+/// tek bir üçgende kalır.
+///
+/// Kırpma payı segmentlerden birinin yarısını aşarsa (çok keskin köşe veya
+/// kısa segment) segmentin iki ucundaki kırpmalar birbirini geçerdi. Geri
+/// dönen köşede de kesişim noktası yoktur. Bu durumlarda hiçbir şey yazılmaz
+/// ve false döner; çağıran örtüşen geometriye düşer.
+///
+/// @return Birleşim yazıldıysa veya gerekmiyorsa (düz devam) true.
+bool AppendTrimmedJoin(std::vector<Vertex>& out, const Point& corner,
+                       StrokeSegment& before, StrokeSegment& after,
+                       float half_width, LineJoin join) {
+  if (before.length < 1e-6F || after.length < 1e-6F) {
+    return false;
+  }
+  const float cross = before.ux * after.uy - before.uy * after.ux;
+  const float dot = before.ux * after.ux + before.uy * after.uy;
+  if (std::fabs(cross) < 1e-6F) {
+    if (dot < 0.0F) {
+      return false;
+    }
+    // Düz devam: boşluk yok. Gövdeler aynı kenarı birebir paylaşsın.
+    after.start_left = before.end_left;
+    after.start_right = before.end_right;
+    return true;
+  }
+
+  // Dönüş açısı θ ise kırpma payı yarım kalınlık * tan(θ/2).
+  const float trim = half_width * std::fabs(cross) / (1.0F + dot);
+  if (!(trim <= 0.5F * std::min(before.length, after.length))) {
+    return false;
+  }
+
+  // Dış taraf dönüşün tersidir: sola dönüşte sağ, sağa dönüşte sol.
+  const bool outer_is_left = cross < 0.0F;
+  const float inner_side = outer_is_left ? -1.0F : 1.0F;
+  const Point inner{
+      corner.x - inner_side * half_width * before.uy - trim * before.ux,
+      corner.y + inner_side * half_width * before.ux - trim * before.uy};
+  const Point a = outer_is_left ? before.end_left : before.end_right;
+  const Point b = outer_is_left ? after.start_left : after.start_right;
+  if (outer_is_left) {
+    before.end_right = inner;
+    after.start_right = inner;
+  } else {
+    before.end_left = inner;
+    after.start_left = inner;
+  }
+
+  if (join == LineJoin::kRound) {
+    AppendArcFan(out, inner, corner, a, b, before.ux, before.uy, half_width,
+                 std::atan2(std::fabs(cross), dot));
+    return true;
+  }
+  if (join == LineJoin::kMiter) {
+    // Miter noktası iki dış kenarın kesişimi: birinci dış kenarın köşeden
+    // kırpma payı kadar uzantısı.
+    const float kRatio =
+        std::sqrt(1.0F + (trim / half_width) * (trim / half_width));
+    if (kRatio <= kMiterLimit) {
+      const Point m{a.x + trim * before.ux, a.y + trim * before.uy};
+      out.emplace_back(inner.x, inner.y);
+      out.emplace_back(a.x, a.y);
+      out.emplace_back(m.x, m.y);
+      out.emplace_back(inner.x, inner.y);
+      out.emplace_back(m.x, m.y);
+      out.emplace_back(b.x, b.y);
+      return true;
+    }
+  }
+  out.emplace_back(inner.x, inner.y);
+  out.emplace_back(a.x, a.y);
+  out.emplace_back(b.x, b.y);
+  return true;
+}
 }  // namespace
 
 std::vector<Vertex> Tessellator::TessellateFilledRect(float x, float y, float w,
@@ -246,83 +417,47 @@ std::vector<Vertex> Tessellator::TessellateThickLine(float x1, float y1,
                                                      float x2, float y2,
                                                      float line_width,
                                                      LineCap cap) {
-  float dx = x2 - x1;
-  float dy = y2 - y1;
-  float len = std::sqrt(dx * dx + dy * dy);
-  if (len < 1e-6F) {
+  const float hw = line_width * 0.5F;
+  const StrokeSegment seg = MakeSegment(Point{x1, y1}, Point{x2, y2}, hw);
+  if (seg.length < 1e-6F) {
     return {};
   }
 
-  float nx = -dy / len;
-  float ny = dx / len;
-  float hw = line_width * 0.5F;
-
-  // clang-format off
-  float p0x = x1 + hw * nx;  float p0y = y1 + hw * ny;  // A üst
-  float p1x = x1 - hw * nx;  float p1y = y1 - hw * ny;  // A alt
-  float p2x = x2 + hw * nx;  float p2y = y2 + hw * ny;  // B üst
-  float p3x = x2 - hw * nx;  float p3y = y2 - hw * ny;  // B alt
-
-  std::vector<Vertex> result = {
-      {p0x, p0y}, {p1x, p1y}, {p2x, p2y},
-      {p1x, p1y}, {p3x, p3y}, {p2x, p2y},
-  };
-  // clang-format on
-
+  std::vector<Vertex> result;
+  EmitSegment(seg, result);
   if (cap != LineCap::kButt) {
-    const float ux = dx / len;
-    const float uy = dy / len;
-    AppendCap(result, Point{x1, y1}, -ux, -uy, hw, cap);
-    AppendCap(result, Point{x2, y2}, ux, uy, hw, cap);
+    AppendCap(result, Point{x1, y1}, -seg.ux, -seg.uy, seg.start_left,
+              seg.start_right, hw, cap);
+    AppendCap(result, Point{x2, y2}, seg.ux, seg.uy, seg.end_left,
+              seg.end_right, hw, cap);
   }
   return result;
 }
 
 void Tessellator::AppendCap(std::vector<Vertex>& out, const Point& tip,
-                            float outward_x, float outward_y, float half_width,
-                            LineCap cap) {
-  if (cap == LineCap::kButt) {
-    return;
-  }
+                            float outward_x, float outward_y, const Point& left,
+                            const Point& right, float half_width, LineCap cap) {
   if (cap == LineCap::kRound) {
-    // FIXME: Diskin yarısı quad ile örtüşüyor; yarı saydam renkte bu
-    // bölge iki kez blend ediliyor. outward yönünde yarım disk üretelim.
-    // Tam disk: yarısı zaten quad'ın altında kalır. Yarım disk üretmek
-    // vertex sayısını yarıya indirirdi ama açı aralığını yön vektöründen
-    // hesaplamayı gerektirir; kazanç, birkaç üçgen için karmaşıklığa değmez.
-    AppendRoundJoin(out, tip, half_width);
+    // Gövdenin dışında kalan yarım disk: bir köşeden dışarı doğru dönüp
+    // diğer köşede biter.
+    AppendArcFan(out, tip, tip, left, right, outward_x, outward_y, half_width,
+                 kTwoPi * 0.5F);
     return;
   }
-  // Kare uç: çizgiyi yarım kalınlık kadar uzatan ek bir quad.
-  // Yön vektörü burada normalize edilir; çağıranların hazır birim vektör
-  // tutmak zorunda kalmaması için (polyline uçlarında elde ham fark var).
-  const float len = std::sqrt(outward_x * outward_x + outward_y * outward_y);
-  if (len < 1e-6F) {
+  if (cap != LineCap::kSquare) {
     return;
   }
-  outward_x /= len;
-  outward_y /= len;
-
-  const float nx = -outward_y;
-  const float ny = outward_x;
-  const float ex = tip.x + outward_x * half_width;
-  const float ey = tip.y + outward_y * half_width;
-
-  const float ax = tip.x + nx * half_width;
-  const float ay = tip.y + ny * half_width;
-  const float bx = tip.x - nx * half_width;
-  const float by = tip.y - ny * half_width;
-  const float cx = ex + nx * half_width;
-  const float cy = ey + ny * half_width;
-  const float dx2 = ex - nx * half_width;
-  const float dy2 = ey - ny * half_width;
-
-  out.emplace_back(ax, ay);
-  out.emplace_back(bx, by);
-  out.emplace_back(cx, cy);
-  out.emplace_back(bx, by);
-  out.emplace_back(dx2, dy2);
-  out.emplace_back(cx, cy);
+  // Kare uç: gövdeyi yarım kalınlık kadar uzatan ek bir quad.
+  const Point far_left{left.x + outward_x * half_width,
+                       left.y + outward_y * half_width};
+  const Point far_right{right.x + outward_x * half_width,
+                        right.y + outward_y * half_width};
+  out.emplace_back(left.x, left.y);
+  out.emplace_back(right.x, right.y);
+  out.emplace_back(far_left.x, far_left.y);
+  out.emplace_back(right.x, right.y);
+  out.emplace_back(far_right.x, far_right.y);
+  out.emplace_back(far_left.x, far_left.y);
 }
 
 void Tessellator::AppendMiterOrBevelJoin(std::vector<Vertex>& out,
@@ -398,12 +533,7 @@ void Tessellator::AppendRoundJoin(std::vector<Vertex>& out, const Point& center,
   // Yuvarlak birleşim (round join): köşeye kalınlığın yarısı yarıçapında bir
   // disk yerleştirilir. Miter'a göre avantajı, keskin açılarda sivri uç
   // (spike) üretmemesi ve miter limit ayarı gerektirmemesi.
-  //
-  // Segment sayısı yarıçapla ölçeklenir; ince çizgilerde 6 segment yeterli.
-  constexpr int32_t kMinJoinSegments = 6;
-  constexpr int32_t kMaxJoinSegments = 24;
-  const int32_t kSegments = std::clamp(static_cast<int32_t>(radius * 2.0F),
-                                       kMinJoinSegments, kMaxJoinSegments);
+  const int32_t kSegments = RoundSegments(radius);
 
   for (int32_t i = 0; i < kSegments; ++i) {
     const float a0 =
@@ -544,15 +674,13 @@ std::vector<Vertex> Tessellator::TessellatePolyline(
     return {};
   }
 
-  std::vector<Vertex> result;
+  const float kRadius = line_width * 0.5F;
   const std::size_t kSegmentCount = closed ? points.size() : points.size() - 1;
-  result.reserve(kSegmentCount * 6);
-
+  std::vector<StrokeSegment> segments;
+  segments.reserve(kSegmentCount);
   for (std::size_t i = 0; i < kSegmentCount; ++i) {
-    const Point& a = points[i];
-    const Point& b = points[(i + 1) % points.size()];
-    auto seg = TessellateThickLine(a.x, a.y, b.x, b.y, line_width);
-    result.insert(result.end(), seg.begin(), seg.end());
+    segments.push_back(
+        MakeSegment(points[i], points[(i + 1) % points.size()], kRadius));
   }
 
   // Birleşimler: segmentler bağımsız quad'lar olduğundan köşelerde kama
@@ -560,35 +688,55 @@ std::vector<Vertex> Tessellator::TessellatePolyline(
   // geometri eklemek yalnızca vertex israfı olur. Aynı eşik uçlar için de
   // geçerli: yarım pikselden kısa bir uzatma görünmez.
   constexpr float kMinJoinWidth = 1.5F;
-  if (line_width >= kMinJoinWidth) {
-    const float kRadius = line_width * 0.5F;
+  const bool kWithJoins = line_width >= kMinJoinWidth;
+  std::vector<Vertex> joins;
+  if (kWithJoins) {
     // Açık polyline'da yalnızca iç köşeler; kapalı poligonda tüm köşeler
     // (ilk köşe de son segmentin bitişidir).
     const std::size_t kFirst = closed ? 0 : 1;
     const std::size_t kLast = closed ? points.size() : points.size() - 1;
     for (std::size_t i = kFirst; i < kLast; ++i) {
-      // FIXME: Tam disk, iki segment quad'ının zaten örtüştüğü köşeye
-      // biniyor; yarı saydam renkte köşe üç kez blend ediliyor.
+      // Birleşim, gövdelerin köşelerini de kırptığı için gövdeler yazılmadan
+      // önce kurulur.
+      if (AppendTrimmedJoin(joins, points[i],
+                            segments[(i + kSegmentCount - 1) % kSegmentCount],
+                            segments[i], kRadius, join)) {
+        continue;
+      }
+      // Kırpılamayan köşe: gövdeler iç tarafta örtüşür, yalnızca dış taraftaki
+      // boşluk doldurulur.
       if (join == LineJoin::kRound) {
-        AppendRoundJoin(result, points[i], kRadius);
+        AppendRoundJoin(joins, points[i], kRadius);
       } else {
         const Point& prev = points[(i + points.size() - 1) % points.size()];
         const Point& next = points[(i + 1) % points.size()];
-        AppendMiterOrBevelJoin(result, prev, points[i], next, kRadius,
+        AppendMiterOrBevelJoin(joins, prev, points[i], next, kRadius,
                                join == LineJoin::kMiter);
       }
     }
+  }
 
-    // Uçlar yalnızca açık geometride ve yalnızca iki uç noktada.
-    if (!closed && cap != LineCap::kButt) {
-      const Point& head = points.front();
-      const Point& after_head = points[1];
-      const Point& tail = points.back();
-      const Point& before_tail = points[points.size() - 2];
-      AppendCap(result, head, head.x - after_head.x, head.y - after_head.y,
-                kRadius, cap);
-      AppendCap(result, tail, tail.x - before_tail.x, tail.y - before_tail.y,
-                kRadius, cap);
+  std::vector<Vertex> result;
+  result.reserve(kSegmentCount * 6 + joins.size());
+  for (const StrokeSegment& s : segments) {
+    if (s.length >= 1e-6F) {
+      EmitSegment(s, result);
+    }
+  }
+  result.insert(result.end(), joins.begin(), joins.end());
+
+  // Uçlar yalnızca açık geometride ve yalnızca iki uç noktada. Açık yolda
+  // birleşim ilk segmentin başına ve son segmentin sonuna dokunmaz.
+  if (kWithJoins && !closed && cap != LineCap::kButt) {
+    const StrokeSegment& head = segments.front();
+    const StrokeSegment& tail = segments.back();
+    if (head.length >= 1e-6F) {
+      AppendCap(result, points.front(), -head.ux, -head.uy, head.start_left,
+                head.start_right, kRadius, cap);
+    }
+    if (tail.length >= 1e-6F) {
+      AppendCap(result, points.back(), tail.ux, tail.uy, tail.end_left,
+                tail.end_right, kRadius, cap);
     }
   }
 
