@@ -179,7 +179,8 @@ void OpenGLRenderer::CollectGpuTime() {
 
 void OpenGLRenderer::BeginFrame() {
   // Not: Kendi context'ini secmiyor; ikinci bir Painter olusturulunca
-  // bu renderer'in GL cagrilari onun context'ine gidiyor. Şu an için kararırımız tek piantered yaşaması.
+  // bu renderer'in GL cagrilari onun context'ine gidiyor. Surec basina tek
+  // Painter destekleniyor (bkz. painter.h).
   if (mTimerQueries[0] == 0) {
     return;
   }
@@ -271,6 +272,15 @@ void OpenGLRenderer::DrawTriangles(const std::vector<Vertex>& vertices) {
 }
 
 void OpenGLRenderer::SetBlendMode(BlendMode mode) {
+  mBlendMode = mode;
+  ApplyBlend(mode, false);
+}
+
+void OpenGLRenderer::ApplyBlend(BlendMode mode, bool premultiplied_src) {
+  // Hedef dokusunda renk alfayla carpilmis birikir; renk kaynak faktoru
+  // SRC_ALPHA kalirsa alfa ikinci kez carpilir (bkz. vk_blend.h).
+  const GLenum kSrcColor = premultiplied_src ? GL_ONE : GL_SRC_ALPHA;
+
   // Neden glBlendFunc degil de glBlendFuncSeparate:
   // glBlendFunc alfa kanalina da renk faktorlerini uygular. Vulkan tarafinda
   // ise alfa faktorleri ayri alanlardir (srcAlphaBlendFactor /
@@ -288,7 +298,7 @@ void OpenGLRenderer::SetBlendMode(BlendMode mode) {
       glEnable(GL_BLEND);
       // Kaynak alfasiyla olceklenip eklenir: ust uste binen parlak nesneler
       // birbirini soner degil, parlatir. Alfa da birikir.
-      glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE, GL_ONE, GL_ONE);
+      glBlendFuncSeparate(kSrcColor, GL_ONE, GL_ONE, GL_ONE);
       return;
     case BlendMode::kMultiply:
       glEnable(GL_BLEND);
@@ -297,7 +307,7 @@ void OpenGLRenderer::SetBlendMode(BlendMode mode) {
     case BlendMode::kAlpha:
     default:
       glEnable(GL_BLEND);
-      glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_ONE,
+      glBlendFuncSeparate(kSrcColor, GL_ONE_MINUS_SRC_ALPHA, GL_ONE,
                           GL_ONE_MINUS_SRC_ALPHA);
       return;
   }
@@ -421,6 +431,11 @@ void OpenGLRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
   glActiveTexture(GL_TEXTURE0);
   glBindTexture(GL_TEXTURE_2D, static_cast<uint32_t>(texture));
 
+  const bool kFromTarget = IsRenderTargetTexture(texture);
+  if (kFromTarget) {
+    ApplyBlend(mBlendMode, true);
+  }
+
   glBindVertexArray(mTexturedVao);
   glBindBuffer(GL_ARRAY_BUFFER, mTexturedVbo);
   glBufferData(
@@ -430,6 +445,19 @@ void OpenGLRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
   glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(vertices.size()));
   glBindVertexArray(0);
   glBindTexture(GL_TEXTURE_2D, 0);
+
+  if (kFromTarget) {
+    ApplyBlend(mBlendMode, false);
+  }
+}
+
+bool OpenGLRenderer::IsRenderTargetTexture(TextureHandle texture) const {
+  for (const auto& entry : mRenderTargets) {
+    if (static_cast<TextureHandle>(entry.second.texture) == texture) {
+      return true;
+    }
+  }
+  return false;
 }
 
 RenderTargetHandle OpenGLRenderer::CreateRenderTarget(int32_t width,

@@ -35,6 +35,7 @@ using sdl_painter::Brush;
 using sdl_painter::Color;
 using sdl_painter::Font;
 using sdl_painter::FrameStats;
+using sdl_painter::Glyph;
 using sdl_painter::Image;
 using sdl_painter::kInvalidRenderTarget;
 using sdl_painter::MockRenderer;
@@ -45,6 +46,7 @@ using sdl_painter::RendererBackend;
 using sdl_painter::RenderTarget;
 using sdl_painter::TexturedVertex;
 using sdl_painter::TextureHandle;
+using sdl_painter::TextWrap;
 using sdl_painter::Vertex;
 using sdl_painter::testing::FramePolicy;
 using sdl_painter::testing::HiddenWindow;
@@ -779,6 +781,24 @@ float RightmostTexturedX(const RecordingTargetRenderer& renderer) {
   return right;
 }
 
+/// @brief Kaydedilen çizimlerdeki `index`. glyph dörtgeninin sol kenarı.
+///
+/// Her glyph 6 vertex'lik bir dörtgendir ve çizim sırasıyla kaydedilir.
+float GlyphQuadLeft(const RecordingTargetRenderer& renderer,
+                    std::size_t index) {
+  std::vector<TexturedVertex> all;
+  for (const auto& draw : renderer.draws) {
+    all.insert(all.end(), draw.textured_vertices.begin(),
+               draw.textured_vertices.end());
+  }
+  float left = std::numeric_limits<float>::infinity();
+  for (std::size_t i = index * 6U; i < (index + 1U) * 6U && i < all.size();
+       ++i) {
+    left = std::min(left, all[i].x);
+  }
+  return left;
+}
+
 /// @brief Üye Image'ını OnInit'te GPU'ya yükleyip başlatmayı reddeden uygulama.
 class FailingInitApp : public Application {
  public:
@@ -844,9 +864,9 @@ TEST(PainterFont, SelectingSameFontDoesNotSplitBatch) {
   EXPECT_EQ(h.mock->draws.size(), 1U);
 }
 
-// Bulgu A11: ölçüm kerning uyguluyor, çizim uygulamıyor; sağa hizalı metin
-// dikdörtgenin dışına taşıyor. Düzeltmeyle birlikte DISABLED_ kaldırılacak.
-TEST(PainterText, DISABLED_RightAlignedTextEndsAtRectEdge) {
+// Ölçüm kerning uyguluyor, çizim uygulamıyordu; sağa hizalı metin
+// dikdörtgenin dışına taşıyordu (432, beklenen 400).
+TEST(PainterText, RightAlignedTextEndsAtRectEdge) {
   SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
   TargetHarness h;
   h.painter.SetFont(std::make_shared<Font>(font_path, 48));
@@ -871,6 +891,59 @@ TEST(PainterText, DISABLED_RightAlignedTextEndsAtRectEdge) {
   h.painter.End();
 
   EXPECT_NEAR(RightmostTexturedX(*h.mock), kRectRight + kInkOffset, 2.0F);
+}
+
+// Çizim, ölçümle aynı kerning'i uygulamalı: ikinci glyph, birincinin
+// advance'i artı çiftin kerning'i kadar ilerde başlar.
+TEST(PainterText, DrawingAppliesKerning) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
+  TargetHarness h;
+  h.painter.SetFont(std::make_shared<Font>(font_path, 48));
+  const Font& font = *h.painter.GetFont();
+  ASSERT_TRUE(font.IsValid());
+
+  h.painter.Begin();
+  h.painter.DrawText(0.0F, 60.0F, "V");
+  h.painter.End();
+  const float kLoneV = GlyphQuadLeft(*h.mock, 0);
+
+  h.mock->draws.clear();
+  h.painter.Begin();
+  h.painter.DrawText(0.0F, 60.0F, "AV");
+  h.painter.End();
+
+  const Glyph* a = font.GetGlyph(*h.mock, U'A');
+  ASSERT_NE(a, nullptr);
+  EXPECT_FLOAT_EQ(GlyphQuadLeft(*h.mock, 1) - kLoneV,
+                  static_cast<float>(a->advance + font.Kerning(U'A', U'V')));
+}
+
+// Kaydırmayla yeni satıra geçen glyph, önceki satırın son karakteriyle
+// kerning almamalı.
+TEST(PainterText, KerningRestartsOnWrappedLine) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
+  TargetHarness h;
+  h.painter.SetFont(std::make_shared<Font>(font_path, 48));
+  const Font& font = *h.painter.GetFont();
+  ASSERT_TRUE(font.IsValid());
+
+  int32_t a_w = 0;
+  int32_t a_h = 0;
+  ASSERT_TRUE(font.MeasureText("A", a_w, a_h));
+  const Rect kRect{0.0F, 0.0F, static_cast<float>(a_w) + 1.0F, 200.0F};
+  ASSERT_EQ(h.painter.CountTextLines("AV", kRect.w, TextWrap::kWord), 2U);
+
+  h.painter.Begin();
+  h.painter.DrawText(kRect, "V", Alignment::kLeft, TextWrap::kWord);
+  h.painter.End();
+  const float kLoneV = GlyphQuadLeft(*h.mock, 0);
+
+  h.mock->draws.clear();
+  h.painter.Begin();
+  h.painter.DrawText(kRect, "AV", Alignment::kLeft, TextWrap::kWord);
+  h.painter.End();
+
+  EXPECT_FLOAT_EQ(GlyphQuadLeft(*h.mock, 1), kLoneV);
 }
 
 // OnInit false dönse de türeyen sınıfın Image üyesi, Painter'ın renderer'ı

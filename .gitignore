@@ -27,6 +27,8 @@ cmake-build-*/
 .claude/
 .localllm/
 .codex/
+AGENTS.md
+
 
 # OS
 .DS_Store

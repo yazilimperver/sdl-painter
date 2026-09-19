@@ -206,6 +206,17 @@ float ClampUnit(float t) noexcept {
   return t < 0.0F ? 0.0F : (t > 1.0F ? 1.0F : t);
 }
 
+/// @brief RGB'yi `k` ile carp, alfayi koru.
+///
+/// Hedeflerde renk alfayla carpilmis (premultiplied) birikir; hedefi temizleme
+/// rengi ve hedefi cizerken kullanilan tint bu bicime getirilir.
+Color ScaleRgb(const Color& c, float k) noexcept {
+  const auto kScale = [k](uint8_t v) {
+    return static_cast<uint8_t>(std::lround(static_cast<float>(v) * k));
+  };
+  return Color{kScale(c.r), kScale(c.g), kScale(c.b), c.a};
+}
+
 /// @brief Cokgeni `t = limit` sinirina gore kirp (yalnizca linear gradient).
 ///
 /// Linear'de esit-t yerleri dogru oldugu icin bu bir yari-duzlem kirpmasidir.
@@ -740,6 +751,10 @@ void Painter::Clear(const Color& color) {
   if (mBatcher != nullptr) {
     mBatcher->Flush();
   }
+  if (mActiveTarget != kInvalidRenderTarget) {
+    mRenderer->Clear(ScaleRgb(color, static_cast<float>(color.a) / 255.0F));
+    return;
+  }
   mRenderer->Clear(color);
 }
 
@@ -1244,10 +1259,18 @@ void Painter::DrawTextLine(float x, float y, const std::string& text) {
 
   const float kBaselineY = y;
 
+  // Kalem konumlari Font::MeasureText ile ayni hesaplanir; hizalama ve
+  // kaydirma olculen genisligi kullandigi icin ikisi ayrismamali.
+  char32_t previous = 0;
   for (size_t i = 0; i < text.size();) {
     std::size_t advance = 0;
     char32_t c = detail::DecodeUTF8(text.c_str() + i, text.size() - i, advance);
     i += advance;
+
+    if (previous != 0) {
+      current_x += static_cast<float>(mCurrentFont->Kerning(previous, c));
+    }
+    previous = c;
 
     const Glyph* glyph = mCurrentFont->GetGlyph(*mRenderer, c);
     if (glyph == nullptr) {
@@ -1263,7 +1286,11 @@ void Painter::DrawTextLine(float x, float y, const std::string& text) {
 
     // Baseline tabanlı çizim:
     // y: baseline - glyph'in baseline'dan yukarı olan yüksekliği
-    const float kGx0 = current_x + static_cast<float>(glyph->bearing_x);
+    // x: glyph yüzeyi kalem konumundan başlar, mürekkep içinde bearing kadar
+    // sağdadır; yalnız negatif bearing yüzeyi kalemin soluna taşır (bkz.
+    // Font::GetGlyph). Bearing'i yeniden eklemek glyph'i sağa kaydırıyordu.
+    const float kGx0 =
+        current_x + static_cast<float>(std::min(0, glyph->bearing_x));
     const float kGy0 = kBaselineY - static_cast<float>(glyph->bearing_y);
     const float kGx1 = kGx0 + static_cast<float>(glyph->width);
     const float kGy1 = kGy0 + static_cast<float>(glyph->height);
@@ -1697,10 +1724,13 @@ void Painter::DrawRenderTarget(const RenderTarget& target,
   if (kTexture == kInvalidTexture) {
     return;
   }
-  // FIXME: Hedefte premultiplied renk birikiyor ama burada normal Image
-  // gibi straight-alpha ile tekrar alfa carpiliyor; alfa 128 kirmizi dogrudan
-  // 128, hedef uzerinden 64 veriyor. Hedef icin ayri bir blend yolu ekleyelim.
-  PushTexturedQuad(kTexture, 0.0F, 0.0F, 1.0F, 1.0F, dest_rect, tint, flip);
+  // Renderer hedef dokusunu premultiplied karistirir (renk faktoru ONE).
+  // Tint alfasi ve opaklik shader'da yalniz alfayi carptigi icin RGB'ye
+  // burada uygulanir.
+  const float kScale =
+      (static_cast<float>(tint.a) / 255.0F) * mCurrentState.opacity;
+  PushTexturedQuad(kTexture, 0.0F, 0.0F, 1.0F, 1.0F, dest_rect,
+                   ScaleRgb(tint, kScale), flip);
 }
 
 bool Painter::ReadRenderTarget(const RenderTarget& target,

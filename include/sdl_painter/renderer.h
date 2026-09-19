@@ -55,6 +55,9 @@ enum class BlendMode : uint8_t {
   kMultiply,
   /// @brief Karıştırma kapalı — kaynak rengi olduğu gibi yazılır, alfa
   ///        dikkate alınmaz.
+  ///
+  /// Bir çizim hedefine yarı saydam renkle yazılan değer alfayla
+  /// çarpılmaz; hedef sonra çizildiğinde o bölge daha parlak görünür.
   kNone,
 };
 
@@ -204,6 +207,11 @@ class IRenderer {
   virtual void DestroyRenderTarget(RenderTargetHandle handle) { (void)handle; }
 
   /// @brief Hedefin içeriğini örneklemek için kullanılacak texture.
+  ///
+  /// Hedefte renk alfayla çarpılmış (premultiplied) birikir. Bu texture
+  /// @ref DrawTextured ile çizilirken `kAlpha` ve `kAdditive` renk kaynak
+  /// faktörü olarak `SRC_ALPHA` yerine `ONE` kullanmalıdır; vertex tint'i de
+  /// aynı biçimde verilmelidir (RGB, tint alfası ve opaklıkla çarpılmış).
   ///
   /// @return @ref DrawTextured'a verilebilecek tanımlayıcı; hedef geçersizse
   ///         @ref kInvalidTexture.

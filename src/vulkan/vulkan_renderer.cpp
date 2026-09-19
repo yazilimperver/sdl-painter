@@ -789,10 +789,14 @@ void VulkanRenderer::DrawTextured(const std::vector<TexturedVertex>& vertices,
   pc.tint_color[3] = 1.0F;
   pc.opacity = mOpacity;
 
+  // Descriptor set bulunduysa handle ya bir dokunun ya da bir hedefin; hedefin
+  // renk image'inda renk alfayla carpilmis birikir.
+  const bool kFromTarget = mTextures.find(texture) == mTextures.end();
+
   VkCommandBuffer cmd = mFrameSync->GetCommandBuffer(mCurrentFrame);
 
   vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS,
-                    pipeline->GetPipeline(mBlendMode));
+                    pipeline->GetPipeline(mBlendMode, kFromTarget));
 
   // Not: descriptor set birincil pipeline'in havuzundan gelmis olabilir. Iki
   // pipeline layout'u aynı şekilde tanimlandigi icin Vulkan onlari set 0 icin

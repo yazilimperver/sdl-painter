@@ -55,8 +55,12 @@ class VulkanTexturedPipeline {
   ///
   /// Vulkan'da blend, pipeline'ın sabit durumudur; mod başına ayrı bir
   /// varyant üretilir (bkz. vk_blend.h).
-  VkPipeline GetPipeline(BlendMode mode = BlendMode::kAlpha) const {
-    return mPipelines[vk_detail::BlendIndex(mode)];
+  /// @param premultiplied_src Doku bir hedefin renk dokusu mu (rengi alfayla
+  ///        önceden çarpılmış).
+  VkPipeline GetPipeline(BlendMode mode = BlendMode::kAlpha,
+                         bool premultiplied_src = false) const {
+    return mPipelines[(premultiplied_src ? kBlendModeCount : 0U) +
+                      vk_detail::BlendIndex(mode)];
   }
   VkPipelineLayout GetLayout() const { return mLayout; }
   VkDescriptorSetLayout GetDescriptorSetLayout() const {
@@ -71,8 +75,11 @@ class VulkanTexturedPipeline {
                                            const uint32_t* code,
                                            std::size_t byte_size);
 
+  /// @brief Varyant sayısı: her mod için düz ve premultiplied kaynak.
+  static constexpr std::size_t kPipelineCount = kBlendModeCount * 2U;
+
   VkDevice mDevice{VK_NULL_HANDLE};  // RAII için Init'te saklanır
-  std::array<VkPipeline, kBlendModeCount> mPipelines{};
+  std::array<VkPipeline, kPipelineCount> mPipelines{};
   VkPipelineLayout mLayout{VK_NULL_HANDLE};
   VkDescriptorSetLayout mDescriptorSetLayout{VK_NULL_HANDLE};
   VkDescriptorPool mDescriptorPool{VK_NULL_HANDLE};

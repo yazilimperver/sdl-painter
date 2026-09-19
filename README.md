@@ -65,8 +65,8 @@ can think in **shapes** instead of vertices.
 | **Anti-aliasing** | 4× MSAA, **OpenGL only**, and only through `Application` (it is a GL window attribute). The Vulkan backend and every render target are single-sample. |
 | **Viewport** | Draw into a sub-rectangle with local coordinates — split screen, minimaps |
 | **Image** | PNG / JPG loading (stb_image), source→destination scaling, atlas slicing, tint, mirroring, nearest/linear filtering, in-place texture update, free-form textured meshes |
-| **Text** | SDL_ttf 3.x, glyph cache, left/center/right alignment, multi-line and word wrap |
-| **Backend** | OpenGL 3.3 Core and Vulkan 1.1 — interchangeable through `IRenderer` |
+| **Text** | SDL_ttf 3.x, glyph cache, left/center/right alignment, multi-line and word wrap, kerning from the font's `kern` table. Left-to-right only: no ligatures, bidirectional text or complex shaping |
+| **Backend** | OpenGL 3.3 Core and Vulkan 1.1 — interchangeable through `IRenderer`. One `Painter` per process at a time; multiple GL contexts are not supported |
 
 ## Blog Posts
 

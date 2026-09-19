@@ -19,7 +19,14 @@
 namespace sdl_painter::vk_detail {
 
 /// @brief Verilen karıştırma modu için renk eki (attachment) durumu.
-inline VkPipelineColorBlendAttachmentState BlendAttachmentFor(BlendMode mode) {
+///
+/// @param premultiplied_src Kaynak rengi alfayla önceden çarpılmış mı. Hedef
+///        dokusunda renk bu biçimde birikir; `kAlpha` ve `kAdditive` onu
+///        `SRC_ALPHA` yerine `ONE` ile alır, yoksa alfa ikinci kez çarpılır.
+inline VkPipelineColorBlendAttachmentState BlendAttachmentFor(
+    BlendMode mode, bool premultiplied_src = false) {
+  const VkBlendFactor kSrcColor =
+      premultiplied_src ? VK_BLEND_FACTOR_ONE : VK_BLEND_FACTOR_SRC_ALPHA;
   VkPipelineColorBlendAttachmentState a{};
   a.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT |
                      VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -34,7 +41,7 @@ inline VkPipelineColorBlendAttachmentState BlendAttachmentFor(BlendMode mode) {
     case BlendMode::kAdditive:
       // GL karsiligi: glBlendFunc(GL_SRC_ALPHA, GL_ONE)
       a.blendEnable = VK_TRUE;
-      a.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+      a.srcColorBlendFactor = kSrcColor;
       a.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
       a.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
       a.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
@@ -59,7 +66,7 @@ inline VkPipelineColorBlendAttachmentState BlendAttachmentFor(BlendMode mode) {
       // sekil cizmek hedefin alfasini o bolgede DUSURUYORDU. Dogru "over"
       // bilesimi aOut = aSrc + aDst(1 - aSrc); asagidaki bunu verir.
       a.blendEnable = VK_TRUE;
-      a.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+      a.srcColorBlendFactor = kSrcColor;
       a.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
       a.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
       a.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;

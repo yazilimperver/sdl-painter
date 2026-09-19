@@ -113,12 +113,27 @@ class SDLPAINTER_API Font {
   [[nodiscard]] void* Handle() const noexcept { return mHandle; }
 
   /// @brief Verilen metnin piksel boyutunu ölç.
+  ///
+  /// Ölçüm, çizimle aynı glyph konumlarını kullanır (advance +
+  /// @ref Kerning); genişlik, glyph'lerin görünen kısmı ile kalem sonunun
+  /// birleşimidir. Hizalama ve sözcük kaydırma bu değerle yapılır.
+  ///
+  /// Metin soldan sağa, glyph glyph yerleştirilir: sağdan sola yazım,
+  /// ligatür ve karmaşık yazım biçimlendirmesi (shaping) desteklenmez.
+  /// Tek satır içindir; `\n` satır ayırıcı olarak işlenmez.
+  ///
   /// @param text Ölçülecek metin.
   /// @param out_width Çıkış: genişlik (piksel).
   /// @param out_height Çıkış: yükseklik (piksel).
   /// @return Ölçüm başarılıysa true.
   bool MeasureText(const std::string& text, int32_t& out_width,
                    int32_t& out_height) const;
+
+  /// @brief İki ardışık karakter arasındaki kerning düzeltmesi (piksel).
+  ///
+  /// Fontun `kern` tablosundan okunur. Kerning'i yalnızca GPOS tablosunda
+  /// tanımlayan fontlarda 0 döner; o fontlar kerning'siz çizilir ve ölçülür.
+  [[nodiscard]] int32_t Kerning(char32_t previous, char32_t current) const;
 
   /// @brief Karakter için Glyph al; yoksa oluşturur.
   ///

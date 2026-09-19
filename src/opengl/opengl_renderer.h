@@ -76,6 +76,14 @@ class OpenGLRenderer final : public IRenderer {
   /// @brief Hazır olan en eski sorgu sonucunu topla (bloklamadan).
   void CollectGpuTime();
 
+  /// @brief Karıştırma modunu GL durumuna uygula.
+  /// @param premultiplied_src Kaynak rengi alfayla önceden çarpılmış mı
+  ///        (hedef dokusu).
+  static void ApplyBlend(BlendMode mode, bool premultiplied_src);
+
+  /// @brief Doku bir hedefin renk dokusu mu?
+  [[nodiscard]] bool IsRenderTargetTexture(TextureHandle texture) const;
+
   /// @brief Bir offscreen hedefin GL kaynakları.
   struct RenderTargetGL {
     uint32_t fbo{0};
@@ -110,6 +118,10 @@ class OpenGLRenderer final : public IRenderer {
   float mProjection[16]{};
   float mModel[9]{};
   float mOpacity{1.0F};
+
+  /// @brief Yürürlükteki karıştırma modu; hedef dokusu çizildikten sonra
+  ///        geri yüklemek için saklanır.
+  BlendMode mBlendMode{BlendMode::kAlpha};
 
   // Cift tamponlu: bu karenin sorgusu yazilirken bir onceki karenin sonucu
   // okunur. Ayni karenin sonucunu beklemek CPU'yu GPU'ya kilitler ve

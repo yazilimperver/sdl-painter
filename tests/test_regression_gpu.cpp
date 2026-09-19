@@ -4,6 +4,7 @@
 
 #include "sdl_painter/brush.h"
 #include "sdl_painter/color.h"
+#include "sdl_painter/font.h"
 #include "sdl_painter/geometry.h"
 #include "sdl_painter/image.h"
 #include "sdl_painter/painter.h"
@@ -11,6 +12,7 @@
 #include "sdl_painter/render_target.h"
 #include "sdl_painter/renderer.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <gtest/gtest.h>
 #include <memory>
@@ -21,8 +23,10 @@
 
 namespace {
 
+using sdl_painter::BlendMode;
 using sdl_painter::Brush;
 using sdl_painter::Color;
+using sdl_painter::Font;
 using sdl_painter::Image;
 using sdl_painter::LineCap;
 using sdl_painter::Painter;
@@ -331,9 +335,9 @@ TEST_P(RegressionGpu, ConcavePolygonNotchStaysEmpty) {
       << "Centik boyandi.";
 }
 
-// Bulgu A07: saydam hedefte premultiplied renk birikiyor, kompozisyonda alfa
-// ikinci kez carpiliyor. Duzeltmeyle birlikte DISABLED_ kaldirilacak.
-TEST_P(RegressionGpu, DISABLED_TranslucentTargetComposesLikeDirectDraw) {
+// Saydam hedefte renk premultiplied birikiyor; kompozisyonda alfa ikinci kez
+// carpiliyordu (64, beklenen 128).
+TEST_P(RegressionGpu, TranslucentTargetComposesLikeDirectDraw) {
   REQUIRE_BACKEND(be, GetParam());
   Painter& p = *be.painter;
 
@@ -365,6 +369,185 @@ TEST_P(RegressionGpu, DISABLED_TranslucentTargetComposesLikeDirectDraw) {
       << "Dogrudan cizim";
   EXPECT_TRUE(ColorNear(PixelAt(px, kW, 48, 16), kExpected, kTolerance))
       << "Ara hedef uzerinden cizim";
+}
+
+// Opaklik shader'da yalniz alfayi carpiyor; premultiplied hedefte RGB de
+// olceklenmezse katman fazla parlak cizilir.
+TEST_P(RegressionGpu, TranslucentTargetHonoursOpacity) {
+  REQUIRE_BACKEND(be, GetParam());
+  Painter& p = *be.painter;
+
+  RenderTarget layer = p.CreateRenderTarget(32, 32);
+  RenderTarget out = p.CreateRenderTarget(kW, kH);
+  ASSERT_TRUE(layer.IsValid());
+  ASSERT_TRUE(out.IsValid());
+  const Color kHalfRed{255, 0, 0, 128};
+  // 255 * (128 / 255) * 0.5 = 64.
+  const Color kExpected{64, 0, 0, 255};
+
+  p.Begin();
+  p.SetPen(Pen::NoPen());
+  p.SetBrush(Brush(kHalfRed));
+  ASSERT_TRUE(p.SetRenderTarget(layer));
+  p.Clear(Color::Transparent());
+  p.FillRect(0.0F, 0.0F, 32.0F, 32.0F);
+  ASSERT_TRUE(p.SetRenderTarget(out));
+  p.Clear(kBlack);
+  p.SetOpacity(0.5F);
+  p.FillRect(0.0F, 0.0F, 32.0F, 32.0F);
+  p.DrawRenderTarget(layer, 32.0F, 0.0F);
+  p.ResetRenderTarget();
+  p.End();
+
+  std::vector<uint8_t> px;
+  ASSERT_TRUE(p.ReadRenderTarget(out, px));
+  DumpRgba("translucent_target_opacity_" + Tag(), px, kW, kH);
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 16, 16), kExpected, kTolerance))
+      << "Dogrudan cizim";
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 48, 16), kExpected, kTolerance))
+      << "Ara hedef uzerinden cizim";
+}
+
+// Opak hedefte tint alfasi, ayni dokuyu Image olarak cizmekle ayni sonucu
+// vermeli (iz efekti bu yolu kullaniyor).
+TEST_P(RegressionGpu, OpaqueTargetTintMatchesImage) {
+  REQUIRE_BACKEND(be, GetParam());
+  Painter& p = *be.painter;
+
+  Image img = MakeSolidImage(kRed);
+  ASSERT_TRUE(img.IsValid());
+  RenderTarget layer = p.CreateRenderTarget(32, 32);
+  RenderTarget out = p.CreateRenderTarget(kW, kH);
+  ASSERT_TRUE(layer.IsValid());
+  ASSERT_TRUE(out.IsValid());
+  const Color kHalfTint{255, 255, 255, 128};
+  const Color kExpected{128, 0, 0, 255};
+
+  p.Begin();
+  ASSERT_TRUE(p.SetRenderTarget(layer));
+  p.Clear(kRed);
+  ASSERT_TRUE(p.SetRenderTarget(out));
+  p.Clear(kBlack);
+  p.DrawImage(img, Rect{0.0F, 0.0F, 32.0F, 32.0F}, kHalfTint);
+  p.DrawRenderTarget(layer, 32.0F, 0.0F, kHalfTint);
+  p.ResetRenderTarget();
+  p.End();
+
+  std::vector<uint8_t> px;
+  ASSERT_TRUE(p.ReadRenderTarget(out, px));
+  DumpRgba("opaque_target_tint_" + Tag(), px, kW, kH);
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 16, 16), kExpected, kTolerance))
+      << "Image";
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 48, 16), kExpected, kTolerance))
+      << "Hedef";
+}
+
+// Toplamali modda da hedef, icindekiler dogrudan cizilmis gibi eklenmeli.
+TEST_P(RegressionGpu, TranslucentTargetAddsLikeDirectDraw) {
+  REQUIRE_BACKEND(be, GetParam());
+  Painter& p = *be.painter;
+
+  RenderTarget layer = p.CreateRenderTarget(32, 32);
+  RenderTarget out = p.CreateRenderTarget(kW, kH);
+  ASSERT_TRUE(layer.IsValid());
+  ASSERT_TRUE(out.IsValid());
+  const Color kHalfRed{255, 0, 0, 128};
+  const Color kExpected{128, 0, 0, 255};
+
+  p.Begin();
+  p.SetPen(Pen::NoPen());
+  p.SetBrush(Brush(kHalfRed));
+  ASSERT_TRUE(p.SetRenderTarget(layer));
+  p.Clear(Color::Transparent());
+  p.FillRect(0.0F, 0.0F, 32.0F, 32.0F);
+  ASSERT_TRUE(p.SetRenderTarget(out));
+  p.Clear(kBlack);
+  p.SetBlendMode(BlendMode::kAdditive);
+  p.FillRect(0.0F, 0.0F, 32.0F, 32.0F);
+  p.DrawRenderTarget(layer, 32.0F, 0.0F);
+  p.ResetRenderTarget();
+  p.End();
+
+  std::vector<uint8_t> px;
+  ASSERT_TRUE(p.ReadRenderTarget(out, px));
+  DumpRgba("translucent_target_additive_" + Tag(), px, kW, kH);
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 16, 16), kExpected, kTolerance))
+      << "Dogrudan cizim";
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 48, 16), kExpected, kTolerance))
+      << "Ara hedef uzerinden cizim";
+}
+
+// Hedefi yari saydam renkle temizlemek de icerigi premultiplied birakmali.
+TEST_P(RegressionGpu, TranslucentClearOnTargetIsPremultiplied) {
+  REQUIRE_BACKEND(be, GetParam());
+  Painter& p = *be.painter;
+
+  RenderTarget layer = p.CreateRenderTarget(32, 32);
+  RenderTarget out = p.CreateRenderTarget(kW, kH);
+  ASSERT_TRUE(layer.IsValid());
+  ASSERT_TRUE(out.IsValid());
+
+  p.Begin();
+  ASSERT_TRUE(p.SetRenderTarget(layer));
+  p.Clear(Color{255, 0, 0, 128});
+  ASSERT_TRUE(p.SetRenderTarget(out));
+  p.Clear(kBlack);
+  p.DrawRenderTarget(layer, 0.0F, 0.0F);
+  p.ResetRenderTarget();
+  p.End();
+
+  std::vector<uint8_t> layer_px;
+  ASSERT_TRUE(p.ReadRenderTarget(layer, layer_px));
+  EXPECT_TRUE(ColorNear(PixelAt(layer_px, 32, 16, 16), Color{128, 0, 0, 128},
+                        kTolerance))
+      << "Hedef icerigi";
+
+  std::vector<uint8_t> px;
+  ASSERT_TRUE(p.ReadRenderTarget(out, px));
+  DumpRgba("translucent_clear_target_" + Tag(), px, kW, kH);
+  EXPECT_TRUE(
+      ColorNear(PixelAt(px, kW, 16, 16), Color{128, 0, 0, 255}, kTolerance))
+      << "Kompozisyon";
+}
+
+// Hedef cizildikten sonra gelen duz alfali cizimler kendi karistirmasini
+// kullanmali; OpenGL'de blend durumu hedef cizimi icin degisip geri aliniyor.
+TEST_P(RegressionGpu, StraightDrawsAfterTargetKeepTheirBlend) {
+  REQUIRE_BACKEND(be, GetParam());
+  Painter& p = *be.painter;
+
+  const Color kHalfRed{255, 0, 0, 128};
+  Image img = MakeSolidImage(kHalfRed);
+  ASSERT_TRUE(img.IsValid());
+  RenderTarget layer = p.CreateRenderTarget(32, 32);
+  RenderTarget out = p.CreateRenderTarget(kW, kH);
+  ASSERT_TRUE(layer.IsValid());
+  ASSERT_TRUE(out.IsValid());
+  const Color kExpected{128, 0, 0, 255};
+
+  p.Begin();
+  p.SetPen(Pen::NoPen());
+  p.SetBrush(Brush(kHalfRed));
+  ASSERT_TRUE(p.SetRenderTarget(layer));
+  p.Clear(Color::Transparent());
+  p.FillRect(0.0F, 0.0F, 32.0F, 32.0F);
+  ASSERT_TRUE(p.SetRenderTarget(out));
+  p.Clear(kBlack);
+  p.DrawRenderTarget(layer, 0.0F, 0.0F);
+  p.DrawImage(img, Rect{32.0F, 0.0F, 16.0F, 32.0F});
+  p.FillRect(48.0F, 0.0F, 16.0F, 32.0F);
+  p.ResetRenderTarget();
+  p.End();
+
+  std::vector<uint8_t> px;
+  ASSERT_TRUE(p.ReadRenderTarget(out, px));
+  DumpRgba("straight_after_target_" + Tag(), px, kW, kH);
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 16, 16), kExpected, kTolerance))
+      << "Hedef";
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 40, 16), kExpected, kTolerance))
+      << "Image";
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 56, 16), kExpected, kTolerance))
+      << "Dolgu";
 }
 
 // Bolme karari yalniz kenar orta noktalarina bakinca ucgenin icindeki kucuk
@@ -424,6 +607,58 @@ TEST_P(RegressionGpu, TranslucentRoundCapBlendsOnce) {
       << "Uc";
   EXPECT_TRUE(ColorNear(PixelAt(px, kSize, 22, 52), kExpected, kTolerance))
       << "Uc ile govdenin kesistigi bolge";
+}
+
+// Cizilen metin olculen kutunun icinde kalmali. Hizalama ve kaydirma bu
+// kutuyla yapiliyor; olcum kerning uygulayip cizim uygulamayinca ya da glyph
+// sol boslugu iki kez eklenince metin kutudan tasiyordu.
+TEST_P(RegressionGpu, DrawnTextStaysInsideMeasuredBox) {
+  REQUIRE_BACKEND(be, GetParam());
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
+  Painter& p = *be.painter;
+
+  const auto font = std::make_shared<Font>(font_path, 48);
+  ASSERT_TRUE(font->IsValid());
+  constexpr int32_t kTargetW = 400;
+  constexpr int32_t kTargetH = 100;
+  constexpr float kX = 20.0F;
+  RenderTarget t = p.CreateRenderTarget(kTargetW, kTargetH);
+  ASSERT_TRUE(t.IsValid());
+
+  // "r"nin sag boslugu negatif: murekkebi kalem sonunu asar, kutunun sag
+  // kenari murekkebin kendisidir.
+  for (const std::string text : {"rrrr", "AVAVAVAVAV"}) {
+    int32_t box_w = 0;
+    int32_t box_h = 0;
+    ASSERT_TRUE(font->MeasureText(text, box_w, box_h));
+
+    p.Begin();
+    ASSERT_TRUE(p.SetRenderTarget(t));
+    p.Clear(Color::Transparent());
+    p.SetPen(Pen(Color::White()));
+    p.SetFont(font);
+    p.DrawText(kX, 70.0F, text);
+    p.ResetRenderTarget();
+    p.End();
+
+    std::vector<uint8_t> px;
+    ASSERT_TRUE(p.ReadRenderTarget(t, px));
+    int32_t ink_left = kTargetW;
+    int32_t ink_right = -1;
+    for (int32_t y = 0; y < kTargetH; ++y) {
+      for (int32_t x = 0; x < kTargetW; ++x) {
+        if (PixelAt(px, kTargetW, x, y).a > 0) {
+          ink_left = std::min(ink_left, x);
+          ink_right = std::max(ink_right, x + 1);
+        }
+      }
+    }
+    ASSERT_GE(ink_right, 0) << text << ": hic murekkep yok";
+    EXPECT_LE(ink_right, static_cast<int32_t>(kX) + box_w)
+        << text << ": murekkep olculen kutunun sagina tasti";
+    EXPECT_LE(ink_right - ink_left, box_w) << text;
+  }
+  p.SetFont(nullptr);
 }
 
 // Doku olarak cizilen hedef, cizim gonderilmeden silinse de cizim kaybolmamali.

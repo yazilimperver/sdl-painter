@@ -13,6 +13,15 @@
 - **Vulkan'da hedefe yeniden bağlanma ve frame içi doku güncelleme sırası**
   düzeltildi.
 - **`font.h`** düzeltildi.
+- **Metin ölçümü ile çizim farklı genişlik veriyordu.** `MeasureText`
+  `TTF_GetStringSize` ile HarfBuzz kerning'i uyguluyor, çizim ise glyph
+  advance'lerini kerning'siz topluyordu; sağa ve ortaya hizalama ile sözcük
+  kaydırma bu yüzden kayıyordu (Arial 48 pt `AVAVAVAVAV`: 32 px). Artık ikisi
+  aynı konumları kullanıyor: advance + fontun `kern` tablosundan
+  `Font::Kerning` (yeni). `MeasureText`'in döndürdüğü genişlik biraz
+  değişebilir; kerning'i yalnızca GPOS'ta tanımlayan fontlar kerning'siz
+  çizilir ve ölçülür. Ayrıca glyph'ler sol boşlukları (bearing) kadar fazladan
+  sağa çiziliyordu; düzeltildi.
 
 - **Vulkan frame başına ~4 MB'tan sonraki geometriyi sessizce düşürüyordu.**
   Vertex ring'i frame slotu başına 4 MB idi; dolduğunda `VulkanBuffer::Write`

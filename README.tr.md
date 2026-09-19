@@ -65,8 +65,8 @@ böylece vertex yerine **şekil** düşünebilirsiniz.
 | **Kenar yumuşatma** | 4× MSAA, **yalnızca OpenGL** ve yalnızca `Application` üzerinden (bir GL pencere özniteliği). Vulkan backend'i ve tüm çizim hedefleri tek örneklemli |
 | **Viewport** | Alt dikdörtgene yerel koordinatlarla çizim — bölünmüş ekran, mini harita |
 | **Image** | PNG / JPG yükleme (stb_image), kaynak→hedef ölçekleme, atlas dilimleme, tint, aynalama, nearest/linear filtre, yerinde doku güncelleme, serbest dokulu ızgara |
-| **Metin** | SDL_ttf 3.x, glyph cache, left/center/right hizalama, çok satırlı ve sözcük kaydırmalı |
-| **Backend** | OpenGL 3.3 Core ve Vulkan 1.1 — `IRenderer` ile değiştirilebilir |
+| **Metin** | SDL_ttf 3.x, glyph cache, left/center/right hizalama, çok satırlı ve sözcük kaydırmalı, fontun `kern` tablosundan kerning. Yalnızca soldan sağa: ligatür, çift yönlü metin ve karmaşık yazım biçimlendirmesi yok |
+| **Backend** | OpenGL 3.3 Core ve Vulkan 1.1 — `IRenderer` ile değiştirilebilir. Süreç başına aynı anda tek `Painter`; çoklu GL context desteklenmiyor |
 
 ## Blog Yazıları
 

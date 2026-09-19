@@ -162,11 +162,12 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass) {
   // Vulkan 1.1'de blend pipeline'in sabit durumu; calisma zamaninda
   // degistirilemez (bkz. vk_blend.h). Dizilerin omru
   // vkCreateGraphicsPipelines cagrisini kapsamali.
-  std::array<VkPipelineColorBlendAttachmentState, kBlendModeCount>
-      attachments{};
-  std::array<VkPipelineColorBlendStateCreateInfo, kBlendModeCount> blends{};
-  for (std::size_t i = 0; i < kBlendModeCount; ++i) {
-    attachments[i] = vk_detail::BlendAttachmentFor(static_cast<BlendMode>(i));
+  // Ilk yari duz, ikinci yari premultiplied kaynak (bkz. GetPipeline).
+  std::array<VkPipelineColorBlendAttachmentState, kPipelineCount> attachments{};
+  std::array<VkPipelineColorBlendStateCreateInfo, kPipelineCount> blends{};
+  for (std::size_t i = 0; i < kPipelineCount; ++i) {
+    attachments[i] = vk_detail::BlendAttachmentFor(
+        static_cast<BlendMode>(i % kBlendModeCount), i >= kBlendModeCount);
     blends[i].sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     blends[i].logicOpEnable = VK_FALSE;
     blends[i].attachmentCount = 1;
@@ -211,15 +212,15 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass) {
   pipeline_ci.renderPass = render_pass;
   pipeline_ci.subpass = 0;
 
-  // Tek cagrida dort varyant: aralarindaki TEK fark blend durumu.
-  std::array<VkGraphicsPipelineCreateInfo, kBlendModeCount> infos{};
-  for (std::size_t i = 0; i < kBlendModeCount; ++i) {
+  // Tek cagrida tum varyantlar: aralarindaki TEK fark blend durumu.
+  std::array<VkGraphicsPipelineCreateInfo, kPipelineCount> infos{};
+  for (std::size_t i = 0; i < kPipelineCount; ++i) {
     infos[i] = pipeline_ci;
     infos[i].pColorBlendState = &blends[i];
   }
 
   VkResult res = vkCreateGraphicsPipelines(
-      device, VK_NULL_HANDLE, static_cast<uint32_t>(kBlendModeCount),
+      device, VK_NULL_HANDLE, static_cast<uint32_t>(kPipelineCount),
       infos.data(), nullptr, mPipelines.data());
 
   vkDestroyShaderModule(device, vert_mod, nullptr);

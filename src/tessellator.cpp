@@ -879,7 +879,7 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& raw) {
     // şeklin büyük kısmı hiçbir iz bırakmadan kaybolur.
     if (!found_ear) {
       spdlog::warn(
-          "Tessellator: poligon tam üçgenlenemedi — {} köşe atlandı "
+          "Tessellator: poligon tam ucgenlenemedi — {} kose atlandi "
           "(kendini kesen veya dejenere poligon?).",
           indices.size() - 3);
       break;

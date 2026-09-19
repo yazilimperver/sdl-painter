@@ -56,6 +56,11 @@ struct RenderState {
 /// yaşayan bir konuma yerleştirmek tanımsız davranışa yol açar — yıkım
 /// sırasında dangling IRenderer pointer kullanılır. v0.2.0'da bu sözleşme
 /// `weak_ptr<IRenderer>` veya benzeri bir mekanizma ile zorunlu kılınacaktır.
+///
+/// @note Süreç başına aynı anda tek Painter desteklenir. OpenGL renderer'ı
+///       çizerken kendi context'ini seçmez; aynı anda yaşayan ikinci bir
+///       Painter, öncekinin GL çağrılarını kendi context'ine yönlendirir.
+///       Painter'ı yıkıp yenisini oluşturmak desteklenir.
 class SDLPAINTER_API Painter {
  public:
   /// @brief Belirtilen pencere ve backend ile Painter oluştur.
@@ -163,6 +168,11 @@ class SDLPAINTER_API Painter {
 
   /// @brief Hedefin içeriğini orijinal boyutuyla çiz.
   ///
+  /// Hedefte renk alfayla çarpılmış (premultiplied) birikir ve öyle
+  /// karıştırılır: yarı saydam bir katman, içindekiler doğrudan çizilmiş gibi
+  /// görünür. `kAlpha` ve `kAdditive` buna göre uyarlanır, `kMultiply` ve
+  /// `kNone` değişmez.
+  ///
   /// @param tint @ref DrawImage ile aynı anlamda.
   void DrawRenderTarget(const RenderTarget& target, float x, float y,
                         const Color& tint = Color::White(),
@@ -178,6 +188,10 @@ class SDLPAINTER_API Painter {
   /// Sonuç sıkı paketlenmiş, doğrusal RGBA8 ve satırlar yukarıdan aşağı —
   /// OpenGL ile Vulkan birebir aynı baytları verir. Ekran görüntüsü almak ve
   /// iki backend'in çıktısını karşılaştıran testler için.
+  ///
+  /// Renkler alfayla çarpılmış (premultiplied) okunur: saydam hedefe çizilen
+  /// alfa 128 kırmızı `(128, 0, 0, 128)` verir. Düz alfalı bir biçime (PNG
+  /// gibi) yazmadan önce RGB'yi alfaya bölün. Opak hedefte fark yoktur.
   ///
   /// @warning **Bloklar:** GPU'nun işi bitene kadar bekler. Kare döngüsünde
   ///          kullanılmamalıdır. Ayrıca @ref End sonrasında çağrılmalıdır;
@@ -200,6 +214,7 @@ class SDLPAINTER_API Painter {
   /// viewport'a ve dönüşüm yığınına uyar.
   ///
   /// @note Bir çizim hedefi bağlıysa temizlenen şey hedeftir, ekran değil.
+  ///       Hedefe yazılan renk alfayla çarpılır (bkz. @ref DrawRenderTarget).
   void Clear(const Color& color);
 
   /// @brief Son tamamlanan karenin çizim istatistikleri.

@@ -4,10 +4,12 @@
 
 #include <SDL3_ttf/SDL_ttf.h>
 
+#include <algorithm>
 #include <spdlog/spdlog.h>
 #include <utility>
 
 #include "glyph_atlas.h"
+#include "text_utf8.h"
 
 namespace sdl_painter {
 
@@ -110,22 +112,64 @@ int32_t Font::LineHeight() const {
   return TTF_GetFontHeight(static_cast<TTF_Font*>(mHandle));
 }
 
-// FIXME: Olcum TTF_GetStringSize ile kerning uyguluyor, DrawTextLine ise
-// ham advance topluyor; Arial "AVAVAVAVAV" 288'e karsi 320 px. Hizalama ve
-// wrap bu yuzden cizimden farkli genislik kullaniyor, buna bakalım.
+int32_t Font::Kerning(char32_t previous, char32_t current) const {
+  if (mHandle == nullptr) {
+    return 0;
+  }
+  int kerning = 0;
+  if (!TTF_GetGlyphKerning(static_cast<TTF_Font*>(mHandle), previous, current,
+                           &kerning)) {
+    return 0;
+  }
+  return kerning;
+}
+
 bool Font::MeasureText(const std::string& text, int32_t& out_width,
                        int32_t& out_height) const {
+  out_width = out_height = 0;
   if (mHandle == nullptr || text.empty()) {
-    out_width = out_height = 0;
     return false;
   }
-  int w = 0;
-  int h = 0;
-  bool ok = TTF_GetStringSize(static_cast<TTF_Font*>(mHandle), text.c_str(),
-                              text.size(), &w, &h);
-  out_width = w;
-  out_height = h;
-  return ok;
+  // TTF_GetStringSize kullanilmiyor: HarfBuzz ile sekillendirip GPOS
+  // kerning'i uyguluyor, cizim ise glyph'leri tek tek yerlestiriyor. Kalem
+  // konumlari Painter::DrawTextLine ile ayni (advance + Kerning); kutu,
+  // TTF_GetStringSize'daki gibi murekkep ile kalem sonunun birlesimi.
+  auto* font = static_cast<TTF_Font*>(mHandle);
+  const int32_t kAscent = TTF_GetFontAscent(font);
+  int32_t pen = 0;
+  int32_t left = 0;
+  int32_t right = 0;
+  int32_t top = 0;
+  int32_t bottom = TTF_GetFontHeight(font);
+  char32_t previous = 0;
+  for (std::size_t i = 0; i < text.size();) {
+    std::size_t step = 0;
+    const char32_t kCodepoint =
+        detail::DecodeUTF8(text.c_str() + i, text.size() - i, step);
+    i += step;
+
+    int minx = 0;
+    int maxx = 0;
+    int miny = 0;
+    int maxy = 0;
+    int advance = 0;
+    if (!TTF_GetGlyphMetrics(font, kCodepoint, &minx, &maxx, &miny, &maxy,
+                             &advance)) {
+      return false;
+    }
+    if (previous != 0) {
+      pen += Kerning(previous, kCodepoint);
+    }
+    left = std::min(left, pen + minx);
+    right = std::max(right, pen + maxx);
+    top = std::min(top, kAscent - maxy);
+    bottom = std::max(bottom, kAscent - miny);
+    pen += advance;
+    previous = kCodepoint;
+  }
+  out_width = std::max(right, pen) - left;
+  out_height = bottom - top;
+  return true;
 }
 
 const Glyph* Font::GetGlyph(IRenderer& renderer, char32_t codepoint) const {
@@ -155,8 +199,9 @@ const Glyph* Font::GetGlyph(IRenderer& renderer, char32_t codepoint) const {
   // Beyaz render edilir: renk vertex'te tasindigi icin glyph notr bir
   // taban olmali, aksi halde Pen rengiyle carpim yanlis sonuc verir.
   SDL_Color white = {255, 255, 255, 255};
-  // TTF_RenderGlyph_Blended, karakterin sıkıca kırpılmış (tightly cropped)
-  // bir yüzeyini verir.
+  // TTF_RenderGlyph_Blended tek karakterlik TTF_RenderText_Blended'dir; yuzey
+  // sikica kirpilmis degildir. Sol kenari kalem konumudur (bearing negatifse
+  // onun solu), murekkep yuzeyin icinde bearing kadar saga yerlesir.
   SDL_Surface* surface = TTF_RenderGlyph_Blended(font, codepoint, white);
   if (surface == nullptr) {
     return nullptr;
