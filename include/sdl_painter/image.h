@@ -34,8 +34,7 @@ enum class ImageFlip : uint8_t {
 /// olduktan sonra Image yıkılırsa, sahip pointer (raw IRenderer*) dangling
 /// olur ve `~Image()` davranışı tanımsızdır. Pratikte: Image'ı Painter
 /// scope'una göre dar tutun, asla `static` veya `Painter`'dan daha uzun
-/// yaşayan bir konuma koymayın. v0.2.0'da `weak_ptr<IRenderer>` veya
-/// `Painter::EvictImage` ile bu sözleşme zorunlu kılınacaktır.
+/// yaşayan bir konuma koymayın.
 class SDLPAINTER_API Image {
  public:
   Image() = default;

@@ -48,9 +48,10 @@ class Painter;
 /// aynıdır. Ekranın veya başka bir hedefin temizleme rengi buraya sızmaz;
 /// hedefe geçmeden önce @ref Painter::Clear çağırmak zorunlu değildir.
 ///
-/// @warning  Bir RenderTarget, onu üreten
-/// @ref Painter yaşıyorken yıkılmalıdır — @ref Image ve @ref Font ile aynı
-/// kural. Painter yok olduktan sonra yıkılırsa sahip pointer dangling olur.
+/// @note Painter'dan sonra yıkılan bir RenderTarget güvenlidir: Painter'ın
+/// yıkıldığını bilir ve renderer'a dokunmaz (kaynakları renderer ile
+/// birlikte bırakılmıştır). @ref Image ve @ref Font'ta bu koruma yoktur;
+/// onlar Painter yaşarken yıkılmalıdır.
 ///
 /// @warning Bir hedefe çizerken o hedefin kendi içeriğini örneklemek
 /// tanımsızdır. Önce @ref Painter::ResetRenderTarget çağırın.

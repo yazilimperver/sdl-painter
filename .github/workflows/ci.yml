@@ -629,7 +629,7 @@ jobs:
           PROJECT_BRIEF          = "SDL3 + OpenGL/Vulkan 2D çizim kütüphanesi"
           OUTPUT_DIRECTORY       = public
           HTML_OUTPUT            = .
-          INPUT                  = include/sdl_painter doc
+          INPUT                  = include/sdl_painter doc adr examples/README.md examples/benchmarks/README.md
           FILE_PATTERNS          = *.h *.md
           RECURSIVE              = YES
           USE_MDFILE_AS_MAINPAGE = doc/README.md

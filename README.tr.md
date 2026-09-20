@@ -56,9 +56,9 @@ böylece vertex yerine **şekil** düşünebilirsiniz.
 
 | Alan | Desteklenen |
 |------|-------------|
-| **Primitifler** | Çizgi, dikdörtgen, yuvarlatılmış dikdörtgen, daire, elips, yay, dilim, kiriş, çokgen, polyline — hepsi stroke + fill |
+| **Primitifler** | Dikdörtgen, yuvarlatılmış dikdörtgen, daire, elips, dilim, kiriş ve çokgen stroke + fill; çizgi, polyline ve yay yalnızca stroke (yayın alanı dilim veya kirişle doldurulur) |
 | **Stiller** | Pen (renk, kalınlık, outline, kesik deseni, uç ve birleşim stili), Brush (düz dolgu veya iki uçlu doğrusal/ışınsal gradient), global opacity, karıştırma modları |
-| **Yol (Path)** | Doğru parçaları ve quadratic/cubic Bézier'lerden oluşan `Path`; kalemin tüm stilleriyle çizilir veya alt yol başına doldurulur |
+| **Yol (Path)** | Doğru parçaları ve quadratic/cubic Bézier'lerden oluşan `Path`; kalemin tüm stilleriyle çizilir veya alt yol başına doldurulur (even-odd/nonzero dolgu kuralı yok, bu yüzden delik açılamaz) |
 | **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` |
 | **Clipping** | Scissor tabanlı dikdörtgen kırpma |
 | **Çizim hedefi** | Ekran yerine dokuya çizim — mini harita, son işlem efektleri, iz efekti — ve pikselleri geri okuma |
@@ -70,7 +70,7 @@ böylece vertex yerine **şekil** düşünebilirsiniz.
 
 ## Blog Yazıları
 
-Aşağıdaki bağlantıda [Yazilimperver](www.yazilimperver.net) sayfamda, bu kütüphane ile ilgili yayınlamış olduğum yazıları bulabilirsiniz:
+Aşağıdaki bağlantıda [Yazilimperver](https://www.yazilimperver.net) sayfamda, bu kütüphane ile ilgili yayınlamış olduğum yazıları bulabilirsiniz:
 
 - [SDLPainter - Core Primitives and Capabilities](https://yazilimperver.net/index.php/2026/08/29/sdl-painter-temel-sekiller-ve-kabiliyetler-faz-1/)
 

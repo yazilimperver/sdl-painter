@@ -187,7 +187,7 @@ Belirsizlik yaratabilecek her parametrede birim veya aralık belirt:
 
 ## 6. Sık Yapılan Hatalar
 
-### 6.1 @brief'i Tekrar Etmek
+### 6.1 `@brief`'i Tekrar Etmek
 
 ```cpp
 // Kötü: imza zaten bunu söylüyor

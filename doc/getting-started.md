@@ -97,6 +97,7 @@ chmod +x scripts/*.sh
 | `linux-debug` | Linux | Debug | used also in CI |
 | `linux-release` | Linux | Release | used also in CI |
 | `linux-debug-asan` | Linux | Debug | ASan + UBSan enabled |
+| `linux-debug-coverage` | Linux | Debug | gcov instrumentation (`ENABLE_COVERAGE`), used by the CI coverage job |
 | `windows-debug` | Windows | Debug | MSVC, Visual Studio 17 2022 |
 | `windows-release` | Windows | Release | MSVC, Visual Studio 17 2022 |
 | `windows-mingw-debug` | Windows (cross) | Debug | MinGW-w64 from a Linux host, no Vulkan |
@@ -107,8 +108,8 @@ chmod +x scripts/*.sh
 | Option | Default | Effect |
 |--------|---------|--------|
 | `SDLPAINTER_WITH_VULKAN` | `OFF` | Vulkan backend |
-| `SDLPAINTER_BUILD_EXAMPLES` | `ON` | Example applications |
-| `SDLPAINTER_BUILD_TESTS` | `ON` | GTest unit tests |
+| `SDLPAINTER_BUILD_EXAMPLES` | `ON` as top-level project, `OFF` via `add_subdirectory`/FetchContent | Example applications |
+| `SDLPAINTER_BUILD_TESTS` | `ON` as top-level project, `OFF` via `add_subdirectory`/FetchContent | GTest unit tests |
 | `ENABLE_SANITIZERS` | `OFF` | ASan + UBSan (GCC/Clang) |
 
 Building with everything, Vulkan included:

@@ -4,7 +4,7 @@ Working *on* SDLPainter. For building it see [Building from source](building.md)
 for the helper scripts see the [Script Reference](scripts.md).
 
 Contribution rules (commit format, branch strategy, when an ADR is required) are
-in [CONTRIBUTING.md](../CONTRIBUTING.md).
+in [CONTRIBUTING.md](https://github.com/yazilimperver/sdl-painter/blob/main/CONTRIBUTING.md).
 
 ## Directory layout
 

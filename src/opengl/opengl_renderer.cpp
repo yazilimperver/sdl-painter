@@ -19,6 +19,12 @@ OpenGLRenderer::~OpenGLRenderer() {
 }
 
 bool OpenGLRenderer::Initialize(SDL_Window* window) {
+  return InitializeWithLoader(
+      window, reinterpret_cast<GlLoader>(SDL_GL_GetProcAddress));
+}
+
+bool OpenGLRenderer::InitializeWithLoader(SDL_Window* window,
+                                          GlLoader gl_loader) {
   mWindow = window;
 
   SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -32,9 +38,12 @@ bool OpenGLRenderer::Initialize(SDL_Window* window) {
     return false;
   }
 
-  if (0 ==
-      gladLoadGLLoader(reinterpret_cast<GLADloadproc>(SDL_GL_GetProcAddress))) {
+  if (0 == gladLoadGLLoader(gl_loader)) {
     spdlog::error("[OpenGLRenderer] Failed to load GLAD");
+    // GL giris noktalari yuklenmedi; Shutdown'daki GL cagrilari null
+    // fonksiyon isaretcisine giderdi. Yalniz context birakilir.
+    SDL_GL_DestroyContext(static_cast<SDL_GLContext>(mGLContext));
+    mGLContext = nullptr;
     return false;
   }
 

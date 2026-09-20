@@ -6,8 +6,7 @@ layout(location = 2) in vec4 aColor;  // R8G8B8A8_UNORM otomatik [0,1]'e normali
 
 /// Push constant bloğu — textured çizim için per-draw verisi.
 layout(push_constant) uniform PushConstants {
-    mat4 uProjection;  // Ortografik projeksiyon (column-major)
-    mat4 uModel;       // 2D affine transform (3x3 → 4x4 padded, column-major)
+    mat4 uTransform;   // Projeksiyon × model (column-major), CPU'da çarpılır
     vec4 uTintColor;   // Tint rengi [0,1]
     float uOpacity;    // Global opaklık [0,1]
 } pc;
@@ -16,8 +15,7 @@ layout(location = 0) out vec2 vTexCoord;
 layout(location = 1) out vec4 vColor;
 
 void main() {
-    vec4 worldPos = pc.uModel * vec4(aPosition, 0.0, 1.0);
-    gl_Position = pc.uProjection * worldPos;
+    gl_Position = pc.uTransform * vec4(aPosition, 0.0, 1.0);
     vTexCoord = aTexCoord;
     vColor = aColor * pc.uTintColor * vec4(1.0, 1.0, 1.0, pc.uOpacity);
 }

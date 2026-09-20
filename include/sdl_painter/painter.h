@@ -54,8 +54,7 @@ struct RenderState {
 /// @ref Image ve @ref Font nesneleri, Painter yıkılmadan önce
 /// yıkılmalıdır. Image veya Font'u global / `static` ya da daha uzun
 /// yaşayan bir konuma yerleştirmek tanımsız davranışa yol açar — yıkım
-/// sırasında dangling IRenderer pointer kullanılır. v0.2.0'da bu sözleşme
-/// `weak_ptr<IRenderer>` veya benzeri bir mekanizma ile zorunlu kılınacaktır.
+/// sırasında dangling IRenderer pointer kullanılır.
 ///
 /// @note Süreç başına aynı anda tek Painter desteklenir. OpenGL renderer'ı
 ///       çizerken kendi context'ini seçmez; aynı anda yaşayan ikinci bir
@@ -457,6 +456,10 @@ class SDLPAINTER_API Painter {
                                            TextWrap wrap) const;
 
   /// @brief Mevcut render durumunu stack'e kaydet.
+  ///
+  /// Saklanan: dönüşüm, kalem, fırça, opaklık, karıştırma modu ve kırpma
+  /// dikdörtgeni (@ref RenderState). Font, viewport ve çizim hedefi
+  /// saklanmaz; @ref Restore onları geri almaz.
   void Save();
 
   /// @brief Son kaydedilen durumu geri yükle.

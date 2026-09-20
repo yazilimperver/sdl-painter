@@ -2,6 +2,7 @@
 
 #include "sdl_painter/renderer.h"
 
+#include <array>
 #include <cstddef>
 #include <cstdint>
 #include <memory>
@@ -162,6 +163,15 @@ class VulkanRenderer final : public IRenderer {
   std::unique_ptr<VulkanPipeline> mPipeline;
   VertexChain mVertexChain;
   PushConstants mPushConstants{};
+
+  /// @brief Son verilen projeksiyon ve model (4x4, column-major); push
+  ///        constant'a çarpımları gider (bkz. @ref UpdateTransform).
+  std::array<float, 16> mProjection{};
+  std::array<float, 16> mModel{1.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F, 0.0F, 0.0F,
+                               0.0F, 0.0F, 1.0F, 0.0F, 0.0F, 0.0F, 0.0F, 1.0F};
+
+  /// @brief `mPushConstants.transform = mProjection × mModel`.
+  void UpdateTransform();
 
   // Textured pipeline + texture registry
   std::unique_ptr<VulkanTexturedPipeline> mTexturedPipeline;

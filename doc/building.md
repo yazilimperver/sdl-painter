@@ -57,8 +57,8 @@ The [helper scripts](scripts.md) wrap all of the above:
 | Option | Default | Effect |
 |--------|---------|--------|
 | `SDLPAINTER_WITH_VULKAN` | `OFF` | Build the Vulkan backend |
-| `SDLPAINTER_BUILD_EXAMPLES` | `ON` | Build the demos in `examples/` |
-| `SDLPAINTER_BUILD_TESTS` | `ON` | Build the GTest suite |
+| `SDLPAINTER_BUILD_EXAMPLES` | `ON` as top-level project, `OFF` via `add_subdirectory`/FetchContent | Build the demos in `examples/` |
+| `SDLPAINTER_BUILD_TESTS` | `ON` as top-level project, `OFF` via `add_subdirectory`/FetchContent | Build the GTest suite |
 | `SDLPAINTER_REGENERATE_SHADERS` | `OFF` | Expose the `regenerate_shaders` target (needs `glslc`) |
 
 Presets, and the full option reference, are documented in

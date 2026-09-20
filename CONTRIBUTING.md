@@ -192,4 +192,4 @@ göndererek bunu kabul etmiş sayılırsın.
 ## Teşekkürler
 
 Her türden katkı (kod, doküman, hata bildirimi, öneri) değerlidir.
-İletişim: <yazilimperver@gmail.com>, [Yazılımperber](www.yazilimperver.com)
+İletişim: <yazilimperver@gmail.com>, [Yazılımperver](https://www.yazilimperver.net)

@@ -16,23 +16,18 @@ namespace sdl_painter {
 ///
 /// Vertex shader'daki PushConstants layout'u ile byte-for-byte eşleşmeli.
 ///
-/// Toplam boyut: 64 + 64 + 16 + 4 = 148 bayt. Dikkat: Vulkan'ın her
-/// implementasyonda garanti ettiği `maxPushConstantsSize` 128 bayt,
-/// 256 değil — bu blok o asgari sınırı aşar. 128 bildiren bir sürücüde
-/// (örn. bazı tümleşik GPU'lar) `vkCreatePipelineLayout` geçersiz olur;
-/// @ref VulkanRenderer::Initialize bu yüzden limiti başlangıçta sorgular ve
-/// açık bir hata verir. Kalıcı çözüm bloğu küçültmektir: `model` matrisi
-/// Painter tarafından daima birim yazılıyor (dönüşüm CPU'da vertex'e
-/// gömülüyor), yani 64 baytı bedelsiz geri alınabilir.
-// FIXME: 148 bayt, Vulkan'ın garanti ettiği 128 baytı aşıyor; model
-// alanını shader, SPIR-V ve manifest ile birlikte çıkaralım.
+/// Toplam boyut: 64 + 16 + 4 = 84 bayt; Vulkan'ın her implementasyonda
+/// garanti ettiği `maxPushConstantsSize` (128 bayt) altında. Model matrisi
+/// ayrı gönderilmez, CPU'da projeksiyonla çarpılır (bkz.
+/// VulkanRenderer::SetModelMatrix).
 struct alignas(4) PushConstants {
-  float projection[16]{};  ///< mat4 ortografik projeksiyon (column-major)
-  float model
-      [16]{};  ///< mat4 2B affine transform (3x3 → 4x4 padded, column-major)
+  float transform[16]{};  ///< mat4 projeksiyon × model (column-major)
   float tint_color[4]{};  ///< vec4 tint rengi [0,1]
   float opacity{1.0F};    ///< Global opaklık [0,1]
 };
+
+static_assert(sizeof(PushConstants) <= 128U,
+              "Vulkan'in garanti ettigi push constant siniri 128 bayt.");
 
 /// @brief Untextured (düz renk) çizim için Vulkan graphics pipeline yönetimi.
 ///

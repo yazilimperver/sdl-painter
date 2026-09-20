@@ -24,4 +24,4 @@ The records themselves are written in Turkish.
 | [ADR-009](ADR-009-embedded-shaders.md) | Embedding shaders into the binary |
 
 New ADRs are required for changes that affect a backend or the public API — see
-[CONTRIBUTING.md](../CONTRIBUTING.md).
+[CONTRIBUTING.md](https://github.com/yazilimperver/sdl-painter/blob/main/CONTRIBUTING.md).

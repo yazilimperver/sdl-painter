@@ -10,8 +10,7 @@ namespace sdl_painter {
 /// renderer (ve dolayısıyla Painter), Texture'dan önce yıkılmamalıdır.
 /// Aksi halde `Reset()` çağrısı dangling renderer üzerinden `DestroyTexture`
 /// çağırır — davranış tanımsızdır. Bu sözleşme @ref Image ve @ref Font
-/// içindeki Texture'lar için de geçerlidir. v0.2.0'da `weak_ptr` ile
-/// güçlendirilmesi planlanıyor.
+/// içindeki Texture'lar için de geçerlidir.
 class Texture {
  public:
   explicit Texture(IRenderer* renderer = nullptr) : mRenderer(renderer) {}

@@ -11,9 +11,12 @@
 #include "sdl_painter/pen.h"
 #include "sdl_painter/render_target.h"
 #include "sdl_painter/renderer.h"
+#include "sdl_painter/vertex.h"
 
 #include <algorithm>
 #include <cstdint>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <gtest/gtest.h>
 #include <memory>
 #include <string>
@@ -28,6 +31,7 @@ using sdl_painter::Brush;
 using sdl_painter::Color;
 using sdl_painter::Font;
 using sdl_painter::Image;
+using sdl_painter::IRenderer;
 using sdl_painter::LineCap;
 using sdl_painter::Painter;
 using sdl_painter::Pen;
@@ -35,9 +39,11 @@ using sdl_painter::Rect;
 using sdl_painter::RendererBackend;
 using sdl_painter::RenderTarget;
 using sdl_painter::TextureFilter;
+using sdl_painter::Vertex;
 using sdl_painter::testing::AvailableBackends;
 using sdl_painter::testing::ColorNear;
 using sdl_painter::testing::DumpRgba;
+using sdl_painter::testing::HiddenWindow;
 using sdl_painter::testing::PixelAt;
 
 constexpr int32_t kW = 64;
@@ -659,6 +665,51 @@ TEST_P(RegressionGpu, DrawnTextStaysInsideMeasuredBox) {
     EXPECT_LE(ink_right - ink_left, box_w) << text;
   }
   p.SetFont(nullptr);
+}
+
+// Vulkan'da model matrisi ayri push constant degil, projeksiyonla CPU'da
+// carpiliyor. IRenderer'i dogrudan kullanan kod icin anlami iki backend'de
+// ayni kalmali: model matrisi geometriyi tasir.
+TEST_P(RegressionGpu, RendererModelMatrixMovesGeometry) {
+  const sdl_painter::testing::ValidationGuard guard;
+  const HiddenWindow window(GetParam(), 128, 96);
+  if (window.Get() == nullptr) {
+    GTEST_SKIP() << "Pencere olusturulamadi: " << window.Error();
+  }
+  std::unique_ptr<IRenderer> owned = sdl_painter::CreateRenderer(GetParam());
+  ASSERT_NE(owned, nullptr);
+  if (!owned->Initialize(window.Get())) {
+    GTEST_SKIP() << "Backend baslatilamadi.";
+  }
+  IRenderer* const renderer = owned.get();
+  Painter p(std::move(owned), 128, 96);
+
+  RenderTarget t = p.CreateRenderTarget(kW, kH);
+  ASSERT_TRUE(t.IsValid());
+  const std::vector<Vertex> kQuad = {
+      {0.0F, 0.0F, 255, 0, 0, 255},   {16.0F, 0.0F, 255, 0, 0, 255},
+      {16.0F, 16.0F, 255, 0, 0, 255}, {0.0F, 0.0F, 255, 0, 0, 255},
+      {16.0F, 16.0F, 255, 0, 0, 255}, {0.0F, 16.0F, 255, 0, 0, 255},
+  };
+  glm::mat3 shift(1.0F);
+  shift[2][0] = 32.0F;
+
+  p.Begin();
+  ASSERT_TRUE(p.SetRenderTarget(t));
+  p.Clear(kBlack);
+  renderer->SetModelMatrix(glm::value_ptr(shift));
+  renderer->DrawTriangles(kQuad);
+  renderer->SetModelMatrix(glm::value_ptr(glm::mat3(1.0F)));
+  p.ResetRenderTarget();
+  p.End();
+
+  std::vector<uint8_t> px;
+  ASSERT_TRUE(p.ReadRenderTarget(t, px));
+  DumpRgba("model_matrix_" + Tag(), px, kW, kH);
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 40, 8), kRed, kTolerance))
+      << "Kaydirilmis dortgen";
+  EXPECT_TRUE(ColorNear(PixelAt(px, kW, 8, 8), kBlack, kTolerance))
+      << "Kaydirilmamis konum bos kalmali";
 }
 
 // Doku olarak cizilen hedef, cizim gonderilmeden silinse de cizim kaybolmamali.

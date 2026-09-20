@@ -22,6 +22,16 @@ class OpenGLRenderer final : public IRenderer {
   OpenGLRenderer& operator=(const OpenGLRenderer&) = delete;
 
   bool Initialize(SDL_Window* window) override;
+
+  /// @brief GL fonksiyon yükleyicisi (`GLADloadproc` ile aynı imza).
+  using GlLoader = void* (*)(const char* name);
+
+  /// @brief GL giriş noktalarını @p gl_loader ile yükleyerek başlat.
+  ///
+  /// @ref Initialize bunu `SDL_GL_GetProcAddress` ile çağırır. Yükleyici
+  /// başarısız olursa context hemen bırakılır; testler bu yolu sınar.
+  bool InitializeWithLoader(SDL_Window* window, GlLoader gl_loader);
+
   void Shutdown() override;
   void BeginFrame() override;
   void EndFrame() override;

@@ -25,6 +25,7 @@
 #include <utility>
 #include <vector>
 
+#include "opengl/opengl_renderer.h"
 #include "recording_target_renderer.h"
 #include "test_support.h"
 
@@ -39,6 +40,7 @@ using sdl_painter::Glyph;
 using sdl_painter::Image;
 using sdl_painter::kInvalidRenderTarget;
 using sdl_painter::MockRenderer;
+using sdl_painter::OpenGLRenderer;
 using sdl_painter::Painter;
 using sdl_painter::Point;
 using sdl_painter::Rect;
@@ -965,6 +967,32 @@ TEST(ApplicationLifecycleDeathTest, FailedOnInitReleasesMemberImageSafely) {
           FailingInitApp app(config);
           if (app.Run() != 1 || !app.ImageUploaded()) {
             std::fprintf(stderr, "onkosul: OnInit calismadi\n");
+            std::exit(3);
+          }
+        }
+        std::exit(0);
+      },
+      ::testing::ExitedWithCode(0), "");
+}
+
+// GL yükleyicisi başarısız olunca renderer yıkımda yüklenmemiş (null) GL
+// fonksiyonunu çağırıyordu. Ayrı süreçte koşar: GLAD işaretçileri süreç
+// genelidir ve önceki testlerden dolu kalıp hatayı gizler.
+TEST(OpenGLRendererDeathTest, FailedGlLoaderCanBeDestroyedSafely) {
+  if (HiddenWindow(RendererBackend::kOpenGL).Get() == nullptr) {
+    GTEST_SKIP() << "OpenGL penceresi oluşturulamadı.";
+  }
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+
+  EXPECT_EXIT(
+      {
+        const HiddenWindow window(RendererBackend::kOpenGL);
+        {
+          OpenGLRenderer renderer;
+          const bool kOk = renderer.InitializeWithLoader(
+              window.Get(), [](const char*) -> void* { return nullptr; });
+          if (kOk) {
+            std::fprintf(stderr, "onkosul: yukleyici basarisiz olmaliydi\n");
             std::exit(3);
           }
         }

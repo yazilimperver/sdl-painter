@@ -65,12 +65,15 @@
   OpenGL'de `GL_INVALID_VALUE` üretip önceki scissor'ı yürürlükte bırakıyor,
   Vulkan'da ise her şeyi kırpıyordu.
 - **Vulkan push constant bloğu (148 bayt), Vulkan'ın garanti ettiği asgari
-  `maxPushConstantsSize` değerini (128 bayt) aşıyor.** Limit hiç
-  sorgulanmıyordu; 128 bildiren bir sürücüde hata, sebebi belirsiz biçimde
-  pipeline kurulumunda ortaya çıkardı. `VulkanRenderer::Initialize` artık
-  limiti başlangıçta sorgulayıp açık bir hata veriyor. (Bloğun küçültülmesi
-  ayrı bir iş olarak duruyor: `model` matrisi daima birim yazıldığı için
-  64 bayt bedelsiz geri alınabilir.)
+  `maxPushConstantsSize` değerini (128 bayt) aşıyordu.** 128 bildiren bir
+  cihazda Vulkan backend başlamıyordu. Blok 84 bayta indi: model matrisi
+  ayrı alan olarak gönderilmiyor, `SetModelMatrix` onu CPU'da projeksiyonla
+  çarpıyor (IRenderer'ı doğrudan kullanan kod için anlamı değişmedi).
+  Sınır artık derleme zamanında `static_assert` ile korunuyor.
+- **OpenGL fonksiyonları yüklenemeyince Painter yıkılırken çöküyordu.**
+  GLAD başarısız olursa `Initialize` context'i bırakmadan `false` dönüyor,
+  yıkım ise yüklenmemiş (null) bir GL fonksiyonunu çağırıyordu. Context artık
+  hata anında bırakılıyor.
 
 ### Değişti
 

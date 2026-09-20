@@ -247,20 +247,21 @@ Detaylar için [Akış Diyagramları → Vulkan Frame](akislar.md#7-vulkan-frame
 2. **Vertex ring buffer** — `VulkanBuffer` persistent mapped; her
    `DrawTriangles` çağrısında ring içinde ofset ilerletilir, böylece
    memcpy + draw atomik olur.
-3. **Push constants** — Projeksiyon, model matrisi ve opacity push
+3. **Push constants** — Projeksiyon × model matrisi, tint ve opacity push
    constants ile gönderilir; descriptor set veya UBO yok.
 
 ### 3.4 Push Constants Layout
 
 ```cpp
 struct PushConstants {
-  float projection[16];   // mat4
-  float model[9];         // mat3 (gerçekte 12 byte std140 alignment)
+  float transform[16];    // mat4: projeksiyon × model, CPU'da çarpılır
+  float tint_color[4];    // vec4
   float opacity;
 };
 ```
 
-Toplam ≤ 128 byte (Vulkan minimum garanti). Her draw call'da değişebilir,
+Toplam 84 byte; Vulkan'ın garanti ettiği 128 byte'ın altında
+(`static_assert` ile korunuyor). Her draw call'da değişebilir,
 descriptor set güncellemesi gerektirmez.
 
 ### 3.5 Swapchain Recreate

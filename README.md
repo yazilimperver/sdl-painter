@@ -56,7 +56,7 @@ can think in **shapes** instead of vertices.
 
 | Area | Supported |
 |------|-----------|
-| **Primitives** | Line, rectangle, rounded rectangle, circle, ellipse, arc, pie, chord, polygon, polyline — all with stroke + fill |
+| **Primitives** | Rectangle, rounded rectangle, circle, ellipse, pie, chord and polygon with stroke + fill; line, polyline and arc stroke only (fill an arc's area with pie or chord) |
 | **Styles** | Pen (color, width, outline, dash pattern, cap and join style), Brush (flat fill or two-stop linear/radial gradient), global opacity, blend modes |
 | **Paths** | `Path` of lines and quadratic/cubic Béziers, stroked with the full pen style set or filled per sub-path (no even-odd/nonzero rule, so no holes) |
 | **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` stack |
@@ -70,7 +70,7 @@ can think in **shapes** instead of vertices.
 
 ## Blog Posts
 
-You can find my blog posts about this library, SDL3 and much more on [my page](www.yazilimperver.net) at the following links:
+You can find my blog posts about this library, SDL3 and much more on [my page](https://www.yazilimperver.net) at the following links:
 
 - [SDLPainter - Core Primitives and Capabilities](https://yazilimperver.net/index.php/2026/08/29/sdl-painter-temel-sekiller-ve-kabiliyetler-faz-1/)
 

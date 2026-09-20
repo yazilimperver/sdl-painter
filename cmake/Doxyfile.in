@@ -8,8 +8,13 @@ PROJECT_BRIEF           = "SDL3 + OpenGL/Vulkan 2B çizim kütüphanesi"
 PROJECT_LOGO            =
 
 # --- Girdi ---
+# adr/ ve iki örnek README'si doc/ belgelerinin bağlantı hedefi; tek tek dosya
+# olarak verilen girdiye EXCLUDE_PATTERNS uygulanmaz.
 INPUT                   = "@PROJECT_SOURCE_DIR@/include/sdl_painter" \
-                          "@PROJECT_SOURCE_DIR@/doc"
+                          "@PROJECT_SOURCE_DIR@/doc" \
+                          "@PROJECT_SOURCE_DIR@/adr" \
+                          "@PROJECT_SOURCE_DIR@/examples/README.md" \
+                          "@PROJECT_SOURCE_DIR@/examples/benchmarks/README.md"
 FILE_PATTERNS           = *.h *.md
 RECURSIVE               = YES
 USE_MDFILE_AS_MAINPAGE  = "@PROJECT_SOURCE_DIR@/doc/README.md"

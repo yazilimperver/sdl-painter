@@ -9,6 +9,8 @@
 #include <algorithm>
 #include <array>
 #include <cstring>
+#include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <spdlog/spdlog.h>
 
 #include "vk_check.h"
@@ -49,21 +51,6 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
 
   mFrameSync = std::make_unique<VkFrameSync>();
   if (!mFrameSync->Initialize(mContext.get(), mSwapchain->GetImageCount())) {
-    return false;
-  }
-
-  // Push constant blogu 148 bayt; Vulkan'in her implementasyonda GARANTI
-  // ettigi asgari sinir ise 128 bayt (bkz. PushConstants). Limit
-  // sorgulanmazsa 128 bildiren bir surucude vkCreatePipelineLayout gecersiz
-  // olur ve hata, sebebi belirsiz bicimde pipeline kurulumunda ortaya cikar.
-  VkPhysicalDeviceProperties props{};
-  vkGetPhysicalDeviceProperties(mContext->GetPhysicalDevice(), &props);
-  if (props.limits.maxPushConstantsSize < sizeof(PushConstants)) {
-    spdlog::error(
-        "VulkanRenderer: bu cihaz {} bayt push constant destekliyor, {} bayt "
-        "gerekiyor ({}). Vulkan backend kullanilamaz.",
-        props.limits.maxPushConstantsSize, sizeof(PushConstants),
-        props.deviceName);
     return false;
   }
 
@@ -1073,7 +1060,18 @@ bool VulkanRenderer::ReadRenderTarget(RenderTargetHandle handle,
 }
 
 void VulkanRenderer::SetProjectionMatrix(const float* mat4) {
-  std::memcpy(mPushConstants.projection, mat4, 16 * sizeof(float));
+  std::memcpy(mProjection.data(), mat4, 16 * sizeof(float));
+  UpdateTransform();
+}
+
+void VulkanRenderer::UpdateTransform() {
+  // Model ayri bir push constant alani degil: 64 bayt, blogu Vulkan'in
+  // garanti ettigi 128 baytin ustune cikariyordu. Painter daima birim
+  // yaziyor; dogrudan IRenderer kullanan kod icin anlam OpenGL'dekiyle ayni.
+  const glm::mat4 kTransform =
+      glm::make_mat4(mProjection.data()) * glm::make_mat4(mModel.data());
+  std::memcpy(mPushConstants.transform, glm::value_ptr(kTransform),
+              sizeof(mPushConstants.transform));
 }
 
 void VulkanRenderer::SetModelMatrix(const float* mat3) {
@@ -1086,7 +1084,8 @@ void VulkanRenderer::SetModelMatrix(const float* mat3) {
       0.0F,    0.0F,    1.0F, 0.0F,  // column 2
       mat3[6], mat3[7], 0.0F, 1.0F,  // column 3 (tx, ty)
   };
-  std::memcpy(mPushConstants.model, m.data(), 16 * sizeof(float));
+  mModel = m;
+  UpdateTransform();
 }
 
 }  // namespace sdl_painter

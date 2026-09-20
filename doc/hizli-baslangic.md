@@ -102,6 +102,7 @@ chmod +x scripts/*.sh
 | `linux-debug` | Linux | Debug | CI'da da kullanılır |
 | `linux-release` | Linux | Release | CI'da da kullanılır |
 | `linux-debug-asan` | Linux | Debug | ASan + UBSan aktif |
+| `linux-debug-coverage` | Linux | Debug | gcov ölçümü (`ENABLE_COVERAGE`), CI'daki kapsama job'u kullanır |
 | `windows-debug` | Windows | Debug | MSVC, Visual Studio 17 2022 |
 | `windows-release` | Windows | Release | MSVC, Visual Studio 17 2022 |
 | `windows-mingw-debug` | Windows (cross) | Debug | Linux host'ta MinGW-w64 cross-compile, Vulkan'sız |
@@ -112,8 +113,8 @@ chmod +x scripts/*.sh
 | Seçenek | Varsayılan | Açıklama |
 |---------|-----------|----------|
 | `SDLPAINTER_WITH_VULKAN` | `OFF` | Vulkan backend |
-| `SDLPAINTER_BUILD_EXAMPLES` | `ON` | Örnek uygulamalar |
-| `SDLPAINTER_BUILD_TESTS` | `ON` | GTest birim testleri |
+| `SDLPAINTER_BUILD_EXAMPLES` | Üst projede `ON`, `add_subdirectory`/FetchContent ile `OFF` | Örnek uygulamalar |
+| `SDLPAINTER_BUILD_TESTS` | Üst projede `ON`, `add_subdirectory`/FetchContent ile `OFF` | GTest birim testleri |
 | `ENABLE_SANITIZERS` | `OFF` | ASan + UBSan (GCC/Clang) |
 
 Vulkan dahil tüm özelliklerle derleme:
