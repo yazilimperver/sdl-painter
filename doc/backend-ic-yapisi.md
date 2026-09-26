@@ -1,3 +1,5 @@
+**Türkçe** | [English version](en/backend-internals.md)
+
 # SDLPainter — Backend İç Yapısı
 
 Bu dokümanda, `IRenderer` arayüzünün arkasındaki **iki somut implementasyonu**
@@ -411,4 +413,4 @@ genişlemez ve mevcut backend'ler bu değişiklikten etkilenmez.
 
 - [Sınıf Diyagramı → Vulkan Bölümü](sinif-diyagrami.md#5-vulkan-backend-sınıfları)
 - [Akış Diyagramları → Vulkan Frame](akislar.md#7-vulkan-frame-akışı-phase-5)
-- [Yazılım Mühendisliği Perspektifi](sdl-painter-yazilim-muhendisligi.md)
+- [Yazılım Mühendisliği Perspektifi](yazilim-muhendisligi.md)

@@ -7,7 +7,7 @@ body:
       value: |
         Some features are deliberately out of scope for v1 — paths, beziers,
         gradients and path-based clipping among them. See
-        [the scope notes](../../doc/sdl-painter-yazilim-muhendisligi.md) before
+        [the scope notes](https://github.com/yazilimperver/sdl-painter/blob/main/doc/yazilim-muhendisligi.md) before
         opening a request for those.
 
   - type: textarea

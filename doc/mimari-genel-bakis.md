@@ -1,4 +1,4 @@
-**Türkçe** | [English version](architecture.md)
+**Türkçe** | [English version](en/architecture.md)
 
 # SDLPainter — Mimari Genel Bakış
 
@@ -268,7 +268,7 @@ graph TB
 
 `with_vulkan=False` olduğunda Vulkan loader hiç indirilmez; CI süresi ve
 container imaj boyutu küçük kalır. Detaylar için `conanfile.py` ve
-[Derleme](building.md) *(İngilizce)*.
+[Derleme](en/building.md) *(İngilizce)*.
 
 ---
 
@@ -297,4 +297,4 @@ backend değiştirilebilirliği, performans öngörülebilirliği) kaybolur.
 - [Akış Diyagramları](akislar.md) — Frame, draw call, transform stack, texture upload sequence'leri
 - [Backend İç Yapısı](backend-ic-yapisi.md) — OpenGL ve Vulkan implementasyon detayı
 - [Hızlı Başlangıç](hizli-baslangic.md) — İlk Painter uygulaması
-- [Yazılım Mühendisliği Perspektifi](sdl-painter-yazilim-muhendisligi.md) — Tasarım kararlarının gerekçeleri
+- [Yazılım Mühendisliği Perspektifi](yazilim-muhendisligi.md) — Tasarım kararlarının gerekçeleri

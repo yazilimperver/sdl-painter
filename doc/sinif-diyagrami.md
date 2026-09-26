@@ -1,3 +1,5 @@
+**Türkçe** | [English version](en/class-diagram.md)
+
 # SDLPainter — Sınıf Diyagramları
 
 Bu dokümanda SDLPainter'ın **sınıf yapısı** Mermaid `classDiagram` notasyonuyla

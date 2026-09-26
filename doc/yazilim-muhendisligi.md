@@ -1,3 +1,5 @@
+**Türkçe** | [English version](en/software-engineering.md)
+
 # SDLPainter — Yazılım Mühendisliği Perspektifi
 
 Bu doküman SDLPainter'ın teknik özellik listesi değil; kütüphanenin

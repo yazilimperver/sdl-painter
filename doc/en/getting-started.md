@@ -1,4 +1,4 @@
-[Türkçe sürüm](hizli-baslangic.md) | **English**
+[Türkçe sürüm](../hizli-baslangic.md) | **English**
 
 # SDLPainter — Getting Started
 
@@ -307,7 +307,7 @@ for newcomers:
 | `vulkan_demo.cpp` | Vulkan: every primitive | — |
 | `vulkan_text.cpp` | Vulkan: text | — |
 
-Descriptions of every demo: [examples/README.md](../examples/README.md).
+Descriptions of every demo: [examples/README.md](../../examples/README.md).
 
 ---
 
@@ -345,9 +345,9 @@ Descriptions of every demo: [examples/README.md](../examples/README.md).
 
 ## 8. Where to go next
 
-- 🧩 [Class Diagram](sinif-diyagrami.md) — the full API structure *(in Turkish)*
-- 🔄 [Flow Diagrams](akislar.md) — frame lifecycle, batch flush, transform stack *(in Turkish)*
-- 📜 [Feature List](sdl-painter-ozellikler.md) — every supported primitive *(in Turkish)*
-- 💡 [Examples Guide](sdl-painter-ornekler.md) — more usage examples *(in Turkish)*
-- 🏗️ [Software Engineering Perspective](sdl-painter-yazilim-muhendisligi.md) — why the design decisions were made *(in Turkish)*
+- 🧩 [Class Diagram](class-diagram.md) — the full API structure
+- 🔄 [Flow Diagrams](flows.md) — frame lifecycle, batch flush, transform stack
+- 📜 [Feature List](features.md) — every supported primitive
+- 💡 [Examples Guide](examples-guide.md) — more usage examples
+- 🏗️ [Software Engineering Perspective](software-engineering.md) — why the design decisions were made
 - 📐 [Architecture Overview](architecture.md) — layers, dependencies, data flow

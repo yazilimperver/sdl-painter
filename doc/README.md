@@ -1,7 +1,9 @@
+**Türkçe** | [English version](en/README.md)
+
 # SDLPainter — Dokümantasyon
 
 SDL3 + OpenGL/Vulkan dual backend destekli C++ 2B çizim kütüphanesinin teknik dokümantasyonu.
-Bu teknik dokümanlar genel olarak Türkçe, vakit oldukça bunları da İngilizce'ye çeviriyor olabiliriz (desteğe hayır demem).
+Dokümanların İngilizce sürümleri [en/](en/README.md) dizinindedir.
 
 ---
 
@@ -10,13 +12,13 @@ Bu teknik dokümanlar genel olarak Türkçe, vakit oldukça bunları da İngiliz
 ```mermaid
 flowchart LR
     Start(["🚀 İlk defa kullanıyorum"]) --> Quick["hizli-baslangic.md"]
-    Quick --> Examples["sdl-painter-ornekler.md"]
-    Quick --> Features["sdl-painter-ozellikler.md"]
+    Quick --> Examples["ornekler.md"]
+    Quick --> Features["ozellikler.md"]
 
     Arch(["🏗️ Mimariyi anlamak istiyorum"]) --> Overview["mimari-genel-bakis.md"]
     Overview --> Class["sinif-diyagrami.md"]
     Overview --> Flow["akislar.md"]
-    Overview --> SE["sdl-painter-yazilim-muhendisligi.md"]
+    Overview --> SE["yazilim-muhendisligi.md"]
 
     Backend(["⚙️ Backend implementasyonu"]) --> BImpl["backend-ic-yapisi.md"]
     BImpl --> ADR["../adr/"]
@@ -44,38 +46,38 @@ flowchart LR
 
 | Doküman | İçerik |
 |---------|--------|
-| [Hızlı Başlangıç](hizli-baslangic.md) · [Getting Started](getting-started.md) | Önkoşullar, kurulum, ilk uygulama, sık sorunlar |
-| [Özellik Listesi](sdl-painter-ozellikler.md) | Desteklenen primitifler, stiller, backend'ler |
-| [Örnekler](sdl-painter-ornekler.md) · [examples/README.md](../examples/README.md) | Kullanım örnekleri ve kod parçaları |
-| [Building](building.md) · [Scripts](scripts.md) · [Development](development.md) | Derleme, Docker, script referansı, kalite kontrolleri, CI/CD *(İngilizce)* |
+| [Hızlı Başlangıç](hizli-baslangic.md) · [Getting Started](en/getting-started.md) | Önkoşullar, kurulum, ilk uygulama, sık sorunlar |
+| [Özellik Listesi](ozellikler.md) · [Features](en/features.md) | Desteklenen primitifler, stiller, backend'ler |
+| [Örnekler](ornekler.md) · [Examples Guide](en/examples-guide.md) · [examples/README.md](../examples/README.md) | Kullanım örnekleri ve kod parçaları |
+| [Building](en/building.md) · [Scripts](en/scripts.md) · [Development](en/development.md) | Derleme, Docker, script referansı, kalite kontrolleri, CI/CD *(İngilizce)* |
 
 ### Mimari
 
 | Doküman | İçerik |
 |---------|--------|
-| [Mimari Genel Bakış](mimari-genel-bakis.md) · [Architecture](architecture.md) | Katmanlar, bileşen bağımlılıkları, kaynak ağacı, sözleşmeler |
-| [Sınıf Diyagramı](sinif-diyagrami.md) | UML class diagram (Mermaid) — Painter, render hattı, görseller, backend'ler |
-| [Akış Diyagramları](akislar.md) | Frame yaşam döngüsü, draw call, batch flush, transform stack, texture upload, Vulkan frame |
-| [Yazılım Mühendisliği Perspektifi](sdl-painter-yazilim-muhendisligi.md) | Tasarım kararlarının gerekçeleri, SOLID, kapsam yönetimi |
+| [Mimari Genel Bakış](mimari-genel-bakis.md) · [Architecture](en/architecture.md) | Katmanlar, bileşen bağımlılıkları, kaynak ağacı, sözleşmeler |
+| [Sınıf Diyagramı](sinif-diyagrami.md) · [Class Diagram](en/class-diagram.md) | UML class diagram (Mermaid) — Painter, render hattı, görseller, backend'ler |
+| [Akış Diyagramları](akislar.md) · [Flows](en/flows.md) | Frame yaşam döngüsü, draw call, batch flush, transform stack, texture upload, Vulkan frame |
+| [Yazılım Mühendisliği Perspektifi](yazilim-muhendisligi.md) · [Software Engineering](en/software-engineering.md) | Tasarım kararlarının gerekçeleri, SOLID, kapsam yönetimi |
 
 ### Backend Detayı
 
 | Doküman | İçerik |
 |---------|--------|
-| [Backend İç Yapısı](backend-ic-yapisi.md) | OpenGL 3.3 ve Vulkan 1.1 implementasyonu, karşılaştırma, yeni backend ekleme |
+| [Backend İç Yapısı](backend-ic-yapisi.md) · [Backend Internals](en/backend-internals.md) | OpenGL 3.3 ve Vulkan 1.1 implementasyonu, karşılaştırma, yeni backend ekleme |
 
 ### Docker ve Dağıtım
 
 | Doküman | İçerik |
 |---------|--------|
-| [Docker Kullanım Kılavuzu](docker.md) | İmaj hiyerarşisi, builder/ci/windows-cross aşamaları, GitLab CI entegrasyonu, Dockerfile.windows |
-| [Docker Hub'a Dağıtım](docker-hub-deployment.md) | İmaj build, etiketleme, Hub/GitLab Registry'ye push, otomatik CI/CD akışı |
+| [Docker Kullanım Kılavuzu](docker.md) · [Docker Guide](en/docker.md) | İmaj hiyerarşisi, builder/ci/windows-cross aşamaları, GitLab CI entegrasyonu, Dockerfile.windows |
+| [Docker Hub'a Dağıtım](docker-hub-deployment.md) · [Publishing to Docker Hub](en/docker-hub-deployment.md) | İmaj build, etiketleme, Hub/GitLab Registry'ye push, otomatik CI/CD akışı |
 
 ### Katkı ve Dokümantasyon
 
 | Doküman | İçerik |
 |---------|--------|
-| [Dokümantasyon Rehberi](dokumantasyon-rehberi.md) | Doxygen yorum standardı, etiket kullanımı, yerel build, GitLab Pages |
+| [Dokümantasyon Rehberi](dokumantasyon-rehberi.md) · [Documentation Guide](en/documentation-guide.md) | Doxygen yorum standardı, etiket kullanımı, yerel build, GitLab Pages |
 
 ### Karar Kayıtları
 
@@ -94,7 +96,7 @@ flowchart LR
 **2. OpenGL ve Vulkan arasındaki fark kullanıcı tarafından hissedilir mi?**
 → Hayır. Tek değişiklik constructor argümanı (`RendererBackend::kVulkan`).
 Tüm Painter API çağrıları aynı şekilde çalışır. Detay:
-[backend-ic-yapisi.md → §4](backend-ic-yapisi.md#4-iki-backendin-aynı-painter-çağrısına-verdiği-yanıt).
+[backend-ic-yapisi.md → §4](backend-ic-yapisi.md#4-i̇ki-backendin-aynı-painter-çağrısına-verdiği-yanıt).
 
 **3. Yeni bir backend eklemek istiyorum (örn. DirectX, Metal).**
 → Sadece `IRenderer` arayüzünü implemente etmek yeterli. Elbette böyle bir yola girecekseniz beni de bir dürterseniz sevinirim :)
@@ -115,7 +117,7 @@ Detay: [akislar.md → §3](akislar.md#3-render-batcher-akışı).
 `FillPath`); `Brush::LinearGradient` ve `Brush::RadialGradient` iki duraklı
 geçiş verir. **Sınırlar:** delikli dolgu (even-odd / nonzero) ve çok duraklı /
 conical gradient yok. Gerekçeler:
-[sdl-painter-yazilim-muhendisligi.md → Kapsam Yönetimi](sdl-painter-yazilim-muhendisligi.md#kapsam-yönetimi).
+[yazilim-muhendisligi.md → Kapsam Yönetimi](yazilim-muhendisligi.md#kapsam-yönetimi).
 
 ---
 

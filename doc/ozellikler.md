@@ -1,3 +1,5 @@
+**Türkçe** | [English version](en/features.md)
+
 # SDLPainter — Özellik Listesi
 
 Bu sayfa içerisinde SDLPainter kütüphanesine yönelik önce çıkan özellikler listelenecektir.

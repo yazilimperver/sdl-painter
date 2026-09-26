@@ -1,11 +1,11 @@
-[Türkçe sürüm](mimari-genel-bakis.md) | **English**
+[Türkçe sürüm](../mimari-genel-bakis.md) | **English**
 
 # SDLPainter — Architecture Overview
 
 This document describes SDLPainter's **layered architecture**, the
 **dependencies between components** and the **flow of data**, from a high
-level. For class-level detail see the [Class Diagram](sinif-diyagrami.md); for
-runtime sequences see the [Flow Diagrams](akislar.md) *(both in Turkish)*.
+level. For class-level detail see the [Class Diagram](class-diagram.md); for
+runtime sequences see the [Flow Diagrams](flows.md).
 
 ---
 
@@ -174,11 +174,10 @@ the same opacity. `Flush()` is not triggered, and every vertex goes out
 in a **single GPU draw call**. Neither colour nor transform breaks a batch:
 both are baked into the vertex data — which is why `u_model` is always
 identity. Details:
-[Flow Diagrams → Batch flush conditions](akislar.md#3-render-batcher-akışı)
-*(in Turkish)*.
+[Flow Diagrams → Batch flush conditions](flows.md#3-render-batcher-flow).
 
 Measured, not assumed — see
-[`examples/benchmarks/README.md`](../examples/benchmarks/README.md): with a
+[`examples/benchmarks/README.md`](../../examples/benchmarks/README.md): with a
 per-shape `Translate`+`Rotate`, 2000 shapes went from **2000 draw calls
 (9.44 ms) to 2 draw calls (0.30 ms)**. `Painter::GetFrameStats()` exposes the
 same counters at runtime; `Application` draws them on screen with **F1**.
@@ -231,7 +230,7 @@ sdl-painter/
 
 Note there is no `transform.h`: the transform is a `glm::mat3` held inside
 `RenderState`, not a class of its own
-([ADR-007](../adr/ADR-007-glm-transform-matrix.md)).
+([ADR-007](../../adr/ADR-007-glm-transform-matrix.md)).
 
 ### Public vs. private
 
@@ -279,7 +278,7 @@ time and container images small. See `conanfile.py` and
 
 The Vulkan SDK is **not** a build requirement: the compiled SPIR-V lives in the
 repository and is embedded into the library, so `glslc` is only needed by people
-editing the shader sources ([ADR-009](../adr/ADR-009-embedded-shaders.md)).
+editing the shader sources ([ADR-009](../../adr/ADR-009-embedded-shaders.md)).
 
 ---
 
@@ -305,9 +304,9 @@ interchangeability, predictable performance — go with them.
 
 ## 7. Where to go next
 
-- [Class Diagram](sinif-diyagrami.md) — UML classes and relationship types *(in Turkish)*
-- [Flow Diagrams](akislar.md) — frame, draw call, transform stack, texture upload *(in Turkish)*
-- [Backend Internals](backend-ic-yapisi.md) — OpenGL and Vulkan implementation detail *(in Turkish)*
+- [Class Diagram](class-diagram.md) — UML classes and relationship types
+- [Flow Diagrams](flows.md) — frame, draw call, transform stack, texture upload
+- [Backend Internals](backend-internals.md) — OpenGL and Vulkan implementation detail
 - [Getting Started](getting-started.md) — your first Painter application
-- [Software Engineering Perspective](sdl-painter-yazilim-muhendisligi.md) — the reasoning behind the design *(in Turkish)*
-- [Architecture Decision Records](../adr/README.md) — the decisions themselves
+- [Software Engineering Perspective](software-engineering.md) — the reasoning behind the design
+- [Architecture Decision Records](../../adr/README.md) — the decisions themselves

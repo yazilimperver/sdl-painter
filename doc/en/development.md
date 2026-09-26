@@ -18,7 +18,8 @@ sdl-painter/
 ├── tests/                 # GTest unit tests
 ├── examples/              # Demo applications (see examples/README.md)
 ├── packaging/consumer/    # External-consumer verification project
-├── doc/                   # Design documents, diagrams, screenshots
+├── doc/                   # Design documents (Turkish), diagrams, screenshots
+│   └── en/                # English design documents
 ├── cmake/                 # CMake helper modules
 ├── scripts/               # Build/test helper scripts (.sh + .ps1)
 └── adr/                   # Architecture Decision Records
@@ -67,7 +68,7 @@ Start-Process build\docs\index.html
 > [doxygen.nl](https://www.doxygen.nl/download.html) (Windows).
 
 Doxygen configuration and comment conventions:
-[Documentation Guide](dokumantasyon-rehberi.md) *(in Turkish)*.
+[Documentation Guide](documentation-guide.md).
 
 ## CI/CD
 

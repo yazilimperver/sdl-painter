@@ -153,7 +153,7 @@ target_link_libraries(my_app PRIVATE sdl_painter::app)
 
 **Windows'ta** SDL3 ve bağımlılıkları shared kütüphane olarak sunulmakta; executable'ınızın
 yanında olmazlarsa program `0xC0000135` ile kapanabilir — bkz.
-[Çalışma zamanı DLL'leri](doc/building.md#deploying-runtime-dlls-windows)
+[Çalışma zamanı DLL'leri](doc/en/building.md#deploying-runtime-dlls-windows)
 *(İngilizce)*. Mevcut, cmake betiği bu dll'leri otomatik kopyalamakta, benzer bir yaklaşımı uygulamalarınızda izleyebilirsiniz.
 
 SDLPainter **henüz Conan Center'da değil** — Conan şu an yalnızca SDLPainter'ın
@@ -220,7 +220,7 @@ Painter kodu değişmez. Bu katmanları şekillendiren her karar bir
 [Mimari Karar Kaydı](adr/README.md) olarak tutuluyor.
 
 
-![SDLPainter mimarisi](doc/sdl-painter-architecture.png)
+![SDLPainter mimarisi](doc/images/tr/architecture.png)
 
 ## Desteklenen platformlar
 
@@ -239,18 +239,18 @@ Painter kodu değişmez. Bu katmanları şekillendiren her karar bir
 |---|---|
 | [API referansı (Doxygen)](https://yazilimperver.github.io/sdl-painter) | Public header'lardan üretiliyor, her `main` push'unda güncelleniyor |
 | [Hızlı Başlangıç](doc/hizli-baslangic.md) | Kurulum, preset'ler, CMake seçenekleri, sorun giderme |
-| [Örnekler Rehberi](doc/sdl-painter-ornekler.md) | Her demonun ne gösterdiği |
+| [Örnekler Rehberi](doc/ornekler.md) | Her demonun ne gösterdiği |
 | [Mimari Karar Kayıtları](adr/README.md) | Tasarımın neden böyle olduğu |
-| [Genel bakış infografiği](doc/sdl-painter-general-overview.png) | Kütüphanenin tek sayfalık görsel özeti |
+| [Genel bakış infografiği](doc/images/tr/general-overview.png) | Kütüphanenin tek sayfalık görsel özeti |
 | [Mimari Genel Bakış](doc/mimari-genel-bakis.md) | Katmanlar, bağımlılıklar, veri akışı, değişmezler |
-| [Derleme](doc/building.md) · [Script'ler](doc/scripts.md) · [Geliştirme](doc/development.md) | Önkoşullar, Docker, script referansı, kalite kontrolleri, CI/CD *(İngilizce)* |
+| [Derleme](doc/en/building.md) · [Script'ler](doc/en/scripts.md) · [Geliştirme](doc/en/development.md) | Önkoşullar, Docker, script referansı, kalite kontrolleri, CI/CD *(İngilizce)* |
 
 Diğer tasarım dokümanları:
-[Özellik Listesi](doc/sdl-painter-ozellikler.md) ·
+[Özellik Listesi](doc/ozellikler.md) ·
 [Sınıf Diyagramları](doc/sinif-diyagrami.md) ·
 [Akış Diyagramları](doc/akislar.md) ·
 [Backend İç Yapısı](doc/backend-ic-yapisi.md) ·
-[Yazılım Mühendisliği](doc/sdl-painter-yazilim-muhendisligi.md) ·
+[Yazılım Mühendisliği](doc/yazilim-muhendisligi.md) ·
 [Dokümantasyon Rehberi](doc/dokumantasyon-rehberi.md) ·
 [Docker Rehberi](doc/docker.md) ·
 [Docker Hub'a Yayınlama](doc/docker-hub-deployment.md)

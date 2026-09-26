@@ -1,4 +1,4 @@
-**Türkçe** | [English version](getting-started.md)
+**Türkçe** | [English version](en/getting-started.md)
 
 # SDLPainter — Hızlı Başlangıç
 
@@ -75,7 +75,7 @@ cmake --build --preset windows-debug
 ### 2.2 Script ile Derleme
 
 Tüm scriptler projenin root dizininden çalıştırılmalıdır. Argümanların tam listesi için
-[Script Referansı](scripts.md) *(İngilizce)*.
+[Script Referansı](en/scripts.md) *(İngilizce)*.
 
 ```bash
 chmod +x scripts/*.sh
@@ -350,6 +350,6 @@ başlayanlar için önerilen okuma sırası:
 
 - 📐 [Sınıf Diyagramı](sinif-diyagrami.md) — API'nin tam yapısı
 - 🔄 [Akış Diyagramları](akislar.md) — Frame yaşam döngüsü, batch flush, transform stack
-- 📜 [Özellik Listesi](sdl-painter-ozellikler.md) — Desteklenen tüm primitifler
-- 💡 [Örnekler](sdl-painter-ornekler.md) — Daha fazla kullanım örneği
-- 🏗️ [Yazılım Mühendisliği Perspektifi](sdl-painter-yazilim-muhendisligi.md) — Tasarım kararlarının gerekçeleri
+- 📜 [Özellik Listesi](ozellikler.md) — Desteklenen tüm primitifler
+- 💡 [Örnekler](ornekler.md) — Daha fazla kullanım örneği
+- 🏗️ [Yazılım Mühendisliği Perspektifi](yazilim-muhendisligi.md) — Tasarım kararlarının gerekçeleri

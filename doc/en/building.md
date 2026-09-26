@@ -4,7 +4,7 @@ How to build **the repository itself**.
 
 To consume SDLPainter from your own
 project instead, see the Installation section of the
-[README](../README.md#installation).
+[README](../../README.md#installation).
 
 A deeper, step-by-step walkthrough (Windows/Visual Studio, preset tables,
 troubleshooting) is in [Getting Started](getting-started.md).
@@ -24,7 +24,7 @@ troubleshooting) is in [Getting Started](getting-started.md).
 - **Vulkan SDK** (for `glslc`) — only if you *modify* the Vulkan shader sources.
   Building and using the Vulkan backend does not need it: the compiled SPIR-V is
   checked into the repository and embedded into the library
-  ([ADR-009](../adr/ADR-009-embedded-shaders.md)).
+  ([ADR-009](../../adr/ADR-009-embedded-shaders.md)).
 - `clang-format-18`, `clang-tidy-18` — for the quality checks.
 - `doxygen` — to generate the API reference.
 
@@ -183,4 +183,4 @@ docker run --rm -v $(pwd):/workspace sdl-painter:windows-cross bash -c \
 > Windows use a native MSVC build (`windows-release` preset).
 
 Full workflows and publishing steps: [Docker Guide](docker.md) ·
-[Publishing to Docker Hub](docker-hub-deployment.md) *(both in Turkish)*.
+[Publishing to Docker Hub](docker-hub-deployment.md).

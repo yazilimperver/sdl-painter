@@ -90,7 +90,7 @@ Formatting is enforced in CI — a violation fails the pipeline. See
 
 ## make-hero-gif.sh / Make-HeroGif.ps1 — README banner
 
-Assembles the frames dumped by the [`hero`](../examples/README.md#the-hero-animation)
+Assembles the frames dumped by the [`hero`](../../examples/README.md#the-hero-animation)
 demo into `doc/hero.gif`. Requires `ffmpeg` (`sudo apt install ffmpeg` /
 `winget install --id Gyan.FFmpeg -e`); the script says so if it is missing.
 

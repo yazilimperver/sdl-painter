@@ -1,3 +1,5 @@
+**Türkçe** | [English version](en/documentation-guide.md)
+
 # SDLPainter — Dokümantasyon Rehberi
 
 Bu doküman kütüphaneye katkıda bulunanlar için **Doxygen yorum standardını**,

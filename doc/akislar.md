@@ -1,3 +1,5 @@
+**Türkçe** | [English version](en/flows.md)
+
 # SDLPainter — Akış Diyagramları
 
 Bu dokümanda SDLPainter'ın **çalışma zamanı davranışını** sequence ve flow

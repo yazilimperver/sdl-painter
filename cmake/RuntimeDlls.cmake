@@ -3,7 +3,7 @@
 # Kullanım: sdlpainter_copy_runtime_dlls(<target>)
 #
 # Yalnızca repo içi derleme kolaylığı içindir; kurulan/pakete giren tüketiciye
-# export EDİLMEZ (bkz. doc/building.md).
+# export EDİLMEZ (bkz. doc/en/building.md).
 
 # MinGW cross-compile'da Conan'dan gelen shared DLL'ler libgcc_s_seh-1.dll'e
 # dinamik bağımlı kalabiliyor — exe'ler -static-libgcc ile derlense bile.

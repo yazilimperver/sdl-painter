@@ -1,5 +1,5 @@
 <!--
-Yeni bir özellik önermeden önce: doc/sdl-painter-yazilim-muhendisligi.md →
+Yeni bir özellik önermeden önce: doc/yazilim-muhendisligi.md →
 Kapsam Yönetimi bölümünü inceledin mi? Bazı özellikler (delikli dolgu, çok
 duraklı/conical gradient, yol tabanlı kırpma) bilinçli olarak kapsam dışıdır.
 -->

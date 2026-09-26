@@ -112,7 +112,7 @@ Followings are about SDL2:
 
 ### CMake — `find_package`
 
-Build and install SDLPainter once (see [Building](doc/building.md)), then:
+Build and install SDLPainter once (see [Building](doc/en/building.md)), then:
 
 ```cmake
 find_package(sdl_painter CONFIG REQUIRED)
@@ -150,7 +150,7 @@ target_link_libraries(my_app PRIVATE sdl_painter::app)
 
 On **Windows**, SDL3 and its dependencies are shared libraries and must sit next
 to your executable or the program exits with `0xC0000135` — see
-[Deploying runtime DLLs](doc/building.md#deploying-runtime-dlls-windows). By the way, cmake script already copies given files.
+[Deploying runtime DLLs](doc/en/building.md#deploying-runtime-dlls-windows). By the way, cmake script already copies given files.
 
 SDLPainter is **not on Conan Center yet** — Conan is currently used only to
 resolve SDLPainter's own dependencies when building from source.
@@ -185,7 +185,7 @@ cmake --preset linux-debug && cmake --build --preset linux-debug
 ./build/linux-debug/examples/primitives
 ```
 
-Full instructions: [Building from source](doc/building.md).
+Full instructions: [Building from source](doc/en/building.md).
 
 You can check out other examples given at **[Examples](examples/README.md)**.
 
@@ -225,7 +225,7 @@ Adding a backend only requires implementing `IRenderer`; Painter code stays
 untouched. Every decision that shaped these layers is recorded as an
 [Architecture Decision Record](adr/README.md).
 
-![SDLPainter architecture](doc/sdl-painter-architecture-en.png)
+![SDLPainter architecture](doc/images/en/architecture.png)
 
 ## Supported platforms
 
@@ -242,26 +242,24 @@ untouched. Every decision that shaped these layers is recorded as an
 | | |
 |---|---|
 | [API reference (Doxygen)](https://yazilimperver.github.io/sdl-painter) | Generated from the public headers on every push to `main` |
-| [Building from source](doc/building.md) | Prerequisites, presets, CMake options, Docker |
-| [Script reference](doc/scripts.md) | `build` / `conan-install` / `run-tests` / `format-check` |
-| [Development](doc/development.md) | Directory layout, quality checks, CI/CD |
+| [Building from source](doc/en/building.md) | Prerequisites, presets, CMake options, Docker |
+| [Script reference](doc/en/scripts.md) | `build` / `conan-install` / `run-tests` / `format-check` |
+| [Development](doc/en/development.md) | Directory layout, quality checks, CI/CD |
 | [Examples](examples/README.md) | What each demo shows |
-| [Getting Started](doc/getting-started.md) | Setup, presets, first application, troubleshooting |
-| [Architecture Overview](doc/architecture.md) | Layers, dependencies, data flow, invariants |
+| [Getting Started](doc/en/getting-started.md) | Setup, presets, first application, troubleshooting |
+| [Architecture Overview](doc/en/architecture.md) | Layers, dependencies, data flow, invariants |
 | [Architecture Decision Records](adr/README.md) | Why the design is what it is |
-| [Overview infographic](doc/sdl-painter-general-overview-english.png) | One-page visual summary of the library |
+| [Overview infographic](doc/images/en/general-overview.png) | One-page visual summary of the library |
 
-Design documents are currently only in **Turkish**, as are the diagrams:
-[Feature List](doc/sdl-painter-ozellikler.md) ·
-[Examples Guide](doc/sdl-painter-ornekler.md) ·
-[Class Diagrams](doc/sinif-diyagrami.md) · [Flow Diagrams](doc/akislar.md) ·
-[Backend Internals](doc/backend-ic-yapisi.md) ·
-[Software Engineering](doc/sdl-painter-yazilim-muhendisligi.md) ·
-[Documentation Guide](doc/dokumantasyon-rehberi.md) ·
-[Docker Guide](doc/docker.md) ·
-[Publishing to Docker Hub](doc/docker-hub-deployment.md)
-
-I will translate them as soon as possible.
+Other design documents (full index: [doc/en/README.md](doc/en/README.md)):
+[Feature List](doc/en/features.md) ·
+[Examples Guide](doc/en/examples-guide.md) ·
+[Class Diagrams](doc/en/class-diagram.md) · [Flow Diagrams](doc/en/flows.md) ·
+[Backend Internals](doc/en/backend-internals.md) ·
+[Software Engineering](doc/en/software-engineering.md) ·
+[Documentation Guide](doc/en/documentation-guide.md) ·
+[Docker Guide](doc/en/docker.md) ·
+[Publishing to Docker Hub](doc/en/docker-hub-deployment.md)
 
 ## Support the project
 

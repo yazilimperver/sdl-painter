@@ -205,5 +205,4 @@ Each source file also repeats its phase in the header comment.
 ---
 
 A longer walkthrough of every demo — what it verifies and why it is written
-that way — is in [`doc/sdl-painter-ornekler.md`](../doc/sdl-painter-ornekler.md)
-*(in Turkish)*.
+that way — is in [`doc/en/examples-guide.md`](../doc/en/examples-guide.md).
