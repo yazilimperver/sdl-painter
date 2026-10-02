@@ -203,7 +203,7 @@ bool VkContext::CreateInstance() {
   if (!ContainsExtension(extensions, VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME) &&
       IsInstanceExtensionAvailable(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME)) {
     extensions.push_back(VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
-    spdlog::debug("VkContext: {} etkinleştirildi (başsız surface desteği).",
+    spdlog::debug("VkContext: {} etkinlestirildi (bassiz surface destegi).",
                   VK_EXT_HEADLESS_SURFACE_EXTENSION_NAME);
   }
 #endif

@@ -1,7 +1,7 @@
 /// @file test_path.cpp
 /// @brief Path yapımı, Bézier düzleştirme ve Painter entegrasyonu.
 ///
-/// Düzleştirmenin doğruluğu **sayısal olarak** sınanır: üretilen kırık çizgi
+/// Düzleştirmenin doğruluğu sayısal olarak sınanır: üretilen kırık çizgi
 /// ile gerçek eğri arasındaki azami sapma ölçülüp toleransla karşılaştırılır.
 /// Segment sayısını sabit bir beklenen değerle karşılaştırmak, formülü
 /// yeniden yazmaktan başka bir şey doğrulamazdı.
@@ -67,7 +67,7 @@ float Distance(const Point& a, const Point& b) {
 /// @brief Düzleştirilmiş eğrinin gerçek eğriden azami sapması.
 ///
 /// Her segmentin orta noktası, aynı parametre aralığının ortasındaki gerçek
-/// eğri noktasıyla karşılaştırılır — düzgün örneklemede sapmanın en büyük
+/// eğri noktasıyla karşılaştırılır; düzgün örneklemede sapmanın en büyük
 /// olduğu yer burasıdır.
 float MaxDeviation(const std::vector<Point>& flat, const Point& p0,
                    const Point& p1, const Point& p2, const Point& p3) {
@@ -369,7 +369,7 @@ TEST(PainterPathTest, FillPathIgnoresSubPathsWithFewerThanThreePoints) {
 
   Path path;
   path.MoveTo(0.0F, 0.0F);
-  path.LineTo(50.0F, 0.0F);  // yalnizca iki nokta — alan yok
+  path.LineTo(50.0F, 0.0F);  // yalnizca iki nokta, alan yok
 
   h.painter.Begin();
   h.painter.FillPath(path);

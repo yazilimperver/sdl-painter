@@ -159,7 +159,7 @@ TEST(TicTacToeHitTest, TopLeftEdgeIsInsideBoard) {
 }
 
 TEST(TicTacToeHitTest, BottomRightEdgeIsOutsideBoard) {
-  // Sag/alt sinir haric (yari acik aralik) — tasma olmamali.
+  // Sag/alt sinir haric (yari acik aralik); tasma olmamali.
   EXPECT_EQ(ttt::CellFromPoint(400.0F, 400.0F, 100.0F, 100.0F, 300.0F), -1);
 }
 

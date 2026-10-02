@@ -14,7 +14,7 @@ std::size_t GlyphAtlas::CreatePage(IRenderer& renderer) {
   TextureHandle handle =
       renderer.CreateTexture(kBlank.data(), kPageSize, kPageSize, 4);
   if (handle == kInvalidTexture) {
-    spdlog::error("GlyphAtlas: sayfa texture'i oluşturulamadi.");
+    spdlog::error("GlyphAtlas: sayfa texture'i olusturulamadi.");
     return static_cast<std::size_t>(-1);
   }
 

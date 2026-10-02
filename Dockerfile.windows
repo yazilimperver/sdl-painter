@@ -1,17 +1,17 @@
 # escape=`
 # ──────────────────────────────────────────────────────────────────────────────
-# SDLPainter — Native Windows (MSVC) CI imajı  (self-contained)
+# SDLPainter: Native Windows (MSVC) CI imajı  (self-contained)
 #
 # Linux `Dockerfile`'ının Windows muadili. `Dockerfile-Example` (VS Build Tools
-# + LLVM base imajı) içeriği BU dosyaya birleştirildi — ayrı bir GitLab base
+# + LLVM base imajı) içeriği BU dosyaya birleştirildi. Ayrı bir GitLab base
 # imajına gerek yok. Tek Docker imajı tek-OS olur: Linux conan adımları bu
 # imajda çalışamaz (onlar Linux `Dockerfile`'da kalır); burada Linux'taki
 # "conanfile.py kopyala + conan install ile cache ön-ısıt" akışının birebir
 # Windows/MSVC karşılığı kurulur.
 #
 # Dockerfile-Example'dan SAPMALAR:
-#  • VS Installer (vswhere.exe) SİLİNMİYOR — Conan'ın VS tespiti için gerekli.
-#  • compiler.version elle yazılmıyor — `conan profile detect` otomatik bulur
+#  • VS Installer (vswhere.exe) SİLİNMİYOR. Conan'ın VS tespiti için gerekli.
+#  • compiler.version elle yazılmıyor; `conan profile detect` otomatik bulur
 #    (aka.ms/vs/17 her zaman güncel 17.x çeker; 193/194 sabiti kırılgan olurdu).
 # ──────────────────────────────────────────────────────────────────────────────
 FROM mcr.microsoft.com/windows/servercore:ltsc2019 AS windows-msvc

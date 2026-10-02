@@ -1,14 +1,13 @@
-#include <gtest/gtest.h>
+#include "sdl_painter/geometry.h"
+#include "sdl_painter/vertex.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <gtest/gtest.h>
 #include <string>
 #include <vector>
-
-#include "sdl_painter/geometry.h"
-#include "sdl_painter/vertex.h"
 
 // Tessellator dahili başlık (src/ altında)
 #include "../src/tessellator.h"
@@ -42,7 +41,6 @@ Box BoxOf(const std::vector<Vertex>& v) {
 
 }  // namespace
 
-
 // ─── TessellateFilledRect ───────────────────────────────────────────────────
 
 TEST(TessellateFilledRect, ProducesExactlySixVertices) {
@@ -55,15 +53,19 @@ TEST(TessellateFilledRect, VerticesCoverCorners) {
   // Beklenen köşeler (x, y) çiftleri olarak kontrol
   bool has_tl = false, has_tr = false, has_bl = false, has_br = false;
   for (const auto& vert : v) {
-    if (vert.x == 10.0f  && vert.y == 20.0f)  has_tl = true;
-    if (vert.x == 110.0f && vert.y == 20.0f)  has_tr = true;
-    if (vert.x == 10.0f  && vert.y == 70.0f)  has_bl = true;
-    if (vert.x == 110.0f && vert.y == 70.0f)  has_br = true;
+    if (vert.x == 10.0f && vert.y == 20.0f)
+      has_tl = true;
+    if (vert.x == 110.0f && vert.y == 20.0f)
+      has_tr = true;
+    if (vert.x == 10.0f && vert.y == 70.0f)
+      has_bl = true;
+    if (vert.x == 110.0f && vert.y == 70.0f)
+      has_br = true;
   }
-  EXPECT_TRUE(has_tl) << "Sol-üst köşe eksik";
-  EXPECT_TRUE(has_tr) << "Sağ-üst köşe eksik";
-  EXPECT_TRUE(has_bl) << "Sol-alt köşe eksik";
-  EXPECT_TRUE(has_br) << "Sağ-alt köşe eksik";
+  EXPECT_TRUE(has_tl) << "Sol-ust kose eksik";
+  EXPECT_TRUE(has_tr) << "Sag-ust kose eksik";
+  EXPECT_TRUE(has_bl) << "Sol-alt kose eksik";
+  EXPECT_TRUE(has_br) << "Sag-alt kose eksik";
 }
 
 TEST(TessellateFilledRect, ZeroSizeProducesSixDegenerateVertices) {
@@ -131,7 +133,8 @@ TEST(TessellateFilledEllipse, PerimeterVerticesOnEllipse) {
   float cx = 50.0f, cy = 50.0f, rx = 80.0f, ry = 40.0f;
   auto v = Tessellator::TessellateFilledEllipse(cx, cy, rx, ry);
   for (std::size_t i = 1; i < v.size(); ++i) {
-    if (i % 3 == 0) continue;  // merkez vertex
+    if (i % 3 == 0)
+      continue;  // merkez vertex
     float dx = (v[i].x - cx) / rx;
     float dy = (v[i].y - cy) / ry;
     EXPECT_NEAR(dx * dx + dy * dy, 1.0f, 1e-4f) << "vertex " << i;
@@ -170,7 +173,7 @@ TEST(TessellateThickLine, HorizontalLineQuadWidth) {
     max_y = std::max(max_y, vert.y);
   }
   EXPECT_FLOAT_EQ(min_y, -3.0f);
-  EXPECT_FLOAT_EQ(max_y,  3.0f);
+  EXPECT_FLOAT_EQ(max_y, 3.0f);
 }
 
 TEST(TessellateThickLine, VerticalLineQuadWidth) {
@@ -184,7 +187,7 @@ TEST(TessellateThickLine, VerticalLineQuadWidth) {
     max_x = std::max(max_x, vert.x);
   }
   EXPECT_FLOAT_EQ(min_x, -4.0f);
-  EXPECT_FLOAT_EQ(max_x,  4.0f);
+  EXPECT_FLOAT_EQ(max_x, 4.0f);
 }
 
 // ─── TessellateThickPolyline ────────────────────────────────────────────────
@@ -201,16 +204,14 @@ TEST(TessellateThickPolyline, TwoPointsEqualsOneLine) {
 }
 
 TEST(TessellateThickPolyline, ThinLineHasNoJoinsAndIsNMinus1Times6) {
-  std::vector<Point> pts = {
-      {0, 0}, {100, 0}, {100, 100}, {200, 100}};
+  std::vector<Point> pts = {{0, 0}, {100, 0}, {100, 100}, {200, 100}};
   // Kalinlik 1.5 pikselin altinda -> birlesim eklenmez.
   auto v = Tessellator::TessellateThickPolyline(pts, 1.0f);
   EXPECT_EQ(v.size(), 18u);  // 3 segment * 6 vertex
 }
 
 TEST(TessellateThickPolyline, ThickLineAddsRoundJoinsAtInteriorVertices) {
-  std::vector<Point> pts = {
-      {0, 0}, {100, 0}, {100, 100}, {200, 100}};
+  std::vector<Point> pts = {{0, 0}, {100, 0}, {100, 100}, {200, 100}};
   auto thin = Tessellator::TessellateThickPolyline(pts, 1.0f);
   auto thick = Tessellator::TessellateThickPolyline(pts, 8.0f);
   // 4 nokta -> 2 ic kose -> 2 birlesim diski eklenir.
@@ -293,7 +294,7 @@ TEST(RoundedRect, OutlineTouchesAllFourEdges) {
   EXPECT_NEAR(max_y, y + h, 1e-3f);
 }
 
-/// @brief Yarıçap yarım boyutu aşarsa kırpılmalı — aksi halde şekil kendi
+/// @brief Yarıçap yarım boyutu aşarsa kırpılmalı; aksi halde şekil kendi
 ///        üzerine kıvrılıp bozulurdu.
 TEST(RoundedRect, OversizedRadiusIsClampedToHalfTheShortSide) {
   const float w = 100.0f;
@@ -413,7 +414,7 @@ TEST(FilledPie, FullSweepCoversTheWholeEllipse) {
   EXPECT_NEAR(b.max_y, 100.0f, 0.5f);
 }
 
-/// @brief Kiriş merkezi İÇERMEZ — dilimden farkı budur.
+/// @brief Kiriş merkezi İÇERMEZ; dilimden farkı budur.
 TEST(FilledChord, DoesNotIncludeTheCentre) {
   // 0°..90° kirisi: merkez (0,0), yay birinci ceyrekte. Kirisin kapladigi
   // bolge, merkezden uzaktaki ince dilimdir.
@@ -421,8 +422,7 @@ TEST(FilledChord, DoesNotIncludeTheCentre) {
   ASSERT_FALSE(chord.empty());
   for (const auto& p : chord) {
     // Hicbir vertex merkezde olmamali.
-    const bool at_centre =
-        std::fabs(p.x) < 1e-3f && std::fabs(p.y) < 1e-3f;
+    const bool at_centre = std::fabs(p.x) < 1e-3f && std::fabs(p.y) < 1e-3f;
     EXPECT_FALSE(at_centre) << "Kiris merkezi iceriyor; bu dilim davranisi.";
   }
 }
@@ -458,8 +458,8 @@ TEST(LineCap, ButtIsTheDefaultAndAddsNothing) {
 TEST(LineCap, SquareExtendsBothEndsByHalfWidth) {
   constexpr float kWidth = 8.0f;
   auto butt = Tessellator::TessellateThickLine(0, 0, 100, 0, kWidth);
-  auto square = Tessellator::TessellateThickLine(
-      0, 0, 100, 0, kWidth, sdl_painter::LineCap::kSquare);
+  auto square = Tessellator::TessellateThickLine(0, 0, 100, 0, kWidth,
+                                                 sdl_painter::LineCap::kSquare);
 
   const Box b = BoxOf(butt);
   const Box s = BoxOf(square);
@@ -478,8 +478,8 @@ TEST(LineCap, SquareExtendsBothEndsByHalfWidth) {
 TEST(LineCap, RoundExtendsBothEndsByHalfWidth) {
   constexpr float kWidth = 8.0f;
   auto butt = Tessellator::TessellateThickLine(0, 0, 100, 0, kWidth);
-  auto round = Tessellator::TessellateThickLine(
-      0, 0, 100, 0, kWidth, sdl_painter::LineCap::kRound);
+  auto round = Tessellator::TessellateThickLine(0, 0, 100, 0, kWidth,
+                                                sdl_painter::LineCap::kRound);
 
   const Box b = BoxOf(butt);
   const Box r = BoxOf(round);
@@ -512,8 +512,8 @@ TEST(LineCap, IgnoredOnClosedGeometry) {
 TEST(LineCap, ThinLineSkipsCapsBecauseTheyWouldBeInvisible) {
   // 1.5 piksel esigi altinda uc geometrisi eklenmez (bkz. birlesim esigi).
   const std::vector<Point> pts = {{0, 0}, {100, 0}, {100, 100}};
-  auto v = Tessellator::TessellateThickPolyline(
-      pts, 1.0f, sdl_painter::LineCap::kRound);
+  auto v = Tessellator::TessellateThickPolyline(pts, 1.0f,
+                                                sdl_painter::LineCap::kRound);
   EXPECT_EQ(v.size(), 12u) << "Ince cizgide uc/birlesim eklenmemeli.";
 }
 
@@ -555,7 +555,7 @@ TEST(LineJoin, MiterAddsTwoTrianglesAndReachesFurtherThanBevel) {
   EXPECT_TRUE(contains(miter, 104.0f, -4.0f))
       << "Miter noktasi (104, -4) uretilmedi.";
   EXPECT_FALSE(contains(bevel, 104.0f, -4.0f))
-      << "Bevel, miter noktasini uretmemeli — kose kesik kalmali.";
+      << "Bevel, miter noktasini uretmemeli; kose kesik kalmali.";
 }
 
 TEST(LineJoin, MiterFallsBackToBevelOnVerySharpAngle) {
@@ -628,7 +628,7 @@ TEST(DashedPolyline, EmptyPatternFallsBackToSolid) {
 
 /// @brief REGRESYON: desende sıfır uzunluk olursa yürüme döngüsü ilerlemez.
 ///
-/// Bu test, sonsuz döngüye girmediğini kanıtlar — düşerse takılır, geçerse
+/// Bu test, sonsuz döngüye girmediğini kanıtlar: düşerse takılır, geçerse
 /// koruma çalışıyordur.
 TEST(DashedPolyline, ZeroLengthInPatternFallsBackToSolidInsteadOfHanging) {
   const std::vector<Point> pts = {{0, 0}, {100, 0}};
@@ -703,8 +703,7 @@ TEST(DashedPolyline, PatternContinuesAcrossCorners) {
 
 TEST(DashedPolyline, ClosedShapeIsDashedAsOpenPieces) {
   // 100x100 kare -> cevre 400. 20/20 deseni -> 10 cizili parca.
-  const std::vector<Point> pts = {
-      {0, 0}, {100, 0}, {100, 100}, {0, 100}};
+  const std::vector<Point> pts = {{0, 0}, {100, 0}, {100, 100}, {0, 100}};
   const float kPattern[] = {20.0f, 20.0f};
   auto v = Tessellator::TessellateDashedPolyline(pts, 4.0f, kPattern, 2,
                                                  /*closed=*/true);
@@ -786,13 +785,11 @@ TEST(TessellateStrokedEllipse, ProducesNonEmptyResult) {
 TEST(TessellateFilledPolygon, LessThanThreePointsReturnsEmpty) {
   EXPECT_TRUE(Tessellator::TessellateFilledPolygon({}).empty());
   EXPECT_TRUE(Tessellator::TessellateFilledPolygon({{0, 0}}).empty());
-  EXPECT_TRUE(
-      Tessellator::TessellateFilledPolygon({{0, 0}, {1, 0}}).empty());
+  EXPECT_TRUE(Tessellator::TessellateFilledPolygon({{0, 0}, {1, 0}}).empty());
 }
 
 TEST(TessellateFilledPolygon, TriangleProducesThreeVertices) {
-  auto v = Tessellator::TessellateFilledPolygon(
-      {{0, 0}, {100, 0}, {50, 100}});
+  auto v = Tessellator::TessellateFilledPolygon({{0, 0}, {100, 0}, {50, 100}});
   EXPECT_EQ(v.size(), 3u);
 }
 
@@ -805,8 +802,8 @@ TEST(TessellateFilledPolygon, ConvexQuadProducesSixVertices) {
 
 TEST(TessellateFilledPolygon, ConcaveLShapeCorrectTriangleCount) {
   // L şekli (6 köşe → 4 üçgen → 12 vertex)
-  auto v = Tessellator::TessellateFilledPolygon({
-      {0, 0}, {60, 0}, {60, 40}, {40, 40}, {40, 80}, {0, 80}});
+  auto v = Tessellator::TessellateFilledPolygon(
+      {{0, 0}, {60, 0}, {60, 40}, {40, 40}, {40, 80}, {0, 80}});
   EXPECT_EQ(v.size(), 12u);
 }
 
@@ -820,12 +817,15 @@ TEST(TessellateFilledPolygon, ClockwiseInputProducesSameCount) {
 }
 
 TEST(TessellateFilledPolygon, TriangleVerticesMatchInput) {
-  auto v = Tessellator::TessellateFilledPolygon(
-      {{10, 20}, {110, 20}, {60, 120}});
+  auto v =
+      Tessellator::TessellateFilledPolygon({{10, 20}, {110, 20}, {60, 120}});
   ASSERT_EQ(v.size(), 3u);
-  EXPECT_FLOAT_EQ(v[0].x, 10.0f);  EXPECT_FLOAT_EQ(v[0].y, 20.0f);
-  EXPECT_FLOAT_EQ(v[1].x, 110.0f); EXPECT_FLOAT_EQ(v[1].y, 20.0f);
-  EXPECT_FLOAT_EQ(v[2].x, 60.0f);  EXPECT_FLOAT_EQ(v[2].y, 120.0f);
+  EXPECT_FLOAT_EQ(v[0].x, 10.0f);
+  EXPECT_FLOAT_EQ(v[0].y, 20.0f);
+  EXPECT_FLOAT_EQ(v[1].x, 110.0f);
+  EXPECT_FLOAT_EQ(v[1].y, 20.0f);
+  EXPECT_FLOAT_EQ(v[2].x, 60.0f);
+  EXPECT_FLOAT_EQ(v[2].y, 120.0f);
 }
 
 // ─── TessellateTexturedRect ──────────────────────────────────────────────────
@@ -836,8 +836,8 @@ TEST(TessellateTexturedRect, ProducesExactlySixVertices) {
 }
 
 TEST(TessellateTexturedRect, UVCoordinatesCorrect) {
-  auto v = Tessellator::TessellateTexturedRect(
-      0.0f, 0.0f, 200.0f, 100.0f, 0.25f, 0.1f, 0.75f, 0.9f);
+  auto v = Tessellator::TessellateTexturedRect(0.0f, 0.0f, 200.0f, 100.0f,
+                                               0.25f, 0.1f, 0.75f, 0.9f);
   ASSERT_EQ(v.size(), 6u);
 
   // İlk vertex: sol üst
@@ -852,13 +852,17 @@ TEST(TessellateTexturedRect, UVCoordinatesCorrect) {
 }
 
 TEST(TessellateTexturedRect, PositionCoordinatesCorrect) {
-  auto v = Tessellator::TessellateTexturedRect(
-      10.0f, 20.0f, 80.0f, 60.0f, 0, 0, 1, 1);
+  auto v = Tessellator::TessellateTexturedRect(10.0f, 20.0f, 80.0f, 60.0f, 0, 0,
+                                               1, 1);
   ASSERT_EQ(v.size(), 6u);
-  EXPECT_FLOAT_EQ(v[0].x, 10.0f);   EXPECT_FLOAT_EQ(v[0].y, 20.0f);
-  EXPECT_FLOAT_EQ(v[1].x, 90.0f);   EXPECT_FLOAT_EQ(v[1].y, 20.0f);
-  EXPECT_FLOAT_EQ(v[2].x, 10.0f);   EXPECT_FLOAT_EQ(v[2].y, 80.0f);
-  EXPECT_FLOAT_EQ(v[5].x, 90.0f);   EXPECT_FLOAT_EQ(v[5].y, 80.0f);
+  EXPECT_FLOAT_EQ(v[0].x, 10.0f);
+  EXPECT_FLOAT_EQ(v[0].y, 20.0f);
+  EXPECT_FLOAT_EQ(v[1].x, 90.0f);
+  EXPECT_FLOAT_EQ(v[1].y, 20.0f);
+  EXPECT_FLOAT_EQ(v[2].x, 10.0f);
+  EXPECT_FLOAT_EQ(v[2].y, 80.0f);
+  EXPECT_FLOAT_EQ(v[5].x, 90.0f);
+  EXPECT_FLOAT_EQ(v[5].y, 80.0f);
 }
 
 // ─── Dejenere poligon girdileri (K4 regresyonu) ─────────────────────────────
@@ -878,13 +882,12 @@ TEST(TessellateFilledPolygon, DuplicateVertexDoesNotDropTriangles) {
   };
   auto v = Tessellator::TessellateFilledPolygon(pts);
   // Tekrar elendikten sonra 4 köşe kalır → 2 üçgen → 6 vertex.
-  EXPECT_EQ(v.size(), 6u)
-      << "Tekrarlı köşe üçgenlerin kaybolmasına yol açtı.";
+  EXPECT_EQ(v.size(), 6u) << "Tekrarli kose ucgenlerin kaybolmasina yol acti.";
 }
 
 TEST(TessellateFilledPolygon, MultipleDuplicateVerticesHandled) {
   const std::vector<Point> pts = {
-      {0.0f, 0.0f},   {0.0f, 0.0f},  {10.0f, 0.0f},
+      {0.0f, 0.0f},   {0.0f, 0.0f},   {10.0f, 0.0f},
       {10.0f, 10.0f}, {10.0f, 10.0f}, {0.0f, 10.0f},
   };
   auto v = Tessellator::TessellateFilledPolygon(pts);
@@ -897,13 +900,16 @@ TEST(TessellateFilledPolygon, CollinearVertexDoesNotDropTriangles) {
       {0.0f, 0.0f}, {5.0f, 0.0f}, {10.0f, 0.0f}, {10.0f, 10.0f}, {0.0f, 10.0f},
   };
   auto v = Tessellator::TessellateFilledPolygon(pts);
-  EXPECT_EQ(v.size(), 9u) << "5 köşe → 3 üçgen beklenir.";
+  EXPECT_EQ(v.size(), 9u) << "5 kose → 3 ucgen beklenir.";
 }
 
 TEST(TessellateFilledPolygon, DegenerateInputCollapsingToLineReturnsEmpty) {
   // Tüm noktalar aynı → geçerli hiçbir üçgen yok, ama çökmemeli.
   const std::vector<Point> pts = {
-      {5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f}, {5.0f, 5.0f},
+      {5.0f, 5.0f},
+      {5.0f, 5.0f},
+      {5.0f, 5.0f},
+      {5.0f, 5.0f},
   };
   auto v = Tessellator::TessellateFilledPolygon(pts);
   EXPECT_TRUE(v.empty());
@@ -912,8 +918,8 @@ TEST(TessellateFilledPolygon, DegenerateInputCollapsingToLineReturnsEmpty) {
 TEST(TessellateFilledPolygon, ConcaveWithDuplicateVertexKeepsAllTriangles) {
   // Konkav L şekli + tekrarlı köşe → eleme sonrası 6 köşe = 4 üçgen.
   const std::vector<Point> pts = {
-      {0.0f, 0.0f},  {10.0f, 0.0f}, {10.0f, 10.0f},
-      {5.0f, 10.0f}, {5.0f, 10.0f}, {5.0f, 5.0f}, {0.0f, 5.0f},
+      {0.0f, 0.0f},  {10.0f, 0.0f}, {10.0f, 10.0f}, {5.0f, 10.0f},
+      {5.0f, 10.0f}, {5.0f, 5.0f},  {0.0f, 5.0f},
   };
   auto v = Tessellator::TessellateFilledPolygon(pts);
   EXPECT_EQ(v.size(), 12u);
@@ -925,7 +931,7 @@ TEST(TessellateFilledCircle, SegmentCountIsCapped) {
   // Üst sınır olmadan yarıçap 100000 → 150.000 vertex (~1.7 MB) üretiliyordu.
   auto v = Tessellator::TessellateFilledCircle(0.0f, 0.0f, 100000.0f);
   EXPECT_LE(v.size(), 512u * 3u)
-      << "Segment sayısı sınırsız: " << v.size() << " vertex üretildi.";
+      << "Segment sayisi sinirsiz: " << v.size() << " vertex uretildi.";
   EXPECT_GT(v.size(), 0u);
 }
 
@@ -958,8 +964,8 @@ TEST(TessellateFilledPolygon, ReflexVertexOnDiagonalKeepsArea) {
   };
   expect_area_kept(ccw, "CCW");
   expect_area_kept(std::vector<Point>(ccw.rbegin(), ccw.rend()), "CW");
-  expect_area_kept(transformed(1.0f, 1000.3f, 1000.7f), "ötelenmiş");
-  expect_area_kept(transformed(37.5f, 0.0f, 0.0f), "ölçeklenmiş");
+  expect_area_kept(transformed(1.0f, 1000.3f, 1000.7f), "otelenmis");
+  expect_area_kept(transformed(37.5f, 0.0f, 0.0f), "olceklenmis");
 }
 
 TEST(TessellateFilledPolygon, NotchOfConcavePolygonStaysEmpty) {
@@ -968,7 +974,7 @@ TEST(TessellateFilledPolygon, NotchOfConcavePolygonStaysEmpty) {
   };
   const auto v = Tessellator::TessellateFilledPolygon(pts);
   EXPECT_EQ(CoverageCount(v, 1.37f, 0.41f), 1);
-  EXPECT_EQ(CoverageCount(v, 2.0f, 3.5f), 0) << "Çentik poligonun dışında.";
+  EXPECT_EQ(CoverageCount(v, 2.0f, 3.5f), 0) << "Centik poligonun disinda.";
 }
 
 // Açık yol başlangıca dönebilir; son nokta tekrar sayılıp silinmemeli. Kapalı
@@ -979,17 +985,17 @@ TEST(TessellateThickPolyline, OpenPolylineReturningToStartKeepsLastSegment) {
   const auto open = Tessellator::TessellateThickPolyline(pts, 1.0f);
   EXPECT_EQ(CoverageCount(open, 45.3f, 10.2f), 1);
   EXPECT_EQ(CoverageCount(open, 45.3f, 45.1f), 1)
-      << "Başlangıca dönen son segment çizilmedi.";
+      << "Baslangica donen son segment cizilmedi.";
 
   constexpr float kLongDash[] = {1000.0f, 1.0f};
   const auto dashed = Tessellator::TessellateDashedPolyline(
       pts, 1.0f, kLongDash, 2, /*closed=*/false);
   EXPECT_EQ(CoverageCount(dashed, 45.3f, 45.1f), 1)
-      << "Kesikli yolda başlangıca dönen son segment çizilmedi.";
+      << "Kesikli yolda baslangica donen son segment cizilmedi.";
 
   const auto closed = Tessellator::TessellateStrokedPolygon(pts, 1.0f);
   EXPECT_EQ(CoverageCount(closed, 45.3f, 45.1f), 1)
-      << "Kapalı çerçevede kapanış segmenti tekrarlandı.";
+      << "Kapali cercevede kapanis segmenti tekrarlandi.";
 }
 
 // Round cap ve round join tam disk olduğunda komşu quad'larla örtüşen bölge
@@ -999,7 +1005,7 @@ TEST(LineCap, RoundCapDoesNotOverlapLineBody) {
       20.0f, 50.0f, 80.0f, 50.0f, 20.0f, sdl_painter::LineCap::kRound);
   EXPECT_EQ(CoverageCount(v, 12.37f, 46.13f), 1);
   EXPECT_EQ(CoverageCount(v, 22.37f, 52.91f), 1)
-      << "Uç ile gövdenin kesiştiği bölge";
+      << "Uc ile govdenin kesistigi bolge";
 }
 
 TEST(LineJoin, RoundJoinDoesNotOverlapSegments) {
@@ -1009,7 +1015,7 @@ TEST(LineJoin, RoundJoinDoesNotOverlapSegments) {
       pts, 20.0f, sdl_painter::LineCap::kButt, sdl_painter::LineJoin::kRound);
   EXPECT_EQ(CoverageCount(v, 84.71f, 14.63f), 1);
   EXPECT_EQ(CoverageCount(v, 75.37f, 25.91f), 1)
-      << "İç köşede iki segment ve birleşim diski üst üste";
+      << "Ic kosede iki segment ve birlesim diski ust uste";
 }
 
 namespace {
@@ -1068,9 +1074,9 @@ StrokeScan ScanStroke(const std::vector<Vertex>& v,
         const bool end = !closed && (k == 0 || k + 1 == path.size());
         const bool round = end ? cap == sdl_painter::LineCap::kRound
                                : join == sdl_painter::LineJoin::kRound;
-        inside = inside || (round && std::hypot(px - path[k].x,
-                                                py - path[k].y) <
-                                         half - kMargin);
+        inside = inside ||
+                 (round &&
+                  std::hypot(px - path[k].x, py - path[k].y) < half - kMargin);
       }
       const int32_t count =
           CoverageCount(v, static_cast<float>(px), static_cast<float>(py));
@@ -1107,15 +1113,16 @@ TEST(StrokeCoverage, PartsDoNotOverlapOrLeaveGaps) {
 
   for (const LineJoin join : kJoins) {
     for (const LineCap cap : kCaps) {
-      const std::string name = "join=" + std::to_string(static_cast<int>(join)) +
-                               " cap=" + std::to_string(static_cast<int>(cap));
+      const std::string name =
+          "join=" + std::to_string(static_cast<int>(join)) +
+          " cap=" + std::to_string(static_cast<int>(cap));
 
       const StrokeScan open = ScanStroke(
           Tessellator::TessellateThickPolyline(kOpen, kWidth, cap, join), kOpen,
           kWidth, false, cap, join);
-      EXPECT_EQ(open.overlaps, 0) << "açık, " << name;
-      EXPECT_EQ(open.gaps, 0) << "açık, " << name;
-      EXPECT_EQ(open.strays, 0) << "açık, " << name;
+      EXPECT_EQ(open.overlaps, 0) << "acik, " << name;
+      EXPECT_EQ(open.gaps, 0) << "acik, " << name;
+      EXPECT_EQ(open.strays, 0) << "acik, " << name;
 
       const StrokeScan dashed =
           ScanStroke(Tessellator::TessellateDashedPolyline(
@@ -1129,9 +1136,9 @@ TEST(StrokeCoverage, PartsDoNotOverlapOrLeaveGaps) {
     const StrokeScan closed = ScanStroke(
         Tessellator::TessellateStrokedPolygon(kTriangle, kWidth, join),
         kTriangle, kWidth, true, LineCap::kButt, join);
-    EXPECT_EQ(closed.overlaps, 0) << "kapalı, " << name;
-    EXPECT_EQ(closed.gaps, 0) << "kapalı, " << name;
-    EXPECT_EQ(closed.strays, 0) << "kapalı, " << name;
+    EXPECT_EQ(closed.overlaps, 0) << "kapali, " << name;
+    EXPECT_EQ(closed.gaps, 0) << "kapali, " << name;
+    EXPECT_EQ(closed.strays, 0) << "kapali, " << name;
   }
 }
 

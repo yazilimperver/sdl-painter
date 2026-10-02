@@ -12,7 +12,7 @@ function(set_target_sanitizers target)
     endif()
 
     if(MSVC OR WIN32)
-        message(STATUS "Sanitizers: MSVC/Windows'ta desteklenmez, atlanıyor.")
+        message(STATUS "Sanitizers: MSVC/Windows'ta desteklenmez, atlaniyor.")
         return()
     endif()
 
@@ -28,5 +28,5 @@ function(set_target_sanitizers target)
         -fsanitize=address
         -fsanitize=undefined
     )
-    message(STATUS "Sanitizers: ${target} için ASan + UBSan etkin.")
+    message(STATUS "Sanitizers: ${target} icin ASan + UBSan etkin.")
 endfunction()

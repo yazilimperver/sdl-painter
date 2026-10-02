@@ -119,11 +119,11 @@ Write-Output ">>> Build completed."
 
 if ($Docs) {
     if (-not (Get-Command doxygen -ErrorAction SilentlyContinue)) {
-        Write-Error "Hata: doxygen bulunamadı. Lütfen kurun ve PATH'e ekleyin."
+        Write-Error "Hata: doxygen bulunamadi. Lutfen kurun ve PATH'e ekleyin."
         exit 1
     }
-    Write-Output ">>> Doxygen dokümantasyonu oluşturuluyor..."
+    Write-Output ">>> Doxygen dokumantasyonu olusturuluyor..."
     doxygen Doxyfile
     if (-not $?) { exit $LASTEXITCODE }
-    Write-Output ">>> Dokümantasyon hazır: build/docs/index.html"
+    Write-Output ">>> Dokumantasyon hazir: build/docs/index.html"
 }

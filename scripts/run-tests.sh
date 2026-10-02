@@ -23,7 +23,7 @@ fi
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --filter)
-            [[ $# -ge 2 ]] || { echo "Hata: --filter için değer gerekli." >&2 ; exit 1; }
+            [[ $# -ge 2 ]] || { echo "Hata: --filter icin deger gerekli." >&2 ; exit 1; }
             FILTER="$2" ; shift 2 ;;
         *) echo "Hata: Bilinmeyen bayrak '$1'." >&2 ; exit 1 ;;
     esac
@@ -33,17 +33,17 @@ case "${BUILD_TYPE}" in
     Debug)   PRESET="linux-debug" ;;
     Release) PRESET="linux-release" ;;
     ASan)    PRESET="linux-debug-asan" ;;
-    *) echo "Hata: Bilinmeyen build type '${BUILD_TYPE}'. Debug|Release|ASan kullanın." >&2 ; exit 1 ;;
+    *) echo "Hata: Bilinmeyen build type '${BUILD_TYPE}'. Debug|Release|ASan kullanin." >&2 ; exit 1 ;;
 esac
 
 CTEST_ARGS=(--preset "${PRESET}" --output-on-failure)
 if [[ -n "${FILTER}" ]]; then
     CTEST_ARGS+=(-R "${FILTER}")
-    echo ">>> Testler çalıştırılıyor: preset=${PRESET} filter=/${FILTER}/"
+    echo ">>> Testler calistiriliyor: preset=${PRESET} filter=/${FILTER}/"
 else
-    echo ">>> Testler çalıştırılıyor: preset=${PRESET}"
+    echo ">>> Testler calistiriliyor: preset=${PRESET}"
 fi
 
 ctest "${CTEST_ARGS[@]}"
 
-echo ">>> Testler tamamlandı."
+echo ">>> Testler tamamlandi."

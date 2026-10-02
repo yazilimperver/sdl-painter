@@ -472,9 +472,6 @@ classDiagram
         +Center() Point
         +Contains(px, py) bool
     }
-    class Size {
-        +float w, h
-    }
     class TextureHandle {
         <<typedef>>
         uint32_t (kInvalidTexture = 0)

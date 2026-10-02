@@ -25,7 +25,7 @@
 namespace {
 
 // ---------------------------------------------------------------------------
-// OpenGL — gomulu GLSL gercekten derleniyor mu?
+// OpenGL: gomulu GLSL gercekten derleniyor mu?
 // ---------------------------------------------------------------------------
 
 /// OpenGLRenderer::Initialize() shader derlemesi basarisiz olursa `false`
@@ -43,7 +43,7 @@ TEST(RendererSmokeTest, OpenGLInitializeCompilesEmbeddedShaders) {
   ASSERT_NE(renderer, nullptr);
 
   EXPECT_TRUE(renderer->Initialize(window.Get()))
-      << "OpenGLRenderer::Initialize() basarisiz — gomulu GLSL derlenemedi.";
+      << "OpenGLRenderer::Initialize() basarisiz: gomulu GLSL derlenemedi.";
 
   renderer->Shutdown();
 }
@@ -69,7 +69,7 @@ TEST(RendererSmokeTest, OpenGLInitializeIsRepeatable) {
 #ifdef SDLPAINTER_HAS_VULKAN
 
 // ---------------------------------------------------------------------------
-// Vulkan — gomulu SPIR-V yapisal olarak gecerli mi?
+// Vulkan: gomulu SPIR-V yapisal olarak gecerli mi?
 // ---------------------------------------------------------------------------
 //
 // Bu testler GPU istemez; CMake'teki bayt-sirasi donusumunun (little-endian
@@ -89,7 +89,7 @@ void ExpectValidSpirv(const uint32_t* words, std::size_t byte_size,
   ASSERT_GE(byte_size / sizeof(uint32_t), 5U) << "SPIR-V basligi eksik";
 
   EXPECT_EQ(words[0], kSpirvMagic)
-      << "magic number tutmuyor — CMake bayt-sirasi donusumu bozuk olabilir";
+      << "magic number tutmuyor; CMake bayt-sirasi donusumu bozuk olabilir";
 
   // Version kelimesi: 0x00MMmm00 (major/minor). 1.0-1.6 arasi beklenir.
   const uint32_t kMajor = (words[1] >> 16U) & 0xFFU;
@@ -123,7 +123,7 @@ TEST(SpirvEmbedTest, TexturedModulesAreValid) {
 /// burada da yakalanir.
 ///
 /// Ancak `false` donusu "Vulkan yok" ile "pipeline bozuk" arasinda ayrim
-/// yapmiyor — surface/ICD eksikligi de ayni sonucu veriyor. Bu yuzden test
+/// yapmiyor; surface/ICD eksikligi de ayni sonucu veriyor. Bu yuzden test
 /// SKIP'e dusuyor; SPIR-V dogrulugunun GPU'suz garantisini yukaridaki
 /// SpirvEmbedTest'ler veriyor.
 TEST(RendererSmokeTest, VulkanInitializeSucceeds) {

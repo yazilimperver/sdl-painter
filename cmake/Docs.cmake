@@ -1,7 +1,7 @@
 find_package(Doxygen OPTIONAL_COMPONENTS dot)
 
 if(NOT DOXYGEN_FOUND)
-    message(STATUS "Doxygen bulunamadı — 'sdlpainter_docs' hedefi oluşturulmadı")
+    message(STATUS "Doxygen bulunamadi — 'sdlpainter_docs' hedefi olusturulmadi")
     return()
 endif()
 
@@ -13,8 +13,8 @@ set(_AWESOME "${PROJECT_SOURCE_DIR}/third_party/doxygen-awesome-css/doxygen-awes
 if(EXISTS "${_AWESOME}")
     set(DOXYGEN_AWESOME_CSS "${_AWESOME}")
 else()
-    message(STATUS "doxygen-awesome-css submodule bulunamadı — varsayılan Doxygen teması kullanılacak")
-    message(STATUS "  Eklemek için: git submodule add https://github.com/jothepro/doxygen-awesome-css.git third_party/doxygen-awesome-css")
+    message(STATUS "doxygen-awesome-css submodule bulunamadi — varsayilan Doxygen temasi kullanilacak")
+    message(STATUS "  Eklemek icin: git submodule add https://github.com/jothepro/doxygen-awesome-css.git third_party/doxygen-awesome-css")
 endif()
 
 if(DOXYGEN_DOT_FOUND)
@@ -33,11 +33,11 @@ add_custom_target(sdlpainter_docs
     COMMAND ${CMAKE_COMMAND} -E make_directory "${DOXYGEN_OUTPUT_DIR}"
     COMMAND ${DOXYGEN_EXECUTABLE} "${PROJECT_BINARY_DIR}/Doxyfile"
     WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
-    COMMENT "Doxygen ile API dokümantasyonu oluşturuluyor..."
+    COMMENT "Doxygen ile API dokumantasyonu olusturuluyor..."
     VERBATIM
 )
 
 message(STATUS "Doxygen ${DOXYGEN_VERSION} bulundu — hedef: sdlpainter_docs")
 if(DOXYGEN_DOT_FOUND)
-    message(STATUS "  Graphviz dot bulundu — sınıf diyagramları etkin")
+    message(STATUS "  Graphviz dot bulundu — sinif diyagramlari etkin")
 endif()

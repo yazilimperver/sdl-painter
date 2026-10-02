@@ -85,7 +85,7 @@ TEST(DecodeUTF8, FourByteSequenceUpperBound) {
 }
 
 TEST(DecodeUTF8, TurkishCharactersDecodeCorrectly) {
-  // "Ğüşİöç" — projenin hedef dili; hepsi 2 baytlık diziler.
+  // "Ğüşİöç": projenin hedef dili; hepsi 2 baytlık diziler.
   //  Ğ=U+011E(C4 9E) ü=U+00FC(C3 BC) ş=U+015F(C5 9F)
   //  İ=U+0130(C4 B0) ö=U+00F6(C3 B6) ç=U+00E7(C3 A7)
   const std::vector<char32_t> kExpected = {U'\u011E', U'\u00FC', U'\u015F',
@@ -108,7 +108,7 @@ TEST(DecodeUTF8, MixedAsciiAndMultibyte) {
   EXPECT_EQ(v[4], U'c');
 }
 
-// ─── Bozuk girdiler — daima ilerlemeli, asla çökmemeli ──────────────────────
+// ─── Bozuk girdiler: daima ilerlemeli, asla çökmemeli ──────────────────────
 
 TEST(DecodeUTF8, EmptyInputYieldsReplacementAndAdvancesOne) {
   std::size_t adv = 0;
@@ -126,7 +126,7 @@ TEST(DecodeUTF8, TruncatedTwoByteSequence) {
   // C3 tek başına: devamı yok.
   std::size_t adv = 0;
   EXPECT_EQ(DecodeUTF8("\xC3", 1, adv), kReplacement);
-  EXPECT_EQ(adv, 1u) << "Bozuk dizide tek bayt tüketilmeli.";
+  EXPECT_EQ(adv, 1u) << "Bozuk dizide tek bayt tuketilmeli.";
 }
 
 TEST(DecodeUTF8, TruncatedFourByteSequence) {
@@ -164,7 +164,7 @@ TEST(DecodeUTF8, OverlongThreeByteEncodingRejected) {
 }
 
 TEST(DecodeUTF8, SurrogateRangeRejected) {
-  // ED A0 80 = U+D800, UTF-16 surrogate — tek başına geçerli değil.
+  // ED A0 80 = U+D800, UTF-16 surrogate; tek başına geçerli değil.
   std::size_t adv = 0;
   EXPECT_EQ(DecodeUTF8("\xED\xA0\x80", 3, adv), kReplacement);
   EXPECT_EQ(adv, 1u);

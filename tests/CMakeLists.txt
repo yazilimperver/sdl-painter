@@ -31,7 +31,7 @@ include(GoogleTest)
 # Bu takim `src/` altindaki dahili basliklari include eder ve export EDILMEYEN
 # sembolleri (Tessellator, RenderBatcher, vk_detail::VkResultToString ...)
 # dogrudan cagirir. Paylasimli derlemede bunlar DLL'den disari verilmedigi icin
-# hedef link edilemez — ve edilmemeli: dahili detaylar ABI yuzeyine cikmamali.
+# hedef link edilemez (ve edilmemeli): dahili detaylar ABI yuzeyine cikmamali.
 #
 # Bu yuzden paylasimli derlemede bu takim atlanir; public yuzeyi dogrulayan
 # `sdl_painter_abi_tests` her iki modda da derlenir ve kosar.
@@ -45,10 +45,7 @@ else()
 
     target_include_directories(sdl_painter_tests PRIVATE
         ${PROJECT_SOURCE_DIR}/src
-        # Örneklerin saf oyun mantığı burada: tictactoe_logic.h,
-        # collision_logic.h (breakout).
         ${PROJECT_SOURCE_DIR}/examples/games
-        # Gömülü shader başlıkları — test_renderer_smoke.cpp SPIR-V'yi doğruluyor.
         ${PROJECT_BINARY_DIR}/generated
     )
 
@@ -82,7 +79,7 @@ endif()
 # Ayri bir hedef olmasinin sebebi yukaridaki takimla arasindaki tek farkta:
 # `sdl_painter_tests` DAHILI basliklari (src/) include eder ve Tessellator,
 # RenderBatcher, vk_detail::VkResultToString gibi export edilmeyen sembolleri
-# cagirir. Bu bilincli — dahili detaylar ABI yuzeyine cikmamali. Sonucu ise
+# cagirir. Bu bilincli: dahili detaylar ABI yuzeyine cikmamali. Sonucu ise
 # `BUILD_SHARED_LIBS=ON` ile o hedefin link edilememesi.
 #
 # Bu hedef yalnizca public basliklari kullanir ve `src/` include yoluna sahip
@@ -94,7 +91,7 @@ add_executable(sdl_painter_abi_tests test_public_abi.cpp)
 # DIKKAT: buraya ${PROJECT_SOURCE_DIR}/src eklenmeyecek. Testin degeri, public
 # yuzeyle sinirli kalmasindan geliyor.
 target_include_directories(sdl_painter_abi_tests PRIVATE
-    # mock_renderer.h — yalnizca public basliklari include eder, IRenderer'i
+    # mock_renderer.h: yalnizca public basliklari include eder, IRenderer'i
     # tuketici gibi implemente eder.
     ${CMAKE_CURRENT_SOURCE_DIR}
 )

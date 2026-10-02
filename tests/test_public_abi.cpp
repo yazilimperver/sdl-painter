@@ -1,7 +1,7 @@
 // Public ABI / paylasimli kutuphane (DLL) testleri.
 //
 // NEDEN AYRI BIR HEDEF:
-// `sdl_painter_tests` beyaz kutu bir takim — `src/` altindaki DAHILI basliklari
+// `sdl_painter_tests` beyaz kutu bir takim: `src/` altindaki DAHILI basliklari
 // (tessellator.h, render_batcher.h, vk_check.h ...) include eder ve o
 // sembolleri dogrudan cagirir. Bu semboller bilincli olarak export EDILMEZ,
 // dolayisiyla o takim `BUILD_SHARED_LIBS=ON` ile link edilemez (ve edilmemeli;
@@ -161,7 +161,7 @@ TEST(PublicAbi, ConsumerDefinedRendererReceivesClear) {
 //
 // Application AYRI bir hedeftir (shared derlemede ayri bir DLL) ve kendi
 // SDLPAINTER_APP_API makrosunu kullanir. Uye fonksiyonun ADRESINI almak,
-// hicbir sey calistirmadan link-zamani cozunurlugu zorlar — Application'i
+// hicbir sey calistirmadan link-zamani cozunurlugu zorlar; Application'i
 // gercekten kurmak SDL init + pencere gerektirirdi.
 TEST(PublicAbi, ApplicationSymbolsResolveAcrossBoundary) {
   void (sdl_painter::Application::*quit)() noexcept =

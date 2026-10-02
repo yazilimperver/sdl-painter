@@ -15,7 +15,7 @@ function(set_target_coverage target)
     endif()
 
     if(MSVC)
-        message(STATUS "Coverage: MSVC'de desteklenmez, atlanıyor.")
+        message(STATUS "Coverage: MSVC'de desteklenmez, atlaniyor.")
         return()
     endif()
 
@@ -24,5 +24,5 @@ function(set_target_coverage target)
     # linklenirse `__gcov_*` sembolleri çözülemez.
     target_compile_options(${target} PUBLIC --coverage -O0 -g)
     target_link_options(${target} PUBLIC --coverage)
-    message(STATUS "Coverage: ${target} için gcov enstrümantasyonu etkin.")
+    message(STATUS "Coverage: ${target} icin gcov enstrumantasyonu etkin.")
 endfunction()

@@ -44,7 +44,7 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass) {
   if (vkCreateDescriptorSetLayout(device, &layout_ci, nullptr,
                                   &mDescriptorSetLayout) != VK_SUCCESS) {
     spdlog::error(
-        "VulkanTexturedPipeline: vkCreateDescriptorSetLayout başarısız.");
+        "VulkanTexturedPipeline: vkCreateDescriptorSetLayout basarisiz.");
     return false;
   }
 
@@ -60,7 +60,7 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass) {
   pool_ci.pPoolSizes = &pool_size;
   if (vkCreateDescriptorPool(device, &pool_ci, nullptr, &mDescriptorPool) !=
       VK_SUCCESS) {
-    spdlog::error("VulkanTexturedPipeline: vkCreateDescriptorPool başarısız.");
+    spdlog::error("VulkanTexturedPipeline: vkCreateDescriptorPool basarisiz.");
     vkDestroyDescriptorSetLayout(device, mDescriptorSetLayout, nullptr);
     mDescriptorSetLayout = VK_NULL_HANDLE;
     return false;
@@ -186,7 +186,7 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass) {
   pl_ci.pushConstantRangeCount = 1;
   pl_ci.pPushConstantRanges = &push_range;
   if (vkCreatePipelineLayout(device, &pl_ci, nullptr, &mLayout) != VK_SUCCESS) {
-    spdlog::error("VulkanTexturedPipeline: vkCreatePipelineLayout başarısız.");
+    spdlog::error("VulkanTexturedPipeline: vkCreatePipelineLayout basarisiz.");
     vkDestroyShaderModule(device, vert_mod, nullptr);
     vkDestroyShaderModule(device, frag_mod, nullptr);
     vkDestroyDescriptorPool(device, mDescriptorPool, nullptr);
@@ -228,7 +228,7 @@ bool VulkanTexturedPipeline::Init(VkDevice device, VkRenderPass render_pass) {
 
   if (res != VK_SUCCESS) {
     spdlog::error(
-        "VulkanTexturedPipeline: vkCreateGraphicsPipelines hatası: {}",
+        "VulkanTexturedPipeline: vkCreateGraphicsPipelines hatasi: {}",
         vk_detail::VkResultToString(res));
     // Tüm önceki kaynakları temizle.
     vkDestroyPipelineLayout(device, mLayout, nullptr);
@@ -254,7 +254,7 @@ VkDescriptorSet VulkanTexturedPipeline::AllocateDescriptorSet(VkDevice device) {
 
   VkDescriptorSet set = VK_NULL_HANDLE;
   if (vkAllocateDescriptorSets(device, &alloc_info, &set) != VK_SUCCESS) {
-    spdlog::error("VulkanTexturedPipeline: descriptor set tahsisi başarısız.");
+    spdlog::error("VulkanTexturedPipeline: descriptor set tahsisi basarisiz.");
     return VK_NULL_HANDLE;
   }
   return set;

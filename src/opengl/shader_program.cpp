@@ -134,7 +134,7 @@ int32_t ShaderProgram::GetUniformLocation(const std::string& name) const {
   // uyarı yalnızca bir kez loglanır (hot-path log'unu önler).
   mUniformCache.emplace(name, kLoc);
   if (kLoc == -1) {  // NOLINT(readability-magic-numbers) — GL sentinel value
-    spdlog::warn("[ShaderProgram] Uniform '{}' bulunamadı (warn-once).", name);
+    spdlog::warn("[ShaderProgram] Uniform '{}' bulunamadi (warn-once).", name);
   }
   return kLoc;
 }

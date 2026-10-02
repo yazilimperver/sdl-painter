@@ -1,5 +1,5 @@
 /// @file test_painter.cpp
-/// @brief Painter davranış testleri — sahte IRenderer enjeksiyonu ile.
+/// @brief Painter davranış testleri, sahte IRenderer enjeksiyonu ile.
 ///
 /// Painter, pencere gerektirmeyen ctor'u sayesinde MockRenderer ile
 /// sürülebilir. Böylece transform yayılımı, kırpma koordinat dönüşümü ve
@@ -103,7 +103,7 @@ TEST(PainterTransform, TranslateIsAppliedToShapeDrawCall) {
   h.painter.FillRect(0.0F, 0.0F, 10.0F, 10.0F);
   h.painter.End();
 
-  ASSERT_EQ(h.mock->last_vertices.size(), 6u) << "Hiç çizim komutu üretilmedi.";
+  ASSERT_EQ(h.mock->last_vertices.size(), 6u) << "Hic cizim komutu uretilmedi.";
   const Bounds b = BoundsOf(h.mock->last_vertices);
   EXPECT_FLOAT_EQ(b.min_x, 100.0F);
   EXPECT_FLOAT_EQ(b.min_y, 50.0F);
@@ -125,7 +125,7 @@ TEST(PainterTransform, ModelMatrixStaysIdentity) {
 
   ASSERT_FALSE(h.mock->model_at_draw.empty());
   EXPECT_TRUE(IsIdentity(h.mock->model_at_draw.front()))
-      << "Model matrisi artık kullanılmıyor; birim kalmalı.";
+      << "Model matrisi artik kullanilmiyor; birim kalmali.";
 }
 
 TEST(PainterTransform, SaveRestoreBalancesTransform) {
@@ -149,7 +149,7 @@ TEST(PainterTransform, SaveRestoreBalancesTransform) {
   EXPECT_FLOAT_EQ(inside.min_x, 200.0F);
   EXPECT_FLOAT_EQ(inside.min_y, 300.0F);
   EXPECT_FLOAT_EQ(outside.min_x, 0.0F)
-      << "Restore sonrası transform birime dönmeliydi.";
+      << "Restore sonrasi transform birime donmeliydi.";
   EXPECT_FLOAT_EQ(outside.min_y, 0.0F);
 }
 
@@ -165,7 +165,7 @@ TEST(PainterTransform, TranslateIsAppliedToTextDrawCall) {
 
   Harness h;
   auto font = std::make_shared<Font>(font_path, 16);
-  ASSERT_TRUE(font->IsValid()) << "Font yüklenemedi: " << font_path;
+  ASSERT_TRUE(font->IsValid()) << "Font yuklenemedi: " << font_path;
 
   h.painter.Begin();
   h.painter.SetFont(font);
@@ -175,7 +175,7 @@ TEST(PainterTransform, TranslateIsAppliedToTextDrawCall) {
   h.painter.End();
 
   ASSERT_FALSE(h.mock->last_textured_vertices.empty())
-      << "DrawText hiç çizim komutu üretmedi.";
+      << "DrawText hic cizim komutu uretmedi.";
   const Bounds moved = BoundsOf(h.mock->last_textured_vertices);
 
   // Referans: aynı metin, transform'suz.
@@ -190,7 +190,7 @@ TEST(PainterTransform, TranslateIsAppliedToTextDrawCall) {
   const Bounds base = BoundsOf(ref.mock->last_textured_vertices);
 
   EXPECT_FLOAT_EQ(moved.min_x - base.min_x, 100.0F)
-      << "DrawText, güncel transform'u vertex'lere uygulamıyor.";
+      << "DrawText, guncel transform'u vertex'lere uygulamiyor.";
   EXPECT_FLOAT_EQ(moved.min_y - base.min_y, 50.0F);
 }
 
@@ -255,7 +255,7 @@ TEST(PainterClip, VulkanClipRectIsNotYFlipped) {
 
   ASSERT_EQ(h.mock->scissor_calls.size(), 1u);
   EXPECT_EQ(h.mock->scissor_calls.front().y, 20)
-      << "Vulkan'da Y ekseni zaten üstten başlar, flip uygulanmamalı.";
+      << "Vulkan'da Y ekseni zaten ustten baslar, flip uygulanmamali.";
 }
 
 TEST(PainterClip, RestoreReappliesSavedClip) {
@@ -350,7 +350,7 @@ TEST(PainterLifecycle, NullRendererYieldsInvalidPainter) {
 TEST(PainterLifecycle, UnbalancedRestoreIsSafe) {
   Harness h;
   h.painter.Begin();
-  h.painter.Restore();  // Save() olmadan — uyarı loglanır, çökmez.
+  h.painter.Restore();  // Save() olmadan: uyarı loglanır, çökmez.
   h.painter.End();
   SUCCEED();
 }
@@ -375,7 +375,7 @@ TEST(PainterText, MultiCharacterTextIsASingleDrawCall) {
   h.painter.End();
 
   EXPECT_EQ(h.mock->CountCalls("DrawTextured"), 1)
-      << "Metin tek draw call'a toplanmadı (glyph atlası devrede değil?).";
+      << "Metin tek draw call'a toplanmadi (glyph atlasi devrede degil?).";
 }
 
 TEST(PainterText, TextVertexCountMatchesGlyphCount) {
@@ -405,14 +405,14 @@ TEST(PainterText, TurkishTextRendersAllGlyphs) {
   h.painter.Begin();
   h.painter.SetFont(font);
   h.painter.SetPen(Pen(Color::White(), 1.0F));
-  // "Ğüşİöç" — 6 karakter, hepsi çok baytlı UTF-8.
+  // "Ğüşİöç": 6 karakter, hepsi çok baytlı UTF-8.
   h.painter.DrawText(10.0F, 40.0F,
                      "\xC4\x9E\xC3\xBC\xC5\x9F\xC4\xB0\xC3\xB6\xC3\xA7");
   h.painter.End();
 
   EXPECT_EQ(h.mock->CountCalls("DrawTextured"), 1);
   EXPECT_EQ(h.mock->last_textured_vertices.size(), 36u)
-      << "6 glyph * 6 vertex bekleniyordu — UTF-8 çözümlemesi eksik olabilir.";
+      << "6 glyph * 6 vertex bekleniyordu; UTF-8 cozumlemesi eksik olabilir.";
 }
 
 TEST(PainterText, GlyphUVsStayWithinAtlasRange) {
@@ -563,7 +563,7 @@ TEST(PainterPrimitives, TransformReachesEveryPrimitive) {
     ASSERT_FALSE(h.mock->last_vertices.empty()) << "hic cizim uretilmedi";
     const Bounds moved = BoundsOf(h.mock->last_vertices);
 
-    // Ayni primitif, transform'suz — fark tam olarak oteleme kadar olmali.
+    // Ayni primitif, transform'suz; fark tam olarak oteleme kadar olmali.
     Harness ref;
     ref.painter.Begin();
     ref.painter.SetPen(Pen(Color::White(), 2.0F));
@@ -934,7 +934,7 @@ TEST(PainterMesh, UVsSpanTheWholeTexture) {
   EXPECT_FLOAT_EQ(max_v, 1.0F);
 }
 
-/// @brief Deforme edilmiş ızgara: köşeler bağımsız hareket edebilmeli — bu,
+/// @brief Deforme edilmiş ızgara: köşeler bağımsız hareket edebilmeli; bu,
 ///        `DrawImage`'ın eksen hizalı `Rect` ile yapamadığı şey.
 TEST(PainterMesh, CornersMoveIndependently) {
   Harness h;
@@ -1059,7 +1059,7 @@ TEST(PainterGradient, ColourIsConstantPerpendicularToTheAxis) {
   EXPECT_EQ(left.b, right.b);
 }
 
-/// @brief Sıfır uzunluklu gradient sıfıra bölmemeli — düz renge düşmeli.
+/// @brief Sıfır uzunluklu gradient sıfıra bölmemeli, düz renge düşmeli.
 TEST(PainterGradient, ZeroLengthLinearGradientFallsBackToStartColour) {
   Harness h;
   const Brush g = Brush::LinearGradient({50.0F, 50.0F}, {50.0F, 50.0F},
@@ -1096,8 +1096,8 @@ TEST(PainterGradient, RadialGradientIsBrightestAtTheCentre) {
 
 TEST(PainterGradient, RadialWithZeroRadiusFallsBackToStartColour) {
   Harness h;
-  const Brush g =
-      Brush::RadialGradient({50.0F, 50.0F}, 0.0F, Color::Green(), Color::Blue());
+  const Brush g = Brush::RadialGradient({50.0F, 50.0F}, 0.0F, Color::Green(),
+                                        Color::Blue());
   h.painter.Begin();
   h.painter.SetBrush(g);
   h.painter.FillRect(0.0F, 0.0F, 100.0F, 100.0F);
@@ -1377,7 +1377,7 @@ TEST(PainterText, LineHeightIsPositiveAndAtLeastPointSize) {
   EXPECT_GE(font.LineHeight(), font.Ascent());
 }
 
-/// @brief Satır sonu artık gerçekten satır bölmeli — eskiden tek bir görünmez
+/// @brief Satır sonu artık gerçekten satır bölmeli; eskiden tek bir görünmez
 ///        glyph olarak ele alınıyordu.
 TEST(PainterText, NewlineStartsANewLine) {
   SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
@@ -1401,8 +1401,7 @@ TEST(PainterText, NewlineStartsANewLine) {
 
   EXPECT_GT(two.max_y - two.min_y, single.max_y - single.min_y)
       << "Satir sonu dikeyde yer kaplamadi.";
-  EXPECT_LT(two.max_x, single.max_x)
-      << "Iki satir hala yan yana ciziliyor.";
+  EXPECT_LT(two.max_x, single.max_x) << "Iki satir hala yan yana ciziliyor.";
 }
 
 TEST(PainterText, SecondLineIsOneLineHeightBelowTheFirst) {
@@ -1508,7 +1507,7 @@ TEST(PainterText, CountTextLinesIsZeroWithoutFontOrText) {
       << "Font yokken satir sayilmamali.";
 }
 
-/// @brief Tek bir sözcük bile sığmazsa karakterden bölünmeli — ve bölme
+/// @brief Tek bir sözcük bile sığmazsa karakterden bölünmeli, ve bölme
 ///        UTF-8 kod noktası sınırında olmalı, yoksa bozuk dizi oluşur.
 TEST(PainterText, OverlongWordIsSplitAtCodepointBoundaries) {
   SDLPAINTER_REQUIRE_FONT_OR_SKIP(font_path);
@@ -1554,7 +1553,8 @@ TEST(PainterText, WrappedLinesHonourAlignment) {
   t.h.painter.End();
   const Bounds right = BoundsOf(t.h.mock->last_textured_vertices);
 
-  EXPECT_GT(right.min_x, left.min_x) << "Saga hizalama satir basina uygulanmadi.";
+  EXPECT_GT(right.min_x, left.min_x)
+      << "Saga hizalama satir basina uygulanmadi.";
   EXPECT_NEAR(right.max_x, kBox.w, 4.0F);
 }
 
@@ -1613,7 +1613,7 @@ TEST(PainterArc, ArcProducesLessGeometryThanPieAndChord) {
 
   ASSERT_GT(arc_size, 0u);
   EXPECT_LT(arc_size, pie_size)
-      << "Yay, dilim kadar geometri uretti — uclari kapatiliyor olabilir.";
+      << "Yay, dilim kadar geometri uretti; uclari kapatiliyor olabilir.";
 }
 
 TEST(PainterArc, DegenerateSweepProducesNothing) {
@@ -1907,8 +1907,7 @@ TEST(PainterImage, FlipStaysWithinSourceSubRegion) {
   h.painter.Begin();
   // Sol ust 2x2 -> UV [0, 0.5]; aynalama bu araligin disina tasmamali.
   h.painter.DrawImage(image, Rect{0.0F, 0.0F, 2.0F, 2.0F},
-                      Rect{0.0F, 0.0F, 10.0F, 10.0F},
-                      Color::White(),
+                      Rect{0.0F, 0.0F, 10.0F, 10.0F}, Color::White(),
                       sdl_painter::ImageFlip::kHorizontal);
   h.painter.End();
 

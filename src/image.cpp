@@ -14,7 +14,7 @@
 //
 // STBI_MAX_DIMENSIONS: güvenilmeyen bir PNG/JPG'nin devasa boyut bildirerek
 // belleği tüketmesini (decompression bomb) önler. stb bunu kendi içinde,
-// piksel verisi ayrılmadan ÖNCE kontrol eder.
+// piksel verisi ayrılmadan once kontrol eder.
 // TODO: İleride Vulkan gibi SDL_Image'i de kullanır hale gelebiliriz ya da DevIL gibi kütüphane desteği ekleriz.
 // clang-format off
 #define STBI_MAX_DIMENSIONS 32768
@@ -46,13 +46,13 @@ Image::Image(const std::string& file_path) {
   int probe_h = 0;
   int probe_ch = 0;
   if (stbi_info(file_path.c_str(), &probe_w, &probe_h, &probe_ch) == 0) {
-    spdlog::error("Image: '{}' okunamadı ({}).", file_path,
+    spdlog::error("Image: '{}' okunamadi ({}).", file_path,
                   stbi_failure_reason() != nullptr ? stbi_failure_reason()
                                                    : "bilinmeyen hata");
     return;
   }
   if (probe_w <= 0 || probe_h <= 0) {
-    spdlog::error("Image: '{}' geçersiz boyut ({}x{}).", file_path, probe_w,
+    spdlog::error("Image: '{}' gecersiz boyut ({}x{}).", file_path, probe_w,
                   probe_h);
     return;
   }
@@ -60,7 +60,7 @@ Image::Image(const std::string& file_path) {
       static_cast<std::size_t>(probe_w) * static_cast<std::size_t>(probe_h);
   if (kTotalPixels > kMaxTotalPixels) {
     spdlog::error(
-        "Image: '{}' çok büyük ({}x{} = {} piksel, sınır {}). Yüklenmedi.",
+        "Image: '{}' cok buyuk ({}x{} = {} piksel, sinir {}). Yuklenmedi.",
         file_path, probe_w, probe_h, kTotalPixels, kMaxTotalPixels);
     return;
   }
@@ -75,7 +75,7 @@ Image::Image(const std::string& file_path) {
     mHeight = h;
     mChannels = ch;
   } else {
-    spdlog::error("Image: '{}' yüklenemedi ({}).", file_path,
+    spdlog::error("Image: '{}' yuklenemedi ({}).", file_path,
                   stbi_failure_reason() != nullptr ? stbi_failure_reason()
                                                    : "bilinmeyen hata");
   }
@@ -89,13 +89,14 @@ Image& Image::operator=(Image&&) noexcept = default;
 Image Image::CreateFromData(const uint8_t* data, int32_t width, int32_t height,
                             int32_t channels) {
   Image img;
-  if (data == nullptr || width <= 0 || height <= 0 || channels <= 0) {
+  if (data == nullptr || width <= 0 || height <= 0 || channels < 1 ||
+      channels > 4) {
     return img;
   }
 
   constexpr int32_t kMaxDimension = 32767;
   if (width > kMaxDimension || height > kMaxDimension) {
-    spdlog::warn("Image::CreateFromData: çok büyük boyut ({}x{})", width,
+    spdlog::warn("Image::CreateFromData: cok buyuk boyut ({}x{})", width,
                  height);
     return img;
   }

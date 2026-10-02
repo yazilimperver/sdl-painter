@@ -2,6 +2,11 @@
 
 ## [Yayımlanmamış]
 
+### Kaldırıldı
+
+- Kullanılmayan `sdl_painter::Size` türü public API'den kaldırıldı. Bu kaynak
+  uyumluluğunu bozan değişiklik 1.4 sürümü içindir.
+
 ### Düzeltildi
 
 - **Painter durum yönetimi ve kaynak sahipliği.** Move işlemleri artık çizim
@@ -10,7 +15,7 @@
   doğrulanıyor. Gradient dolgular geçiş sınırlarında bölünerek şekil içinde
   doğru rengi üretiyor.
 - **Move constructor başlatma sırası** üye bildirim sırasıyla hizalandı.
-- **Vulkan'da hedefe yeniden bağlanma ve frame içi doku güncelleme sırası**
+- **Vulkan'da hedefe yeniden bağlanma ve frame içi texture güncelleme sırası**
   düzeltildi.
 - **`font.h`** düzeltildi.
 - **Metin ölçümü ile çizim farklı genişlik veriyordu.** `MeasureText`
@@ -40,12 +45,12 @@
   kullanıyordu ve o değer en son `Clear` çağrısından kalıyordu. Yeni hedefin
   başlangıç içeriği artık iki backend'de de (0, 0, 0, 0); OpenGL tarafında
   FBO oluşturulurken açıkça temizleniyor.
-- **Aynı `Font` ikinci bir renderer'da birincinin doku handle'ını
-  veriyordu.** Glyph önbelleği yalnızca kod noktasına göre tutuluyordu; doku
+- **Aynı `Font` ikinci bir renderer'da birincinin texture handle'ını
+  veriyordu.** Glyph önbelleği yalnızca kod noktasına göre tutuluyordu; texture
   tanımlayıcıları ise renderer'a yereldir. Bir Font tek
   bir Painter'a ait olacka şekilde güncelleme yapıldı; yabancı renderer ile çağrı `nullptr` döner ve hata loglar.
 - **Aktif çizim hedefi yok edilince Painter hâlâ hedefe çizdiğini
-  sanıyordu** — viewport hedefin boyutunda, projeksiyon hedefin Y yönünde
+  sanıyordu.** Viewport hedefin boyutunda, projeksiyon hedefin Y yönünde
   kalıyor ve frame sonuna kadar ekrana o durumla çiziliyordu. `RenderTarget`
   artık yıkılırken Painter'a haber veriyor. Aynı mekanizma, Painter'dan sonra
   yıkılan bir hedefin ölü renderer'a dokunmasını da engelliyor.
@@ -61,7 +66,7 @@
   kapalıyken çarpan 1.0, davranış değişmiyor).
 - **`SetOpacity` ve `SetClipRect` arayüzlerini doğrulamıyordu.** Opaklık
   artık `[0, 1]` aralığına kırpılıyor (başlık zaten bunu vaat ediyordu);
-  negatif boyutlu kırpma dikdörtgeni boş kırpmaya dönüşüyor — ham hâli
+  negatif boyutlu kırpma dikdörtgeni boş kırpmaya dönüşüyor; ham hali
   OpenGL'de `GL_INVALID_VALUE` üretip önceki scissor'ı yürürlükte bırakıyor,
   Vulkan'da ise her şeyi kırpıyordu.
 - **Vulkan push constant bloğu (148 bayt), Vulkan'ın garanti ettiği asgari
@@ -388,7 +393,7 @@
 - **`hero` tanıtım sahnesi dört perdeli showcase olarak yeniden yazıldı.**
   Eski sahne tek karede yalnızca v1.0 yeteneklerini gösteriyordu; aradan geçen
   sürümlerde eklenen yol/Bézier, gradient, karıştırma modları, kesik desenleri,
-  uç ve birleşim stilleri, viewport, doku filtresi, mesh warp ve çizim hedefi
+  uç ve birleşim stilleri, viewport, texture filtresi, mesh warp ve çizim hedefi
   tanıtımda hiç görünmüyordu. Yeni sahne 3'er saniyelik dört perdeye bölünüyor
   (şekiller ve yollar · renk ve karıştırma · transform ve kırpma · görüntü ve
   metin), toplam 12 saniye; künye şeridinde canlı `FrameStats` sayacı var, yani

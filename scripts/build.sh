@@ -49,10 +49,10 @@ while [[ $# -gt 0 ]]; do
         --skip-conan)  SKIP_CONAN=1  ; shift ;;
         --clean)       CLEAN=1       ; shift ;;
         --target)
-            [[ $# -ge 2 ]] || { echo "Hata: --target için değer gerekli." >&2 ; exit 1; }
+            [[ $# -ge 2 ]] || { echo "Hata: --target icin deger gerekli." >&2 ; exit 1; }
             TARGET="$2" ; shift 2 ;;
         --jobs)
-            [[ $# -ge 2 ]] || { echo "Hata: --jobs için değer gerekli." >&2 ; exit 1; }
+            [[ $# -ge 2 ]] || { echo "Hata: --jobs icin deger gerekli." >&2 ; exit 1; }
             JOBS="$2" ; shift 2 ;;
         --docs)    WITH_DOCS=1   ; shift ;;
         *) echo "Hata: Bilinmeyen bayrak '$1'." >&2 ; exit 1 ;;
@@ -63,7 +63,7 @@ case "${BUILD_TYPE}" in
     Debug)   PRESET="linux-debug" ;;
     Release) PRESET="linux-release" ;;
     ASan)    PRESET="linux-debug-asan" ;;
-    *) echo "Hata: Bilinmeyen build type '${BUILD_TYPE}'. Debug|Release|ASan kullanın." >&2 ; exit 1 ;;
+    *) echo "Hata: Bilinmeyen build type '${BUILD_TYPE}'. Debug|Release|ASan kullanin." >&2 ; exit 1 ;;
 esac
 
 # Linux preset'lerinde toolchain yolu Conan layout'una göre build_type altında.
@@ -97,17 +97,17 @@ NEED_CONAN=0
 if [[ ${SKIP_CONAN} -eq 0 ]]; then
     if [[ ! -f "${TOOLCHAIN_FILE}" ]]; then
         NEED_CONAN=1
-        echo ">>> Toolchain bulunamadı, Conan install gerekli."
+        echo ">>> Toolchain bulunamadi, Conan install gerekli."
     elif [[ -f "${STAMP_FILE}" ]]; then
         PREVIOUS_OPTIONS="$(cat "${STAMP_FILE}" 2>/dev/null || true)"
         if [[ "${PREVIOUS_OPTIONS}" != "${OPTION_STAMP}" ]]; then
             NEED_CONAN=1
-            echo ">>> Build opsiyonları değişti ('${PREVIOUS_OPTIONS}' -> '${OPTION_STAMP}'); Conan yeniden kuruluyor."
+            echo ">>> Build opsiyonlari degisti ('${PREVIOUS_OPTIONS}' -> '${OPTION_STAMP}'); Conan yeniden kuruluyor."
         fi
     else
         # Toolchain var, stamp yok -> bilinmeyen onceki opsiyonlar; guvenli olarak yeniden kur.
         NEED_CONAN=1
-        echo ">>> Toolchain'e ait opsiyon damgası yok; Conan yeniden kuruluyor."
+        echo ">>> Toolchain'e ait opsiyon damgasi yok; Conan yeniden kuruluyor."
     fi
 fi
 
@@ -132,20 +132,20 @@ if [[ -n "${TARGET}" ]]; then
     BUILD_ARGS+=(--target "${TARGET}")
     echo ">>> Build: preset=${PRESET} target=${TARGET}"
 else
-    echo ">>> Build: preset=${PRESET} (tüm hedefler)"
+    echo ">>> Build: preset=${PRESET} (tum hedefler)"
 fi
 [[ ${JOBS} -gt 0 ]] && BUILD_ARGS+=(-j "${JOBS}")
 
 cmake "${BUILD_ARGS[@]}"
 
-echo ">>> Build tamamlandı."
+echo ">>> Build tamamlandi."
 
 if [[ ${WITH_DOCS} -eq 1 ]]; then
     if ! command -v doxygen &>/dev/null; then
-        echo "Hata: doxygen bulunamadı. Lütfen kurun (ör. apt install doxygen)." >&2
+        echo "Hata: doxygen bulunamadi. Lutfen kurun (or. apt install doxygen)." >&2
         exit 1
     fi
-    echo ">>> Doxygen dokümantasyonu oluşturuluyor..."
+    echo ">>> Doxygen dokumantasyonu olusturuluyor..."
     doxygen Doxyfile
-    echo ">>> Dokümantasyon hazır: build/docs/index.html"
+    echo ">>> Dokumantasyon hazir: build/docs/index.html"
 fi

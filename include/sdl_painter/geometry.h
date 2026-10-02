@@ -65,20 +65,4 @@ struct Rect {
   }
 };
 
-/// @brief 2B boyut — genişlik ve yükseklik.
-struct Size {
-  float w{0.0F};
-  float h{0.0F};
-
-  constexpr Size() = default;
-  constexpr Size(float w_, float h_) : w(w_), h(h_) {}
-
-  [[nodiscard]] bool operator==(const Size& other) const noexcept {
-    return w == other.w && h == other.h;
-  }
-  [[nodiscard]] bool operator!=(const Size& other) const noexcept {
-    return !(*this == other);
-  }
-};
-
 }  // namespace sdl_painter

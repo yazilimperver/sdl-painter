@@ -71,7 +71,7 @@ function(sdlpainter_add_example name)
             COMMAND ${CMAKE_COMMAND} -E copy_directory
                     "${CMAKE_CURRENT_SOURCE_DIR}/assets"
                     "$<TARGET_FILE_DIR:${name}>/assets"
-            COMMENT "Örnek varlıkları kopyalanıyor → ${name}")
+            COMMENT "Ornek varliklari kopyalaniyor → ${name}")
     endif()
 
     sdlpainter_copy_runtime_dlls(${name})

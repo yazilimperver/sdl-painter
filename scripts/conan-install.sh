@@ -37,7 +37,7 @@ case "${BUILD_TYPE}" in
     Debug)   PRESET="linux-debug" ;;
     Release) PRESET="linux-release" ;;
     ASan)    PRESET="linux-debug-asan" ; CONAN_BUILD_TYPE="Debug" ;;
-    *) echo "Hata: Bilinmeyen build type '${BUILD_TYPE}'. Debug|Release|ASan kullanın." >&2 ; exit 1 ;;
+    *) echo "Hata: Bilinmeyen build type '${BUILD_TYPE}'. Debug|Release|ASan kullanin." >&2 ; exit 1 ;;
 esac
 
 OUTPUT_FOLDER="build/${PRESET}/generators"
@@ -51,7 +51,7 @@ CONAN_OPTS=()
 if [[ ${#CONAN_OPTS[@]} -gt 0 ]]; then
     OPTS_SUMMARY="${CONAN_OPTS[*]}"
 else
-    OPTS_SUMMARY="(varsayılan)"
+    OPTS_SUMMARY="(varsayilan)"
 fi
 
 echo ">>> Conan install: build_type=${CONAN_BUILD_TYPE}, output=${OUTPUT_FOLDER}, opts=${OPTS_SUMMARY}"
@@ -61,4 +61,4 @@ conan install . \
     -s build_type="${CONAN_BUILD_TYPE}" \
     "${CONAN_OPTS[@]}"
 
-echo ">>> Conan install tamamlandı."
+echo ">>> Conan install tamamlandi."

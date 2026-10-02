@@ -39,12 +39,20 @@ TEST(EventTranslatorTest, SpecialKeysMapToKeys) {
   EXPECT_EQ(internal::TranslateKey(SDLK_TAB), Key::kTab);
   EXPECT_EQ(internal::TranslateKey(SDLK_BACKSPACE), Key::kBackspace);
   EXPECT_EQ(internal::TranslateKey(SDLK_DELETE), Key::kDelete);
+  EXPECT_EQ(internal::TranslateKey(SDLK_HOME), Key::kHome);
+  EXPECT_EQ(internal::TranslateKey(SDLK_END), Key::kEnd);
+  EXPECT_EQ(internal::TranslateKey(SDLK_PAGEUP), Key::kPageUp);
+  EXPECT_EQ(internal::TranslateKey(SDLK_PAGEDOWN), Key::kPageDown);
 }
 
 TEST(EventTranslatorTest, ModifierKeysMapToKeys) {
   EXPECT_EQ(internal::TranslateKey(SDLK_LSHIFT), Key::kLeftShift);
+  EXPECT_EQ(internal::TranslateKey(SDLK_RSHIFT), Key::kRightShift);
+  EXPECT_EQ(internal::TranslateKey(SDLK_LCTRL), Key::kLeftCtrl);
   EXPECT_EQ(internal::TranslateKey(SDLK_RCTRL), Key::kRightCtrl);
   EXPECT_EQ(internal::TranslateKey(SDLK_LALT), Key::kLeftAlt);
+  EXPECT_EQ(internal::TranslateKey(SDLK_RALT), Key::kRightAlt);
+  EXPECT_EQ(internal::TranslateKey(SDLK_LGUI), Key::kLeftGui);
   EXPECT_EQ(internal::TranslateKey(SDLK_RGUI), Key::kRightGui);
 }
 
@@ -60,18 +68,24 @@ TEST(EventTranslatorTest, NoModifierReturnsNone) {
 }
 
 TEST(EventTranslatorTest, SingleModifierTranslates) {
-  EXPECT_TRUE(HasModifier(internal::TranslateModifiers(SDL_KMOD_LSHIFT),
-                          KeyModifier::kShift));
-  EXPECT_TRUE(HasModifier(internal::TranslateModifiers(SDL_KMOD_LCTRL),
-                          KeyModifier::kCtrl));
+  EXPECT_EQ(internal::TranslateModifiers(SDL_KMOD_LSHIFT), KeyModifier::kShift);
+  EXPECT_EQ(internal::TranslateModifiers(SDL_KMOD_RSHIFT), KeyModifier::kShift);
+  EXPECT_EQ(internal::TranslateModifiers(SDL_KMOD_LCTRL), KeyModifier::kCtrl);
+  EXPECT_EQ(internal::TranslateModifiers(SDL_KMOD_RCTRL), KeyModifier::kCtrl);
+  EXPECT_EQ(internal::TranslateModifiers(SDL_KMOD_LALT), KeyModifier::kAlt);
+  EXPECT_EQ(internal::TranslateModifiers(SDL_KMOD_RALT), KeyModifier::kAlt);
+  EXPECT_EQ(internal::TranslateModifiers(SDL_KMOD_LGUI), KeyModifier::kGui);
+  EXPECT_EQ(internal::TranslateModifiers(SDL_KMOD_RGUI), KeyModifier::kGui);
 }
 
 TEST(EventTranslatorTest, CombinedModifiersTranslate) {
   const KeyModifier mods =
       internal::TranslateModifiers(SDL_KMOD_LSHIFT | SDL_KMOD_LCTRL);
-  EXPECT_TRUE(HasModifier(mods, KeyModifier::kShift));
-  EXPECT_TRUE(HasModifier(mods, KeyModifier::kCtrl));
-  EXPECT_FALSE(HasModifier(mods, KeyModifier::kAlt));
+  EXPECT_EQ(mods, KeyModifier::kShift | KeyModifier::kCtrl);
+  EXPECT_EQ(internal::TranslateModifiers(SDL_KMOD_RSHIFT | SDL_KMOD_LCTRL |
+                                         SDL_KMOD_RALT | SDL_KMOD_LGUI),
+            KeyModifier::kShift | KeyModifier::kCtrl | KeyModifier::kAlt |
+                KeyModifier::kGui);
 }
 
 // --- TranslateMouseButton ---

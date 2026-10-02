@@ -1,5 +1,3 @@
-// Paketin tuketilebilirligini dogrular. Pencere acmaz, GPU istemez.
-
 #include "sdl_painter/brush.h"
 #include "sdl_painter/color.h"
 #include "sdl_painter/pen.h"

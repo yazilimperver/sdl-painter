@@ -184,7 +184,7 @@ sdl-painter/
 ├── include/sdl_painter/        ← Public API (kullanıcı bu header'ları görür)
 │   ├── painter.h               · Ana çizim sınıfı
 │   ├── pen.h, brush.h, color.h · Stil tipleri
-│   ├── geometry.h              · Point, Rect, Size
+│   ├── geometry.h              · Point, Rect
 │   ├── image.h, texture.h      · Görsel + RAII texture sarmalayıcı
 │   ├── font.h                  · SDL_ttf wrapper, Alignment
 │   ├── renderer.h              · IRenderer arayüzü + RendererBackend enum

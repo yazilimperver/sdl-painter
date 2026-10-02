@@ -16,7 +16,7 @@ TEST(VersionTest, StringMatchesNumericComponents) {
   EXPECT_EQ(expected, std::string(sdl_painter::kVersionString));
 }
 
-/// Sabitler sabit ifadede kullanilabilmeli — surum kontrolunun makro olmadan
+/// Sabitler sabit ifadede kullanilabilmeli; surum kontrolunun makro olmadan
 /// da derleme zamaninda ifade edilebildigini gosterir.
 TEST(VersionTest, ConstantsUsableInStaticAssert) {
   static_assert(sdl_painter::kVersionMajor >= 1,

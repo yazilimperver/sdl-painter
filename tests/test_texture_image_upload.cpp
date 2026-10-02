@@ -1,23 +1,22 @@
-#include <gtest/gtest.h>
-
-#include <cstdint>
-#include <vector>
-
-#include "mock_renderer.h"
 #include "sdl_painter/image.h"
 #include "sdl_painter/renderer.h"
 #include "sdl_painter/texture.h"
 
+#include <cstdint>
+#include <gtest/gtest.h>
+#include <vector>
+
+#include "mock_renderer.h"
+
 using sdl_painter::Image;
+using sdl_painter::kInvalidTexture;
 using sdl_painter::MockRenderer;
 using sdl_painter::Texture;
-using sdl_painter::kInvalidTexture;
 
 // 2x2 RGBA piksel verisi üreten yardımcı.
 static std::vector<uint8_t> MakePixels(int32_t w = 2, int32_t h = 2,
-                                        int32_t ch = 4) {
-  return std::vector<uint8_t>(
-      static_cast<std::size_t>(w * h * ch), 128);
+                                       int32_t ch = 4) {
+  return std::vector<uint8_t>(static_cast<std::size_t>(w * h * ch), 128);
 }
 
 // ════════════════════════════════════════════════════════════════
@@ -137,7 +136,7 @@ TEST(Texture, MoveAssignmentDestroysOldHandle) {
 TEST(Texture, SelfMoveAssignmentIsSafe) {
   MockRenderer r;
   Texture t(&r, 29);
-  // Kendi üzerine move — tanımsız davranış olmamalı
+  // Kendi üzerine move: tanımsız davranış olmamalı
   Texture& ref = t;
   t = std::move(ref);  // NOLINT(bugprone-use-after-move)
   // Bu çağrı sonrası t geçersiz olabilir; önemli olan crash olmaması.
@@ -145,7 +144,7 @@ TEST(Texture, SelfMoveAssignmentIsSafe) {
 }
 
 // ════════════════════════════════════════════════════════════════
-//  Image::Upload — renderer takibi
+//  Image::Upload: renderer takibi
 // ════════════════════════════════════════════════════════════════
 
 // ─── Temel Upload ────────────────────────────────────────────────
@@ -196,10 +195,10 @@ TEST(ImageUpload, DifferentRendererTriggersReupload) {
   auto pixels = MakePixels();
   Image img = Image::CreateFromData(pixels.data(), 2, 2, 4);
 
-  img.Upload(r1);                  // r1'e yükle
+  img.Upload(r1);  // r1'e yükle
   EXPECT_EQ(r1.create_texture_count, 1);
 
-  img.Upload(r2);                  // r2'ye yükle → yeniden oluşturulmalı
+  img.Upload(r2);  // r2'ye yükle → yeniden oluşturulmalı
   EXPECT_EQ(r2.create_texture_count, 1);
 }
 
@@ -229,9 +228,9 @@ TEST(ImageUpload, SameRendererSecondTimeNoReuploadAfterSwitch) {
   auto pixels = MakePixels();
   Image img = Image::CreateFromData(pixels.data(), 2, 2, 4);
 
-  img.Upload(r1);   // r1'e yükle
-  img.Upload(r2);   // r2'ye geç
-  img.Upload(r2);   // aynı r2 → önbellekten dönmeli
+  img.Upload(r1);  // r1'e yükle
+  img.Upload(r2);  // r2'ye geç
+  img.Upload(r2);  // aynı r2 → önbellekten dönmeli
 
   EXPECT_EQ(r2.create_texture_count, 1);
 }

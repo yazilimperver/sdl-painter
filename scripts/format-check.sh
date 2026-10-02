@@ -12,11 +12,11 @@ fi
 FILES=$(find include/ src/ -name '*.h' -o -name '*.cpp' | sort)
 
 if $FIX_MODE; then
-    echo ">>> Format düzeltiliyor..."
+    echo ">>> Format duzeltiliyor..."
     echo "${FILES}" | xargs clang-format-18 -i
-    echo ">>> Format düzeltmesi tamamlandı."
+    echo ">>> Format duzeltmesi tamamlandi."
 else
     echo ">>> Format kontrol ediliyor..."
     echo "${FILES}" | xargs clang-format-18 --dry-run --Werror
-    echo ">>> Format kontrolü başarılı."
+    echo ">>> Format kontrolu basarili."
 fi

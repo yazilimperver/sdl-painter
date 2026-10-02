@@ -11,16 +11,16 @@
 ///
 /// Buradaki üç tasarım kararı testlerin değerini belirliyor:
 ///
-/// 1. **Çizim anı anlık görüntüsü.** Her çizim çağrısında o andaki hedef,
+/// 1. Çizim anı anlık görüntüsü. Her çizim çağrısında o andaki hedef,
 ///    viewport, scissor ve projeksiyon kopyalanır. "SetScissor kaç kez
-///    çağrıldı" sorusu bir kırpma hatasını yakalayamaz — çağrı sayısı
+///    çağrıldı" sorusu bir kırpma hatasını yakalayamaz: çağrı sayısı
 ///    doğruyken değer yanlış olabilir. "Çizim hangi scissor ile gitti"
 ///    sorusu yakalar.
-/// 2. **Kare politikası.** `BeginFrame`'de aktif hedefi koruyan (OpenGL
+/// 2. Kare politikası. `BeginFrame`'de aktif hedefi koruyan (OpenGL
 ///    benzeri) ve ekrana dönen (Vulkan benzeri) iki mod. Painter'ın kare
 ///    sınırı sözleşmesini backend davranışına bırakması ancak iki davranış
 ///    yan yana konunca görünür olur.
-/// 3. **Yaşam süresi günlüğü.** @ref LifetimeJournal renderer'dan uzun yaşar
+/// 3. Yaşam süresi günlüğü. @ref LifetimeJournal renderer'dan uzun yaşar
 ///    (test kapsamında durur, renderer yalnızca ham işaretçi tutar). Renderer
 ///    yok edildikten sonra gelen `DestroyTexture` çağrıları ayrıca sayılır;
 ///    yok edilmiş renderer'a test tarafından erişilmez.
@@ -45,8 +45,7 @@ namespace sdl_painter::testing {
 /// @brief Renderer'dan uzun yaşayan kaynak ömrü kaydı.
 ///
 /// Testin kapsamında (stack'te) durur; renderer buna yalnızca ham işaretçiyle
-/// bakar. Böylece renderer yok edildikten sonra günlüğe yazmak güvenlidir —
-/// günlük hâlâ yaşıyordur.
+/// bakar. Böylece renderer yok edildikten sonra günlüğe yazmak güvenlidir.
 struct LifetimeJournal {
   /// @brief `CreateTexture` çağrı sayısı.
   int32_t textures_created{0};
@@ -141,7 +140,7 @@ class RecordingTargetRenderer : public MockRenderer {
   /// @brief Backend'den gerçekten okunan hedefler (sırayla).
   std::vector<RenderTargetHandle> read_target_calls;
 
-  /// @brief Yürürlükteki hedef — testin doğrudan sorabilmesi için.
+  /// @brief Yürürlükteki hedef, testin doğrudan sorabilmesi için.
   [[nodiscard]] RenderTargetHandle ActiveTarget() const noexcept {
     return mActiveTarget;
   }
@@ -248,7 +247,7 @@ class RecordingTargetRenderer : public MockRenderer {
 
   /// @brief Hedefi seç.
   ///
-  /// Yabancı bir renderer'ın handle'ı burada AYIRT EDİLEMEZ — sayısal handle
+  /// Yabancı bir renderer'ın handle'ı burada AYIRT EDİLEMEZ: sayısal handle
   /// bu renderer'ın kendi tablosunda da geçerli olabilir. Sahiplik kontrolü
   /// Painter katmanına aittir; testin sınadığı da tam olarak budur.
   bool SetRenderTarget(RenderTargetHandle handle) override {

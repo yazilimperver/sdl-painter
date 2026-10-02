@@ -92,7 +92,7 @@ bool Application::Initialize() {
   mSdlInitialized = true;
 
   // OpenGL: pencere piksel formatını etkileyen attribute'lar pencereden
-  // ÖNCE ayarlanmalı. Context sürüm attribute'larını renderer da set eder
+  // once ayarlanmalı. Context sürüm attribute'larını renderer da set eder
   // (tekrar zararsız); MSAA yalnızca burada ayarlanabilir.
   if (mConfig.backend == RendererBackend::kOpenGL) {
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
@@ -118,13 +118,13 @@ bool Application::Initialize() {
   mWindow = SDL_CreateWindow(mConfig.title.c_str(), mConfig.width,
                              mConfig.height, flags);
   if (mWindow == nullptr) {
-    spdlog::error("SDL_CreateWindow başarısız: {}", SDL_GetError());
+    spdlog::error("SDL_CreateWindow basarisiz: {}", SDL_GetError());
     return false;
   }
 
   mPainter = std::make_unique<Painter>(mWindow, mConfig.backend);
   if (!mPainter->IsValid()) {
-    spdlog::error("Painter başlatılamadı.");
+    spdlog::error("Painter baslatilamadi.");
     return false;
   }
 
@@ -133,8 +133,8 @@ bool Application::Initialize() {
     SDL_GL_SetSwapInterval(mConfig.vsync ? 1 : 0);
   } else if (mConfig.vsync) {
     spdlog::debug(
-        "vsync yapılandırması Vulkan'da yoksayıldı "
-        "(sunum modu swapchain tarafından seçilir).");
+        "vsync yapilandirmasi Vulkan'da yoksayildi "
+        "(sunum modu swapchain tarafindan secilir).");
   }
 
   // Width()/Height() daima framebuffer (piksel) boyutunu bildirir; Painter
@@ -385,7 +385,7 @@ void Application::UpdateTitleFps(uint64_t frame_ns) {
   std::array<char, 32> fps_text{};
   std::snprintf(fps_text.data(), fps_text.size(), "%.0f", mStatsOverlay->Fps());
   SDL_SetWindowTitle(
-      mWindow, (mConfig.title + " — " + fps_text.data() + " FPS").c_str());
+      mWindow, (mConfig.title + " - " + fps_text.data() + " FPS").c_str());
 }
 
 void Application::SetTitle(const std::string& title) {

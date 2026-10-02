@@ -1,17 +1,17 @@
 /// @file test_backend_parity.cpp
 /// @brief "Aynı kod iki backend'de aynı sonucu üretir" iddiasının sınavı.
 ///
-/// README bu iddiayı açıkça yapıyor ama bugüne kadar **hiçbir yerde
-/// doğrulanmıyordu**. Sonucu: Vulkan'da kırpmanın hiç uygulanmadığının fark
-/// edilmesi günler almıştı — hiçbir test pikselleri karşılaştırmıyordu.
+/// README bu iddiayı açıkça yapıyor ama bugüne kadar hiçbir yerde
+/// doğrulanmıyordu. Sonucu: Vulkan'da kırpmanın hiç uygulanmadığının fark
+/// edilmesi günler almıştı; hiçbir test pikselleri karşılaştırmıyordu.
 ///
 /// @par Neden repoda referans PNG yok
 /// Klasik "altın görüntü" testi, beklenen çıktıyı repoya gömer ve her
 /// karşılaştırmayı ona yapar. Burada bilinçli olarak farklı bir yol seçildi:
-/// aynı sahne **her iki backend'de** çizilir ve sonuçlar birbiriyle
+/// aynı sahne her iki backend'de çizilir ve sonuçlar birbiriyle
 /// karşılaştırılır. Gerekçeler:
 ///
-///   1. Doğrulanmak istenen iddia tam olarak budur — "iki backend aynı sonucu
+///   1. Doğrulanmak istenen iddia tam olarak budur: "iki backend aynı sonucu
 ///      verir". Gömülü bir PNG tek backend'in regresyonunu yakalar, iki
 ///      backend'in ayrışmasını değil.
 ///   2. Gömülü PNG sürücüye bağımlıdır: lavapipe, MSVC/NVIDIA ve Mesa aynı
@@ -20,7 +20,7 @@
 ///      yakalamaz.
 ///   3. Kaynak paketine ikili dosya eklemez (tarball zaten büyük).
 ///
-/// Bedeli: her iki backend'in **birlikte** aynı yanlışı yapması durumu
+/// Bedeli: her iki backend'in birlikte aynı yanlışı yapması durumu
 /// yakalanmaz. Bu kabul edilmiş bir sınırdır ve buradaki yönelim/renk
 /// assert'leri (bkz. `test_render_target.cpp`) o boşluğun bir kısmını kapatır.
 
@@ -63,21 +63,21 @@ constexpr int32_t kSceneH = 120;
 ///
 /// Sıfır beklemek gerçekçi değil: iki sürücü aynı üçgeni aynı kurallarla
 /// rasterleştirse bile kenar piksellerinde ve enterpolasyonda son bitler
-/// ayrışabilir. Eşik ölçülerek belirlendi — gerçek fark bunun çok altında
+/// ayrışabilir. Eşik ölçülerek belirlendi; gerçek fark bunun çok altında
 /// (ayrıntı testin çıktısında raporlanır).
 constexpr int32_t kChannelTolerance = 8;
 
 /// @brief Eşiği aşmasına izin verilen piksel oranı.
 ///
-/// **Ölçülen gerçek değer: 0.** Bu sahne, gerçek sürücülerde (Windows/MSVC,
-/// NVIDIA GL + Vulkan) iki backend'de **bayt bayt aynı** çıkıyor. Eşiğin
+/// Ölçülen gerçek değer: 0. Bu sahne, gerçek sürücülerde (Windows/MSVC,
+/// NVIDIA GL + Vulkan) iki backend'de bayt bayt aynı çıkıyor. Eşiğin
 /// sıfırdan büyük olmasının tek sebebi CI'daki yazılım rasterleştiricileri
 /// (lavapipe / llvmpipe): onların kenar piksellerinde ufak farklar üretmesi
 /// mümkün ve bu testin bir sürücü farkı yüzünden kırmızıya dönmesi
 /// istenmiyor.
 ///
 /// Yine de dar tutuldu: bir şekil kaybolursa, yer değiştirirse veya bir
-/// karıştırma faktörü ayrışırsa fark bunun kat kat üstüne çıkar — nitekim
+/// karıştırma faktörü ayrışırsa fark bunun kat kat üstüne çıkar; nitekim
 /// bu test yazılırken bulunan üç hatanın en küçüğü %4'tü. Ölçülen oran her
 /// koşuda basılır, sessizce gevşemez.
 constexpr double kMaxDifferingRatio = 0.005;
@@ -98,7 +98,7 @@ Image MakeCheckerImage(int32_t size = 16) {
   return Image::CreateFromData(pixels.data(), size, size, 4);
 }
 
-/// @brief Karşılaştırılacak sahne — **deterministik**, zaman/rastgelelik yok.
+/// @brief Karşılaştırılacak sahne: deterministik, zaman/rastgelelik yok.
 ///
 /// Kasıtlı olarak zengin: dolgu, çerçeve, kesikli kalem, Bézier yolu,
 /// gradient, doku, kırpma, transform ve opaklık aynı karede. Bir backend'de
@@ -135,7 +135,7 @@ void DrawScene(Painter& painter, const Image& image) {
   painter.SetBrush(Brush(Color{120, 200, 120, 220}));
   painter.FillPolygon(kConcave);
 
-  // Bézier yolu — dolgu ve çerçeve birlikte
+  // Bézier yolu: dolgu ve çerçeve birlikte
   Path path;
   path.MoveTo(10.0F, 108.0F);
   path.CubicTo(30.0F, 74.0F, 62.0F, 74.0F, 82.0F, 108.0F);
@@ -152,7 +152,7 @@ void DrawScene(Painter& painter, const Image& image) {
                                          Color{40, 80, 255, 255}));
   painter.FillRect(92.0F, 74.0F, 58.0F, 34.0F);
 
-  // Doku — üç aşırı yükleme de
+  // Doku: üç aşırı yükleme de
   painter.DrawImage(image, 54.0F, 6.0F);
   painter.DrawImage(image, Rect{132.0F, 38.0F, 22.0F, 20.0F});
   painter.DrawImage(image, Rect{0.0F, 0.0F, 8.0F, 8.0F},
@@ -376,7 +376,7 @@ TEST(BackendParity, OpenGLAndVulkanProduceTheSameImage) {
       << RenderMap(report);
 }
 
-/// Aynı backend iki kez çalıştırıldığında **birebir** aynı çıktıyı vermeli.
+/// Aynı backend iki kez çalıştırıldığında birebir aynı çıktıyı vermeli.
 ///
 /// Parite testinin ön koşulu: çizim kendi içinde deterministik değilse iki
 /// backend'i karşılaştırmanın anlamı olmaz. Bu test, bir farkın kaynağının

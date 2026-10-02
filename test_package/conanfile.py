@@ -9,7 +9,7 @@ class SDLPainterTestConan(ConanFile):
     """Paketin tuketilebilirligini dogrular: header bulunuyor mu, link
     ediliyor mu, derlenmis sembol cozuluyor mu.
 
-    GPU veya ekran GEREKTIRMEZ — Conan Center derleyicilerinde ikisi de yok.
+    GPU veya ekran GEREKTIRMEZ: Conan Center derleyicilerinde ikisi de yok.
     Pencere acan bir test_package orada duser.
     """
 
@@ -34,8 +34,5 @@ class SDLPainterTestConan(ConanFile):
 
     def test(self):
         if can_run(self):
-            # Onceki hali `f".{self.package_folder}/test_package"` idi;
-            # package_folder mutlak yol oldugu icin basina nokta eklenince
-            # ".C:/..." gibi gecersiz bir yol uretiyordu.
             bin_path = os.path.join(self.cpp.build.bindir, "test_package")
             self.run(bin_path, env="conanrun")

@@ -95,7 +95,7 @@ ok "main origin ile ayni noktada"
 
 # 8) Remote'ta ayni etiket varsa dur -- yayinlanmis etiket oynatilmaz.
 if git ls-remote --exit-code --tags origin "refs/tags/${tag}" > /dev/null 2>&1; then
-    fail "$tag zaten origin'de yayinlanmis. Yeni sürüm için version.h'yi yukselt."
+    fail "$tag zaten origin'de yayinlanmis. Yeni surum icin version.h'yi yukselt."
 fi
 ok "$tag remote'ta yok"
 

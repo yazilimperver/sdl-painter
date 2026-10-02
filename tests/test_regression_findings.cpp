@@ -73,7 +73,7 @@ struct TargetHarness {
 };
 
 /// @brief Bir noktanın rengini üçgen listesinden baricentrik enterpolasyonla
-///        oku — rasterizer'ın yapacağı işi bağımsız olarak yapar.
+///        oku; rasterizer'ın yapacağı işi bağımsız olarak yapar.
 ///
 /// Gradient testlerinde kullanacağız.
 struct SampledColor {
@@ -169,7 +169,7 @@ TEST(PainterLifecycleDeathTest, MoveAssignmentReleasesOwnedFontSafely) {
         std::fprintf(stderr, "[move oncesi] atlas texture sayisi=%d\n",
                      journal.textures_created);
 
-        dst = std::move(src);  //renderer fonttan ÖNCE yok ediliyor.
+        dst = std::move(src);  //renderer fonttan once yok ediliyor.
 
         std::fprintf(stderr,
                      "[move sonrasi] destroy_after_death=%d "
@@ -184,7 +184,7 @@ TEST(PainterLifecycleDeathTest, MoveAssignmentReleasesOwnedFontSafely) {
       ::testing::ExitedWithCode(0), "");
 }
 
-// Hata 2 — Frame sınırında aktif hedef sözleşmesi uygulanmıyo
+// Hata 2: Frame sınırında aktif hedef sözleşmesi uygulanmıyo
 TEST(PainterTargets, BeginStartsOnScreen) {
   TargetHarness h;  // kKeepTarget: OpenGL'de FBO bağlı kalır.
   RenderTarget a = h.painter.CreateRenderTarget(32, 32);
@@ -389,7 +389,7 @@ TEST(PainterClip, FollowsResize) {
          "olmaliydi.";
 }
 
-// Hata 5 — Pencere boyutu ile hedef boyutu birbirine karışıyor
+// Hata 5: Pencere boyutu ile hedef boyutu birbirine karışıyor
 //
 // `ResetViewport` aktif hedef olsa bile `mDrawableWidth/Height` kullanıyor
 // `ApplyDrawableSize` hedef seçiliyken de viewport'u pencere boyutuna çeviriyor ve biriken çizimleri
@@ -578,8 +578,8 @@ TEST(PainterGradient, SmallRadialDiscIsNotLostInsideLargeTriangles) {
   const auto sample = [](Point centre, float scale_x, float scale_y,
                          const Rect& rect, float px, float py) {
     TargetHarness h;
-    h.painter.SetBrush(Brush::RadialGradient(centre, kRadius, Color::Red(),
-                                             Color::Blue()));
+    h.painter.SetBrush(
+        Brush::RadialGradient(centre, kRadius, Color::Red(), Color::Blue()));
     h.painter.Begin();
     h.painter.Scale(scale_x, scale_y);
     h.painter.FillRect(rect.x, rect.y, rect.w, rect.h);
@@ -605,17 +605,17 @@ TEST(PainterGradient, SmallRadialDiscIsNotLostInsideLargeTriangles) {
   ASSERT_TRUE(kCentre.found);
   EXPECT_GT(kCentre.r, 245.0F) << "Merkez kayboldu.";
   expect_t(sample({25.5F, 50.5F}, 1.0F, 1.0F, kSquare, 29.5F, 50.5F), 0.5F,
-           "merkezden yarıçapın yarısı kadar sağda");
+           "merkezden yaricapin yarisi kadar sagda");
   expect_t(sample({25.5F, 50.5F}, 1.0F, 1.0F, kSquare, 80.0F, 50.0F), 1.0F,
-           "yarıçapın dışında");
+           "yaricapin disinda");
 
   // Merkez bir üçgende, disk köşegeni geçip komşu üçgene taşıyor.
   expect_t(sample({25.0F, 32.0F}, 1.0F, 1.0F, kSquare, 28.6F, 28.4F),
-           std::hypot(3.6F, 3.6F) / kRadius, "komşu üçgene taşan disk");
+           std::hypot(3.6F, 3.6F) / kRadius, "komsu ucgene tasan disk");
 
   // Merkez şeklin dışında, disk sol kenarı kesiyor.
   expect_t(sample({-3.0F, 30.5F}, 1.0F, 1.0F, kSquare, 0.5F, 30.5F),
-           3.5F / kRadius, "şekil kenarını kesen disk");
+           3.5F / kRadius, "sekil kenarini kesen disk");
 
   // Eşit olmayan ölçek: gradient şekil-yerel uzayda uygulanır, ekranda
   // yatayda iki kat geniş, dikeyde yarı yüksek bir elips olur.
@@ -623,13 +623,13 @@ TEST(PainterGradient, SmallRadialDiscIsNotLostInsideLargeTriangles) {
   const SampledColor kScaledCentre =
       sample({12.75F, 101.0F}, 2.0F, 0.5F, kTall, 25.5F, 50.5F);
   ASSERT_TRUE(kScaledCentre.found);
-  EXPECT_GT(kScaledCentre.r, 245.0F) << "Ölçekli merkez kayboldu.";
+  EXPECT_GT(kScaledCentre.r, 245.0F) << "Olcekli merkez kayboldu.";
   expect_t(sample({12.75F, 101.0F}, 2.0F, 0.5F, kTall, 33.5F, 50.5F), 0.5F,
-           "ölçekli, yatay eksen");
+           "olcekli, yatay eksen");
   expect_t(sample({12.75F, 101.0F}, 2.0F, 0.5F, kTall, 25.5F, 52.5F), 0.5F,
-           "ölçekli, dikey eksen");
+           "olcekli, dikey eksen");
   expect_t(sample({12.75F, 101.0F}, 2.0F, 0.5F, kTall, 25.5F, 55.5F), 1.0F,
-           "ölçekli, dikey eksende yarıçapın dışında");
+           "olcekli, dikey eksende yaricapin disinda");
 }
 
 TEST(PainterGradient, LinearRectClampsOutsideSegment) {
@@ -952,7 +952,7 @@ TEST(PainterText, KerningRestartsOnWrappedLine) {
 // yıkılmadan önce serbest bırakılmalı.
 TEST(ApplicationLifecycleDeathTest, FailedOnInitReleasesMemberImageSafely) {
   if (HiddenWindow(RendererBackend::kOpenGL).Get() == nullptr) {
-    GTEST_SKIP() << "OpenGL penceresi oluşturulamadı.";
+    GTEST_SKIP() << "OpenGL penceresi olusturulamadi.";
   }
   GTEST_FLAG_SET(death_test_style, "threadsafe");
 
@@ -980,7 +980,7 @@ TEST(ApplicationLifecycleDeathTest, FailedOnInitReleasesMemberImageSafely) {
 // genelidir ve önceki testlerden dolu kalıp hatayı gizler.
 TEST(OpenGLRendererDeathTest, FailedGlLoaderCanBeDestroyedSafely) {
   if (HiddenWindow(RendererBackend::kOpenGL).Get() == nullptr) {
-    GTEST_SKIP() << "OpenGL penceresi oluşturulamadı.";
+    GTEST_SKIP() << "OpenGL penceresi olusturulamadi.";
   }
   GTEST_FLAG_SET(death_test_style, "threadsafe");
 

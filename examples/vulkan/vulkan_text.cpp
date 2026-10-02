@@ -98,8 +98,8 @@ void DrawLabelBox(sdl_painter::Painter& p, const sdl_painter::Rect& box,
 int main() {
   InitLogger();
 
-  spdlog::info("SDLPainter vulkan_text (Vulkan + Metin) başlıyor...");
-  spdlog::info("ESC veya pencereyi kapat ile çıkış.");
+  spdlog::info("SDLPainter vulkan_text (Vulkan + Metin) basliyor...");
+  spdlog::info("ESC veya pencereyi kapat ile cikis.");
 
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     spdlog::error("SDL_Init hata: {}", SDL_GetError());
@@ -114,7 +114,7 @@ int main() {
 
   const std::string font_path = FindSystemFont();
   if (font_path.empty()) {
-    spdlog::error("Sistem fontu bulunamadı. Demo çalıştırılamıyor.");
+    spdlog::error("Sistem fontu bulunamadi. Demo calistirilamiyor.");
     TTF_Quit();
     SDL_Quit();
     return 1;
@@ -133,7 +133,7 @@ int main() {
   {  // Painter scope: window'dan önce destroy edilmeli.
     sdl_painter::Painter painter(window, sdl_painter::RendererBackend::kVulkan);
     if (!painter.IsValid()) {
-      spdlog::error("Vulkan Painter başlatılamadı.");
+      spdlog::error("Vulkan Painter baslatilamadi.");
       SDL_DestroyWindow(window);
       TTF_Quit();
       SDL_Quit();
@@ -148,7 +148,7 @@ int main() {
 
     if (!font_sm->IsValid() || !font_md->IsValid() || !font_lg->IsValid() ||
         !font_xl->IsValid()) {
-      spdlog::error("En az bir font yüklenemedi.");
+      spdlog::error("En az bir font yuklenemedi.");
       SDL_DestroyWindow(window);
       TTF_Quit();
       SDL_Quit();

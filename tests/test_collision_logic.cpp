@@ -85,7 +85,7 @@ TEST(ResolveAxis, NoIntersectionReturnsNone) {
   EXPECT_EQ(bo::ResolveAxis(c, r), bo::Axis::kNone);
 }
 
-/// @brief Üstten çarpma dikey eksende çözülmeli — top yukarı sekmeli.
+/// @brief Üstten çarpma dikey eksende çözülmeli: top yukarı sekmeli.
 TEST(ResolveAxis, HitFromAboveIsVertical) {
   const bo::Aabb brick{0, 0, 60, 20};
   const bo::Circle ball{30, -6, 8};  // tuğlanın üstünde, ortasında
@@ -100,7 +100,7 @@ TEST(ResolveAxis, HitFromBelowIsVertical) {
 
 /// @brief Yandan çarpma yatay eksende çözülmeli.
 ///
-/// Bu ayrım olmadan top, yandan çarptığında da yukarı sekerdi — oyunun en
+/// Bu ayrım olmadan top, yandan çarptığında da yukarı sekerdi; oyunun en
 /// çok fark edilen hatası bu olurdu.
 TEST(ResolveAxis, HitFromSideIsHorizontal) {
   const bo::Aabb brick{0, 0, 60, 20};
@@ -135,7 +135,7 @@ TEST(PaddleBounce, RightEdgeIsPlusOne) {
 ///
 /// Top raketin kenarını sıyırdığında değme noktası teknik olarak raketin
 /// dışında kalabilir; kırpılmazsa sekme açısı sınırı aşar ve top neredeyse
-/// yatay gider — sonsuza kadar sektiği bir duruma düşer.
+/// yatay gider, sonsuza kadar sektiği bir duruma düşer.
 TEST(PaddleBounce, OutsideHitIsClamped) {
   const bo::Aabb paddle{100, 500, 140, 16};
   EXPECT_FLOAT_EQ(bo::PaddleBounce(paddle.Left() - 500.0F, paddle), -1.0F);

@@ -191,7 +191,7 @@ sdl-painter/
 ├── include/sdl_painter/        ← Public API (what the user sees)
 │   ├── painter.h               · main drawing class
 │   ├── pen.h, brush.h, color.h · style types
-│   ├── geometry.h              · Point, Rect, Size
+│   ├── geometry.h              · Point, Rect
 │   ├── image.h, texture.h      · image + RAII texture wrapper
 │   ├── font.h                  · SDL_ttf wrapper, Alignment
 │   ├── renderer.h              · IRenderer interface + RendererBackend enum

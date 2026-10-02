@@ -142,7 +142,7 @@ bool VulkanPipeline::Init(VkDevice device, VkRenderPass render_pass) {
 
   if (vkCreatePipelineLayout(device, &layout_ci, nullptr, &mLayout) !=
       VK_SUCCESS) {
-    spdlog::error("VulkanPipeline: vkCreatePipelineLayout başarısız.");
+    spdlog::error("VulkanPipeline: vkCreatePipelineLayout basarisiz.");
     // Shader modülleri henüz silinmedi — leak'i önle.
     vkDestroyShaderModule(device, vert_mod, nullptr);
     vkDestroyShaderModule(device, frag_mod, nullptr);

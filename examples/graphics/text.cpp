@@ -289,7 +289,7 @@ int main() {
     }
   }
 
-  spdlog::info("Demo kapatılıyor.");
+  spdlog::info("Demo kapatiliyor.");
   SDL_DestroyWindow(window);
   SDL_Quit();
   return 0;

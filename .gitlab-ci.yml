@@ -22,13 +22,13 @@ build:linux:debug:
         -c tools.system.package_manager:sudo=False
     - cmake --preset linux-debug
     - cmake --build --preset linux-debug
-  # Artifact yok — GitHub'dan bilinçli fark (orada aynı çıktılar
+  # Artifact yok. GitHub'dan bilinçli fark (orada aynı çıktılar
   # `upload-artifact` ile saklanıyor). Gerekçe: Debug'da 47 örnek
   # executable'ının her biri ~61 MB statik binary, toplamı ~2.1 GB; GitLab
   # koordinatörü bunu 413 (Request Entity Too Large) ile reddediyor.
   # Tüketeni de yok: `test:unit` kendi build'ini yapıyor (aşağıda), çünkü
   # `ctest` zaten CMakeCache/CTestTestfile isterdi ve onlar bu listede hiç
-  # yoktu — upload geçseydi bile test job'ı düşerdi.
+  # yoktu; upload geçseydi bile test job'ı düşerdi.
 
 build:linux:release:
   stage: build
@@ -42,7 +42,7 @@ build:linux:release:
         -c tools.system.package_manager:sudo=False
     - cmake --preset linux-release
     - cmake --build --preset linux-release
-  # Artifact YOK — gerekce build:linux:debug ile ayni.
+  # Artifact YOK: gerekce build:linux:debug ile ayni.
 
 build:windows:debug:
   stage: build
@@ -66,7 +66,7 @@ build:windows:release:
 test:unit:
   stage: test
   image: $CI_REGISTRY_IMAGE
-  # Kendi conan+cmake build'ini yapar, build-stage artifact'ı tüketmez —
+  # Kendi conan+cmake build'ini yapar, build-stage artifact'ı tüketmez;
   # `test:unit:asan` ve GitHub'daki karşılığı da böyle çalışıyor.
   # needs: [] → pipeline başında bağımsız koşsun; alakasız bir build
   # job'ının (örn. windows MinGW) fail'i bunu SKIP ettirmesin.
@@ -330,7 +330,7 @@ quality:clang-format:
   # apt ile yeniden kurmaya gerek yok (imajda apt list'leri silinmiş durumda).
   script:
     - find include/ src/ -name '*.h' -o -name '*.cpp' | xargs clang-format-18 --dry-run --Werror
-  # SERT KAPI — allow_failure YOK. GitHub tarafında da öyle; ikisi ayrışırsa
+  # SERT KAPI: allow_failure YOK. GitHub tarafında da öyle; ikisi ayrışırsa
   # biçim ihlali yalnızca bir pipeline'da görünür ve diğerinde birikir.
   # (clang-tidy bilinçli olarak yumuşak kalır: yanlış pozitif üretebiliyor.)
 
@@ -365,7 +365,7 @@ quality:clang-tidy:
 # --- Docs Stage ---
 
 # GitLab Pages: job adı 'pages' olmalı, artifact 'public/' altına gitmeli.
-# Conan/CMake gerektirmez — doxygen doğrudan include/ ve doc/ üzerinde çalışır.
+# Conan/CMake gerektirmez; doxygen doğrudan include/ ve doc/ üzerinde çalışır.
 pages:
   stage: docs
   image: ubuntu:24.04
@@ -451,7 +451,7 @@ release:publish:
     - if: $CI_COMMIT_TAG =~ /^v\d+\.\d+\.\d+$/
   script:
     # CHANGELOG'un tamami yerine yalnizca etiketlenen surumun bolumu.
-    # Bolum bulunamazsa script hata verir — bos release notu yayinlanmasin.
+    # Bolum bulunamazsa script hata verir; bos release notu yayinlanmasin.
     - apk add --no-cache bash >/dev/null 2>&1 || true
     - bash scripts/changelog-section.sh "$CI_COMMIT_TAG" | tee RELEASE_NOTES.md
   release:

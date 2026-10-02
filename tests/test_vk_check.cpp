@@ -1,5 +1,5 @@
 /// @file test_vk_check.cpp
-/// @brief `VkResultToString` — Vulkan hata kodu → okunabilir metin.
+/// @brief `VkResultToString`: Vulkan hata kodu → okunabilir metin.
 ///
 /// Saf fonksiyon, GPU gerektirmez. Yalnızca hata yollarından çağrıldığı için
 /// kapsama ölçümünde %0 görünüyordu; oysa bir hata anında log'da doğru ismin
@@ -59,7 +59,7 @@ TEST(VkResultToString, UnknownCodeFallsBack) {
   EXPECT_STREQ(VkResultToString(kBogus), "VK_UNKNOWN_RESULT");
 }
 
-/// Hiçbir kod için `nullptr` veya boş metin dönmemeli — log'da boş satır
+/// Hiçbir kod için `nullptr` veya boş metin dönmemeli; log'da boş satır
 /// teşhisi imkânsız kılar.
 TEST(VkResultToString, NeverReturnsNullOrEmpty) {
   const VkResult kCodes[] = {

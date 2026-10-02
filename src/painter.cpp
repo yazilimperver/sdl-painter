@@ -514,17 +514,17 @@ Painter::Painter(SDL_Window* window, RendererBackend backend)
       mRenderer(CreateRenderer(backend)),
       mSelf(std::make_shared<Painter*>(this)) {
   if (window == nullptr) {
-    spdlog::error("Painter: window pointer null, Painter geçersiz durumda.");
+    spdlog::error("Painter: window pointer null, Painter gecersiz durumda.");
     mRenderer.reset();
     return;
   }
   if (mRenderer == nullptr) {
     spdlog::error(
-        "Painter: renderer oluşturulamadı (Vulkan derlenmemiş olabilir?).");
+        "Painter: renderer olusturulamadi (Vulkan derlenmemis olabilir?).");
     return;
   }
   if (!mRenderer->Initialize(window)) {
-    spdlog::error("Painter: renderer initialize başarısız.");
+    spdlog::error("Painter: renderer initialize basarisiz.");
     mRenderer.reset();
     return;
   }
@@ -545,7 +545,7 @@ Painter::Painter(std::unique_ptr<IRenderer> renderer, int32_t viewport_width,
       mViewportHeight(viewport_height),
       mSelf(std::make_shared<Painter*>(this)) {
   if (mRenderer == nullptr) {
-    spdlog::error("Painter: renderer null, Painter geçersiz durumda.");
+    spdlog::error("Painter: renderer null, Painter gecersiz durumda.");
     return;
   }
   mBatcher = std::make_unique<RenderBatcher>(*mRenderer);
@@ -1388,7 +1388,7 @@ void Painter::Restore() {
   if (mStateStack.empty()) {
     // Save() çağrılmadan Restore() çağrıldı — debugging için uyarı.
     spdlog::warn(
-        "Painter::Restore() çağrıldı ancak state stack boş "
+        "Painter::Restore() cagrildi ancak state stack bos "
         "(unbalanced Save/Restore).");
     return;
   }

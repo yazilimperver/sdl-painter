@@ -89,9 +89,9 @@ std::vector<uint8_t> MakeGradientTexture() {
 
 int main() {
   InitLogger();
-  spdlog::info("SDLPainter vulkan_demo (polish & doğrulama) başlıyor...");
-  spdlog::info("Pencereyi yeniden boyutlandırarak resize testini yapabilirsiniz.");
-  spdlog::info("ESC veya pencereyi kapat ile çıkış.");
+  spdlog::info("SDLPainter vulkan_demo (polish & dogrulama) basliyor...");
+  spdlog::info("Pencereyi yeniden boyutlandirarak resize testini yapabilirsiniz.");
+  spdlog::info("ESC veya pencereyi kapat ile cikis.");
 
   if (!SDL_Init(SDL_INIT_VIDEO)) {
     spdlog::error("SDL_Init hata: {}", SDL_GetError());
@@ -110,7 +110,7 @@ int main() {
   {  // Painter scope: window'dan önce destroy edilmeli (surface leak önleme).
   sdl_painter::Painter painter(window, sdl_painter::RendererBackend::kVulkan);
   if (!painter.IsValid()) {
-    spdlog::error("Vulkan Painter başlatılamadı.");
+    spdlog::error("Vulkan Painter baslatilamadi.");
     SDL_DestroyWindow(window);
     SDL_Quit();
     return 1;

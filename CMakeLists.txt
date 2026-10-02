@@ -34,13 +34,8 @@ find_package(spdlog REQUIRED)
 find_package(glm REQUIRED)
 find_package(OpenGL REQUIRED)
 
-# spdlog hedef adi `header_only` secenegine gore DEGISIYOR ve iki adtan yalnizca
-# BIRI tanimli oluyor:
 #   header_only=True  -> spdlog::spdlog_header_only  (spdlog::spdlog YOK)
 #   header_only=False -> spdlog::spdlog              (header_only YOK)
-# Conan Center'da bagimlilik secenegi zorlamak yasak oldugundan sabit bir ada
-# baglanamayiz; hangisi varsa o kullanilir. (vcpkg/upstream spdlog ikisini de
-# tanimlar; orada header-only dal secilir.)
 if(TARGET spdlog::spdlog_header_only)
     set(SDLPAINTER_SPDLOG_TARGET spdlog::spdlog_header_only)
 elseif(TARGET spdlog::spdlog)
@@ -60,8 +55,7 @@ include(CodeCoverage)
 # Windows'ta bagimlilik DLL'lerini exe yaninda toplayan yardimci
 include(RuntimeDlls)
 
-# Kurulum dizinleri (CMAKE_INSTALL_INCLUDEDIR/LIBDIR/BINDIR) — hedef arayuzleri
-# bunlari kullandigi icin hedeflerden ONCE include edilmeli.
+# Kurulum dizinleri (CMAKE_INSTALL_INCLUDEDIR/LIBDIR/BINDIR). Hedeflerden ONCE include edilmeli.
 include(GNUInstallDirs)
 
 # --- Shader gomme ---
@@ -166,7 +160,7 @@ target_include_directories(sdl_painter
         # Build agacinda kaynak include/, kurulumda CMAKE_INSTALL_INCLUDEDIR.
         # Goreli yol export edilemez; generator expression sart.
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-        # Uretilen export basligi (sdl_painter/export.h) — kurulumda ayni
+        # Uretilen export basligi (sdl_painter/export.h). Kurulumda ayni
         # include koku altina kopyalanir, bkz. InstallRules.cmake.
         $<BUILD_INTERFACE:${SDLPAINTER_EXPORTS_DIR}>
         $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
@@ -265,15 +259,14 @@ set_target_properties(sdl_painter sdl_painter_app PROPERTIES
 # bağımlılıklarını binary'ye gömerek dağıtımı tek-dosyaya indir.
 #
 # Dizin kapsamli add_link_options() KULLANILMAZ: add_subdirectory() ile ekleyen
-# tuketicinin kendi hedefleri de bundan etkilenirdi — bayraklar dogrudan
-# hedeflere veriliyor.
+# tuketicinin kendi hedefleri de bundan etkilenirdi.
 if(MINGW)
     target_link_options(sdl_painter      PRIVATE -static-libgcc -static-libstdc++)
     target_link_options(sdl_painter_app  PRIVATE -static-libgcc -static-libstdc++)
 endif()
 
 # Kurulum + export (find_package(sdl_painter) ve Conan/vcpkg paketlemesi bunun
-# uzerine biner) — hedefler tanimlandiktan SONRA.
+# uzerine biner), hedefler tanimlandiktan SONRA.
 include(InstallRules)
 
 if(SDLPAINTER_BUILD_EXAMPLES)
@@ -286,7 +279,7 @@ if(SDLPAINTER_BUILD_TESTS)
     add_subdirectory(tests)
 endif()
 
-# Docs — Doxygen varsa sdlpainter_docs target'ı oluşturur, yoksa sessizce atlar.
+# Docs, doxygen varsa sdlpainter_docs target'ı oluşturur, yoksa sessizce atlar.
 # Yalnizca ust proje iken: alt proje olarak eklenen tuketicinin hedef listesini
 # kirletmeyelim, ayrica gereksiz find_package(Doxygen) maliyeti olmasin.
 if(PROJECT_IS_TOP_LEVEL)

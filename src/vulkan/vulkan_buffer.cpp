@@ -32,7 +32,7 @@ bool VulkanBuffer::Init(VkDevice device, VkPhysicalDevice phys_device,
   buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
   if (vkCreateBuffer(device, &buf_info, nullptr, &mBuffer) != VK_SUCCESS) {
-    spdlog::error("VulkanBuffer: vkCreateBuffer başarısız.");
+    spdlog::error("VulkanBuffer: vkCreateBuffer basarisiz.");
     return false;
   }
 
@@ -45,7 +45,7 @@ bool VulkanBuffer::Init(VkDevice device, VkPhysicalDevice phys_device,
   uint32_t mem_type =
       vk_detail::FindMemoryType(phys_device, mem_req.memoryTypeBits, kMemProps);
   if (mem_type == UINT32_MAX) {
-    spdlog::error("VulkanBuffer: uygun bellek tipi bulunamadı.");
+    spdlog::error("VulkanBuffer: uygun bellek tipi bulunamadi.");
     vkDestroyBuffer(device, mBuffer, nullptr);
     mBuffer = VK_NULL_HANDLE;
     return false;
@@ -57,14 +57,14 @@ bool VulkanBuffer::Init(VkDevice device, VkPhysicalDevice phys_device,
   alloc_info.memoryTypeIndex = mem_type;
 
   if (vkAllocateMemory(device, &alloc_info, nullptr, &mMemory) != VK_SUCCESS) {
-    spdlog::error("VulkanBuffer: vkAllocateMemory başarısız.");
+    spdlog::error("VulkanBuffer: vkAllocateMemory basarisiz.");
     vkDestroyBuffer(device, mBuffer, nullptr);
     mBuffer = VK_NULL_HANDLE;
     return false;
   }
 
   if (vkBindBufferMemory(device, mBuffer, mMemory, 0) != VK_SUCCESS) {
-    spdlog::error("VulkanBuffer: vkBindBufferMemory başarısız.");
+    spdlog::error("VulkanBuffer: vkBindBufferMemory basarisiz.");
     vkFreeMemory(device, mMemory, nullptr);
     vkDestroyBuffer(device, mBuffer, nullptr);
     mMemory = VK_NULL_HANDLE;
@@ -74,7 +74,7 @@ bool VulkanBuffer::Init(VkDevice device, VkPhysicalDevice phys_device,
 
   // Kalıcı map — HOST_COHERENT olduğundan flush gerekmez.
   if (vkMapMemory(device, mMemory, 0, capacity, 0, &mMapped) != VK_SUCCESS) {
-    spdlog::error("VulkanBuffer: vkMapMemory başarısız.");
+    spdlog::error("VulkanBuffer: vkMapMemory basarisiz.");
     vkFreeMemory(device, mMemory, nullptr);
     vkDestroyBuffer(device, mBuffer, nullptr);
     mMemory = VK_NULL_HANDLE;
@@ -118,7 +118,7 @@ bool VulkanBuffer::Write(const void* data, VkDeviceSize byte_size,
                          VkDeviceSize alignment, uint32_t frame_slot,
                          VkDeviceSize& out_offset_bytes) {
   if (frame_slot >= mFrameSlotCount) {
-    spdlog::warn("VulkanBuffer::Write: geçersiz frame_slot {} (max {}).",
+    spdlog::warn("VulkanBuffer::Write: gecersiz frame_slot {} (max {}).",
                  frame_slot, mFrameSlotCount);
     return false;
   }

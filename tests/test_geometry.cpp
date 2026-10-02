@@ -47,6 +47,7 @@ TEST(PointTest, Equality) {
   Point c(1.0f, 3.0f);
   EXPECT_EQ(a, b);
   EXPECT_NE(a, c);
+  EXPECT_NE(a, Point(2.0f, 2.0f));
 }
 
 // --- Rect ---
@@ -84,8 +85,12 @@ TEST(RectTest, Contains) {
   Rect r(10.0f, 10.0f, 80.0f, 60.0f);
   EXPECT_TRUE(r.Contains(50.0f, 40.0f));   // merkez
   EXPECT_TRUE(r.Contains(10.0f, 10.0f));   // sol-üst köşe
+  EXPECT_TRUE(r.Contains(90.0f, 40.0f));
+  EXPECT_TRUE(r.Contains(50.0f, 70.0f));
   EXPECT_FALSE(r.Contains(9.9f, 10.0f));   // sol dışında
   EXPECT_FALSE(r.Contains(91.0f, 10.0f));  // sağ dışında
+  EXPECT_FALSE(r.Contains(50.0f, 9.9f));
+  EXPECT_FALSE(r.Contains(50.0f, 70.1f));
 }
 
 TEST(RectTest, Equality) {
@@ -94,20 +99,9 @@ TEST(RectTest, Equality) {
   Rect c(1.0f, 2.0f, 3.0f, 5.0f);
   EXPECT_EQ(a, b);
   EXPECT_NE(a, c);
-}
-
-// --- Size ---
-
-TEST(SizeTest, DefaultConstructor) {
-  Size s;
-  EXPECT_FLOAT_EQ(s.w, 0.0f);
-  EXPECT_FLOAT_EQ(s.h, 0.0f);
-}
-
-TEST(SizeTest, ParameterizedConstructor) {
-  Size s(640.0f, 480.0f);
-  EXPECT_FLOAT_EQ(s.w, 640.0f);
-  EXPECT_FLOAT_EQ(s.h, 480.0f);
+  EXPECT_NE(a, Rect(2.0f, 2.0f, 3.0f, 4.0f));
+  EXPECT_NE(a, Rect(1.0f, 3.0f, 3.0f, 4.0f));
+  EXPECT_NE(a, Rect(1.0f, 2.0f, 4.0f, 4.0f));
 }
 
 }  // namespace sdl_painter

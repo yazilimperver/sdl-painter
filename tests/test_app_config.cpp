@@ -11,6 +11,7 @@ TEST(AppConfigTest, Defaults) {
   EXPECT_EQ(cfg.width, 800);
   EXPECT_EQ(cfg.height, 600);
   EXPECT_TRUE(cfg.resizable);
+  EXPECT_FALSE(cfg.high_dpi);
   EXPECT_TRUE(cfg.vsync);
   EXPECT_EQ(cfg.msaa_samples, 4);
   EXPECT_EQ(cfg.backend, RendererBackend::kOpenGL);
@@ -18,6 +19,11 @@ TEST(AppConfigTest, Defaults) {
   EXPECT_EQ(cfg.timing, TimingMode::kVariable);
   EXPECT_EQ(cfg.fixed_update_hz, 60);
   EXPECT_EQ(cfg.target_fps, 0);
+  EXPECT_EQ(cfg.stats_overlay, StatsOverlayMode::kNone);
+  EXPECT_EQ(cfg.stats_overlay_key, Key::kF1);
+  EXPECT_FALSE(cfg.show_fps_in_title);
+  EXPECT_TRUE(cfg.stats_overlay_font.empty());
+  EXPECT_EQ(cfg.stats_overlay_font_size, 14);
 }
 
 TEST(AppConfigTest, FixedTimingFields) {
@@ -46,6 +52,8 @@ TEST(KeyModifierTest, OrCombinesFlags) {
   const KeyModifier mods = KeyModifier::kShift | KeyModifier::kCtrl;
   EXPECT_TRUE(HasModifier(mods, KeyModifier::kShift));
   EXPECT_TRUE(HasModifier(mods, KeyModifier::kCtrl));
+  EXPECT_TRUE(HasModifier(mods, KeyModifier::kShift | KeyModifier::kCtrl));
+  EXPECT_FALSE(HasModifier(mods, KeyModifier::kShift | KeyModifier::kAlt));
   EXPECT_FALSE(HasModifier(mods, KeyModifier::kAlt));
   EXPECT_FALSE(HasModifier(mods, KeyModifier::kGui));
 }
@@ -53,6 +61,7 @@ TEST(KeyModifierTest, OrCombinesFlags) {
 TEST(KeyModifierTest, NoneHasNoModifiers) {
   EXPECT_FALSE(HasModifier(KeyModifier::kNone, KeyModifier::kShift));
   EXPECT_FALSE(HasModifier(KeyModifier::kNone, KeyModifier::kNone));
+  EXPECT_FALSE(HasModifier(KeyModifier::kShift, KeyModifier::kNone));
 }
 
 }  // namespace sdl_painter

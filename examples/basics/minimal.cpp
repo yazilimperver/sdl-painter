@@ -17,7 +17,7 @@ int main() {
       SDL_CreateWindow("SDLPainter — minimal", 640, 480, SDL_WINDOW_OPENGL);
 
   // Painter kendi scope'unda: GL context pencereye bağlı olduğu için
-  // SDL_DestroyWindow'dan ÖNCE yıkılmalı.
+  // SDL_DestroyWindow'dan once yıkılmalı.
   {
     sdl_painter::Painter painter(window, sdl_painter::RendererBackend::kOpenGL);
 

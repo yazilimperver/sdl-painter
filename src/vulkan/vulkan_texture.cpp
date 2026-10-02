@@ -39,7 +39,7 @@ bool VulkanTexture::Upload(VkContext* context, VkCommandPool cmd_pool,
   const uint8_t* rgba_data = data;
   if (channels != 4) {
     if (channels < 1 || channels > 4) {
-      spdlog::error("VulkanTexture: desteklenmeyen kanal sayısı: {}", channels);
+      spdlog::error("VulkanTexture: desteklenmeyen kanal sayisi: {}", channels);
       return false;
     }
     const auto kCh = static_cast<std::size_t>(channels);
@@ -109,7 +109,7 @@ bool VulkanTexture::UpdateRegion(VkContext* context, VkCommandPool cmd_pool,
     return false;
   }
   if (x < 0 || y < 0 || x + width > mWidth || y + height > mHeight) {
-    spdlog::error("VulkanTexture::UpdateRegion: bölge sınır dışı.");
+    spdlog::error("VulkanTexture::UpdateRegion: bolge sinir disi.");
     return false;
   }
 
@@ -155,7 +155,7 @@ bool VulkanTexture::RecordUpdateRegion(VkContext* context, VkCommandBuffer cmd,
     return false;
   }
   if (x < 0 || y < 0 || x + width > mWidth || y + height > mHeight) {
-    spdlog::error("VulkanTexture::RecordUpdateRegion: bölge sınır dışı.");
+    spdlog::error("VulkanTexture::RecordUpdateRegion: bolge sinir disi.");
     return false;
   }
 
@@ -198,7 +198,7 @@ bool VulkanTexture::CreateStagingBuffer(VkDevice device,
   buf_ci.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
   buf_ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
   if (vkCreateBuffer(device, &buf_ci, nullptr, &out_buf) != VK_SUCCESS) {
-    spdlog::error("VulkanTexture: staging vkCreateBuffer başarısız.");
+    spdlog::error("VulkanTexture: staging vkCreateBuffer basarisiz.");
     out_buf = VK_NULL_HANDLE;
     return false;
   }
@@ -214,19 +214,19 @@ bool VulkanTexture::CreateStagingBuffer(VkDevice device,
                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
   if (alloc_info.memoryTypeIndex == UINT32_MAX) {
-    spdlog::error("VulkanTexture: staging için uygun bellek tipi bulunamadı.");
+    spdlog::error("VulkanTexture: staging icin uygun bellek tipi bulunamadi.");
     vkDestroyBuffer(device, out_buf, nullptr);
     out_buf = VK_NULL_HANDLE;
     return false;
   }
   if (vkAllocateMemory(device, &alloc_info, nullptr, &out_mem) != VK_SUCCESS) {
-    spdlog::error("VulkanTexture: staging vkAllocateMemory başarısız.");
+    spdlog::error("VulkanTexture: staging vkAllocateMemory basarisiz.");
     vkDestroyBuffer(device, out_buf, nullptr);
     out_buf = VK_NULL_HANDLE;
     return false;
   }
   if (vkBindBufferMemory(device, out_buf, out_mem, 0) != VK_SUCCESS) {
-    spdlog::error("VulkanTexture: staging vkBindBufferMemory başarısız.");
+    spdlog::error("VulkanTexture: staging vkBindBufferMemory basarisiz.");
     vkFreeMemory(device, out_mem, nullptr);
     vkDestroyBuffer(device, out_buf, nullptr);
     out_mem = VK_NULL_HANDLE;
@@ -236,7 +236,7 @@ bool VulkanTexture::CreateStagingBuffer(VkDevice device,
 
   void* mapped = nullptr;
   if (vkMapMemory(device, out_mem, 0, size, 0, &mapped) != VK_SUCCESS) {
-    spdlog::error("VulkanTexture: staging vkMapMemory başarısız.");
+    spdlog::error("VulkanTexture: staging vkMapMemory basarisiz.");
     vkFreeMemory(device, out_mem, nullptr);
     vkDestroyBuffer(device, out_buf, nullptr);
     out_mem = VK_NULL_HANDLE;
@@ -265,7 +265,7 @@ bool VulkanTexture::CreateImage(VkDevice device, VkPhysicalDevice phys_device,
   img_ci.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
   img_ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   if (vkCreateImage(device, &img_ci, nullptr, &mImage) != VK_SUCCESS) {
-    spdlog::error("VulkanTexture: vkCreateImage başarısız.");
+    spdlog::error("VulkanTexture: vkCreateImage basarisiz.");
     mImage = VK_NULL_HANDLE;
     return false;
   }
@@ -279,20 +279,20 @@ bool VulkanTexture::CreateImage(VkDevice device, VkPhysicalDevice phys_device,
   alloc_info.memoryTypeIndex = vk_detail::FindMemoryType(
       phys_device, mem_req.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
   if (alloc_info.memoryTypeIndex == UINT32_MAX) {
-    spdlog::error("VulkanTexture: image için uygun bellek tipi bulunamadı.");
+    spdlog::error("VulkanTexture: image icin uygun bellek tipi bulunamadi.");
     vkDestroyImage(device, mImage, nullptr);
     mImage = VK_NULL_HANDLE;
     return false;
   }
   if (vkAllocateMemory(device, &alloc_info, nullptr, &mImageMemory) !=
       VK_SUCCESS) {
-    spdlog::error("VulkanTexture: image vkAllocateMemory başarısız.");
+    spdlog::error("VulkanTexture: image vkAllocateMemory basarisiz.");
     vkDestroyImage(device, mImage, nullptr);
     mImage = VK_NULL_HANDLE;
     return false;
   }
   if (vkBindImageMemory(device, mImage, mImageMemory, 0) != VK_SUCCESS) {
-    spdlog::error("VulkanTexture: vkBindImageMemory başarısız.");
+    spdlog::error("VulkanTexture: vkBindImageMemory basarisiz.");
     vkFreeMemory(device, mImageMemory, nullptr);
     vkDestroyImage(device, mImage, nullptr);
     mImageMemory = VK_NULL_HANDLE;
@@ -311,7 +311,7 @@ bool VulkanTexture::CreateImage(VkDevice device, VkPhysicalDevice phys_device,
   view_ci.subresourceRange.baseArrayLayer = 0;
   view_ci.subresourceRange.layerCount = 1;
   if (vkCreateImageView(device, &view_ci, nullptr, &mImageView) != VK_SUCCESS) {
-    spdlog::error("VulkanTexture: vkCreateImageView başarısız.");
+    spdlog::error("VulkanTexture: vkCreateImageView basarisiz.");
     vkFreeMemory(device, mImageMemory, nullptr);
     vkDestroyImage(device, mImage, nullptr);
     mImageMemory = VK_NULL_HANDLE;
@@ -417,7 +417,7 @@ bool VulkanTexture::RecordAndSubmitCopy(VkDevice device, VkQueue queue,
   begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
   begin_info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
   if (vkBeginCommandBuffer(cmd, &begin_info) != VK_SUCCESS) {
-    spdlog::error("VulkanTexture: vkBeginCommandBuffer başarısız.");
+    spdlog::error("VulkanTexture: vkBeginCommandBuffer basarisiz.");
     return cleanup(false);
   }
 
@@ -436,7 +436,7 @@ bool VulkanTexture::RecordAndSubmitCopy(VkDevice device, VkQueue queue,
                         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
   if (vkEndCommandBuffer(cmd) != VK_SUCCESS) {
-    spdlog::error("VulkanTexture: vkEndCommandBuffer başarısız.");
+    spdlog::error("VulkanTexture: vkEndCommandBuffer basarisiz.");
     return cleanup(false);
   }
 
@@ -448,16 +448,16 @@ bool VulkanTexture::RecordAndSubmitCopy(VkDevice device, VkQueue queue,
   VkFenceCreateInfo fence_ci{};
   fence_ci.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
   if (vkCreateFence(device, &fence_ci, nullptr, &fence) != VK_SUCCESS) {
-    spdlog::error("VulkanTexture: vkCreateFence başarısız.");
+    spdlog::error("VulkanTexture: vkCreateFence basarisiz.");
     return cleanup(false);
   }
 
   if (vkQueueSubmit(queue, 1, &submit_info, fence) != VK_SUCCESS) {
-    spdlog::error("VulkanTexture: vkQueueSubmit başarısız.");
+    spdlog::error("VulkanTexture: vkQueueSubmit basarisiz.");
     return cleanup(false);
   }
   if (vkWaitForFences(device, 1, &fence, VK_TRUE, UINT64_MAX) != VK_SUCCESS) {
-    spdlog::error("VulkanTexture: vkWaitForFences başarısız.");
+    spdlog::error("VulkanTexture: vkWaitForFences basarisiz.");
     return cleanup(false);
   }
 

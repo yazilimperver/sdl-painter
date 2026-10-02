@@ -59,7 +59,7 @@ class SDLPAINTER_API Image {
   /// @brief Görüntü yüksekliği (piksel).
   [[nodiscard]] int32_t Height() const noexcept { return mHeight; }
 
-  /// @brief Kanal sayısı (3 = RGB, 4 = RGBA).
+  /// @brief Kanal sayısı (1 = gri, 2 = gri+alfa, 3 = RGB, 4 = RGBA).
   [[nodiscard]] int32_t Channels() const noexcept { return mChannels; }
 
   /// @brief Ham piksel verisi (stb_image tarafından yüklendi).

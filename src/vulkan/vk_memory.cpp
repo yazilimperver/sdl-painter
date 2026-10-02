@@ -16,7 +16,7 @@ uint32_t FindMemoryType(VkPhysicalDevice phys_device, uint32_t type_filter,
     }
   }
 
-  spdlog::error("vk_detail: uygun bellek tipi bulunamadı!");
+  spdlog::error("vk_detail: uygun bellek tipi bulunamadi!");
   return UINT32_MAX;
 }
 

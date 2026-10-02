@@ -35,7 +35,7 @@ class HiddenWindow {
     }
     mVideoInitialized = true;
 
-    // Uygulama çatısıyla aynı sıra: GL attribute'ları pencereden ÖNCE.
+    // Uygulama çatısıyla aynı sıra: GL attribute'ları pencereden once.
     if (backend == RendererBackend::kOpenGL) {
       SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
       SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
@@ -79,10 +79,10 @@ class HiddenWindow {
 /// Validation mesajları yalnızca log'a yazılıyor, testleri düşürmüyordu;
 /// yeşil bir takımın altında gerçek spec ihlalleri birikebiliyordu (render
 /// target çalışmasında bir render-pass uyumsuzluğu böyle ortaya çıktı).
-/// Bu koruyucu, kapsamı bittiğinde sayaç arttıysa testi **düşürür**.
+/// Bu koruyucu, kapsamı bittiğinde sayaç arttıysa testi düşürür.
 ///
 /// Vulkan derlenmemişse veya validation katmanı yoksa sayaç sabit kalır ve
-/// koruyucu hiçbir şey yapmaz — yani OpenGL-only ortamda zararsızdır.
+/// koruyucu hiçbir şey yapmaz; yani OpenGL-only ortamda zararsızdır.
 class ValidationGuard {
  public:
   ValidationGuard() : mBefore(CurrentCount()) {}
@@ -114,13 +114,13 @@ class ValidationGuard {
 /// @brief Font bulunamadığında test atlanmak yerine başarısız mı olmalı?
 ///
 /// Metin testleri sistemde bir TTF fontu yoksa `GTEST_SKIP()` eder. Bu,
-/// geliştiricinin çıplak makinesinde makul; **CI'da ise tehlikeli**: testler
+/// geliştiricinin çıplak makinesinde makul; CI'da ise tehlikeli: testler
 /// yeşil görünürken hiç koşmaz. Nitekim ilk kapsama ölçümünde
-/// `glyph_atlas.cpp` %0 çıktı — CI imajında font paketi yoktu ve 28 test
+/// `glyph_atlas.cpp` %0 çıktı: CI imajında font paketi yoktu ve 28 test
 /// sessizce atlanıyordu.
 ///
 /// `SDLPAINTER_REQUIRE_FONT=1` ayarlandığında (CI bunu yapar) font yokluğu
-/// artık atlama değil **hata**dır; sorun ilk çalıştırmada görünür olur.
+/// artık atlama değil hatadır; sorun ilk çalıştırmada görünür olur.
 inline bool FontIsRequired() {
   const char* env = std::getenv("SDLPAINTER_REQUIRE_FONT");
   return env != nullptr && env[0] != '\0' && env[0] != '0';
@@ -157,17 +157,17 @@ inline std::string FindSystemFont() {
 
 /// @brief Font gerektiren testin başına konur: yolu `var` içine alır.
 ///
-/// Font yoksa `SDLPAINTER_REQUIRE_FONT` ayarlıysa testi **düşürür**, değilse
+/// Font yoksa `SDLPAINTER_REQUIRE_FONT` ayarlıysa testi düşürür, değilse
 /// atlar. Böylece CI'da sessiz atlama olmaz, yerelde geliştirici engellenmez.
 #define SDLPAINTER_REQUIRE_FONT_OR_SKIP(var)                               \
   const std::string var = sdl_painter::testing::FindSystemFont();          \
   if ((var).empty()) {                                                     \
     if (sdl_painter::testing::FontIsRequired()) {                          \
-      FAIL() << "Sistemde TTF font bulunamadı, ancak "                     \
-                "SDLPAINTER_REQUIRE_FONT ayarlı. Metin testleri sessizce " \
-                "atlanamaz — ortama bir font paketi kurun "                \
-                "(örn. fonts-dejavu-core).";                               \
+      FAIL() << "Sistemde TTF font bulunamadi, ancak "                     \
+                "SDLPAINTER_REQUIRE_FONT ayarli. Metin testleri sessizce " \
+                "atlanamaz; ortama bir font paketi kurun "                 \
+                "(orn. fonts-dejavu-core).";                               \
     }                                                                      \
-    GTEST_SKIP() << "Sistemde TTF font bulunamadı.";                       \
+    GTEST_SKIP() << "Sistemde TTF font bulunamadi.";                       \
   }                                                                        \
   static_assert(true, "")

@@ -47,7 +47,7 @@ const char* VkResultToString(VkResult result);
   do {                                                                      \
     VkResult _vk_result = (expr);                                           \
     if (_vk_result != VK_SUCCESS) {                                         \
-      spdlog::error("Vulkan hatası: {} -> {} ({}:{})", #expr,               \
+      spdlog::error("Vulkan hatasi: {} -> {} ({}:{})", #expr,               \
                     ::sdl_painter::vk_detail::VkResultToString(_vk_result), \
                     __FILE__, __LINE__);                                    \
       return;                                                               \

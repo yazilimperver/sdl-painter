@@ -75,7 +75,7 @@ RUN conan install . \
 # Vulkan variantı için Conan cache pre-warm (with_vulkan=True).
 # vulkan-loader, vulkan-headers, shaderc + transitive deps (glslang, spirv-tools)
 # burada derlenip ~/.conan2 cache'ine alınır. Output-folder /tmp altında ve
-# son adımda silinir — sadece cache (~/.conan2/p) kalır, image gereksiz şişmez.
+# son adımda silinir.
 # Shaderc'in tool_requires olduğunu unutma: build profile (Linux) için derlenir.
 RUN conan install . \
     --output-folder=/tmp/vk-precache \
@@ -115,13 +115,13 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     # buydu. tests/test_support.h bu yolu arar.
     fonts-dejavu-core \
     # Vulkan ICD: Mesa lavapipe (CPU software renderer, headless test için).
-    # Fiziksel GPU olmadan Vulkan API'sini sunar — CI runner'larında zorunlu.
+    # Fiziksel GPU olmadan Vulkan API'sini sunar (CI runner'larında zorunlu).
     mesa-vulkan-drivers \
     libvulkan1 \
     vulkan-tools \
     && rm -rf /var/lib/apt/lists/*
 
-# Vulkan ICD'sini lavapipe'a sabitle — birden fazla ICD varsa belirsizliği
+# Vulkan ICD'sini lavapipe'a sabitle. Bu sayede birden fazla ICD varsa belirsizliği
 # önler. Ancak mesa paketinin verdiği dosya adı sürüme göre değişiyor
 # (lvp_icd.json / lvp_icd.x86_64.json). ENV'e sabit ad yazmak, ad değiştiğinde
 # loader'ın HİÇBİR sürücü yüklememesine ve Vulkan testlerinin sessizce
@@ -130,10 +130,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN mkdir -p /etc/vulkan/icd.d \
     && ICD="$(ls /usr/share/vulkan/icd.d/lvp_icd*.json 2>/dev/null | head -1)" \
     && if [ -z "$ICD" ]; then \
-         echo "HATA: lavapipe ICD bulunamadi (mesa-vulkan-drivers eksik?)" >&2; \
-         ls -la /usr/share/vulkan/icd.d/ >&2 || true; \
-         exit 1; \
-       fi \
+    echo "HATA: lavapipe ICD bulunamadi (mesa-vulkan-drivers eksik?)" >&2; \
+    ls -la /usr/share/vulkan/icd.d/ >&2 || true; \
+    exit 1; \
+    fi \
     && ln -sf "$ICD" /etc/vulkan/icd.d/lvp_icd.json \
     && echo "lavapipe ICD -> $ICD"
 
@@ -174,7 +174,7 @@ RUN MINGW_VER=$(x86_64-w64-mingw32-gcc -dumpfullversion | sed 's/^\([0-9][0-9]*\
 # Output folder'lar windows-mingw-{debug,release} preset'leriyle uyumludur.
 # Not: Conan profile'ında os=Windows + [conf] compiler_executables=mingw set edildiği
 # için üretilen conan_toolchain.cmake CMAKE_SYSTEM_NAME=Windows ve MinGW derleyicilerini
-# otomatik ayarlar — ayrıca bir CMake toolchain dosyasına ihtiyaç yoktur.
+# otomatik ayarlar. Ayrıca bir CMake toolchain dosyasına ihtiyaç yoktur.
 RUN conan install . \
     --output-folder=build/windows-mingw-debug/generators \
     --build=missing \
@@ -224,7 +224,7 @@ RUN conan install . \
 # Çıktılar: build/windows-mingw-{debug,release}/ altında .exe ve .dll dosyaları
 # docker run --rm -v "${PWD}:/workspace" sdl-painter:windows-cross x86_64-w64-mingw32-objdump -p build/windows-mingw-release/examples/hello_window.exe | grep "DLL Name"
 #
-# Vulkan destekli build — yalnızca Linux (Windows MinGW cross-compile'da
+# Vulkan destekli build, yalnızca Linux (Windows MinGW cross-compile'da
 # vulkan-loader recipe'ı USE_MASM nedeniyle derlenemiyor; configure() bu
 # hedefte with_vulkan'ı otomatik kapatır):
 #   docker run --rm -v "${PWD}:/workspace" sdl-painter:ci bash -c "conan install . --output-folder=build/linux-release/generators --build=missing -s build_type=Release -s compiler=gcc -s compiler.version=13 -s compiler.libcxx=libstdc++11 -o '&:with_vulkan=True' && cmake --preset linux-release && cmake --build --preset linux-release && ctest --preset linux-release --output-on-failure"

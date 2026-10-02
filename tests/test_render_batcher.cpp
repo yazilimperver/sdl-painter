@@ -1,21 +1,21 @@
+#include "sdl_painter/color.h"
+#include "sdl_painter/vertex.h"
+
 #include <glm/glm.hpp>
 #include <gtest/gtest.h>
-
 #include <vector>
 
 #include "mock_renderer.h"
-#include "sdl_painter/color.h"
-#include "sdl_painter/vertex.h"
 
 // RenderBatcher dahili başlık (src/ altında)
 #include "../src/render_batcher.h"
 
 using sdl_painter::Color;
+using sdl_painter::kInvalidTexture;
 using sdl_painter::MockRenderer;
 using sdl_painter::RenderBatcher;
 using sdl_painter::TexturedVertex;
 using sdl_painter::Vertex;
-using sdl_painter::kInvalidTexture;
 
 // Transform artik CPU'da vertex'e uygulaniyor; batch davranisini test
 // eden bu dosyada birim matris kullanilir (dönüsümün kendisi
@@ -63,7 +63,7 @@ TEST(RenderBatcher, FlushClearsBuffer_SecondFlushDoesNothing) {
   RenderBatcher batcher(r);
   batcher.PushTriangles(MakeTriangle(), kIdentity, Color{255, 0, 0, 255}, 1.0f);
   batcher.Flush();
-  batcher.Flush();  // ikinci flush boş — çağrı yapılmamalı
+  batcher.Flush();  // ikinci flush boş, çağrı yapılmamalı
   EXPECT_EQ(r.CountCalls("DrawTriangles"), 1);
 }
 
@@ -108,7 +108,8 @@ TEST(RenderBatcher, ModeChangeBasicToTexturedTriggersFlushen) {
   RenderBatcher batcher(r);
   batcher.PushTriangles(MakeTriangle(), kIdentity, Color{255, 0, 0, 255}, 1.0f);
   // Textured push → önceki basic batch önce flush edilmeli
-  batcher.PushTexturedTriangles(MakeTexturedQuad(), kIdentity, 1, Color{255, 255, 255, 255}, 1.0f);
+  batcher.PushTexturedTriangles(MakeTexturedQuad(), kIdentity, 1,
+                                Color{255, 255, 255, 255}, 1.0f);
   // Bu noktada DrawTriangles çağrısı olmuş olmalı
   EXPECT_EQ(r.CountCalls("DrawTriangles"), 1);
   batcher.Flush();
@@ -118,7 +119,8 @@ TEST(RenderBatcher, ModeChangeBasicToTexturedTriggersFlushen) {
 TEST(RenderBatcher, ModeChangeTexturedToBasicTriggersFlushen) {
   MockRenderer r;
   RenderBatcher batcher(r);
-  batcher.PushTexturedTriangles(MakeTexturedQuad(), kIdentity, 1, Color{255, 255, 255, 255}, 1.0f);
+  batcher.PushTexturedTriangles(MakeTexturedQuad(), kIdentity, 1,
+                                Color{255, 255, 255, 255}, 1.0f);
   batcher.PushTriangles(MakeTriangle(), kIdentity, Color{255, 0, 0, 255}, 1.0f);
   EXPECT_EQ(r.CountCalls("DrawTextured"), 1);
   batcher.Flush();
@@ -139,8 +141,10 @@ TEST(RenderBatcher, OpacityChangeTriggersFlushen) {
 TEST(RenderBatcher, TextureChangeTriggersFlushen) {
   MockRenderer r;
   RenderBatcher batcher(r);
-  batcher.PushTexturedTriangles(MakeTexturedQuad(), kIdentity, 1, Color{255, 255, 255, 255}, 1.0f);
-  batcher.PushTexturedTriangles(MakeTexturedQuad(), kIdentity, 2, Color{255, 255, 255, 255}, 1.0f);
+  batcher.PushTexturedTriangles(MakeTexturedQuad(), kIdentity, 1,
+                                Color{255, 255, 255, 255}, 1.0f);
+  batcher.PushTexturedTriangles(MakeTexturedQuad(), kIdentity, 2,
+                                Color{255, 255, 255, 255}, 1.0f);
   // Texture handle değişti → flush
   EXPECT_EQ(r.CountCalls("DrawTextured"), 1);
   batcher.Flush();
@@ -152,7 +156,8 @@ TEST(RenderBatcher, TextureChangeTriggersFlushen) {
 TEST(RenderBatcher, FlushSetsOpacityBeforeDrawCall) {
   MockRenderer r;
   RenderBatcher batcher(r);
-  batcher.PushTriangles(MakeTriangle(), kIdentity, Color{255, 0, 0, 255}, 0.75f);
+  batcher.PushTriangles(MakeTriangle(), kIdentity, Color{255, 0, 0, 255},
+                        0.75f);
   batcher.Flush();
   EXPECT_FLOAT_EQ(r.last_opacity, 0.75f);
 }
@@ -160,7 +165,8 @@ TEST(RenderBatcher, FlushSetsOpacityBeforeDrawCall) {
 TEST(RenderBatcher, FlushSetsCorrectOpacityForTextured) {
   MockRenderer r;
   RenderBatcher batcher(r);
-  batcher.PushTexturedTriangles(MakeTexturedQuad(), kIdentity, 1, Color{255, 255, 255, 255}, 0.3f);
+  batcher.PushTexturedTriangles(MakeTexturedQuad(), kIdentity, 1,
+                                Color{255, 255, 255, 255}, 0.3f);
   batcher.Flush();
   EXPECT_FLOAT_EQ(r.last_opacity, 0.3f);
 }

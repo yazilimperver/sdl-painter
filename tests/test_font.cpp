@@ -1,7 +1,7 @@
 /// @file test_font.cpp
 /// @brief Font yaşam döngüsü ve glyph önbelleği testleri.
 ///
-/// Gerçek bir TTF dosyası gerektirir; sistemde font yoksa testler atlanır.
+/// Gerçek bir TTF dosyasi gerektirir; sistemde font yoksa testler atlanir.
 
 #include "sdl_painter/font.h"
 
@@ -47,6 +47,50 @@ TEST(FontBasics, MeasureTextReturnsPositiveSize) {
 
 // ─── Glyph önbelleği ────────────────────────────────────────────────────────
 
+TEST(FontBasics, MeasuresUtf8Text) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
+  Font f(path, 24);
+  ASSERT_TRUE(f.IsValid());
+
+  int32_t ascii_width = 0;
+  int32_t ascii_height = 0;
+  ASSERT_TRUE(f.MeasureText("A", ascii_width, ascii_height));
+
+  int32_t width = 0;
+  int32_t height = 0;
+  ASSERT_TRUE(f.MeasureText("A\xC3\xA7", width, height));
+  EXPECT_GT(width, ascii_width);
+  EXPECT_GT(height, 0);
+}
+
+TEST(FontBasics, EmptyTextClearsMeasuredSize) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
+  Font f(path, 24);
+  ASSERT_TRUE(f.IsValid());
+
+  int32_t width = 123;
+  int32_t height = 456;
+  EXPECT_FALSE(f.MeasureText("", width, height));
+  EXPECT_EQ(width, 0);
+  EXPECT_EQ(height, 0);
+}
+
+TEST(FontBasics, RemainingFontWorksAfterAnotherIsDestroyed) {
+  SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
+  Font remaining(path, 24);
+  ASSERT_TRUE(remaining.IsValid());
+  {
+    Font other(path, 18);
+    ASSERT_TRUE(other.IsValid());
+  }
+
+  int32_t width = 0;
+  int32_t height = 0;
+  EXPECT_TRUE(remaining.MeasureText("A", width, height));
+  EXPECT_GT(width, 0);
+  EXPECT_GT(height, 0);
+}
+
 TEST(FontGlyphCache, SameCodepointIsCachedNotReuploaded) {
   SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
   MockRenderer r;
@@ -60,8 +104,8 @@ TEST(FontGlyphCache, SameCodepointIsCachedNotReuploaded) {
   const Glyph* g2 = f.GetGlyph(r, U'A');
   ASSERT_NE(g2, nullptr);
   EXPECT_EQ(r.update_texture_count, 1)
-      << "Aynı karakter yeniden atlasa yüklenmemeli.";
-  EXPECT_EQ(g1, g2) << "Önbellek aynı Glyph'i döndürmeli.";
+      << "Ayni karakter yeniden atlasa yuklenmemeli.";
+  EXPECT_EQ(g1, g2) << "Onbellek ayni Glyph'i dondurmeli.";
 }
 
 TEST(FontGlyphCache, GlyphsShareASingleAtlasTexture) {
@@ -114,15 +158,15 @@ TEST(FontGlyphCache, DestructorReleasesAtlasTextures) {
     EXPECT_EQ(r.create_texture_count, 1);
   }
   EXPECT_EQ(r.destroy_texture_count, 1)
-      << "Font yıkımında atlas sayfası serbest bırakılmalı.";
+      << "Font yikiminda atlas sayfasi serbest birakilmali.";
 }
 
-// ─── Taşıma (move) semantiği ────────────────────────────────────────────────
+// ─── Taşima (move) semantiği ────────────────────────────────────────────────
 
-/// @brief REGRESYON (K2): move ctor glyph önbelleğini taşımıyordu.
+/// @brief move ctor glyph önbelleğini taşimiyordu.
 ///
-/// Önbellek taşınmadığında hedef nesne boş başlar ve tüm glyph'ler yeniden
-/// GPU'ya yüklenir — sessiz performans kaybı.
+/// Önbellek taşinmadiğinda hedef nesne boş başlar ve tüm glyph'ler yeniden
+/// GPU'ya yüklenir: sessiz performans kaybi.
 TEST(FontMove, MoveConstructorTransfersGlyphCache) {
   SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
   MockRenderer r;
@@ -136,13 +180,13 @@ TEST(FontMove, MoveConstructorTransfersGlyphCache) {
 
   ASSERT_NE(dst.GetGlyph(r, U'A'), nullptr);
   EXPECT_EQ(r.update_texture_count, 1)
-      << "Önbellek taşınmadı: 'A' yeniden GPU'ya yüklendi.";
+      << "Onbellek tasinmadi: 'A' yeniden GPU'ya yuklendi.";
 }
 
-/// @brief REGRESYON (K2): move-assign hedefin ESKİ önbelleğini bırakmıyordu.
+/// @brief move-assign hedefin eski önbelleğini birakmiyordu.
 ///
-/// En ciddi belirti: eski fontun texture'ları önbellekte kalıp yeni font
-/// adına döndürülüyor → ekranda **yanlış karakterler** çiziliyor.
+/// En ciddi belirti: eski fontun texture'lari önbellekte kalip yeni font
+/// adina döndürülüyor → ekranda yanliş karakterleri çiziliyor.
 TEST(FontMove, MoveAssignmentDropsDestinationOldGlyphCache) {
   SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
   MockRenderer r;
@@ -161,17 +205,17 @@ TEST(FontMove, MoveAssignmentDropsDestinationOldGlyphCache) {
   ASSERT_TRUE(dst.IsValid());
   EXPECT_EQ(dst.PointSize(), 48);
 
-  // Eski (12pt) önbellek atılmalı; 'A' yeni 48pt fontla yeniden üretilmeli.
+  // Eski (12pt) önbellek atilmali; 'A' yeni 48pt fontla yeniden üretilmeli.
   EXPECT_GE(r.destroy_texture_count, 1)
-      << "Hedefin eski glyph texture'ları serbest bırakılmadı.";
+      << "Hedefin eski glyph texture'lari serbest birakilmadi.";
 
   const Glyph* big = dst.GetGlyph(r, U'A');
   ASSERT_NE(big, nullptr);
   EXPECT_GT(big->height, kSmallH)
-      << "48pt font 12pt glyph'i döndürdü — eski önbellek temizlenmemiş.";
+      << "48pt font 12pt glyph'i dondurdu: eski onbellek temizlenmemis.";
 }
 
-/// @brief Move sonrası kaynak nesne güvenle yıkılabilmeli (çift serbest yok).
+/// @brief Move sonrasi kaynak nesne güvenle yikilabilmeli (çift serbest yok).
 TEST(FontMove, MovedFromFontIsSafeToDestroy) {
   SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
   MockRenderer r;
@@ -184,8 +228,8 @@ TEST(FontMove, MovedFromFontIsSafeToDestroy) {
     EXPECT_TRUE(dst.IsValid());
     EXPECT_FALSE(src.IsValid());  // NOLINT(bugprone-use-after-move)
   }
-  // src burada yıkılır — taşınmış nesne üzerinde ikinci bir serbest bırakma
-  // olmamalı. Toplam destroy sayısı oluşturulan texture sayısını aşmamalı.
+  // src burada yikilir; taşinmiş nesne üzerinde ikinci bir serbest birakma
+  // olmamali. Toplam destroy sayisi oluşturulan texture sayisini aşmamali.
   EXPECT_LE(r.destroy_texture_count, r.create_texture_count);
 }
 
@@ -193,9 +237,9 @@ TEST(FontMove, MovedFromFontIsSafeToDestroy) {
 
 /// @brief Bir Font tek bir renderer'a aittir.
 ///
-/// Önbellek yalnızca kod noktasına göre tutulduğu için ikinci bir renderer
-/// ile yapılan çağrı, önbellek isabetinde BİRİNCİ renderer'ın texture
-/// handle'ını döndürüyordu. Handle'lar renderer'a yereldir; o handle ikinci
+/// Önbellek yalnizca kod noktasina göre tutulduğu için ikinci bir renderer
+/// ile yapilan çağri, önbellek isabetinde birinci renderer'in texture
+/// handle'ini döndürüyordu. Handle'lar renderer'a yereldir; o handle ikinci
 /// renderer'da başka bir texture'a işaret eder ya da hiç etmez.
 TEST(FontOwnership, SecondRendererIsRejected) {
   SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
@@ -209,7 +253,7 @@ TEST(FontOwnership, SecondRendererIsRejected) {
 
   // Önbellek isabeti: eskiden birincinin glyph'ini döndürüyordu.
   EXPECT_EQ(font.GetGlyph(second, U'A'), nullptr);
-  // Önbellekte olmayan bir karakter de yabancı atlasa yazılmamalı.
+  // Önbellekte olmayan bir karakter de yabanci atlasa yazilmamali.
   EXPECT_EQ(font.GetGlyph(second, U'B'), nullptr);
   EXPECT_EQ(second.create_texture_count, 0);
   EXPECT_EQ(second.update_texture_count, 0);
@@ -218,10 +262,10 @@ TEST(FontOwnership, SecondRendererIsRejected) {
 /// @brief Sahiplik ilk GetGlyph ile kurulur; ölçüm renderer gerektirmez.
 TEST(FontOwnership, MeasurementWorksBeforeAnyRenderer) {
   SDLPAINTER_REQUIRE_FONT_OR_SKIP(path);
-  // Renderer, Font'tan ÖNCE bildirilir: yıkım ters sırada olduğu için aksi
-  // halde ~Font, glyph atlasını çoktan yok edilmiş bir renderer üzerinden
-  // bırakmaya çalışır. Sahiplik yine de burada değil, ilk GetGlyph
-  // çağrısında kurulur — testin ölçtüğü şey o.
+  // Renderer, Font'tan once bildirilir: yikim ters sirada olduğu için aksi
+  // halde ~Font, glyph atlasini çoktan yok edilmiş bir renderer üzerinden
+  // birakmaya çalişir. Sahiplik yine de burada değil, ilk GetGlyph
+  // çağrisinda kurulur; testin ölçtüğü şey o.
   MockRenderer renderer;
   Font font(path, 24);
 
@@ -230,7 +274,7 @@ TEST(FontOwnership, MeasurementWorksBeforeAnyRenderer) {
   EXPECT_TRUE(font.MeasureText("AV", w, h));
   EXPECT_GT(w, 0);
   EXPECT_EQ(renderer.create_texture_count, 0)
-      << "Ölçüm renderer'a dokunmamalı.";
+      << "Olcum renderer'a dokunmamali.";
 
   EXPECT_NE(font.GetGlyph(renderer, U'A'), nullptr);
 }

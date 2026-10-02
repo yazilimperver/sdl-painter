@@ -352,7 +352,7 @@ TextureHandle OpenGLRenderer::CreateTexture(const uint8_t* data, int32_t width,
       format = GL_RGBA;
       break;
     default:
-      spdlog::error("[OpenGLRenderer] Desteklenmeyen kanal sayısı: {}",
+      spdlog::error("[OpenGLRenderer] Desteklenmeyen kanal sayisi: {}",
                     channels);
       return kInvalidTexture;
   }

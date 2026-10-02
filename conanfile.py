@@ -117,13 +117,12 @@ class SDLPainterConan(ConanFile):
             # option sunmuyor. MinGW gcc, asm_offset.c'ye MSVC assembler
             # flag'leri (/Fa /FA /Od) geçirilince derleme patlıyor. Bu yüzden
             # MinGW hedefinde Vulkan'ı otomatik kapatıyoruz. Windows'ta Vulkan için
-            # native MSVC build (windows-release preset) kullanılmalı —
-            # MSVC'de USE_MASM sorunsuz çalışır.
+            # native MSVC build (windows-release preset) kullanılmalı.
             if self.settings.compiler == "gcc" and self.options.with_vulkan:
                 self.output.warning(
-                    "MinGW cross-compile vulkan-loader'ı desteklemiyor; "
-                    "with_vulkan=False'a çekildi. Windows'ta Vulkan için "
-                    "native MSVC build kullanın.")
+                    "MinGW cross-compile vulkan-loader'i desteklemiyor; "
+                    "with_vulkan=False'a cekildi. Windows'ta Vulkan icin "
+                    "native MSVC build kullanin.")
                 self.options.with_vulkan = False
 
             # SDL ve SDL3_ttf shared olmak zorunda (recipe validation aynı shared değeri gerektiriyor).
@@ -148,7 +147,7 @@ class SDLPainterConan(ConanFile):
         # SDL basliklarina ihtiyaci var.
         self.requires("sdl/3.2.14", transitive_headers=True,
                       transitive_libs=True)
-        # glm: painter.h dogrudan <glm/glm.hpp> include ediyor — public.
+        # glm: painter.h dogrudan <glm/glm.hpp> include ediyor
         self.requires("glm/1.0.3", transitive_headers=True)
         self.requires("glad/0.1.36")
         self.requires("stb/cci.20240531")
@@ -192,8 +191,7 @@ class SDLPainterConan(ConanFile):
         # generators klasörüne stage'le. CMake helper'ı orayı glob'layıp
         # executable yanına kopyalıyor. Conan 2 + MinGW kombinasyonunda bazı
         # recipe'ler IMPORTED_LOCATION'ı set etmediğinden
-        # $<TARGET_RUNTIME_DLLS> yetersiz kalıyor — bu staging fallback'i
-        # garanti çözüm.
+        # $<TARGET_RUNTIME_DLLS> yetersiz kalıyor.
         if self.settings.os == "Windows":
             for dep in self.dependencies.host.values():
                 for bindir in dep.cpp_info.bindirs:
@@ -208,8 +206,7 @@ class SDLPainterConan(ConanFile):
         cmake.build()
 
     def package(self):
-        # Lisans pakete kopyalanmali (Conan Center zorunlu tutuyor, ve dogru
-        # olan da bu — ikili dagitiliyorsa lisansi da dagitilmali).
+        # Lisans pakete kopyalanmali (Conan Center zorunlu tutuyor).
         copy(self, "LICENSE",
              src=self.source_folder,
              dst=os.path.join(self.package_folder, "licenses"))

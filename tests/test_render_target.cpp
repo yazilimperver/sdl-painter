@@ -71,7 +71,7 @@ TEST(RenderTargetTest, DefaultConstructedIsInvalid) {
 
 TEST(RenderTargetTest, UnsupportedBackendYieldsInvalidTarget) {
   // MockRenderer, IRenderer'i tuketici gibi implemente ediyor ve hedef
-  // metotlarini gecersiz kilmiyor — yani "desteklemiyor" yolunu temsil eder.
+  // metotlarini gecersiz kilmiyor; yani "desteklemiyor" yolunu temsil eder.
   Painter painter(std::make_unique<MockRenderer>(), 128, 96);
   const RenderTarget target = painter.CreateRenderTarget(32, 32);
   EXPECT_FALSE(target.IsValid());
