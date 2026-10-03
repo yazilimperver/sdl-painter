@@ -5,11 +5,13 @@
 ///        yardımcılar.
 
 #include "sdl_painter/color.h"
+#include "sdl_painter/image.h"
 #include "sdl_painter/painter.h"
 #include "sdl_painter/renderer.h"
 
 #include <cstddef>
 #include <cstdint>
+#include <cstdio>
 #include <cstdlib>
 #include <fstream>
 #include <gtest/gtest.h>
@@ -33,13 +35,49 @@ inline std::vector<RendererBackend> AvailableBackends() {
   return backends;
 }
 
+/// @brief Dosya gerektirmeyen prosedürel doku (RGBA dama tahtası).
+inline Image MakeCheckerImage(int32_t size = 16) {
+  std::vector<uint8_t> pixels(static_cast<std::size_t>(size) * size * 4);
+  for (int32_t y = 0; y < size; ++y) {
+    for (int32_t x = 0; x < size; ++x) {
+      const bool on = ((x / 4) + (y / 4)) % 2 == 0;
+      auto* p = pixels.data() + ((static_cast<std::size_t>(y) * size) + x) * 4;
+      p[0] = on ? 220 : 40;
+      p[1] = on ? 90 : 40;
+      p[2] = 60;
+      p[3] = 255;
+    }
+  }
+  return Image::CreateFromData(pixels.data(), size, size, 4);
+}
+
 /// @brief Geri okunan tamponda bir pikselin rengi.
+///
+/// Satır öncelikli, yukarıdan aşağı, piksel başına 4 bayt (RGBA). Koordinat
+/// veya tampon uygun değilse `ADD_FAILURE()` raporlar ve varsayılan renk
+/// döner: `x == width` tampon içinde kalıp sessizce bir sonraki satırın ilk
+/// pikselini okurdu, bu yüzden `x` ayrıca sınırlanır.
 inline Color PixelAt(const std::vector<uint8_t>& rgba, int32_t width, int32_t x,
                      int32_t y) {
+  const bool kShapeOk =
+      width > 0 && x >= 0 && x < width && y >= 0 &&
+      rgba.size() % (static_cast<std::size_t>(width) * 4U) == 0U;
+  if (!kShapeOk) {
+    ADD_FAILURE() << "PixelAt: gecersiz istek (genislik " << width << ", x "
+                  << x << ", y " << y << ", tampon " << rgba.size()
+                  << " bayt).";
+    return Color{};
+  }
   const std::size_t i =
       ((static_cast<std::size_t>(y) * static_cast<std::size_t>(width)) +
        static_cast<std::size_t>(x)) *
       4U;
+  if (i + 4U > rgba.size()) {
+    ADD_FAILURE() << "PixelAt: piksel tamponun disinda (genislik " << width
+                  << ", x " << x << ", y " << y << ", tampon " << rgba.size()
+                  << " bayt).";
+    return Color{};
+  }
   return Color{rgba[i], rgba[i + 1], rgba[i + 2], rgba[i + 3]};
 }
 
@@ -131,7 +169,13 @@ inline void DumpRgba(const std::string& name, const std::vector<uint8_t>& rgba,
     }
   }
 
-  std::ofstream file(std::string(dir) + "/" + name + ".bmp", std::ios::binary);
+  const std::string path = std::string(dir) + "/" + name + ".bmp";
+  std::ofstream file(path, std::ios::binary);
+  if (!file) {
+    std::fprintf(stderr, "[ UYARI ] DumpRgba: dosya acilamadi: %s\n",
+                 path.c_str());
+    return;
+  }
   file.write(reinterpret_cast<const char*>(out.data()),
              static_cast<std::streamsize>(out.size()));
 }
@@ -159,15 +203,15 @@ struct Backend {
 
 }  // namespace sdl_painter::testing
 
-// FIXME: Backend kurulamazsa kosulsuz atlıyor; CI'da GPU testleri sessizce
-// atlaniyor ve ctest yine basarili donuyor. SDLPAINTER_REQUIRE_FONT benzeri
-// zorunlu kosum anahtari ekleyelim.
 /// @brief Backend'i ayaga kaldirir, yoksa testi atlar; ayrica test boyunca
 ///        yeni bir Vulkan validation hatasi cikmadigini garanti eder.
+///
+/// Backend yoksa `SDLPAINTER_REQUIRE_BACKEND` ayarliysa test duser, degilse
+/// atlanir (bkz. `SDLPAINTER_BACKEND_UNAVAILABLE`).
 #define REQUIRE_BACKEND(var, backend)                      \
   const sdl_painter::testing::ValidationGuard var##_guard; \
   sdl_painter::testing::Backend var(backend);              \
   if (!(var).Ready()) {                                    \
-    GTEST_SKIP() << (var).skip_reason;                     \
+    SDLPAINTER_BACKEND_UNAVAILABLE((var).skip_reason);     \
   }                                                        \
   static_assert(true, "")

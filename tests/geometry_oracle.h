@@ -31,6 +31,10 @@ inline double Orientation(const Vertex& a, const Vertex& b, double px,
 ///
 /// Basit bir poligonun doğru triangulation'ında poligon alanına eşittir.
 /// Dışarı taşan veya üst üste binen her üçgen toplamı büyütür.
+///
+/// Üçgenler sarım yönünden bağımsız sayılır (mutlak değer). Vertex sayısı 3'ün
+/// katı değilse sondaki eksik üçgen sessizce yok sayılır: bozuk bir liste bu
+/// ölçütten geçebilir, vertex sayısını ayrıca denetleyin.
 inline double TriangleListArea(const std::vector<Vertex>& vertices) {
   double sum = 0.0;
   for (std::size_t i = 0; i + 2 < vertices.size(); i += 3) {
@@ -42,6 +46,10 @@ inline double TriangleListArea(const std::vector<Vertex>& vertices) {
 }
 
 /// @brief Poligonun alanı (shoelace formülü, sarım yönünden bağımsız).
+///
+/// Poligon basit olmalı (kendini kesmemeli). Kendini kesen poligonda zıt
+/// yönlü bölgeler birbirini götürür ve sonuç şeklin kapladığı alan olmaz.
+/// 3'ten az nokta için sonuç 0'dır.
 inline double ShoelaceArea(const std::vector<Point>& polygon) {
   double twice = 0.0;
   for (std::size_t i = 0; i < polygon.size(); ++i) {
@@ -62,6 +70,9 @@ inline double ShoelaceArea(const std::vector<Point>& polygon) {
 /// Kenar üzerindeki nokta içeride sayılır; iki üçgenin ortak kenarındaki nokta
 /// iki kez sayılacağı için örnek noktaları kenarlardan uzak seçin. Alanı sıfır
 /// olan üçgenler atlanır.
+///
+/// Vertex'ler üçerli gruplanır (kayan pencere değil); sayısı 3'ün katı
+/// değilse sondaki eksik grup yok sayılır.
 inline int32_t CoverageCount(const std::vector<Vertex>& vertices, float px,
                              float py) {
   int32_t count = 0;

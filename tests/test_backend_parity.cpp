@@ -41,7 +41,7 @@
 #include <string>
 #include <vector>
 
-#include "test_support.h"
+#include "pixel_test_support.h"
 
 namespace {
 
@@ -55,6 +55,7 @@ using sdl_painter::Point;
 using sdl_painter::Rect;
 using sdl_painter::RendererBackend;
 using sdl_painter::RenderTarget;
+using sdl_painter::testing::MakeCheckerImage;
 
 constexpr int32_t kSceneW = 160;
 constexpr int32_t kSceneH = 120;
@@ -81,22 +82,6 @@ constexpr int32_t kChannelTolerance = 8;
 /// bu test yazılırken bulunan üç hatanın en küçüğü %4'tü. Ölçülen oran her
 /// koşuda basılır, sessizce gevşemez.
 constexpr double kMaxDifferingRatio = 0.005;
-
-/// @brief Dosya gerektirmeyen prosedürel doku (RGBA dama tahtası).
-Image MakeCheckerImage(int32_t size = 16) {
-  std::vector<uint8_t> pixels(static_cast<std::size_t>(size) * size * 4);
-  for (int32_t y = 0; y < size; ++y) {
-    for (int32_t x = 0; x < size; ++x) {
-      const bool on = ((x / 4) + (y / 4)) % 2 == 0;
-      auto* p = pixels.data() + ((static_cast<std::size_t>(y) * size) + x) * 4;
-      p[0] = on ? 220 : 40;
-      p[1] = on ? 90 : 40;
-      p[2] = 60;
-      p[3] = 255;
-    }
-  }
-  return Image::CreateFromData(pixels.data(), size, size, 4);
-}
 
 /// @brief Karşılaştırılacak sahne: deterministik, zaman/rastgelelik yok.
 ///
@@ -348,12 +333,12 @@ TEST(BackendParity, OpenGLAndVulkanProduceTheSameImage) {
   std::vector<uint8_t> gl_pixels;
   std::string skip;
   if (!RenderScene(RendererBackend::kOpenGL, gl_pixels, skip)) {
-    GTEST_SKIP() << "OpenGL: " << skip;
+    SDLPAINTER_BACKEND_UNAVAILABLE("OpenGL: " + skip);
   }
 
   std::vector<uint8_t> vk_pixels;
   if (!RenderScene(RendererBackend::kVulkan, vk_pixels, skip)) {
-    GTEST_SKIP() << "Vulkan: " << skip;
+    SDLPAINTER_BACKEND_UNAVAILABLE("Vulkan: " + skip);
   }
 
   ASSERT_EQ(gl_pixels.size(), vk_pixels.size());
@@ -387,11 +372,11 @@ TEST(BackendParity, SameBackendIsDeterministic) {
   std::vector<uint8_t> first;
   std::string skip;
   if (!RenderScene(RendererBackend::kOpenGL, first, skip)) {
-    GTEST_SKIP() << skip;
+    SDLPAINTER_BACKEND_UNAVAILABLE(skip);
   }
   std::vector<uint8_t> second;
   if (!RenderScene(RendererBackend::kOpenGL, second, skip)) {
-    GTEST_SKIP() << skip;
+    SDLPAINTER_BACKEND_UNAVAILABLE(skip);
   }
   EXPECT_EQ(first, second);
 }

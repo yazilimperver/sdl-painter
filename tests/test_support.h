@@ -21,7 +21,8 @@ namespace sdl_painter::testing {
 /// pencere belirmez ama gerçek bir sürücü context'i oluşturulur.
 ///
 /// Pencere/context oluşturulamayan ortamlarda `Get()` `nullptr` döner ve
-/// çağıran testi `GTEST_SKIP()` ile atlar:
+/// çağıran testi `GTEST_SKIP()` ile atlar (`SDLPAINTER_REQUIRE_BACKEND`
+/// ayarlıysa düşürür, bkz. `BackendIsRequired()`):
 /// - Linux: `SDL_VIDEODRIVER=offscreen` + Mesa EGL ile çalışır (CI böyle).
 /// - Windows: `offscreen` sürücüsü EGL yükleyemiyor; gerçek sürücü üzerinden
 ///   çalışır, masaüstü oturumu yoksa atlanır.
@@ -126,6 +127,20 @@ inline bool FontIsRequired() {
   return env != nullptr && env[0] != '\0' && env[0] != '0';
 }
 
+/// @brief Backend kurulamadığında test atlanmak yerine başarısız mı olmalı?
+///
+/// GPU testleri pencere/context oluşturulamayan ortamlarda `GTEST_SKIP()`
+/// eder. CI'da bu tehlikeli: lavapipe ICD'si ya da EGL bulunamazsa testlerin
+/// hepsi atlanır, ctest yine de başarılı döner.
+///
+/// `SDLPAINTER_REQUIRE_BACKEND=1` ayarlandığında backend yokluğu atlama
+/// değil hatadır. Derlenmiş tüm backend'ler için geçerlidir. Windows
+/// yerelinde `offscreen` sürücüsü EGL yükleyemediği için orada ayarlanmaz.
+inline bool BackendIsRequired() {
+  const char* env = std::getenv("SDLPAINTER_REQUIRE_BACKEND");
+  return env != nullptr && env[0] != '\0' && env[0] != '0';
+}
+
 /// @brief Sistemde kullanılabilir bir TTF fontu arar.
 /// @return Bulunan fontun yolu; hiçbiri yoksa boş string.
 inline std::string FindSystemFont() {
@@ -171,3 +186,18 @@ inline std::string FindSystemFont() {
     GTEST_SKIP() << "Sistemde TTF font bulunamadi.";                       \
   }                                                                        \
   static_assert(true, "")
+
+/// @brief Backend/pencere kurulamadığında testi atlar ya da düşürür.
+///
+/// `SDLPAINTER_REQUIRE_BACKEND` ayarlıysa testi düşürür, değilse atlar.
+/// `reason` akışa yazılabilir bir ifadedir. Yalnızca `void` dönen test
+/// gövdelerinde kullanılabilir.
+#define SDLPAINTER_BACKEND_UNAVAILABLE(reason)                          \
+  do {                                                                  \
+    if (sdl_painter::testing::BackendIsRequired()) {                    \
+      FAIL() << "Backend kurulamadi, ancak SDLPAINTER_REQUIRE_BACKEND " \
+                "ayarli. GPU testleri sessizce atlanamaz: "             \
+             << (reason);                                               \
+    }                                                                   \
+    GTEST_SKIP() << (reason);                                           \
+  } while (false)

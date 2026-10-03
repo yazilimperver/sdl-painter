@@ -8,6 +8,8 @@ set(TEST_SOURCES
     test_transform.cpp
     test_tessellator.cpp
     test_geometry_oracle.cpp
+    test_mock_renderer.cpp
+    test_pixel_support.cpp
     test_path.cpp
     test_render_target.cpp
     test_backend_parity.cpp

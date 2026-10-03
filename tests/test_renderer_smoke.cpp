@@ -17,7 +17,8 @@
 // gomulu shader'larin surucu tarafindan gercekten kabul edildigini
 // dogrular (bkz. ADR-009).
 //
-// Pencere/context olusturulamayan ortamlarda testler FAIL degil SKIP olur:
+// Pencere/context olusturulamayan ortamlarda testler FAIL degil SKIP olur
+// (SDLPAINTER_REQUIRE_BACKEND=1 ayarliysa FAIL):
 // - Linux: SDL_VIDEODRIVER=offscreen + Mesa EGL ile calisir (CI boyle kosuyor).
 // - Windows: `offscreen` surucusu EGL yukleyemiyor, gizli pencere ile gercek
 //   surucu uzerinden calisir; masaustu oturumu yoksa atlanir.
@@ -35,7 +36,8 @@ TEST(RendererSmokeTest, OpenGLInitializeCompilesEmbeddedShaders) {
   const sdl_painter::testing::HiddenWindow window(
       sdl_painter::RendererBackend::kOpenGL);
   if (window.Get() == nullptr) {
-    GTEST_SKIP() << "OpenGL penceresi olusturulamadi: " << window.Error();
+    SDLPAINTER_BACKEND_UNAVAILABLE(
+        std::string("OpenGL penceresi olusturulamadi: ") + window.Error());
   }
 
   auto renderer =
@@ -54,7 +56,8 @@ TEST(RendererSmokeTest, OpenGLInitializeIsRepeatable) {
   const sdl_painter::testing::HiddenWindow window(
       sdl_painter::RendererBackend::kOpenGL);
   if (window.Get() == nullptr) {
-    GTEST_SKIP() << "OpenGL penceresi olusturulamadi: " << window.Error();
+    SDLPAINTER_BACKEND_UNAVAILABLE(
+        std::string("OpenGL penceresi olusturulamadi: ") + window.Error());
   }
 
   for (int32_t pass = 0; pass < 2; ++pass) {
@@ -124,13 +127,14 @@ TEST(SpirvEmbedTest, TexturedModulesAreValid) {
 ///
 /// Ancak `false` donusu "Vulkan yok" ile "pipeline bozuk" arasinda ayrim
 /// yapmiyor; surface/ICD eksikligi de ayni sonucu veriyor. Bu yuzden test
-/// SKIP'e dusuyor; SPIR-V dogrulugunun GPU'suz garantisini yukaridaki
-/// SpirvEmbedTest'ler veriyor.
+/// SKIP'e dusuyor (SDLPAINTER_REQUIRE_BACKEND=1 ise FAIL); SPIR-V
+/// dogrulugunun GPU'suz garantisini yukaridaki SpirvEmbedTest'ler veriyor.
 TEST(RendererSmokeTest, VulkanInitializeSucceeds) {
   const sdl_painter::testing::HiddenWindow window(
       sdl_painter::RendererBackend::kVulkan);
   if (window.Get() == nullptr) {
-    GTEST_SKIP() << "Vulkan penceresi olusturulamadi: " << window.Error();
+    SDLPAINTER_BACKEND_UNAVAILABLE(
+        std::string("Vulkan penceresi olusturulamadi: ") + window.Error());
   }
 
   auto renderer =
@@ -138,7 +142,8 @@ TEST(RendererSmokeTest, VulkanInitializeSucceeds) {
   ASSERT_NE(renderer, nullptr);
 
   if (!renderer->Initialize(window.Get())) {
-    GTEST_SKIP() << "Vulkan baslatilamadi (uygun ICD yok olabilir).";
+    SDLPAINTER_BACKEND_UNAVAILABLE(
+        "Vulkan baslatilamadi (uygun ICD yok olabilir).");
   }
   renderer->Shutdown();
 }

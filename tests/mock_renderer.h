@@ -6,6 +6,7 @@
 
 #include <array>
 #include <cstdint>
+#include <gtest/gtest.h>
 #include <string>
 #include <vector>
 
@@ -38,6 +39,13 @@ class MockRenderer : public IRenderer {
     int32_t h{0};
   };
 
+  /// @brief Bir CreateTexture çağrısının kaydı.
+  struct CreateCall {
+    int32_t w{0};
+    int32_t h{0};
+    int32_t channels{0};
+  };
+
   /// @brief Bir UpdateTexture (sub-image) çağrısının kaydı.
   struct UpdateCall {
     TextureHandle texture{kInvalidTexture};
@@ -59,6 +67,41 @@ class MockRenderer : public IRenderer {
   TextureFilter last_filter{TextureFilter::kLinear};
 
   std::vector<UpdateCall> update_texture_calls;  ///< UpdateTexture çağrıları
+
+  /// @brief Son CreateTexture çağrısının boyutu ve kanal sayısı.
+  ///
+  /// Başarısız olan (bkz. @ref fail_next_create_texture) çağrı da kaydedilir.
+  CreateCall last_create_call;
+
+  /// @brief DestroyTexture'a verilen geçerli tanımlayıcılar (sırayla).
+  ///
+  /// Aynı tanımlayıcının iki kez görünmesi çift silmedir. Mock, mock'un
+  /// kendisinin üretmediği tanımlayıcıları da kaydeder: Texture testleri
+  /// doğrudan uydurma tanımlayıcı verir.
+  std::vector<TextureHandle> destroyed_textures;
+
+  /// @brief Bir sonraki CreateTexture çağrısı başarısız olsun (test girdisi).
+  ///
+  /// Çağrı kInvalidTexture döner ve bayrak kendiliğinden kapanır; sonraki
+  /// çağrılar normal çalışır. Tanımlayıcı üretmez.
+  bool fail_next_create_texture{false};
+
+  /// @brief Son Clear çağrısının rengi (hiç çağrılmadıysa varsayılan renk).
+  Color last_clear_color;
+
+  /// @brief Sözleşmeyi bozan çizim çağrısı sayısı.
+  ///
+  /// DrawTriangles ve DrawTextured, vertex sayısı 3'ün katı olmayan bir
+  /// liste alırsa artar. Sözleşme renderer.h'de yalnızca DrawTriangles için
+  /// yazılı; DrawTextured için örtüktür (üçgen listesi). Painter'ı süren
+  /// her test bu denetimi kendiliğinden alır.
+  int32_t contract_violation_count{0};
+
+  /// @brief İhlalde ayrıca ADD_FAILURE() çağrılsın mı (test girdisi).
+  ///
+  /// Varsayılan açık: ihlal yapan her test düşer. Yalnızca mock'un kendi
+  /// denetimini sınayan test kapatır.
+  bool report_contract_violations{true};
 
   /// @brief SetModelMatrix'e verilen son 3x3 matris (sütun-major).
   std::array<float, 9> last_model{{1, 0, 0, 0, 1, 0, 0, 0, 1}};
@@ -93,7 +136,10 @@ class MockRenderer : public IRenderer {
     ++clear_scissor_count;
     calls.push_back({"ClearScissor"});
   }
-  void Clear(const Color&) override { calls.push_back({"Clear"}); }
+  void Clear(const Color& color) override {
+    last_clear_color = color;
+    calls.push_back({"Clear"});
+  }
 
   void SetOpacity(float alpha) override {
     last_opacity = alpha;
@@ -106,16 +152,26 @@ class MockRenderer : public IRenderer {
   }
 
   void DrawTriangles(const std::vector<Vertex>& vertices) override {
+    CheckTriangleList("DrawTriangles", vertices.size());
     calls.push_back({"DrawTriangles", vertices.size()});
     last_vertices = vertices;
     model_at_draw.push_back(last_model);
   }
 
-  /// @brief Her çağrıda artan benzersiz handle döner (1'den başlar).
-  TextureHandle CreateTexture(const uint8_t*, int32_t, int32_t,
-                              int32_t) override {
+  /// @brief Her başarılı çağrıda artan benzersiz handle döner (1'den başlar).
+  ///
+  /// Handle sayacı Reset() ile sıfırlanmaz; Reset sonrası üretilen handle'lar
+  /// canlı dokularınkiyle çakışmaz. create_texture_count başarısız çağrıları
+  /// da sayar.
+  TextureHandle CreateTexture(const uint8_t*, int32_t w, int32_t h,
+                              int32_t channels) override {
     ++create_texture_count;
-    return static_cast<TextureHandle>(create_texture_count);
+    last_create_call = {w, h, channels};
+    if (fail_next_create_texture) {
+      fail_next_create_texture = false;
+      return kInvalidTexture;
+    }
+    return mNextTextureHandle++;
   }
 
   TextureHandle CreateTexture(const uint8_t* data, int32_t w, int32_t h,
@@ -131,11 +187,15 @@ class MockRenderer : public IRenderer {
   }
 
   void DestroyTexture(TextureHandle handle) override {
-    if (handle != kInvalidTexture) ++destroy_texture_count;
+    if (handle != kInvalidTexture) {
+      ++destroy_texture_count;
+      destroyed_textures.push_back(handle);
+    }
   }
 
   void DrawTextured(const std::vector<TexturedVertex>& vertices,
                     TextureHandle texture) override {
+    CheckTriangleList("DrawTextured", vertices.size());
     calls.push_back({"DrawTextured", vertices.size(), texture});
     last_textured_vertices = vertices;
     model_at_draw.push_back(last_model);
@@ -162,12 +222,20 @@ class MockRenderer : public IRenderer {
   int32_t CountCalls(const std::string& name) const {
     int32_t count = 0;
     for (const auto& c : calls) {
-      if (c.name == name) ++count;
+      if (c.name == name)
+        ++count;
     }
     return count;
   }
 
-  /// @brief Kayıtlı çağrıları ve sayaçları sıfırla.
+  /// @brief Kaydedilen her gözlemi ilk durumuna döndür.
+  ///
+  /// Çağrı geçmişi, sayaçlar ve "son değer" alanlarının hepsi sıfırlanır
+  /// (last_model ve last_projection dahil). İki grup bilerek dışarıda kalır:
+  ///  - Doku tanımlayıcı sayacı: Reset, Painter yaşarken çağrılabilir; sayaç
+  ///    dönseydi yeni dokular canlı olanlarla aynı tanımlayıcıyı alırdı.
+  ///  - Testin kurduğu yapılandırma: backend, fail_next_create_texture,
+  ///    report_contract_violations.
   void Reset() {
     calls.clear();
     last_vertices.clear();
@@ -184,7 +252,27 @@ class MockRenderer : public IRenderer {
     blend_calls.clear();
     last_filter = TextureFilter::kLinear;
     last_model = {{1, 0, 0, 0, 1, 0, 0, 0, 1}};
+    last_projection = {};
+    last_create_call = {};
+    destroyed_textures.clear();
+    last_clear_color = Color();
+    contract_violation_count = 0;
   }
+
+ private:
+  /// @brief Üçgen listesi sözleşmesini (vertex sayısı 3'ün katı) denetle.
+  void CheckTriangleList(const char* call, std::size_t vertex_count) {
+    if (vertex_count % 3 == 0) {
+      return;
+    }
+    ++contract_violation_count;
+    if (report_contract_violations) {
+      ADD_FAILURE() << call << ": vertex sayisi 3'un kati degil ("
+                    << vertex_count << ")";
+    }
+  }
+
+  TextureHandle mNextTextureHandle{1};
 };
 
 }  // namespace sdl_painter

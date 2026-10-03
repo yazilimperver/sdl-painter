@@ -12,6 +12,7 @@ using sdl_painter::Image;
 using sdl_painter::kInvalidTexture;
 using sdl_painter::MockRenderer;
 using sdl_painter::Texture;
+using sdl_painter::TextureHandle;
 
 // 2x2 RGBA piksel verisi üreten yardımcı.
 static std::vector<uint8_t> MakePixels(int32_t w = 2, int32_t h = 2,
@@ -52,6 +53,15 @@ TEST(Texture, DestructorCallsDestroyTexture) {
     EXPECT_EQ(r.destroy_texture_count, 0);
   }  // destructor
   EXPECT_EQ(r.destroy_texture_count, 1);
+}
+
+TEST(Texture, DestructorDestroysTheOwnedHandleExactlyOnce) {
+  MockRenderer r;
+  {
+    Texture t(&r, 7);
+  }
+  const std::vector<TextureHandle> expected{7};
+  EXPECT_EQ(r.destroyed_textures, expected);
 }
 
 TEST(Texture, DestructorOnInvalidTextureDoesNotCallDestroy) {
@@ -164,6 +174,27 @@ TEST(ImageUpload, FirstUploadCallsCreateTexture) {
   auto handle = img.Upload(r);
   EXPECT_NE(handle, kInvalidTexture);
   EXPECT_EQ(r.create_texture_count, 1);
+}
+
+TEST(ImageUpload, UploadPassesSizeAndChannelsToCreateTexture) {
+  MockRenderer r;
+  auto pixels = MakePixels(3, 2, 4);
+  Image img = Image::CreateFromData(pixels.data(), 3, 2, 4);
+
+  img.Upload(r);
+
+  EXPECT_EQ(r.last_create_call.w, 3);
+  EXPECT_EQ(r.last_create_call.h, 2);
+  EXPECT_EQ(r.last_create_call.channels, 4);
+}
+
+TEST(ImageUpload, FailedCreateTextureReturnsInvalidHandle) {
+  MockRenderer r;
+  r.fail_next_create_texture = true;
+  auto pixels = MakePixels();
+  Image img = Image::CreateFromData(pixels.data(), 2, 2, 4);
+
+  EXPECT_EQ(img.Upload(r), kInvalidTexture);
 }
 
 TEST(ImageUpload, SecondUploadSameRendererReturnsCached) {

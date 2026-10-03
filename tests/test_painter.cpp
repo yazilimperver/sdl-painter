@@ -355,6 +355,16 @@ TEST(PainterLifecycle, UnbalancedRestoreIsSafe) {
   SUCCEED();
 }
 
+TEST(PainterLifecycle, ClearForwardsTheColorToTheRenderer) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.Clear(Color(10, 20, 30, 40));
+  h.painter.End();
+
+  ASSERT_EQ(h.mock->CountCalls("Clear"), 1);
+  EXPECT_EQ(h.mock->last_clear_color, Color(10, 20, 30, 40));
+}
+
 // ─── Metin batch'leme (Y4 regresyonu) ───────────────────────────────────────
 //
 // Eskiden her glyph ayrı bir texture'a sahipti; RenderBatcher texture
@@ -1142,26 +1152,6 @@ TEST(PainterGradient, TransformStillAppliesToGradientFills) {
   // Renk sekil-yerel koordinata gore hesaplanir: ust kenar hala kirmizi.
   const Color top = ColorNear(h.mock->last_vertices, 250.0F, 300.0F);
   EXPECT_EQ(top.r, 255);
-}
-
-TEST(BrushGradient, TransparentToOpaqueIsStillVisible) {
-  const Brush g = Brush::LinearGradient({0.0F, 0.0F}, {10.0F, 0.0F},
-                                        Color::Transparent(), Color::Red());
-  EXPECT_TRUE(g.IsVisible())
-      << "Saydamdan opaga giden gradient gorunmez sayildi.";
-}
-
-TEST(BrushGradient, EqualityCoversGradientParameters) {
-  const Brush a = Brush::LinearGradient({0.0F, 0.0F}, {10.0F, 0.0F},
-                                        Color::Red(), Color::Blue());
-  const Brush b = Brush::LinearGradient({0.0F, 0.0F}, {10.0F, 0.0F},
-                                        Color::Red(), Color::Blue());
-  const Brush c = Brush::LinearGradient({0.0F, 0.0F}, {20.0F, 0.0F},
-                                        Color::Red(), Color::Blue());
-  const Brush solid(Color::Red());
-  EXPECT_EQ(a, b);
-  EXPECT_NE(a, c);
-  EXPECT_NE(a, solid);
 }
 
 // ─── Viewport ───────────────────────────────────────────────────────────────

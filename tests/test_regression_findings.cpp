@@ -952,7 +952,7 @@ TEST(PainterText, KerningRestartsOnWrappedLine) {
 // yıkılmadan önce serbest bırakılmalı.
 TEST(ApplicationLifecycleDeathTest, FailedOnInitReleasesMemberImageSafely) {
   if (HiddenWindow(RendererBackend::kOpenGL).Get() == nullptr) {
-    GTEST_SKIP() << "OpenGL penceresi olusturulamadi.";
+    SDLPAINTER_BACKEND_UNAVAILABLE("OpenGL penceresi olusturulamadi.");
   }
   GTEST_FLAG_SET(death_test_style, "threadsafe");
 
@@ -980,7 +980,7 @@ TEST(ApplicationLifecycleDeathTest, FailedOnInitReleasesMemberImageSafely) {
 // genelidir ve önceki testlerden dolu kalıp hatayı gizler.
 TEST(OpenGLRendererDeathTest, FailedGlLoaderCanBeDestroyedSafely) {
   if (HiddenWindow(RendererBackend::kOpenGL).Get() == nullptr) {
-    GTEST_SKIP() << "OpenGL penceresi olusturulamadi.";
+    SDLPAINTER_BACKEND_UNAVAILABLE("OpenGL penceresi olusturulamadi.");
   }
   GTEST_FLAG_SET(death_test_style, "threadsafe");
 
