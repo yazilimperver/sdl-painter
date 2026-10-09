@@ -12,10 +12,13 @@
 #include "sdl_painter/embedded_vk_shaders.h"
 #endif
 
-// Gercek bir backend ayaga kaldiran tek test dosyasi. Diger testler
-// MockRenderer kullanir ve shader yolunu hic calistirmaz; bu dosya
-// gomulu shader'larin surucu tarafindan gercekten kabul edildigini
-// dogrular (bkz. ADR-009).
+// Gercek backend ayaga kaldiran dosyalardan biri (digerleri:
+// test_frame_render, test_render_target, test_backend_parity,
+// test_regression_gpu, test_regression_findings, test_public_abi). Oradaki
+// testler cizim sonucunu sinar; bu dosya ise yalnizca kurulumu: gomulu
+// shader'larin surucu tarafindan gercekten kabul edildigini ve renderer'in
+// ayni surecte tekrar kurulabildigini dogrular (bkz. ADR-009). MockRenderer
+// kullanan testler shader yolunu hic calistirmaz.
 //
 // Pencere/context olusturulamayan ortamlarda testler FAIL degil SKIP olur
 // (SDLPAINTER_REQUIRE_BACKEND=1 ayarliysa FAIL):
@@ -130,6 +133,9 @@ TEST(SpirvEmbedTest, TexturedModulesAreValid) {
 /// SKIP'e dusuyor (SDLPAINTER_REQUIRE_BACKEND=1 ise FAIL); SPIR-V
 /// dogrulugunun GPU'suz garantisini yukaridaki SpirvEmbedTest'ler veriyor.
 TEST(RendererSmokeTest, VulkanInitializeSucceeds) {
+  // Pencere ve renderer'dan once kurulur, onlardan sonra yikilir: kurulum ve
+  // kapatma sirasindaki validation hatalari da yakalanir.
+  const sdl_painter::testing::ValidationGuard guard;
   const sdl_painter::testing::HiddenWindow window(
       sdl_painter::RendererBackend::kVulkan);
   if (window.Get() == nullptr) {
@@ -146,6 +152,40 @@ TEST(RendererSmokeTest, VulkanInitializeSucceeds) {
         "Vulkan baslatilamadi (uygun ICD yok olabilir).");
   }
   renderer->Shutdown();
+}
+
+/// OpenGLInitializeIsRepeatable'in Vulkan esi: ayni surecte, ayni pencerede
+/// Vulkan iki kez kurulup yikilabilmeli (instance, cihaz, swapchain ve gomulu
+/// SPIR-V pipeline'i her seferinde sifirdan). ctest her testi ayri surecte
+/// kosar; bu yol yalnizca ikili dogrudan calistirilinca ikinci kurulumu
+/// gorur. Validation koruyucusu iki turun da temiz oldugunu sinar.
+TEST(RendererSmokeTest, VulkanInitializeIsRepeatable) {
+  const sdl_painter::testing::ValidationGuard guard;
+  const sdl_painter::testing::HiddenWindow window(
+      sdl_painter::RendererBackend::kVulkan);
+  if (window.Get() == nullptr) {
+    SDLPAINTER_BACKEND_UNAVAILABLE(
+        std::string("Vulkan penceresi olusturulamadi: ") + window.Error());
+  }
+
+  // Ilk kurulum ortamin Vulkan'i destekleyip desteklemedigini ayirt eder.
+  auto first =
+      sdl_painter::CreateRenderer(sdl_painter::RendererBackend::kVulkan);
+  ASSERT_NE(first, nullptr);
+  if (!first->Initialize(window.Get())) {
+    SDLPAINTER_BACKEND_UNAVAILABLE(
+        "Vulkan baslatilamadi (uygun ICD yok olabilir).");
+  }
+  first->Shutdown();
+  first.reset();
+
+  // Ilk kurulum basardiysa ikincinin basarisizligi gercek bir hatadir.
+  auto second =
+      sdl_painter::CreateRenderer(sdl_painter::RendererBackend::kVulkan);
+  ASSERT_NE(second, nullptr);
+  EXPECT_TRUE(second->Initialize(window.Get()))
+      << "ikinci Vulkan kurulumu basarisiz (ilki basarili olmustu).";
+  second->Shutdown();
 }
 
 #endif  // SDLPAINTER_HAS_VULKAN

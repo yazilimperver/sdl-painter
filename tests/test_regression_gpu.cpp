@@ -89,6 +89,9 @@ class RegressionGpu : public ::testing::TestWithParam<RendererBackend> {
   void ReadAndDump(Painter& painter, const RenderTarget& target,
                    const std::string& name, std::vector<uint8_t>& rgba) const {
     ASSERT_TRUE(painter.ReadRenderTarget(target, rgba));
+    // Cagiranlar piksel indeksler; kisa bir tampon sinir disi okuma olurdu.
+    ASSERT_EQ(rgba.size(), static_cast<std::size_t>(target.Width()) *
+                               static_cast<std::size_t>(target.Height()) * 4U);
     DumpRgba(name + Tag(), rgba, target.Width(), target.Height());
   }
 };
@@ -1051,6 +1054,13 @@ INSTANTIATE_TEST_SUITE_P(
       return i.param == RendererBackend::kOpenGL ? "OpenGL" : "Vulkan";
     });
 
+// Asagidaki iki test Vulkan'a ozgu. Vulkan derlenmemis bir yapilandirmada
+// (ornegin Vulkan'siz ASan isi) derlenmezler: derlenmemis backend
+// SDLPAINTER_REQUIRE_BACKEND ayarliyken bile zorunlu degildir, aksi halde
+// REQUIRE_BACKEND "backend kurulamadi" diye FAIL verirdi (BackendIsRequired
+// yalnizca derlenmis backend'ler icin gecerlidir).
+#ifdef SDLPAINTER_HAS_VULKAN
+
 // Kare icinde silinen hedefin framebuffer'i, henuz gonderilmemis komut
 // buffer'indan referans edilirken yikilmamali; sonraki kareler de etkilenmemeli.
 TEST(RegressionVulkan, DestroyingBoundTargetMidFrameIsSafe) {
@@ -1121,5 +1131,7 @@ TEST(RegressionVulkan, TextureDestroyedMidFrameOutlivesItsFrame) {
   p.Begin();
   p.End();
 }
+
+#endif  // SDLPAINTER_HAS_VULKAN
 
 }  // namespace

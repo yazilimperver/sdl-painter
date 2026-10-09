@@ -67,8 +67,18 @@ struct LifetimeJournal {
 
   /// @brief Renderer yok edildikten sonr gelen `DestroyTexture` sayısı.
   ///
-  /// Sıfırdan büyük olması doğrudan use-after-free kanıtıdır.
+  /// Yalnızca `DestroyTexture` sayılır (`DestroyRenderTarget` saymaz) ve
+  /// en iyi çabadır: yıkıcısı çalışmış bir nesnenin sanal metoduna erişmek
+  /// tanımsız davranıştır, sayacın artacağı garanti değildir. Hata geri
+  /// gelirse beklenen işaret sayaç değil çökme ya da ASan raporudur; bu
+  /// yüzden bu alana güvenen testler ayrı süreçte koşmalıdır.
   int32_t destroy_after_death{0};
+
+  /// @brief `DestroyRenderTarget` ile silinen hedefler (sırayla).
+  ///
+  /// Bir hedefin kaç kez silindiğini söyler; "bir kez yok edilir, taşınan
+  /// kaynak ikinci kez yok etmez" iddiası buradan okunur.
+  std::vector<RenderTargetHandle> render_targets_destroyed;
 };
 
 /// @brief `BeginFrame`'in aktif hedefe ne yaptığı.
@@ -233,6 +243,9 @@ class RecordingTargetRenderer : public MockRenderer {
   }
 
   void DestroyRenderTarget(RenderTargetHandle handle) override {
+    if (mJournal != nullptr) {
+      mJournal->render_targets_destroyed.push_back(handle);
+    }
     mTargets.erase(handle);
     if (mActiveTarget == handle) {
       mActiveTarget = kInvalidRenderTarget;

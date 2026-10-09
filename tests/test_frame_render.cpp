@@ -15,9 +15,14 @@
 /// uygulanmaması, texture yükleme yolundaki sızıntılar, simge durumunda 0x0
 /// swapchain) tam olarak bu yolda yaşıyordu ve hiçbir test buraya girmiyordu.
 ///
-/// Sınırlar: yeniden boyutlandırma testleri duman testidir (yalnızca çökme ve
-/// validation hatası yokluğu). Simge durumunda 0x0 yüzey bu dosyada
-/// sınanmıyor: gizli pencere 0x0 yüzey üretmiyor.
+/// Yeniden boyutlandırma testi bu kuralın tek istisnasıdır: kareler çizilirken
+/// renderer'ın kendi tuttuğu yüzey boyutunu da doğrular (Vulkan'da swapchain
+/// extent'i, OpenGL'de GL_VIEWPORT). Painter'ın boyut bilgisi renderer'dan
+/// bağımsız tutulduğu için o değer, swapchain'in yeniden oluşturulmaması ya da
+/// glViewport'un çağrılmaması gibi gerilemeleri göstermez.
+///
+/// Sınırlar: simge durumunda 0x0 yüzey bu dosyada sınanmıyor: gizli pencere
+/// 0x0 yüzey üretmiyor.
 
 #include "sdl_painter/brush.h"
 #include "sdl_painter/color.h"
@@ -32,12 +37,18 @@
 
 #include <SDL3/SDL.h>
 
+#include <array>
 #include <cstdint>
+#include <cstring>
 #include <gtest/gtest.h>
 #include <memory>
 #include <vector>
 
 #include "pixel_test_support.h"
+
+#ifdef SDLPAINTER_HAS_VULKAN
+#include "vulkan/vulkan_renderer.h"
+#endif
 
 namespace {
 
@@ -48,6 +59,7 @@ using sdl_painter::Color;
 using sdl_painter::Font;
 using sdl_painter::Image;
 using sdl_painter::ImageFlip;
+using sdl_painter::IRenderer;
 using sdl_painter::LineCap;
 using sdl_painter::LineJoin;
 using sdl_painter::Painter;
@@ -288,12 +300,158 @@ void RunFrames(RendererBackend backend, int32_t frame_count) {
   SUCCEED();
 }
 
-/// @brief Pencereyi yeniden boyutlandirip kare cizer.
+#ifdef _WIN32
+#define SDLPAINTER_TEST_GL_CALL __stdcall
+#else
+#define SDLPAINTER_TEST_GL_CALL
+#endif
+
+/// @brief Renderer duzeyinde gozlenen yuzey dikdortgeni: {x, y, w, h}.
+///
+/// Painter'in boyut bilgisinden bagimsizdir; dogrudan renderer'in durumuna
+/// bakar. Vulkan'da swapchain'in gercek extent'i (origin 0,0), OpenGL'de
+/// glGetIntegerv(GL_VIEWPORT). GL cagrisi icin baglam gecerli olmali (test,
+/// Initialize'dan sonra ayni is parcacigindan okur). Glad test hedefine bagli
+/// olmadigindan isaretci SDL_GL_GetProcAddress ile alinir.
+std::array<int32_t, 4> ObserveRendererSurface(IRenderer& renderer) {
+#ifdef SDLPAINTER_HAS_VULKAN
+  if (renderer.GetBackend() == RendererBackend::kVulkan) {
+    const VkExtent2D kExtent =
+        static_cast<const sdl_painter::VulkanRenderer&>(renderer)
+            .GetSwapchainExtent();
+    return {0, 0, static_cast<int32_t>(kExtent.width),
+            static_cast<int32_t>(kExtent.height)};
+  }
+#endif
+  constexpr uint32_t kGlViewport = 0x0BA2;
+  using GlGetIntegerv = void(SDLPAINTER_TEST_GL_CALL*)(uint32_t, int32_t*);
+  const auto get_integerv =
+      reinterpret_cast<GlGetIntegerv>(SDL_GL_GetProcAddress("glGetIntegerv"));
+  if (get_integerv == nullptr) {
+    ADD_FAILURE() << "glGetIntegerv alinamadi.";
+    return {};
+  }
+  std::array<int32_t, 4> viewport{};
+  get_integerv(kGlViewport, viewport.data());
+  return viewport;
+}
+
+#undef SDLPAINTER_TEST_GL_CALL
+
+/// @brief Kare cizer, sonra renderer'in yuzeyinin pencere boyutunda oldugunu
+///        dogrular.
+///
+/// Vulkan'da swapchain yeniden olusturma, boyut karsilastirmasiyla degil
+/// surucunun bildirdigiyle tetiklenir: vkAcquireNextImageKHR ya da
+/// vkQueuePresentKHR OUT_OF_DATE/SUBOPTIMAL doner (bkz. AcquireNextImage ve
+/// SubmitAndPresent). Bu yuzden kac karede olacagi bilinmez; yuzey boyutu
+/// uyana kadar en fazla kMaxFrames kare cizilir ve iddia ondan sonra yapilir.
+/// Swapchain hic yeniden olusmazsa kMaxFrames sonunda da eski boyut kalir ve
+/// iddia kirmizi olur. OpenGL'de viewport Painter::SetDrawableSize ile aninda
+/// guncellenir, ilk karede uyar.
+///
+/// SDL "offscreen" video surucusunde yuzey OUT_OF_DATE/SUBOPTIMAL hic
+/// bildirmez; pencere degisse de swapchain eski boyutunda kalir. Windows CI
+/// de SDL_VIDEODRIVER=offscreen ile kosar (bkz. .github/workflows/ci.yml); bu
+/// yuzden `after_resize` iken Vulkan extent iddiasi orada atlanir ve test
+/// ozelligine yazilir. Vulkan yeniden olusturma bu iddiayla CI'da hicbir
+/// yerde yurumez, yalnizca gercek pencereli makinede kosar. Baslangic
+/// boyutu iddiasi (`after_resize` yanlis) ve OpenGL viewport iddiasi her
+/// ortamda yapilir.
+void DrawFramesAndExpectSurface(Painter& painter, IRenderer& renderer,
+                                const Image& image, bool after_resize,
+                                int32_t width, int32_t height) {
+  constexpr int32_t kMaxFrames = 8;
+  const std::array<int32_t, 4> kExpected = {0, 0, width, height};
+  if (after_resize && renderer.GetBackend() == RendererBackend::kVulkan) {
+    const char* const kVideoDriver = SDL_GetCurrentVideoDriver();
+    if (kVideoDriver != nullptr &&
+        std::strcmp(kVideoDriver, "offscreen") == 0) {
+      DrawBusyFrame(painter, image, nullptr);
+      ::testing::Test::RecordProperty(
+          "vulkan_extent_assertion",
+          "skipped: offscreen video driver does not report OUT_OF_DATE");
+      return;
+    }
+  }
+  for (int32_t i = 0; i < kMaxFrames; ++i) {
+    DrawBusyFrame(painter, image, nullptr);
+    if (ObserveRendererSurface(renderer) == kExpected) {
+      break;
+    }
+  }
+  EXPECT_EQ(ObserveRendererSurface(renderer), kExpected)
+      << "Renderer yuzeyi pencere boyutuna ({x,y,w,h} beklenen) uymuyor: "
+         "Vulkan'da swapchain yeniden olusturulmamis ya da OpenGL'de "
+         "glViewport cagrilmamis olabilir.";
+}
+
+/// @brief Pencereyi yeniden boyutlandirip kare cizer ve renderer'in yuzey
+///        boyutunu dogrular.
 ///
 /// Gizli pencerede SDL_SetWindowSize calisir (SDL_SyncWindow ile beklenir);
 /// Vulkan'da swapchain yeniden olusturulur, OpenGL'de viewport guncellenir.
-/// Ekran okunamadigi icin yalnizca cokme ve validation hatasi yoklugu sinanir.
+/// Ekran okunamadigi icin pikseller dogrulanmaz; bunun yerine renderer'in kendi
+/// tuttugu yuzey boyutu gozlenir (bkz. ObserveRendererSurface). Painter'in
+/// pencere yoklamasi yerine acik bildirim (SetDrawableSize) kullanilir,
+/// cunku renderer'a erismek icin Painter, enjekte edilen renderer ile kurulur;
+/// bu kurucu pencere tutmaz.
 void RunFramesAcrossResize(RendererBackend backend) {
+  const sdl_painter::testing::ValidationGuard guard;
+  constexpr int32_t kInitialWidth = 128;
+  constexpr int32_t kInitialHeight = 96;
+  const sdl_painter::testing::HiddenWindow window(backend, kInitialWidth,
+                                                  kInitialHeight);
+  if (window.Get() == nullptr) {
+    SDLPAINTER_BACKEND_UNAVAILABLE(std::string("Pencere olusturulamadi: ") +
+                                   window.Error());
+  }
+  std::unique_ptr<IRenderer> owned = sdl_painter::CreateRenderer(backend);
+  if (owned == nullptr) {
+    SDLPAINTER_BACKEND_UNAVAILABLE("Renderer olusturulamadi.");
+  }
+  if (!owned->Initialize(window.Get())) {
+    SDLPAINTER_BACKEND_UNAVAILABLE(
+        "Backend baslatilamadi (uygun surucu/ICD yok olabilir).");
+  }
+  IRenderer& renderer = *owned;
+  Painter painter(std::move(owned), kInitialWidth, kInitialHeight);
+  SDL_Window* const sdl_window = window.Get();
+
+  const Image image = MakeCheckerImage();
+  ASSERT_TRUE(image.IsValid());
+
+  const auto resize_to = [&painter, sdl_window](int32_t width, int32_t height) {
+    SDL_SetWindowSize(sdl_window, width, height);
+    SDL_SyncWindow(sdl_window);
+    int32_t pixel_width = 0;
+    int32_t pixel_height = 0;
+    SDL_GetWindowSizeInPixels(sdl_window, &pixel_width, &pixel_height);
+    if (pixel_width != width || pixel_height != height) {
+      return false;
+    }
+    painter.SetDrawableSize(width, height);
+    return true;
+  };
+
+  ASSERT_NO_FATAL_FAILURE(DrawFramesAndExpectSurface(
+      painter, renderer, image, false, kInitialWidth, kInitialHeight));
+  ASSERT_TRUE(resize_to(192, 144)) << "Pencere buyutulemedi.";
+  ASSERT_NO_FATAL_FAILURE(
+      DrawFramesAndExpectSurface(painter, renderer, image, true, 192, 144));
+  ASSERT_TRUE(resize_to(64, 48)) << "Pencere kucultulemedi.";
+  ASSERT_NO_FATAL_FAILURE(
+      DrawFramesAndExpectSurface(painter, renderer, image, true, 64, 48));
+}
+
+/// @brief Pencereli Painter kurucusuyla yeniden boyutlandirip kare cizer.
+///
+/// Painter::Begin()'deki otomatik pencere boyutu yoklamasini (acik
+/// SetDrawableSize bildirimi olmadan) gercek backend'de calistirir.
+/// Iddiasizdir: yalnizca cokme ve validation hatasi yoklugunu sinar; boyut
+/// iddialari RunFramesAcrossResize'dadir (Painter renderer'a erisim vermedigi
+/// icin).
+void RunFramesAcrossResizeWithPolling(RendererBackend backend) {
   REQUIRE_BACKEND(be, backend);
   Painter& painter = *be.painter;
   SDL_Window* window = be.window.Get();
@@ -335,9 +493,15 @@ TEST_P(FrameRender, DrawsRepeatedFrames) {
 }
 
 /// Vulkan'da swapchain'in yeniden oluşturulması validation altında temiz
-/// olmalı; OpenGL'de viewport güncellenir.
+/// olmalı ve extent pencereyi izlemeli; OpenGL'de viewport güncellenmeli.
 TEST_P(FrameRender, DrawsFramesAcrossWindowResize) {
   RunFramesAcrossResize(GetParam());
+}
+
+/// Painter'in kendi pencere yoklamasi (SetDrawableSize olmadan) yeniden
+/// boyutlandirmada cokmemeli, validation hatasi uretmemeli.
+TEST_P(FrameRender, DrawsFramesAcrossWindowResizeWithPolling) {
+  RunFramesAcrossResizeWithPolling(GetParam());
 }
 
 TEST_P(FrameRender, EmptyFrameIsSafe) {

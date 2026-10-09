@@ -46,6 +46,7 @@ using sdl_painter::Point;
 using sdl_painter::Rect;
 using sdl_painter::RendererBackend;
 using sdl_painter::RenderTarget;
+using sdl_painter::RenderTargetHandle;
 using sdl_painter::TexturedVertex;
 using sdl_painter::TextureHandle;
 using sdl_painter::TextWrap;
@@ -698,20 +699,76 @@ TEST(RegressionFindings, DestroyingActiveTargetRestoresScreenState) {
 //
 // Sozlesme hedefin Painter'dan once yikilmasini istiyor; ihlal edilirse
 // eskiden ham IRenderer* uzerinden DestroyRenderTarget cagriliyordu.
-TEST(RegressionFindings, TargetOutlivingPainterDoesNotTouchRenderer) {
+//
+// Ayri surecte kosar: hata geri gelirse yikim olmus bir renderer'in sanal
+// metodunu cagirir; bu tanimsiz davranistir ve cokme ya da ASan raporu
+// verebilir, ama cokme garanti degildir (Windows). Bu yuzden cocuk ayrica
+// render_targets_destroyed listesinin bos kaldigini denetler: Painter hedefleri
+// silmez, liste yalnizca bayat bir DestroyRenderTarget ile dolar; doluysa 4 ile
+// cikar. destroy_after_death kullanilmaz; o alan yalnizca DestroyTexture sayar
+// ve en iyi cabadir.
+TEST(RenderTargetLifecycleDeathTest,
+     TargetOutlivingPainterDoesNotTouchRenderer) {
+  GTEST_FLAG_SET(death_test_style, "threadsafe");
+
+  EXPECT_EXIT(
+      {
+        std::setvbuf(stderr, nullptr, _IONBF, 0);
+
+        LifetimeJournal journal;
+        RenderTarget target;
+        {
+          auto renderer = std::make_unique<RecordingTargetRenderer>();
+          renderer->SetJournal(&journal);
+          Painter painter(std::move(renderer), kScreenW, kScreenH);
+          target = painter.CreateRenderTarget(32, 32);
+          if (!target.IsValid()) {
+            std::fprintf(stderr, "onkosul: hedef olusturulamadi\n");
+            std::exit(3);
+          }
+        }
+        if (!journal.renderer_destroyed) {
+          std::fprintf(stderr, "onkosul: renderer yikilmadi\n");
+          std::exit(3);
+        }
+        // Yikim burada, Painter oldukten SONRA calisir.
+        target.Reset();
+        // Painter hedefleri silmez; liste yalnizca olu renderer'a giden
+        // bayat bir DestroyRenderTarget ile dolabilir.
+        if (!journal.render_targets_destroyed.empty()) {
+          std::fprintf(stderr,
+                       "olu renderer'a DestroyRenderTarget gitti (%zu)\n",
+                       journal.render_targets_destroyed.size());
+          std::exit(4);
+        }
+        std::exit(0);
+      },
+      ::testing::ExitedWithCode(0), "");
+}
+
+// Painter yasarken Reset hedefi renderer'da tam bir kez silmeli; ikinci Reset
+// ve yikici yeniden silmemeli.
+TEST(RegressionFindings, TargetResetWhilePainterAliveDestroysItOnce) {
   LifetimeJournal journal;
-  RenderTarget target;
+  auto renderer = std::make_unique<RecordingTargetRenderer>();
+  renderer->SetJournal(&journal);
+  Painter painter(std::move(renderer), kScreenW, kScreenH);
+
+  RenderTargetHandle handle = kInvalidRenderTarget;
   {
-    auto renderer = std::make_unique<RecordingTargetRenderer>();
-    renderer->SetJournal(&journal);
-    Painter painter(std::move(renderer), kScreenW, kScreenH);
-    target = painter.CreateRenderTarget(32, 32);
+    RenderTarget target = painter.CreateRenderTarget(32, 32);
     ASSERT_TRUE(target.IsValid());
-  }
-  ASSERT_TRUE(journal.renderer_destroyed);
-  // Yikim burada, Painter oldukten SONRA calisir.
-  EXPECT_NO_FATAL_FAILURE(target.Reset());
-  EXPECT_EQ(journal.destroy_after_death, 0);
+    handle = target.Handle();
+
+    target.Reset();
+    EXPECT_EQ(journal.render_targets_destroyed,
+              std::vector<RenderTargetHandle>{handle});
+
+    target.Reset();
+  }  // Yikici de ucuncu kez silmemeli.
+
+  EXPECT_EQ(journal.render_targets_destroyed,
+            std::vector<RenderTargetHandle>{handle});
 }
 
 // SetOpacity sozlesmesi [0, 1]; aralik disi deger kirpilmali.

@@ -673,32 +673,28 @@ TEST(DashedPolyline, OddPatternAlternatesLikeSvg) {
 
 /// @brief Desen köşede sıfırlanmamalı; yol boyunca sürekli ilerlemeli.
 TEST(DashedPolyline, PatternContinuesAcrossCorners) {
-  // Iki segment, her biri 100 piksel. Desen 10/10 ile toplam 200 piksel
-  // uzerinde 10 cizili parca vermeli. Desen her kosede sifirlansaydi
-  // segment basi 5 olmak uzere yine 10 cikardi; ayrimi gormek icin kosenin
-  // ORTASINA denk gelen bir desen secilir: 30/30, segment uzunlugu 100.
+  // Yol (0,0) -> (100,0) -> (100,100): GERCEK bir dik kose, her segment 100
+  // piksel. Desen 30/30, yol boyunca (yay uzunlugu) ilerler:
+  // 0-30 ciz, 30-60 atla, 60-90 ciz, 90-120 atla (kose 100'de, yani bosluk
+  // kosenin uzerinden gecer), 120-150 ciz.
+  // Ikinci segmentte yay uzunlugu 100 = y 0, dolayisiyla y 0-20 bosluk,
+  // y 20-50 cizili. Desen kosede sifirlansaydi y 0-30 cizili, 30-60 bosluk
+  // olurdu: iki iddia da tersine doner.
   //
-  // Surekli desende: 0-30 ciz, 30-60 atla, 60-90 ciz, 90-120 atla (kose 100'de,
-  // yani bosluk kosenin uzerinden gecer), 120-150 ciz, 150-180 atla, 180-200 ciz
-  // -> 4 cizili parca.
-  // Sifirlanan desende her segment 0-30 ciz, 60-90 ciz -> segment basi 2,
-  // toplam 4 ama parcalarin KONUMU farkli olurdu. Bu yuzden konum sinanir.
-  const std::vector<Point> pts = {{0, 0}, {100, 0}, {200, 0}};
+  // Kalinlik 4: ikinci segmentteki dikey quad x 98..102 araligini kaplar.
+  // x = 100.3 bu araligin icinde; kaplama yalnizca y'ye bagli, kalinligin
+  // yarisi sorgu noktasini etkilemez. Butt uc: kesik uclari duz kesilir.
+  const std::vector<Point> pts = {{0, 0}, {100, 0}, {100, 100}};
   const float kPattern[] = {30.0f, 30.0f};
   auto v = Tessellator::TessellateDashedPolyline(pts, 4.0f, kPattern, 2,
                                                  /*closed=*/false);
   ASSERT_FALSE(v.empty());
 
-  // x = 100..110 araligi bosluga denk gelmeli (90-120 atlanan bolge).
-  bool has_vertex_in_gap = false;
-  for (const auto& p : v) {
-    if (p.x > 101.0f && p.x < 119.0f) {
-      has_vertex_in_gap = true;
-    }
-  }
-  EXPECT_FALSE(has_vertex_in_gap)
-      << "Desen kosede sifirlanmis: bosluga denk gelmesi gereken bolgede "
-         "geometri var.";
+  EXPECT_EQ(CoverageCount(v, 100.3f, 10.0f), 0)
+      << "Desen kosede sifirlanmis: bosluga denk gelmesi gereken y=10 "
+         "kaplanmis.";
+  EXPECT_EQ(CoverageCount(v, 100.3f, 35.0f), 1)
+      << "Desen kosede sifirlanmis: cizili olmasi gereken y=35 kaplanmamis.";
 }
 
 TEST(DashedPolyline, ClosedShapeIsDashedAsOpenPieces) {

@@ -118,6 +118,8 @@ TEST(ImageCreateFromData, DataIsCopied) {
       255, 0, 0, 255,   0, 255, 0, 255,
       0, 0, 255, 255,   255, 255, 0, 255};
   Image img = Image::CreateFromData(pixels.data(), w, h, ch);
+  ASSERT_TRUE(img.IsValid());
+  ASSERT_NE(img.RawData(), nullptr);
 
   // Kaynak degistirme imajı etkilememeli
   pixels[0] = 0;
@@ -131,10 +133,10 @@ TEST(ImageLoadFile, LoadsPngPixels) {
                     "rgba_32x24.png";
   Image img(path.string());
   ASSERT_TRUE(img.IsValid());
-  EXPECT_EQ(img.Width(), 32);
-  EXPECT_EQ(img.Height(), 24);
-  EXPECT_EQ(img.Channels(), 4);
   ASSERT_NE(img.RawData(), nullptr);
+  ASSERT_EQ(img.Width(), 32);
+  ASSERT_EQ(img.Height(), 24);
+  ASSERT_EQ(img.Channels(), 4);
   EXPECT_EQ(PixelAt(img, 0, 0), (std::vector<uint8_t>{255, 0, 0, 255}));
   EXPECT_EQ(PixelAt(img, 31, 0), (std::vector<uint8_t>{0, 255, 0, 255}));
   EXPECT_EQ(PixelAt(img, 0, 23), (std::vector<uint8_t>{0, 0, 255, 255}));
@@ -146,10 +148,10 @@ TEST(ImageLoadFile, LoadsBmpPixels) {
                     "rgb_32x24.bmp";
   Image img(path.string());
   ASSERT_TRUE(img.IsValid());
-  EXPECT_EQ(img.Width(), 32);
-  EXPECT_EQ(img.Height(), 24);
-  EXPECT_EQ(img.Channels(), 3);
   ASSERT_NE(img.RawData(), nullptr);
+  ASSERT_EQ(img.Width(), 32);
+  ASSERT_EQ(img.Height(), 24);
+  ASSERT_EQ(img.Channels(), 3);
   EXPECT_EQ(PixelAt(img, 0, 0), (std::vector<uint8_t>{255, 0, 0}));
   EXPECT_EQ(PixelAt(img, 31, 0), (std::vector<uint8_t>{0, 255, 0}));
   EXPECT_EQ(PixelAt(img, 0, 23), (std::vector<uint8_t>{0, 0, 255}));
@@ -161,10 +163,10 @@ TEST(ImageLoadFile, LoadsJpeg) {
                     "rgb_32x24.jpg";
   Image img(path.string());
   ASSERT_TRUE(img.IsValid());
-  EXPECT_EQ(img.Width(), 32);
-  EXPECT_EQ(img.Height(), 24);
-  EXPECT_EQ(img.Channels(), 3);
   ASSERT_NE(img.RawData(), nullptr);
+  ASSERT_EQ(img.Width(), 32);
+  ASSERT_EQ(img.Height(), 24);
+  ASSERT_EQ(img.Channels(), 3);
   EXPECT_EQ(PixelAt(img, 0, 0), (std::vector<uint8_t>{254, 0, 0}));
   EXPECT_EQ(PixelAt(img, 31, 0), (std::vector<uint8_t>{0, 255, 0}));
   EXPECT_EQ(PixelAt(img, 0, 23), (std::vector<uint8_t>{0, 0, 254}));

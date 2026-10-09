@@ -1063,6 +1063,8 @@ TEST(PainterGradient, ColourIsConstantPerpendicularToTheAxis) {
   h.painter.FillRect(0.0F, 0.0F, 100.0F, 100.0F);
   h.painter.End();
 
+  // ColorNear bos listede iki kez varsayilan rengi dondurup esit cikardi.
+  ASSERT_FALSE(h.mock->last_vertices.empty());
   const Color left = ColorNear(h.mock->last_vertices, 0.0F, 0.0F);
   const Color right = ColorNear(h.mock->last_vertices, 100.0F, 0.0F);
   EXPECT_EQ(left.r, right.r);
@@ -1113,6 +1115,7 @@ TEST(PainterGradient, RadialWithZeroRadiusFallsBackToStartColour) {
   h.painter.FillRect(0.0F, 0.0F, 100.0F, 100.0F);
   h.painter.End();
 
+  ASSERT_FALSE(h.mock->last_vertices.empty());
   for (const auto& v : h.mock->last_vertices) {
     EXPECT_EQ(v.g, 255);
   }
@@ -1196,6 +1199,10 @@ TEST(PainterViewport, InvalidSizeIsIgnored) {
 TEST(PainterViewport, DrawingCoordinatesBecomeViewportLocal) {
   Harness h;
   h.painter.Begin();
+  // Viewport oncesi projeksiyon tum yuzeye gore: x olcegi 2 / 800.
+  const float before_scale_x = h.mock->last_projection[0];
+  ASSERT_NEAR(before_scale_x, 2.0F / static_cast<float>(kViewportW), 1e-7F);
+
   h.painter.SetViewport(0, 0, 200, 100);
   h.painter.SetBrush(Brush(Color::Red()));
   h.painter.FillRect(0.0F, 0.0F, 50.0F, 50.0F);
@@ -1206,6 +1213,9 @@ TEST(PainterViewport, DrawingCoordinatesBecomeViewportLocal) {
   // Vertex koordinatlari degismez; degisen projeksiyondur.
   EXPECT_FLOAT_EQ(b.min_x, 0.0F);
   EXPECT_FLOAT_EQ(b.max_x, 50.0F);
+  // Projeksiyon viewport genisligine gore kurulur: x olcegi 2 / 200.
+  EXPECT_NEAR(h.mock->last_projection[0], 2.0F / 200.0F, 1e-7F);
+  EXPECT_NE(h.mock->last_projection[0], before_scale_x);
 }
 
 TEST(PainterViewport, ResetRestoresTheFullSurface) {
@@ -1505,7 +1515,14 @@ TEST(PainterText, OverlongWordIsSplitAtCodepointBoundaries) {
   ASSERT_TRUE(t.font->IsValid());
 
   // Turkce karakterler cok baytli: bolme yanlis yerden olursa U+FFFD cikar.
-  const std::string kWord = "çğıöşüçğıöşüçğıöşü";
+  // Bayt dizisi bilincli olarak escape ile yazilir (bkz. test_text_utf8.cpp
+  // basindaki aciklama): c, g, i, o, s, u harflerinin Turkce halleri (her
+  // biri 2 bayt), 3 kez tekrarlanir: 18 kod noktasi, 36 bayt.
+  const std::string kWord =
+      "\xC3\xA7\xC4\x9F\xC4\xB1\xC3\xB6\xC5\x9F\xC3\xBC"
+      "\xC3\xA7\xC4\x9F\xC4\xB1\xC3\xB6\xC5\x9F\xC3\xBC"
+      "\xC3\xA7\xC4\x9F\xC4\xB1\xC3\xB6\xC5\x9F\xC3\xBC";
+  constexpr std::size_t kCodepoints = 18;
   const Rect kNarrow{0.0F, 0.0F, 40.0F, 300.0F};
 
   t.h.painter.Begin();
@@ -1518,6 +1535,18 @@ TEST(PainterText, OverlongWordIsSplitAtCodepointBoundaries) {
   EXPECT_GT(b.max_y - b.min_y, static_cast<float>(t.font->LineHeight()))
       << "Sigmayan sozcuk hic bolunmedi.";
   EXPECT_LE(b.max_x, kNarrow.w + 8.0F);
+
+  // Bolme kod noktasi sinirinda ise her kod noktasi tam bir glyph (6 vertex)
+  // uretir. Cok baytli bir karakterin ortasindan bolunseydi bozuk baytlar
+  // ayri U+FFFD glyph'leri uretir ve toplam artardi. Batch'ler birden fazla
+  // cagriya bolunebildigi icin tum DrawTextured cagrilari toplanir.
+  std::size_t textured_vertices = 0;
+  for (const auto& call : t.h.mock->calls) {
+    if (call.name == "DrawTextured") {
+      textured_vertices += call.vertex_count;
+    }
+  }
+  EXPECT_EQ(textured_vertices, kCodepoints * 6u);
 }
 
 TEST(PainterText, WrappedLinesHonourAlignment) {
@@ -1818,16 +1847,19 @@ TEST(PainterImage, HorizontalFlipSwapsUOnlyAndKeepsGeometry) {
   h.painter.Begin();
   h.painter.DrawImage(image, kDest);
   h.painter.End();
+  ASSERT_EQ(h.mock->CountCalls("DrawTextured"), 1);
   const auto plain = h.mock->last_textured_vertices;
+  // Bos liste dongulere hic girmeden gecerdi: tek quad = 6 vertex.
+  ASSERT_EQ(plain.size(), 6u);
 
   h.mock->Reset();
   h.painter.Begin();
   h.painter.DrawImage(image, kDest, Color::White(),
                       sdl_painter::ImageFlip::kHorizontal);
   h.painter.End();
+  ASSERT_EQ(h.mock->CountCalls("DrawTextured"), 1);
   const auto flipped = h.mock->last_textured_vertices;
-
-  ASSERT_EQ(plain.size(), flipped.size());
+  ASSERT_EQ(flipped.size(), 6u);
   for (std::size_t i = 0; i < plain.size(); ++i) {
     EXPECT_FLOAT_EQ(plain[i].x, flipped[i].x) << "Geometri i=" << i;
     EXPECT_FLOAT_EQ(plain[i].y, flipped[i].y) << "Geometri i=" << i;
@@ -1846,17 +1878,22 @@ TEST(PainterImage, VerticalFlipSwapsVOnly) {
   h.painter.Begin();
   h.painter.DrawImage(image, kDest);
   h.painter.End();
+  ASSERT_EQ(h.mock->CountCalls("DrawTextured"), 1);
   const auto plain = h.mock->last_textured_vertices;
+  // Bos liste dongulere hic girmeden gecerdi: tek quad = 6 vertex.
+  ASSERT_EQ(plain.size(), 6u);
 
   h.mock->Reset();
   h.painter.Begin();
   h.painter.DrawImage(image, kDest, Color::White(),
                       sdl_painter::ImageFlip::kVertical);
   h.painter.End();
+  ASSERT_EQ(h.mock->CountCalls("DrawTextured"), 1);
   const auto flipped = h.mock->last_textured_vertices;
-
-  ASSERT_EQ(plain.size(), flipped.size());
+  ASSERT_EQ(flipped.size(), 6u);
   for (std::size_t i = 0; i < plain.size(); ++i) {
+    EXPECT_FLOAT_EQ(plain[i].x, flipped[i].x) << "Geometri i=" << i;
+    EXPECT_FLOAT_EQ(plain[i].y, flipped[i].y) << "Geometri i=" << i;
     EXPECT_FLOAT_EQ(plain[i].u, flipped[i].u) << "Yatay UV degisti, i=" << i;
     EXPECT_FLOAT_EQ(flipped[i].v, 1.0F - plain[i].v) << "Dikey UV, i=" << i;
   }
@@ -1872,23 +1909,32 @@ TEST(PainterImage, BothFlipSwapsUAndV) {
   h.painter.Begin();
   h.painter.DrawImage(image, kDest);
   h.painter.End();
+  ASSERT_EQ(h.mock->CountCalls("DrawTextured"), 1);
   const auto plain = h.mock->last_textured_vertices;
+  // Bos liste dongulere hic girmeden gecerdi: tek quad = 6 vertex.
+  ASSERT_EQ(plain.size(), 6u);
 
   h.mock->Reset();
   h.painter.Begin();
   h.painter.DrawImage(image, kDest, Color::White(),
                       sdl_painter::ImageFlip::kBoth);
   h.painter.End();
+  ASSERT_EQ(h.mock->CountCalls("DrawTextured"), 1);
   const auto flipped = h.mock->last_textured_vertices;
-
-  ASSERT_EQ(plain.size(), flipped.size());
+  ASSERT_EQ(flipped.size(), 6u);
   for (std::size_t i = 0; i < plain.size(); ++i) {
+    EXPECT_FLOAT_EQ(plain[i].x, flipped[i].x) << "Geometri i=" << i;
+    EXPECT_FLOAT_EQ(plain[i].y, flipped[i].y) << "Geometri i=" << i;
     EXPECT_FLOAT_EQ(flipped[i].u, 1.0F - plain[i].u) << "i=" << i;
     EXPECT_FLOAT_EQ(flipped[i].v, 1.0F - plain[i].v) << "i=" << i;
   }
 }
 
 /// @brief Aynalama, src_rect ile birlikte yalnizca o alt bolgeyi cevirmeli.
+///
+/// Dokunun tamamina gore aynalayan bir kod da u'yu [0, 0.5] icinde birakmaz;
+/// bu yuzden uc degerler tek tek sinanir. Vertex sirasi:
+/// 0 sol-ust, 1 sag-ust, 2 sol-alt, 5 sag-alt.
 TEST(PainterImage, FlipStaysWithinSourceSubRegion) {
   Harness h;
   const auto image = MakeTinyImage();  // 4x4
@@ -1901,11 +1947,50 @@ TEST(PainterImage, FlipStaysWithinSourceSubRegion) {
                       sdl_painter::ImageFlip::kHorizontal);
   h.painter.End();
 
-  ASSERT_FALSE(h.mock->last_textured_vertices.empty());
-  for (const auto& v : h.mock->last_textured_vertices) {
-    EXPECT_GE(v.u, 0.0F);
-    EXPECT_LE(v.u, 0.5F) << "Aynalama kaynak alt bolgesinin disina tasti.";
-  }
+  ASSERT_EQ(h.mock->CountCalls("DrawTextured"), 1);
+  const auto& v = h.mock->last_textured_vertices;
+  ASSERT_EQ(v.size(), 6u);
+  // Sol-ust artik alt bolgenin sag kenarini (0.5), sag-ust sol kenarini (0)
+  // gosterir.
+  EXPECT_FLOAT_EQ(v[0].u, 0.5F);
+  EXPECT_FLOAT_EQ(v[1].u, 0.0F);
+  EXPECT_FLOAT_EQ(v[2].u, 0.5F);
+  EXPECT_FLOAT_EQ(v[5].u, 0.0F);
+  // Dikey UV ve hedef dikdortgen degismez.
+  EXPECT_FLOAT_EQ(v[0].v, 0.0F);
+  EXPECT_FLOAT_EQ(v[2].v, 0.5F);
+  EXPECT_FLOAT_EQ(v[0].x, 0.0F);
+  EXPECT_FLOAT_EQ(v[1].x, 10.0F);
+  EXPECT_FLOAT_EQ(v[2].y, 10.0F);
+}
+
+/// @brief Sifirdan farkli kaynak ofseti: sag-alt 2x2 -> UV [0.5, 1].
+TEST(PainterImage, FlipWithNonZeroSourceOffsetSwapsSubRegionEdges) {
+  Harness h;
+  const auto image = MakeTinyImage();  // 4x4
+  ASSERT_TRUE(image.IsValid());
+
+  h.painter.Begin();
+  h.painter.DrawImage(image, Rect{2.0F, 2.0F, 2.0F, 2.0F},
+                      Rect{0.0F, 0.0F, 10.0F, 10.0F}, Color::White(),
+                      sdl_painter::ImageFlip::kHorizontal);
+  h.painter.End();
+
+  ASSERT_EQ(h.mock->CountCalls("DrawTextured"), 1);
+  const auto& v = h.mock->last_textured_vertices;
+  ASSERT_EQ(v.size(), 6u);
+  // Sol-ust alt bolgenin sag kenarini (1.0), sag-ust sol kenarini (0.5)
+  // gosterir. Dokunun tamamina gore aynalama 0.5 / 0 verirdi.
+  EXPECT_FLOAT_EQ(v[0].u, 1.0F);
+  EXPECT_FLOAT_EQ(v[1].u, 0.5F);
+  EXPECT_FLOAT_EQ(v[2].u, 1.0F);
+  EXPECT_FLOAT_EQ(v[5].u, 0.5F);
+  // v degismez: ust kenar 0.5, alt kenar 1.0.
+  EXPECT_FLOAT_EQ(v[0].v, 0.5F);
+  EXPECT_FLOAT_EQ(v[2].v, 1.0F);
+  EXPECT_FLOAT_EQ(v[0].x, 0.0F);
+  EXPECT_FLOAT_EQ(v[1].x, 10.0F);
+  EXPECT_FLOAT_EQ(v[2].y, 10.0F);
 }
 
 TEST(PainterImage, InvalidImageProducesNoDrawCall) {

@@ -72,6 +72,16 @@ class VulkanRenderer final : public IRenderer {
   void SetProjectionMatrix(const float* mat4) override;
   void SetModelMatrix(const float* mat3) override;
 
+  /// @brief Swapchain'in yürürlükteki boyutu (piksel); swapchain yoksa 0x0.
+  ///
+  /// Test ve tanılama içindir, public API'nin parçası değildir. Yan etkisizdir
+  /// ve @ref CurrentExtent'in aksine bağlı render target'tan etkilenmez:
+  /// pencere yeniden boyutlandırıldığında swapchain'in gerçekten yeniden
+  /// oluşturulup oluşturulmadığını gözlemlemeye yarar.
+  [[nodiscard]] VkExtent2D GetSwapchainExtent() const {
+    return mSwapchain != nullptr ? mSwapchain->GetExtent() : VkExtent2D{0, 0};
+  }
+
  private:
   /// @brief Kare içinde büyüyebilen vertex ring'i — zincirlenmiş tamponlar.
   ///

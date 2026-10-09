@@ -24,7 +24,9 @@
 #include "sdl_painter/geometry.h"
 #include "sdl_painter/image.h"
 #include "sdl_painter/painter.h"
+#include "sdl_painter/path.h"
 #include "sdl_painter/pen.h"
+#include "sdl_painter/render_target.h"
 #include "sdl_painter/renderer.h"
 #include "sdl_painter/version.h"
 
@@ -138,8 +140,11 @@ TEST(PublicAbi, ConsumerDefinedRendererReceivesDrawCalls) {
   painter.FillRect(10.0F, 10.0F, 50.0F, 25.0F);
   painter.End();
 
-  EXPECT_FALSE(observer->calls.empty())
-      << "Kutuphane, tuketici tarafinda tanimlanmis IRenderer'i hic cagirmadi.";
+  // BeginFrame/EndFrame de calls'a yazilir; liste bos-degil denetimi cizim
+  // iletilmese de gecerdi. Cizimin kendisi sayilir.
+  EXPECT_EQ(observer->CountCalls("DrawTriangles"), 1)
+      << "Kutuphane, tuketici tarafinda tanimlanmis IRenderer'a cizimi "
+         "iletmedi.";
 }
 
 TEST(PublicAbi, ConsumerDefinedRendererReceivesClear) {
@@ -154,7 +159,111 @@ TEST(PublicAbi, ConsumerDefinedRendererReceivesClear) {
   painter.Clear(sdl_painter::Color::Black());
   painter.End();
 
-  EXPECT_FALSE(observer->calls.empty());
+  EXPECT_EQ(observer->CountCalls("Clear"), 1);
+  EXPECT_EQ(observer->last_clear_color, sdl_painter::Color::Black());
+}
+
+// --- Path ve RenderTarget: SDLPAINTER_API tasiyan diger iki sinif -----------
+//
+// Ikisinin de kurucu/yikici/uye govdeleri .cpp'de; export isaretlemesi
+// unutulursa shared derlemede bu testler LNK2019 ile duser.
+
+TEST(PublicAbi, PathBuildsCurvesAcrossBoundary) {
+  sdl_painter::Path path(0.5F);
+  path.MoveTo(10.0F, 10.0F);
+  path.LineTo(60.0F, 10.0F);
+  path.CubicTo(80.0F, 10.0F, 80.0F, 60.0F, 60.0F, 60.0F);
+  path.Close();
+
+  EXPECT_FALSE(path.IsEmpty());
+  EXPECT_FLOAT_EQ(path.Flatness(), 0.5F);
+  ASSERT_EQ(path.SubPaths().size(), 1u);
+  EXPECT_TRUE(path.SubPaths().front().closed);
+  // MoveTo + LineTo + egri (en az bir parca) -> en az 3 nokta.
+  EXPECT_GE(path.PointCount(), 3u);
+  // Close imleci alt yolun basina dondurur.
+  EXPECT_FLOAT_EQ(path.CurrentPoint().x, 10.0F);
+  EXPECT_FLOAT_EQ(path.CurrentPoint().y, 10.0F);
+
+  path.Clear();
+  EXPECT_TRUE(path.IsEmpty());
+}
+
+TEST(PublicAbi, FillPathReachesConsumerDefinedRenderer) {
+  auto renderer = std::make_unique<MockRenderer>();
+  MockRenderer* observer = renderer.get();
+  sdl_painter::Painter painter(std::move(renderer), kViewportWidth,
+                               kViewportHeight);
+  ASSERT_TRUE(painter.IsValid());
+
+  sdl_painter::Path path;
+  path.MoveTo(10.0F, 10.0F);
+  path.LineTo(110.0F, 10.0F);
+  path.LineTo(60.0F, 90.0F);
+  path.Close();
+
+  painter.Begin();
+  painter.SetBrush(sdl_painter::Brush(sdl_painter::Color::Red()));
+  painter.FillPath(path);
+  painter.End();
+
+  EXPECT_EQ(observer->CountCalls("DrawTriangles"), 1);
+  EXPECT_FALSE(observer->last_vertices.empty());
+}
+
+TEST(PublicAbi, DrawPathReachesConsumerDefinedRenderer) {
+  auto renderer = std::make_unique<MockRenderer>();
+  MockRenderer* observer = renderer.get();
+  sdl_painter::Painter painter(std::move(renderer), kViewportWidth,
+                               kViewportHeight);
+  ASSERT_TRUE(painter.IsValid());
+
+  sdl_painter::Path path;
+  path.MoveTo(10.0F, 10.0F);
+  path.CubicTo(60.0F, 10.0F, 60.0F, 90.0F, 110.0F, 90.0F);
+
+  painter.Begin();
+  painter.SetPen(sdl_painter::Pen(sdl_painter::Color::White(), 3.0F));
+  painter.DrawPath(path);
+  painter.End();
+
+  EXPECT_EQ(observer->CountCalls("DrawTriangles"), 1);
+  EXPECT_FALSE(observer->last_vertices.empty());
+}
+
+TEST(PublicAbi, DefaultRenderTargetIsInvalidAndResetsCleanly) {
+  sdl_painter::RenderTarget target;
+  EXPECT_FALSE(target.IsValid());
+  EXPECT_EQ(target.Handle(), sdl_painter::kInvalidRenderTarget);
+  EXPECT_EQ(target.Width(), 0);
+  EXPECT_EQ(target.Height(), 0);
+
+  target.Reset();
+  target.Reset();
+  EXPECT_FALSE(target.IsValid());
+}
+
+TEST(PublicAbi, RenderTargetIsMovableAcrossBoundary) {
+  sdl_painter::RenderTarget first;
+  sdl_painter::RenderTarget second(std::move(first));
+  EXPECT_FALSE(second.IsValid());
+
+  sdl_painter::RenderTarget third;
+  third = std::move(second);
+  EXPECT_FALSE(third.IsValid());
+}
+
+// MockRenderer CreateRenderTarget'i override etmez; IRenderer'in varsayilani
+// kInvalidRenderTarget doner ve Painter bunu gecersiz hedefe cevirir.
+TEST(PublicAbi, CreateRenderTargetIsInvalidWithoutBackendSupport) {
+  sdl_painter::Painter painter(std::make_unique<MockRenderer>(), kViewportWidth,
+                               kViewportHeight);
+  ASSERT_TRUE(painter.IsValid());
+
+  const sdl_painter::RenderTarget target = painter.CreateRenderTarget(64, 64);
+
+  EXPECT_FALSE(target.IsValid());
+  EXPECT_EQ(target.Width(), 0);
 }
 
 // --- sdl_painter_app: ayri kutuphane, ayri export makrosu -------------------
