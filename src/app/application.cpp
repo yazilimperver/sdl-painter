@@ -282,8 +282,7 @@ int Application::Run() {
   // target_fps freni için asgari kare süresi; 0 = fren yok.
   const uint64_t frame_min_ns =
       (mConfig.target_fps > 0)
-          ? app_detail::kNsPerSecond /
-                static_cast<uint64_t>(mConfig.target_fps)
+          ? app_detail::kNsPerSecond / static_cast<uint64_t>(mConfig.target_fps)
           : 0;
 
   uint64_t lag_ns = 0;
@@ -294,7 +293,8 @@ int Application::Run() {
     ProcessEvents();
 
     const uint64_t now_ns = SDL_GetTicksNS();
-    const uint64_t elapsed_ns = app_detail::ClampFrameDelta(now_ns - mLastTickNs);
+    const uint64_t elapsed_ns =
+        app_detail::ClampFrameDelta(now_ns - mLastTickNs);
     mLastTickNs = now_ns;
 
     float alpha = 1.0F;
