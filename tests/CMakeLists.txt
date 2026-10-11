@@ -22,6 +22,8 @@ set(TEST_SOURCES
     test_texture_image_upload.cpp
     test_event_translator.cpp
     test_app_config.cpp
+    test_application.cpp
+    test_stats_overlay.cpp
     test_tictactoe_logic.cpp
     test_collision_logic.cpp
     test_regression_findings.cpp
@@ -29,6 +31,35 @@ set(TEST_SOURCES
 )
 
 include(GoogleTest)
+
+# Testler CTest'e derlenmis ikilinin `--gtest_list_tests` ciktisindan
+# kaydedilir. gtest_add_tests kaynak metnini tariyordu: #if ile derlenmeyen
+# testleri de kaydediyor (0 test kosup basarili gorunuyor) ve TEST_P icin tek
+# joker kayit uretiyordu; o kayitta bir ornegin SKIPPED ciktisi digerinin
+# hatasini da "Skipped" gosterebiliyordu (SKIP_REGULAR_EXPRESSION cikis
+# kodundan bagimsiz).
+#
+# PRE_TEST: kesif derlemede degil ctest basinda yapilir; Windows'ta DLL'ler
+# o anda ikilinin yaninda (sdlpainter_copy_runtime_dlls).
+# NO_PRETTY_VALUES: tum orneklerin adi var (/OpenGL, /Vulkan ...); CMake'in
+# deger guzellestirmesi yalniz sayisal ornek adini degistirebiliyor, adli
+# orneklerde "# GetParam() = ..." yorumunu test adina katiyordu.
+# DISCOVERY_TIMEOUT 30: listeleme yerelde 0.4 s'nin altinda, ama CI'da kesif
+# ASan, kapsama ve soguk imajla yavaslar; varsayilan 5 s kesifi dusurebilir.
+#
+# Capraz derlemede (MinGW, CMAKE_CROSSCOMPILING) ikili derleme makinesinde
+# calistirilamaz; orada kaynak taramasi korunur.
+function(sdlpainter_register_gtests target)
+    if(CMAKE_CROSSCOMPILING)
+        gtest_add_tests(TARGET ${target})
+    else()
+        gtest_discover_tests(${target}
+            DISCOVERY_MODE PRE_TEST
+            NO_PRETTY_VALUES
+            DISCOVERY_TIMEOUT 30
+        )
+    endif()
+endfunction()
 
 # Bu takim `src/` altindaki dahili basliklari include eder ve export EDILMEYEN
 # sembolleri (Tessellator, RenderBatcher, vk_detail::VkResultToString ...)
@@ -69,11 +100,7 @@ else()
     endif()
 
     sdlpainter_copy_runtime_dlls(sdl_painter_tests)
-
-    # FIXME: gtest_add_tests kaynak metnini tariyor; #if ile derlenmeyen
-    # testler de (BackendParity.SkippedWithoutVulkan) kaydediliyor ve 0 test
-    # calistirip basarili gorunuyor.
-    gtest_add_tests(TARGET sdl_painter_tests)
+    sdlpainter_register_gtests(sdl_painter_tests)
 endif()
 
 # --- Public ABI / DLL testleri ---
@@ -109,4 +136,4 @@ set_target_warnings(sdl_painter_abi_tests)
 set_target_sanitizers(sdl_painter_abi_tests)
 
 sdlpainter_copy_runtime_dlls(sdl_painter_abi_tests)
-gtest_add_tests(TARGET sdl_painter_abi_tests)
+sdlpainter_register_gtests(sdl_painter_abi_tests)

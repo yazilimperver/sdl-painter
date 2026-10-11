@@ -39,7 +39,6 @@
 
 #include <array>
 #include <cstdint>
-#include <cstring>
 #include <gtest/gtest.h>
 #include <memory>
 #include <vector>
@@ -341,39 +340,20 @@ std::array<int32_t, 4> ObserveRendererSurface(IRenderer& renderer) {
 /// @brief Kare cizer, sonra renderer'in yuzeyinin pencere boyutunda oldugunu
 ///        dogrular.
 ///
-/// Vulkan'da swapchain yeniden olusturma, boyut karsilastirmasiyla degil
-/// surucunun bildirdigiyle tetiklenir: vkAcquireNextImageKHR ya da
-/// vkQueuePresentKHR OUT_OF_DATE/SUBOPTIMAL doner (bkz. AcquireNextImage ve
-/// SubmitAndPresent). Bu yuzden kac karede olacagi bilinmez; yuzey boyutu
-/// uyana kadar en fazla kMaxFrames kare cizilir ve iddia ondan sonra yapilir.
-/// Swapchain hic yeniden olusmazsa kMaxFrames sonunda da eski boyut kalir ve
-/// iddia kirmizi olur. OpenGL'de viewport Painter::SetDrawableSize ile aninda
-/// guncellenir, ilk karede uyar.
-///
-/// SDL "offscreen" video surucusunde yuzey OUT_OF_DATE/SUBOPTIMAL hic
-/// bildirmez; pencere degisse de swapchain eski boyutunda kalir. Windows CI
-/// de SDL_VIDEODRIVER=offscreen ile kosar (bkz. .github/workflows/ci.yml); bu
-/// yuzden `after_resize` iken Vulkan extent iddiasi orada atlanir ve test
-/// ozelligine yazilir. Vulkan yeniden olusturma bu iddiayla CI'da hicbir
-/// yerde yurumez, yalnizca gercek pencereli makinede kosar. Baslangic
-/// boyutu iddiasi (`after_resize` yanlis) ve OpenGL viewport iddiasi her
-/// ortamda yapilir.
+/// Vulkan'da swapchain'i VulkanRenderer::BeginFrame, pencerenin piksel
+/// boyutu degistiginde yeniden olusturur; surucunun OUT_OF_DATE/SUBOPTIMAL
+/// bildirmesine guvenilmez. SDL "offscreen" video surucusunun headless
+/// yuzeyi bunlari hic bildirmez; bu iddia orada da kosar ve boyut
+/// karsilastirmasi gerilerse kirmizi olur. Yuzeyin yeni boyutu gec bildirdigi
+/// platformlarda yeniden olusturma birkac kare surebilir; yuzey boyutu uyana
+/// kadar en fazla kMaxFrames kare cizilir ve iddia ondan sonra yapilir.
+/// OpenGL'de viewport Painter::SetDrawableSize ile aninda guncellenir, ilk
+/// karede uyar.
 void DrawFramesAndExpectSurface(Painter& painter, IRenderer& renderer,
-                                const Image& image, bool after_resize,
-                                int32_t width, int32_t height) {
+                                const Image& image, int32_t width,
+                                int32_t height) {
   constexpr int32_t kMaxFrames = 8;
   const std::array<int32_t, 4> kExpected = {0, 0, width, height};
-  if (after_resize && renderer.GetBackend() == RendererBackend::kVulkan) {
-    const char* const kVideoDriver = SDL_GetCurrentVideoDriver();
-    if (kVideoDriver != nullptr &&
-        std::strcmp(kVideoDriver, "offscreen") == 0) {
-      DrawBusyFrame(painter, image, nullptr);
-      ::testing::Test::RecordProperty(
-          "vulkan_extent_assertion",
-          "skipped: offscreen video driver does not report OUT_OF_DATE");
-      return;
-    }
-  }
   for (int32_t i = 0; i < kMaxFrames; ++i) {
     DrawBusyFrame(painter, image, nullptr);
     if (ObserveRendererSurface(renderer) == kExpected) {
@@ -435,13 +415,13 @@ void RunFramesAcrossResize(RendererBackend backend) {
   };
 
   ASSERT_NO_FATAL_FAILURE(DrawFramesAndExpectSurface(
-      painter, renderer, image, false, kInitialWidth, kInitialHeight));
+      painter, renderer, image, kInitialWidth, kInitialHeight));
   ASSERT_TRUE(resize_to(192, 144)) << "Pencere buyutulemedi.";
   ASSERT_NO_FATAL_FAILURE(
-      DrawFramesAndExpectSurface(painter, renderer, image, true, 192, 144));
+      DrawFramesAndExpectSurface(painter, renderer, image, 192, 144));
   ASSERT_TRUE(resize_to(64, 48)) << "Pencere kucultulemedi.";
   ASSERT_NO_FATAL_FAILURE(
-      DrawFramesAndExpectSurface(painter, renderer, image, true, 64, 48));
+      DrawFramesAndExpectSurface(painter, renderer, image, 64, 48));
 }
 
 /// @brief Pencereli Painter kurucusuyla yeniden boyutlandirip kare cizer.
@@ -538,5 +518,91 @@ INSTANTIATE_TEST_SUITE_P(
     [](const ::testing::TestParamInfo<RendererBackend>& i) {
       return i.param == RendererBackend::kOpenGL ? "OpenGL" : "Vulkan";
     });
+
+#ifdef SDLPAINTER_HAS_VULKAN
+/// Painter'a verilen ozel viewport, pencere buyuyup swapchain yeniden
+/// olusturuldugunda korunmali; Painter onu yalniz boyut degisiminde,
+/// BeginFrame'den once gonderir. ResetViewport'tan sonra ise viewport yine
+/// yuzeyi izlemeli. Ekran okunamadigi icin renderer'in yururlukteki viewport'u
+/// gozlenir. Kare bilerek sade: DrawBusyFrame'deki hedef gecisi
+/// (ResetRenderTarget) viewport'u kare icinde yeniden gonderip hatayi
+/// gizlerdi.
+TEST(FrameRenderVulkan, CustomViewportSurvivesWindowResize) {
+  const sdl_painter::testing::ValidationGuard guard;
+  constexpr int32_t kInitialWidth = 128;
+  constexpr int32_t kInitialHeight = 96;
+  const sdl_painter::testing::HiddenWindow window(
+      RendererBackend::kVulkan, kInitialWidth, kInitialHeight);
+  if (window.Get() == nullptr) {
+    SDLPAINTER_BACKEND_UNAVAILABLE(std::string("Pencere olusturulamadi: ") +
+                                   window.Error());
+  }
+  std::unique_ptr<IRenderer> owned =
+      sdl_painter::CreateRenderer(RendererBackend::kVulkan);
+  if (owned == nullptr) {
+    SDLPAINTER_BACKEND_UNAVAILABLE("Renderer olusturulamadi.");
+  }
+  if (!owned->Initialize(window.Get())) {
+    SDLPAINTER_BACKEND_UNAVAILABLE(
+        "Backend baslatilamadi (uygun surucu/ICD yok olabilir).");
+  }
+  const auto& vulkan = static_cast<const sdl_painter::VulkanRenderer&>(*owned);
+  Painter painter(std::move(owned), kInitialWidth, kInitialHeight);
+  SDL_Window* const sdl_window = window.Get();
+
+  const auto draw_frame = [&painter]() {
+    painter.Begin();
+    painter.Clear(Color{18, 18, 28, 255});
+    painter.SetBrush(Brush(Color{60, 120, 200, 255}));
+    painter.FillRect(4.0F, 4.0F, 40.0F, 24.0F);
+    painter.End();
+  };
+  // Yuzeyin yeni boyutu gec bildirdigi platformlar icin birkac kare tanir.
+  const auto draw_until_extent = [&draw_frame, &vulkan](uint32_t width,
+                                                        uint32_t height) {
+    constexpr int32_t kMaxFrames = 8;
+    for (int32_t i = 0; i < kMaxFrames; ++i) {
+      draw_frame();
+      const VkExtent2D kExtent = vulkan.GetSwapchainExtent();
+      if (kExtent.width == width && kExtent.height == height) {
+        return true;
+      }
+    }
+    return false;
+  };
+  const auto resize_to = [&painter, sdl_window](int32_t width, int32_t height) {
+    SDL_SetWindowSize(sdl_window, width, height);
+    SDL_SyncWindow(sdl_window);
+    int32_t pixel_width = 0;
+    int32_t pixel_height = 0;
+    SDL_GetWindowSizeInPixels(sdl_window, &pixel_width, &pixel_height);
+    if (pixel_width != width || pixel_height != height) {
+      return false;
+    }
+    painter.SetDrawableSize(width, height);
+    return true;
+  };
+
+  const std::array<int32_t, 4> kCustom = {8, 8, 64, 48};
+  painter.SetViewport(kCustom[0], kCustom[1], kCustom[2], kCustom[3]);
+  draw_frame();
+  EXPECT_EQ(vulkan.GetViewport(), kCustom);
+
+  ASSERT_TRUE(resize_to(192, 144)) << "Pencere buyutulemedi.";
+  // Swapchain yeniden olusturulmadiysa asagidaki iddia bos gecerdi.
+  ASSERT_TRUE(draw_until_extent(192, 144))
+      << "Swapchain yeni pencere boyutuna yeniden olusturulmadi.";
+  draw_frame();
+  EXPECT_EQ(vulkan.GetViewport(), kCustom)
+      << "Swapchain yeniden olusturulurken ozel viewport ezildi.";
+
+  painter.ResetViewport();
+  ASSERT_TRUE(resize_to(64, 48)) << "Pencere kucultulemedi.";
+  ASSERT_TRUE(draw_until_extent(64, 48))
+      << "Swapchain yeni pencere boyutuna yeniden olusturulmadi.";
+  const std::array<int32_t, 4> kFullSurface = {0, 0, 64, 48};
+  EXPECT_EQ(vulkan.GetViewport(), kFullSurface);
+}
+#endif
 
 }  // namespace

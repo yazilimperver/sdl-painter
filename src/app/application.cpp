@@ -8,6 +8,7 @@
 #include <spdlog/spdlog.h>
 
 #include "app/event_translator.h"
+#include "app/frame_timing.h"
 #include "app/stats_overlay.h"
 
 #ifdef _WIN32
@@ -33,17 +34,6 @@ void InitDefaultLogger() {
   logger->set_level(spdlog::level::trace);
   spdlog::set_default_logger(logger);
 }
-
-/// @brief Ardışık frame'ler arası azami delta zaman (nanosaniye).
-/// Debugger duraklaması / pencere sürüklemesi gibi büyük sıçramaları sınırlar
-/// ("spiral of death" koruması).
-constexpr uint64_t kMaxDeltaNs = 250'000'000ULL;  // 0.25 s
-
-/// @brief kFixed modda bir frame'de izin verilen azami sabit güncelleme sayısı.
-constexpr int32_t kMaxFixedStepsPerFrame = 5;
-
-/// @brief Saniyedeki nanosaniye.
-constexpr uint64_t kNsPerSecond = 1'000'000'000ULL;
 
 }  // namespace
 
@@ -211,31 +201,28 @@ void Application::ProcessEvents() {
         break;
 
       case SDL_EVENT_MOUSE_BUTTON_DOWN:
-        OnMouseButtonDown(MouseButtonEvent{
-            internal::TranslateMouseButton(event.button.button),
-            event.button.x * mPixelDensity, event.button.y * mPixelDensity,
-            event.button.clicks});
+        OnMouseButtonDown(internal::MakeMouseButtonEvent(
+            event.button.button, event.button.x, event.button.y,
+            event.button.clicks, mPixelDensity));
         break;
 
       case SDL_EVENT_MOUSE_BUTTON_UP:
-        OnMouseButtonUp(MouseButtonEvent{
-            internal::TranslateMouseButton(event.button.button),
-            event.button.x * mPixelDensity, event.button.y * mPixelDensity,
-            event.button.clicks});
+        OnMouseButtonUp(internal::MakeMouseButtonEvent(
+            event.button.button, event.button.x, event.button.y,
+            event.button.clicks, mPixelDensity));
         break;
 
       case SDL_EVENT_MOUSE_MOTION:
-        OnMouseMove(MouseMoveEvent{event.motion.x * mPixelDensity,
-                                   event.motion.y * mPixelDensity,
-                                   event.motion.xrel * mPixelDensity,
-                                   event.motion.yrel * mPixelDensity});
+        OnMouseMove(internal::MakeMouseMoveEvent(
+            event.motion.x, event.motion.y, event.motion.xrel,
+            event.motion.yrel, mPixelDensity));
         break;
 
       case SDL_EVENT_MOUSE_WHEEL:
         // dx/dy tekerlek adimidir, konum degil: olceklenmez.
-        OnMouseWheel(MouseWheelEvent{event.wheel.x, event.wheel.y,
-                                     event.wheel.mouse_x * mPixelDensity,
-                                     event.wheel.mouse_y * mPixelDensity});
+        OnMouseWheel(internal::MakeMouseWheelEvent(
+            event.wheel.x, event.wheel.y, event.wheel.mouse_x,
+            event.wheel.mouse_y, mPixelDensity));
         break;
 
       // Piksel boyutu değişimi hem yeniden boyutlandırmada hem de pencere
@@ -288,16 +275,15 @@ int Application::Run() {
 
   // kFixed modda sabit adım süresi; kVariable'da 0 (devre dışı).
   const uint64_t fixed_step_ns =
-      (mConfig.timing == TimingMode::kFixed && mConfig.fixed_update_hz > 0)
-          ? kNsPerSecond / static_cast<uint64_t>(mConfig.fixed_update_hz)
-          : 0;
+      app_detail::FixedStepNs(mConfig.timing, mConfig.fixed_update_hz);
   const bool fixed = fixed_step_ns > 0;
   const float fixed_step_dt =
       fixed ? 1.0F / static_cast<float>(mConfig.fixed_update_hz) : 0.0F;
   // target_fps freni için asgari kare süresi; 0 = fren yok.
   const uint64_t frame_min_ns =
       (mConfig.target_fps > 0)
-          ? kNsPerSecond / static_cast<uint64_t>(mConfig.target_fps)
+          ? app_detail::kNsPerSecond /
+                static_cast<uint64_t>(mConfig.target_fps)
           : 0;
 
   uint64_t lag_ns = 0;
@@ -308,26 +294,18 @@ int Application::Run() {
     ProcessEvents();
 
     const uint64_t now_ns = SDL_GetTicksNS();
-    uint64_t elapsed_ns = now_ns - mLastTickNs;
+    const uint64_t elapsed_ns = app_detail::ClampFrameDelta(now_ns - mLastTickNs);
     mLastTickNs = now_ns;
-    if (elapsed_ns > kMaxDeltaNs) {
-      elapsed_ns = kMaxDeltaNs;
-    }
 
     float alpha = 1.0F;
     if (fixed) {
-      lag_ns += elapsed_ns;
-      int32_t steps = 0;
-      while (lag_ns >= fixed_step_ns && steps < kMaxFixedStepsPerFrame) {
+      const app_detail::FixedStepResult kStep =
+          app_detail::AdvanceFixedStep(lag_ns, elapsed_ns, fixed_step_ns);
+      for (int32_t i = 0; i < kStep.steps; ++i) {
         OnUpdate(fixed_step_dt);
-        lag_ns -= fixed_step_ns;
-        ++steps;
       }
-      // Catch-up üst sınırına ulaşıldıysa biriken artık zamanı düşür.
-      if (steps == kMaxFixedStepsPerFrame) {
-        lag_ns = 0;
-      }
-      alpha = static_cast<float>(lag_ns) / static_cast<float>(fixed_step_ns);
+      lag_ns = kStep.lag_ns;
+      alpha = kStep.alpha;
     } else {
       OnUpdate(static_cast<float>(elapsed_ns) * 1e-9F);
     }

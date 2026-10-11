@@ -75,6 +75,10 @@ test:unit:
     SDL_VIDEODRIVER: "offscreen"
     # Font yoksa metin testleri sessizce atlanmasin, HATA versin.
     SDLPAINTER_REQUIRE_FONT: "1"
+    # Backend kurulamazsa GPU testleri SKIP yerine HATA versin.
+    SDLPAINTER_REQUIRE_BACKEND: "1"
+    # Debug + Vulkan: validation katmani etkin degilse Vulkan testleri HATA versin.
+    SDLPAINTER_REQUIRE_VALIDATION: "1"
   script:
     - |
       # Metin testleri gercek bir TTF ister; imaj yeniden derlenene kadar burada kurulur.
@@ -109,6 +113,8 @@ test:unit:asan:
     SDL_VIDEODRIVER: "offscreen"
     # Font yoksa metin testleri sessizce atlanmasin, HATA versin.
     SDLPAINTER_REQUIRE_FONT: "1"
+    # Backend kurulamazsa GPU testleri SKIP yerine HATA versin.
+    SDLPAINTER_REQUIRE_BACKEND: "1"
   script:
     - |
       # Metin testleri gercek bir TTF ister; imaj yeniden derlenene kadar burada kurulur.
@@ -152,6 +158,10 @@ quality:coverage:
     SDL_VIDEODRIVER: "offscreen"
     # Font yoksa metin testleri sessizce atlanmasin, HATA versin.
     SDLPAINTER_REQUIRE_FONT: "1"
+    # Backend kurulamazsa GPU testleri SKIP yerine HATA versin.
+    SDLPAINTER_REQUIRE_BACKEND: "1"
+    # Debug + Vulkan: validation katmani etkin degilse Vulkan testleri HATA versin.
+    SDLPAINTER_REQUIRE_VALIDATION: "1"
   script:
     - |
       # Metin testleri gercek bir TTF ister; imaj yeniden derlenene kadar burada kurulur.

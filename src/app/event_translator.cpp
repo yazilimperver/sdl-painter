@@ -107,4 +107,24 @@ MouseButton TranslateMouseButton(uint8_t sdl_button) noexcept {
   }
 }
 
+MouseButtonEvent MakeMouseButtonEvent(uint8_t sdl_button, float x, float y,
+                                      uint8_t clicks,
+                                      float pixel_density) noexcept {
+  return MouseButtonEvent{TranslateMouseButton(sdl_button), x * pixel_density,
+                          y * pixel_density, clicks};
+}
+
+MouseMoveEvent MakeMouseMoveEvent(float x, float y, float xrel, float yrel,
+                                  float pixel_density) noexcept {
+  return MouseMoveEvent{x * pixel_density, y * pixel_density,
+                        xrel * pixel_density, yrel * pixel_density};
+}
+
+MouseWheelEvent MakeMouseWheelEvent(float dx, float dy, float mouse_x,
+                                    float mouse_y,
+                                    float pixel_density) noexcept {
+  return MouseWheelEvent{dx, dy, mouse_x * pixel_density,
+                         mouse_y * pixel_density};
+}
+
 }  // namespace sdl_painter::internal

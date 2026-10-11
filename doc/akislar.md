@@ -345,6 +345,9 @@ sequenceDiagram
     participant Pres as Presentation Engine
 
     P->>VR: BeginFrame()
+    opt pencere piksel boyutu ≠ mRequestedExtent
+        VR->>SC: Recreate(w, h)
+    end
     VR->>FS: vkWaitForFences(inFlight[currentFrame])
     VR->>FS: vkResetFences(inFlight[currentFrame])
     VR->>SC: vkAcquireNextImageKHR(swapchain, imageAvailable[currentFrame])
@@ -373,10 +376,19 @@ sequenceDiagram
     VR->>VR: currentFrame = (currentFrame + 1) % kMaxFramesInFlight (=2)
 ```
 
-**Out-of-date handling:** Pencere yeniden boyutlandığında swapchain
-geçersizleşir. `AcquireNextImage` veya `QueuePresent` `OUT_OF_DATE` döner;
-`VulkanRenderer` swapchain'i `Recreate` ile yeniden oluşturur. Painter
-bu detaydan haberdar olmaz.
+**Out-of-date handling:** Swapchain iki yoldan yeniden oluşturulur.
+Birincisi `BeginFrame`'deki boyut kontrolüdür: yüzey çizilebilir durumdaysa
+pencerenin piksel boyutu (`SDL_GetWindowSizeInPixels`) swapchain'in son
+başarılı oluşumndan istenen boyutla (`mRequestedExtent`) karşılaştırılır,
+farklıysa swapchain image alınmadan önce `Recreate` ile yeniden oluşturulur.
+Bu kontrol gereklidir: `currentExtent` değerini 0xFFFFFFFF bildiren
+yüzeylerde (Wayland, SDL `offscreen` sürücüsünün headless yüzeyi) yüzeyin
+boyutunu swapchain belirler ve sürücü pencere değişince `OUT_OF_DATE`
+bildirmek zorunda değildir. İkincisi sürücü bildirimidir:
+`AcquireNextImage` `OUT_OF_DATE`, `QueuePresent` `OUT_OF_DATE` ya da
+`SUBOPTIMAL` dönerse `VulkanRenderer` swapchain'i yine `Recreate` ile yeniden
+oluşturur. Yüzey 0x0 ise (simge durumu) kare atlanır ve yeniden oluşturma
+pencere geri gelene kadar ertelenir. Painter bu detaydan haberdar olmaz.
 
 ---
 

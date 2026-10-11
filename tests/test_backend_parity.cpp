@@ -381,13 +381,6 @@ TEST(BackendParity, SameBackendIsDeterministic) {
   EXPECT_EQ(first, second);
 }
 
-#else
-
-TEST(BackendParity, SkippedWithoutVulkan) {
-  GTEST_SKIP() << "Vulkan backend derlenmedi; karsilastiracak ikinci backend "
-                  "yok (-o \"&:with_vulkan=True\" ile derleyin).";
-}
-
 #endif  // SDLPAINTER_HAS_VULKAN
 
 }  // namespace

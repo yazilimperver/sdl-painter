@@ -79,6 +79,56 @@
   GLAD başarısız olursa `Initialize` context'i bırakmadan `false` dönüyor,
   yıkım ise yüklenmemiş (null) bir GL fonksiyonunu çağırıyordu. Context artık
   hata anında bırakılıyor.
+- **Vulkan'da pencere yeniden boyutlandırılınca swapchain bazı yüzeylerde
+  eski boyutunda kalıyordu.** Yeniden oluşturma yalnızca sürücünün
+  `VK_ERROR_OUT_OF_DATE_KHR` ya da `VK_SUBOPTIMAL_KHR` bildirmesine bağlıydı;
+  yüzey boyutunu swapchain'in belirlediği yüzeyler (`currentExtent`
+  0xFFFFFFFF) bunu bildirmek zorunda değil. SDL `offscreen` sürücüsünün
+  headless yüzeyinde (Linux, lavapipe) `currentExtent` 0xFFFFFFFF ölçüldü ve
+  pencere 128x96'dan 192x144'e büyürken swapchain 128x96'da kaldı. Wayland
+  aynı sınıftadır: WSLg'nin Wayland yüzeyi de 0xFFFFFFFF bildiriyor (yeniden
+  boyutlandırma hatası Wayland'de ayrıca ölçülmedi). Windows'ta (NVIDIA)
+  sürücü OUT_OF_DATE bildirdiği için görülmüyordu. `BeginFrame` artık
+  pencerenin piksel boyutunu her karede swapchain'in son inşasında istenen
+  boyutla karşılaştırıyor ve farklıysa swapchain'i image alınmadan önce
+  yeniden oluşturuyor.
+- **Vulkan'da swapchain yeniden oluşturulurken özel viewport eziliyordu.**
+  Yeniden oluşturma viewport'un genişlik ve yüksekliğini her seferinde yeni
+  extent'e yazıyordu; Painter'ın aynı karede `BeginFrame`'den önce gönderdiği
+  özel viewport kayboluyordu. 1.3.0'daki "Yeniden boyutlandırma, kullanıcının
+  seçtiği viewport'u ezmiyor" ifadesi Vulkan'ın bu yolunda geçerli değildi.
+  Hata Windows'ta sürücünün OUT_OF_DATE bildirdiği yolda da vardı; yukarıdaki
+  swapchain düzeltmesi onu Wayland ve headless yüzeylerde her boyut
+  değişimine yaymıştı. Artık `SetViewport` ile verilmiş viewport yeniden
+  oluşturmada korunuyor (OpenGL'deki `glViewport` gibi); hiç verilmediyse
+  viewport yüzeyi izlemeye devam ediyor. `IRenderer`'ı doğrudan kullanıp
+  `SetViewport`'u bir kez çağıran kod, viewport'un yeni extent'i izlemesini
+  artık görmez.
+
+- **Ekran üstü gösterge uygulamanın karışım moduyla çiziliyordu.**
+  `StatsOverlay` opaklığı ve dönüşümü kendi çizimi için sıfırlıyor ama
+  karışım modunu ayarlamıyordu; uygulama `kMultiply` ya da `kNone`
+  kullanıyorsa panel sahneyi karartıyor ya da opak siyah blok oluyordu.
+  Gösterge artık `Save`/`Restore` arasında `BlendMode::kAlpha` ile çiziliyor;
+  uygulamanın modu çizimden sonra geri geliyor.
+
+### Eklendi
+
+- **`SDLPAINTER_REQUIRE_VALIDATION` sözleşmesi:** ortam değişkeni ayarlıyken
+  (boş ya da `0` değilse) Vulkan bağlamı kuran bir testte validation tam
+  etkin değilse (kütüphane Release derlenmiş, `VK_LAYER_KHRONOS_validation`
+  katmanı yok ya da debug messenger kurulamadı) test **düşüyor**. Yalnızca
+  Debug derlemede anlamlıdır; Release'de ayarlanırsa Vulkan testleri
+  atlanmaz, düşer.
+- **Linux CI'da GPU testleri sessizce atlanamıyor:** iki pipeline'da
+  `test:unit`, `test:unit:asan` ve `quality:coverage` işlerinde
+  `SDLPAINTER_REQUIRE_BACKEND=1`; backend kurulamazsa GPU testleri SKIP
+  yerine düşüyor. Debug + Vulkan işlerinde (`test:unit`, `quality:coverage`)
+  `SDLPAINTER_REQUIRE_VALIDATION=1` de açık.
+- **CI imajı `ci-v1.1`:** Dockerfile'ın `ci` aşamasına Vulkan validation
+  katmanı (`vulkan-validationlayers`) eklendi; GitHub Actions'ın Linux işleri
+  `yazilimperver/sdl-painter:ci-v1.1` kullanıyor. GitLab etiketsiz
+  `$CI_REGISTRY_IMAGE` kullandığı için imaj orada yeniden push edilmeli.
 
 ### Değişti
 
@@ -89,9 +139,33 @@
   `Painter::PushTexturedQuad` dokulu dörtgeni elle kurmak yerine
   `Tessellator::TessellateTexturedRect` kullanacak hale getirildi.
 - `.claude/rules/shaders.md` tek kaynak kuralına çevrildi.
+- CTest test kaydı `gtest_add_tests` yerine
+  `gtest_discover_tests(DISCOVERY_MODE PRE_TEST)` ile yapılıyor. CTest
+  kayıtları artık derlenmiş testlerle birebir (Windows'ta 716 = 696 + 20, önce
+  652): `TEST_P` örnekleri ayrı kayıt, derlenmeyen testler için boş "Passed"
+  kayıt yok, atlanan testler "Skipped" görünüyor. Çapraz derlemede (MinGW)
+  eski yol korunuyor. Yer tutucu `BackendParity.SkippedWithoutVulkan`
+  kaldırıldı.
+- Vulkan validation mesajları log'a mesaj kimliğiyle (VUID) birlikte
+  yazılıyor. Katmanın 1.4 sürümleri kimliği mesaj metnine artık koymuyor; CI
+  log'unda hatanın hangi kurala takıldığı görünsün diye kimlik, metinde yoksa
+  başa ekleniyor.
+- Conan kaynak export'una kök dizindeki `sdl-logo-small.png` eklendi.
+  `ImageLoadFile.LoadsProjectLogo` bu dosyayı okuyor; testlerle
+  `conan create` yapıldığında dosya pakette olmadığı için test düşerdi.
 
 ### Test
 
+- `Application` ve ekran üstü gösterge testleri (`test_application.cpp`,
+  `test_stats_overlay.cpp`): sabit adım zamanlaması (delta sınırı, kare başına
+  adım sınırı, artık zaman, alpha), yaşam döngüsü sırası, tek seferlik `Run`,
+  başarısız `OnInit`, gösterge tuşu, ham olay tüketimi, olay alanlarının
+  iletimi, FPS örneklemesi ve göstergenin Painter durumunu geri yüklemesi.
+  Zamanlama hesabı (`app/frame_timing.h`) ve fare olayı çevirisi
+  (`event_translator`) bunun için `Run`/`ProcessEvents` içinden dahili saf
+  fonksiyonlara çıkarıldı; davranış değişmedi. HiDPI ölçeklemesi (konum ve
+  hareket yoğunlukla çarpılır, tekerlek adımı çarpılmaz) bu fonksiyonlar
+  üzerinden yoğunluk 2 ile sınanıyor.
 - Yeni regresyon testleri: `FreshTargetStartsTransparent`,
   `LargeFrameKeepsAllGeometry`, `ClearIgnoresClipRect` (üçü de iki backend
   için), `DestroyingActiveTargetRestoresScreenState`,

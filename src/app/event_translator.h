@@ -21,4 +21,25 @@ KeyModifier TranslateModifiers(uint16_t sdl_mod) noexcept;
 /// @param sdl_button SDL_MouseButtonEvent::button (1=sol, 2=orta, 3=sağ, ...).
 MouseButton TranslateMouseButton(uint8_t sdl_button) noexcept;
 
+/// @brief SDL fare düğmesi olayının alanlarından @ref MouseButtonEvent kur.
+/// @param pixel_density Pencerenin piksel yoğunluğu; mantıksal konum bununla
+///        çarpılarak çizim (piksel) koordinatına çevrilir.
+MouseButtonEvent MakeMouseButtonEvent(uint8_t sdl_button, float x, float y,
+                                      uint8_t clicks,
+                                      float pixel_density) noexcept;
+
+/// @brief SDL fare hareketi olayının alanlarından @ref MouseMoveEvent kur.
+///
+/// Konum ve hareket farkı piksel yoğunluğuyla çarpılır.
+MouseMoveEvent MakeMouseMoveEvent(float x, float y, float xrel, float yrel,
+                                  float pixel_density) noexcept;
+
+/// @brief SDL tekerlek olayının alanlarından @ref MouseWheelEvent kur.
+///
+/// Fare konumu piksel yoğunluğuyla çarpılır; `dx`/`dy` tekerlek adımıdır,
+/// konum değil, ölçeklenmez.
+MouseWheelEvent MakeMouseWheelEvent(float dx, float dy, float mouse_x,
+                                    float mouse_y,
+                                    float pixel_density) noexcept;
+
 }  // namespace sdl_painter::internal

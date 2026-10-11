@@ -73,7 +73,7 @@ Doxygen configuration and comment conventions:
 ## CI/CD
 
 The primary pipeline is **GitHub Actions** (`.github/workflows/ci.yml`). Linux
-jobs run in the prebuilt Docker Hub image (`yazilimperver/sdl-painter:ci-v1.0`);
+jobs run in the prebuilt Docker Hub image (`yazilimperver/sdl-painter:ci-v1.1`);
 Windows jobs run on a native MSVC runner.
 
 | Job | Environment | What it does |
@@ -103,6 +103,24 @@ Notes worth knowing before touching CI:
 - **SPIR-V is compared through a manifest, not by recompiling.** The CI image has
   no `glslc`; `cmake -P cmake/CheckShaderFreshness.cmake` re-hashes the GLSL
   sources and compares them against `src/vulkan/shaders/spirv/sources.sha256`.
+
+### Test environment variables
+
+GPU, font and validation dependent tests skip quietly when their prerequisite
+is missing, so a local run on a machine without a GPU still passes. CI sets the
+variables below to turn those silent skips into failures. Each one is on when
+set to anything other than empty or `0`.
+
+| Variable | When set | Set in CI |
+|----------|----------|-----------|
+| `SDLPAINTER_REQUIRE_FONT` | A test that needs a system TTF font fails instead of skipping when none is found or it cannot be loaded | Linux test jobs |
+| `SDLPAINTER_REQUIRE_BACKEND` | A test that needs a real OpenGL or Vulkan backend fails instead of skipping when the window, renderer or `Initialize` fails. Backends that are not compiled in are never required | `test:unit`, `test:unit:asan`, `quality:coverage` |
+| `SDLPAINTER_REQUIRE_VALIDATION` | A test that creates a Vulkan context fails unless the Vulkan validation layer is fully active (Debug build, layer found, debug messenger created); the message names the reason. Only meaningful in Debug builds: in Release the library never enables validation, so every Vulkan test fails | `test:unit`, `quality:coverage` (Debug, Vulkan on) |
+
+`SDLPAINTER_REQUIRE_BACKEND` is not set on the Windows job, where the `offscreen`
+driver cannot load EGL. To reproduce the Linux CI test job locally, install the
+validation layer (`vulkan-validationlayers` on Debian/Ubuntu) and run with all
+three variables set plus `SDL_VIDEODRIVER=offscreen`.
 
 The repository also contains a `.gitlab-ci.yml` for the GitLab mirror. Both
 pipelines now run the **same 15 jobs** — including the packaging path

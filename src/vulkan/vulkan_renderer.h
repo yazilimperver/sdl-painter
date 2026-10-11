@@ -82,6 +82,15 @@ class VulkanRenderer final : public IRenderer {
     return mSwapchain != nullptr ? mSwapchain->GetExtent() : VkExtent2D{0, 0};
   }
 
+  /// @brief Yürürlükteki viewport: {x, y, genişlik, yükseklik} (piksel).
+  ///
+  /// Test ve tanılama içindir, public API'nin parçası değildir. Yan etkisizdir:
+  /// swapchain yeniden oluşturulduğunda @ref SetViewport ile verilen
+  /// viewport'un korunup korunmadığını gözlemlemeye yarar.
+  [[nodiscard]] std::array<int32_t, 4> GetViewport() const {
+    return {mViewportX, mViewportY, mViewportW, mViewportH};
+  }
+
  private:
   /// @brief Kare içinde büyüyebilen vertex ring'i — zincirlenmiş tamponlar.
   ///
@@ -107,8 +116,10 @@ class VulkanRenderer final : public IRenderer {
 
   /// @brief Swapchain'i yeniden inşa et; yüzey 0x0 ise işlemi ertele.
   ///
-  /// Simge durumuna küçültülmüş pencerede swapchain oluşturulamaz. Böyle bir
-  /// durumda yalnızca @ref mSwapchainNeedsRecreate işaretlenir ve pencere geri
+  /// Sürücü OUT_OF_DATE/SUBOPTIMAL bildirdiğinde çağrılır. Pencere boyutu
+  /// değişimini ise @ref BeginFrame kendisi yakalar. Simge durumuna
+  /// küçültülmüş pencerede swapchain oluşturulamaz. Böyle bir durumda
+  /// yalnızca @ref mSwapchainNeedsRecreate işaretlenir ve pencere geri
   /// geldiğinde @ref BeginFrame yeniden dener.
   void RecreateSwapchainOrDefer();
 
@@ -147,8 +158,16 @@ class VulkanRenderer final : public IRenderer {
   uint32_t mCurrentImageIndex{0};  // vkAcquireNextImageKHR'dan dönen index
   bool mFrameActive{false};
   bool mSwapchainOutOfDate{false};
-  /// @brief Swapchain yeniden inşa edilmeyi bekliyor (pencere 0x0 idi).
+  /// @brief Swapchain yeniden inşa edilmeyi bekliyor (pencere 0x0 idi,
+  ///        boyutu değişti ya da önceki deneme başarısız oldu).
   bool mSwapchainNeedsRecreate{false};
+  /// @brief Swapchain'in son başarılı inşasında istenen pencere boyutu.
+  ///
+  /// @ref BeginFrame pencerenin piksel boyutunu bununla karşılaştırır.
+  /// Swapchain extent'iyle karşılaştırılmaz: extent kelepçelenmiş ya da
+  /// yüzeyin bildirdiği boyutta kalmış olabilir ve o zaman her karede
+  /// yeniden inşa edilirdi.
+  VkExtent2D mRequestedExtent{0, 0};
 
   // Aktif frame clear değeri — Clear() çağrısından EndFrame'e taşınır.
   VkClearValue mClearValue{};
@@ -157,6 +176,14 @@ class VulkanRenderer final : public IRenderer {
   int32_t mViewportY{0};
   int32_t mViewportW{0};
   int32_t mViewportH{0};
+  /// @brief Viewport @ref SetViewport ile en az bir kez verildi.
+  ///
+  /// Verilmediyse viewport yüzeyi izler: swapchain yeniden oluşturulunca yeni
+  /// extent'e çekilir. Verildiyse çağıranındır ve yeniden oluşturma onu
+  /// değiştirmez (OpenGL'deki glViewport gibi). Painter boyut değişiminde
+  /// viewport'u BeginFrame'den önce gönderir ve sonra tekrar göndermez; aynı
+  /// karedeki yeniden oluşturma onu ezseydi özel viewport kaybolurdu.
+  bool mViewportSetByCaller{false};
   bool mScissorEnabled{false};
   int32_t mScissorX{0};
   int32_t mScissorY{0};

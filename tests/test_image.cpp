@@ -1,12 +1,11 @@
-#include <gtest/gtest.h>
+#include "sdl_painter/image.h"
+#include "sdl_painter/renderer.h"
 
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <gtest/gtest.h>
 #include <vector>
-
-#include "sdl_painter/image.h"
-#include "sdl_painter/renderer.h"
 
 using sdl_painter::Image;
 using sdl_painter::kInvalidTexture;
@@ -114,9 +113,8 @@ TEST(ImageCreateFromData, HandleIsInvalidBeforeUpload) {
 
 TEST(ImageCreateFromData, DataIsCopied) {
   constexpr int32_t w = 2, h = 2, ch = 4;
-  std::vector<uint8_t> pixels = {
-      255, 0, 0, 255,   0, 255, 0, 255,
-      0, 0, 255, 255,   255, 255, 0, 255};
+  std::vector<uint8_t> pixels = {255, 0, 0,   255, 0,   255, 0, 255,
+                                 0,   0, 255, 255, 255, 255, 0, 255};
   Image img = Image::CreateFromData(pixels.data(), w, h, ch);
   ASSERT_TRUE(img.IsValid());
   ASSERT_NE(img.RawData(), nullptr);
@@ -229,7 +227,7 @@ TEST(ImageRawData, NonNullForValidImage) {
 }
 
 TEST(ImageRawData, FirstPixelMatchesInput) {
-  std::vector<uint8_t> pixels = {10, 20, 30, 40,  0, 0, 0, 0};
+  std::vector<uint8_t> pixels = {10, 20, 30, 40, 0, 0, 0, 0};
   Image img = Image::CreateFromData(pixels.data(), 2, 1, 4);
   ASSERT_NE(img.RawData(), nullptr);
   EXPECT_EQ(img.RawData()[0], 10);

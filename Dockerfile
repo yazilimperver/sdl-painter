@@ -119,6 +119,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     mesa-vulkan-drivers \
     libvulkan1 \
     vulkan-tools \
+    # Vulkan validation katmani: Debug derlemede kutuphane
+    # VK_LAYER_KHRONOS_validation ister; katman yoksa validation sessizce kapali
+    # kalir. Testler SDLPAINTER_REQUIRE_VALIDATION=1 ile acik olmasini zorunlu kilar.
+    vulkan-validationlayers \
     && rm -rf /var/lib/apt/lists/*
 
 # Vulkan ICD'sini lavapipe'a sabitle. Bu sayede birden fazla ICD varsa belirsizliği

@@ -1,6 +1,6 @@
-#include <gtest/gtest.h>
-
 #include "sdl_painter/geometry.h"
+
+#include <gtest/gtest.h>
 
 namespace sdl_painter {
 
@@ -83,8 +83,8 @@ TEST(RectTest, Center) {
 
 TEST(RectTest, Contains) {
   Rect r(10.0f, 10.0f, 80.0f, 60.0f);
-  EXPECT_TRUE(r.Contains(50.0f, 40.0f));   // merkez
-  EXPECT_TRUE(r.Contains(10.0f, 10.0f));   // sol-üst köşe
+  EXPECT_TRUE(r.Contains(50.0f, 40.0f));  // merkez
+  EXPECT_TRUE(r.Contains(10.0f, 10.0f));  // sol-üst köşe
   EXPECT_TRUE(r.Contains(90.0f, 40.0f));
   EXPECT_TRUE(r.Contains(50.0f, 70.0f));
   EXPECT_FALSE(r.Contains(9.9f, 10.0f));   // sol dışında

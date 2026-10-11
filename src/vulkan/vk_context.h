@@ -10,16 +10,34 @@ namespace sdl_painter {
 namespace vk_detail {
 
 /// @brief Süreç başından beri raporlanan Vulkan validation hatası sayısı.
-///
-/// Debug messenger her `ERROR` seviyeli mesajda artırır. Var olma sebebi:
-/// validation mesajları yalnızca log'a yazılıyordu ve testler yeşil kalırken
-/// gerçek spec ihlalleri gözden kaçıyordu (render target çalışmasında bir
-/// render-pass uyumsuzluğu tam olarak böyle fark edildi). Testler bir bloğun
-/// öncesi/sonrası değerleri karşılaştırıp yeni hata çıkmadığını doğrular.
-///
-/// Sayaç süreç geneli ve iş parçacığı güvenlidir; validation kapalıysa
+/// Sayaç süreç geneli ve thread safedir; validation kapalıysa
 /// (release derlemesi, katman kurulu değil) daima 0 kalır.
 [[nodiscard]] uint64_t ValidationErrorCount() noexcept;
+
+/// @brief Kurulan bir Vulkan bağlamında validation'ın durumu.
+///
+/// Yalnızca `kEnabled`, `ValidationErrorCount()` sayacının o bağlamda
+/// gerçekten beslendiği anlamına gelir: katmanın kurulu olması yetmez,
+/// mesajları sayan debug messenger da kurulmuş olmalıdır.
+enum class ValidationState : uint8_t {
+  kEnabled,          ///< Debug derleme, katman açık, messenger kurulu.
+  kDisabledInBuild,  ///< Release (`NDEBUG`) derleme; tasarım gereği kapalı.
+  kLayerMissing,     ///< Debug derleme; `VK_LAYER_KHRONOS_validation` yok.
+  kMessengerFailed,  ///< Katman açık, ama debug messenger kurulamadı.
+  /// Durum değil, durum sayısı; sayaç dizisinin boyutu. Yeni durum bunun
+  /// önüne eklenir. `ContextCount`'a verilmez.
+  kCount,
+};
+
+/// @brief Süreç başından beri verilen validation durumuyla başarıyla kurulan
+///        Vulkan bağlamı sayısı.
+///
+/// `VkContext::Initialize()` başarıyla döndüğünde ilgili durumun sayacı bir
+/// artar; yarıda kalan kurulum sayılmaz. Testler bir bloğun öncesi/sonrası
+/// değerleri karşılaştırarak o blokta validation'sız bağlam kurulup
+/// kurulmadığını görür (`SDLPAINTER_REQUIRE_VALIDATION`). Yan etkisizdir;
+/// sayaçlar süreç geneli ve thread safedir.
+[[nodiscard]] uint64_t ContextCount(ValidationState state) noexcept;
 
 }  // namespace vk_detail
 

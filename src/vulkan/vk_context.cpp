@@ -4,7 +4,9 @@
 #include <SDL3/SDL_vulkan.h>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
+#include <cstddef>
 #include <cstring>
 #include <optional>
 #include <set>
@@ -28,6 +30,12 @@ constexpr bool kEnableValidationDefault = true;
 /// @brief Raporlanan validation hatasi sayaci (bkz. vk_detail::ValidationErrorCount).
 std::atomic<uint64_t> gValidationErrors{0};
 
+/// @brief Validation durumuna göre kurulan bağlam sayaçları (bkz.
+///        vk_detail::ContextCount); indis `ValidationState` değeridir.
+constexpr std::size_t kValidationStateCount =
+    static_cast<std::size_t>(vk_detail::ValidationState::kCount);
+std::array<std::atomic<uint64_t>, kValidationStateCount> gContextCounts{};
+
 VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(
     VkDebugUtilsMessageSeverityFlagBitsEXT severity,
     VkDebugUtilsMessageTypeFlagsEXT /*type*/,
@@ -35,15 +43,22 @@ VKAPI_ATTR VkBool32 VKAPI_CALL DebugMessengerCallback(
   if (data == nullptr || data->pMessage == nullptr) {
     return VK_FALSE;
   }
+  // Katmanın yeni sürümleri mesaj kimliğini (VUID) metne yazmıyor; kimlik
+  // metinde yoksa başa eklenir, CI log'undan hata ayırt edilebilsin.
+  const char* id = data->pMessageIdName;
+  const bool show_id = id != nullptr && id[0] != '\0' &&
+                       std::strstr(data->pMessage, id) == nullptr;
+  const char* id_text = show_id ? id : "";
+  const char* id_sep = show_id ? " " : "";
   if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT) {
     gValidationErrors.fetch_add(1, std::memory_order_relaxed);
-    spdlog::error("[Vulkan] {}", data->pMessage);
+    spdlog::error("[Vulkan] {}{}{}", id_text, id_sep, data->pMessage);
   } else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT) {
-    spdlog::warn("[Vulkan] {}", data->pMessage);
+    spdlog::warn("[Vulkan] {}{}{}", id_text, id_sep, data->pMessage);
   } else if (severity & VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT) {
-    spdlog::info("[Vulkan] {}", data->pMessage);
+    spdlog::info("[Vulkan] {}{}{}", id_text, id_sep, data->pMessage);
   } else {
-    spdlog::debug("[Vulkan] {}", data->pMessage);
+    spdlog::debug("[Vulkan] {}{}{}", id_text, id_sep, data->pMessage);
   }
   return VK_FALSE;
 }
@@ -102,6 +117,11 @@ uint64_t ValidationErrorCount() noexcept {
   return gValidationErrors.load(std::memory_order_relaxed);
 }
 
+uint64_t ContextCount(ValidationState state) noexcept {
+  return gContextCounts[static_cast<std::size_t>(state)].load(
+      std::memory_order_relaxed);
+}
+
 }  // namespace vk_detail
 
 VkContext::~VkContext() {
@@ -133,6 +153,17 @@ bool VkContext::Initialize(SDL_Window* window) {
   if (!CreateLogicalDevice()) {
     return false;
   }
+
+  vk_detail::ValidationState state = vk_detail::ValidationState::kEnabled;
+  if constexpr (!kEnableValidationDefault) {
+    state = vk_detail::ValidationState::kDisabledInBuild;
+  } else if (!mValidationEnabled) {
+    state = vk_detail::ValidationState::kLayerMissing;
+  } else if (mDebugMessenger == VK_NULL_HANDLE) {
+    state = vk_detail::ValidationState::kMessengerFailed;
+  }
+  gContextCounts[static_cast<std::size_t>(state)].fetch_add(
+      1, std::memory_order_relaxed);
 
   spdlog::info("VkContext initialized (validation={}).", mValidationEnabled);
   return true;

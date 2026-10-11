@@ -48,6 +48,7 @@ bool VulkanRenderer::Initialize(SDL_Window* window) {
   if (!mSwapchain->Initialize(mContext.get(), width, height)) {
     return false;
   }
+  mRequestedExtent = {width, height};
 
   mFrameSync = std::make_unique<VkFrameSync>();
   if (!mFrameSync->Initialize(mContext.get(), mSwapchain->GetImageCount())) {
@@ -233,8 +234,12 @@ void VulkanRenderer::RecreateSwapchainOrDefer() {
     mSwapchainNeedsRecreate = true;
     return;
   }
-  mViewportW = static_cast<int32_t>(mSwapchain->GetExtent().width);
-  mViewportH = static_cast<int32_t>(mSwapchain->GetExtent().height);
+  mRequestedExtent = {w, h};
+  // Çağıranın verdiği viewport korunur (bkz. mViewportSetByCaller).
+  if (!mViewportSetByCaller) {
+    mViewportW = static_cast<int32_t>(mSwapchain->GetExtent().width);
+    mViewportH = static_cast<int32_t>(mSwapchain->GetExtent().height);
+  }
   mSwapchainNeedsRecreate = false;
 }
 
@@ -285,15 +290,27 @@ void VulkanRenderer::BeginFrame() {
     return;
   }
 
+  // Pencere boyutu değişimi burada yakalanır. Sürücünün OUT_OF_DATE ya da
+  // SUBOPTIMAL bildirmesi buna yetmez: yüzey yeteneklerinde currentExtent
+  // 0xFFFFFFFF ise (Wayland, headless) yüzeyin boyutunu swapchain belirler,
+  // pencere değişince swapchain uyumsuz hale gelmez ve sürücü hiçbir şey
+  // bildirmek zorunda değildir.
+  uint32_t w = 0;
+  uint32_t h = 0;
+  QueryWindowDrawableSize(w, h);
+  if (w != mRequestedExtent.width || h != mRequestedExtent.height) {
+    mSwapchainNeedsRecreate = true;
+  }
+
   if (mSwapchainNeedsRecreate) {
-    uint32_t w = 0;
-    uint32_t h = 0;
-    QueryWindowDrawableSize(w, h);
     if (!mSwapchain->Recreate(w, h)) {
       return;
     }
-    mViewportW = static_cast<int32_t>(mSwapchain->GetExtent().width);
-    mViewportH = static_cast<int32_t>(mSwapchain->GetExtent().height);
+    mRequestedExtent = {w, h};
+    if (!mViewportSetByCaller) {
+      mViewportW = static_cast<int32_t>(mSwapchain->GetExtent().width);
+      mViewportH = static_cast<int32_t>(mSwapchain->GetExtent().height);
+    }
     mSwapchainNeedsRecreate = false;
   }
 
@@ -450,6 +467,7 @@ void VulkanRenderer::SetViewport(int32_t x, int32_t y, int32_t width,
   mViewportY = y;
   mViewportW = width;
   mViewportH = height;
+  mViewportSetByCaller = true;
   // Kare ortasında çağrıldıysa dinamik state'i hemen komut buffer'ına yaz;
   // aksi halde değişiklik bir sonraki BeginFrame'e kadar etkisiz kalır.
   if (mFrameActive) {

@@ -29,6 +29,8 @@ class SDLPainterConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
     exports_sources = (
         "CMakeLists.txt", "cmake/*", "include/*", "src/*", "examples/*", "tests/*", "LICENSE",
+        # ImageLoadFile.LoadsProjectLogo testi kok dizindeki logoyu okuyor.
+        "sdl-logo-small.png",
     )
 
     options = {

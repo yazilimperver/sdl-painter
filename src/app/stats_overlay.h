@@ -43,8 +43,10 @@ class StatsOverlay {
 
   /// @brief Göstergeyi çiz.
   ///
-  /// Painter durumunu (transform, clip, opaklık, kalem, fırça) bozmaz:
-  /// `Save()`/`Restore()` arasında çalışır.
+  /// Painter durumunu (transform, clip, opaklık, karışım modu, kalem, fırça,
+  /// font) bozmaz: `Save()`/`Restore()` arasında çalışır, fontu elle geri
+  /// koyar. Kendisi uygulamanın durumundan bağımsız olarak tam opaklık ve
+  /// `BlendMode::kAlpha` ile çizilir.
   void Draw(Painter& painter, StatsOverlayMode mode, const FrameStats& stats);
 
   /// @brief Yazı tipi yüklenebildi mi? `false` ise @ref Draw hiçbir şey çizmez.

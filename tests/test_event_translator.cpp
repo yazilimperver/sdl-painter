@@ -106,4 +106,51 @@ TEST(EventTranslatorTest, UnknownMouseButtonReturnsUnknown) {
   EXPECT_EQ(internal::TranslateMouseButton(99), MouseButton::kUnknown);
 }
 
+// --- Fare olaylarının piksel yoğunluğuyla ölçeklenmesi ---
+// Gizli test penceresinde yoğunluk daima 1 olduğu için HiDPI çarpımı ancak
+// çeviri fonksiyonlarına doğrudan yoğunluk verilerek sınanabilir.
+
+TEST(EventTranslatorTest, MouseButtonEventScalesPositionByPixelDensity) {
+  const MouseButtonEvent e =
+      internal::MakeMouseButtonEvent(SDL_BUTTON_RIGHT, 10.0F, 20.5F, 2, 2.0F);
+  EXPECT_EQ(e.button, MouseButton::kRight);
+  EXPECT_FLOAT_EQ(e.x, 20.0F);
+  EXPECT_FLOAT_EQ(e.y, 41.0F);
+  EXPECT_EQ(e.clicks, 2);
+}
+
+TEST(EventTranslatorTest, MouseMoveEventScalesPositionAndDeltaByPixelDensity) {
+  const MouseMoveEvent e =
+      internal::MakeMouseMoveEvent(3.0F, 4.0F, -1.5F, 2.5F, 2.0F);
+  EXPECT_FLOAT_EQ(e.x, 6.0F);
+  EXPECT_FLOAT_EQ(e.y, 8.0F);
+  EXPECT_FLOAT_EQ(e.dx, -3.0F);
+  EXPECT_FLOAT_EQ(e.dy, 5.0F);
+}
+
+TEST(EventTranslatorTest, MouseWheelEventScalesPositionButNotSteps) {
+  const MouseWheelEvent e =
+      internal::MakeMouseWheelEvent(1.0F, -2.0F, 5.0F, 6.0F, 2.0F);
+  // Tekerlek adımı konum değildir: yoğunlukla çarpılmaz.
+  EXPECT_FLOAT_EQ(e.dx, 1.0F);
+  EXPECT_FLOAT_EQ(e.dy, -2.0F);
+  EXPECT_FLOAT_EQ(e.mouse_x, 10.0F);
+  EXPECT_FLOAT_EQ(e.mouse_y, 12.0F);
+}
+
+TEST(EventTranslatorTest, UnitPixelDensityLeavesMouseValuesUnchanged) {
+  const MouseButtonEvent b =
+      internal::MakeMouseButtonEvent(SDL_BUTTON_LEFT, 7.0F, 9.0F, 1, 1.0F);
+  EXPECT_FLOAT_EQ(b.x, 7.0F);
+  EXPECT_FLOAT_EQ(b.y, 9.0F);
+  const MouseMoveEvent m =
+      internal::MakeMouseMoveEvent(7.0F, 9.0F, 1.0F, -1.0F, 1.0F);
+  EXPECT_FLOAT_EQ(m.dx, 1.0F);
+  EXPECT_FLOAT_EQ(m.dy, -1.0F);
+  const MouseWheelEvent w =
+      internal::MakeMouseWheelEvent(0.5F, 3.0F, 7.0F, 9.0F, 1.0F);
+  EXPECT_FLOAT_EQ(w.dy, 3.0F);
+  EXPECT_FLOAT_EQ(w.mouse_x, 7.0F);
+}
+
 }  // namespace sdl_painter

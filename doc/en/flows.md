@@ -346,6 +346,9 @@ sequenceDiagram
     participant Pres as Presentation Engine
 
     P->>VR: BeginFrame()
+    opt window pixel size ≠ mRequestedExtent
+        VR->>SC: Recreate(w, h)
+    end
     VR->>FS: vkWaitForFences(inFlight[currentFrame])
     VR->>FS: vkResetFences(inFlight[currentFrame])
     VR->>SC: vkAcquireNextImageKHR(swapchain, imageAvailable[currentFrame])
@@ -374,10 +377,19 @@ sequenceDiagram
     VR->>VR: currentFrame = (currentFrame + 1) % kMaxFramesInFlight (=2)
 ```
 
-**Out-of-date handling:** When the window is resized, the swapchain becomes
-invalid. `AcquireNextImage` or `QueuePresent` returns `OUT_OF_DATE`;
-`VulkanRenderer` rebuilds the swapchain with `Recreate`. Painter is not aware of
-this detail.
+**Out-of-date handling:** The swapchain is rebuilt along two paths. The first
+is the size check in `BeginFrame`: when the surface is renderable, the window's
+pixel size (`SDL_GetWindowSizeInPixels`) is compared with the size requested at
+the swapchain's last successful build (`mRequestedExtent`); if they differ, the
+swapchain is rebuilt with `Recreate` before an image is acquired. This check is
+required: on surfaces that report a `currentExtent` of 0xFFFFFFFF (Wayland, the
+headless surface of SDL's `offscreen` driver) the swapchain determines the
+surface size, and the driver does not have to report `OUT_OF_DATE` when the
+window changes. The second is the driver's report: if `AcquireNextImage` returns
+`OUT_OF_DATE`, or `QueuePresent` returns `OUT_OF_DATE` or `SUBOPTIMAL`,
+`VulkanRenderer` likewise rebuilds the swapchain with `Recreate`. If the surface
+is 0x0 (minimized), the frame is skipped and the rebuild is deferred until the
+window comes back. Painter is not aware of this detail.
 
 ---
 

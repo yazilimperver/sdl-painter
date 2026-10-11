@@ -18,7 +18,7 @@ jobs:
     name: build:linux:debug
     runs-on: ubuntu-latest
     container:
-      image: yazilimperver/sdl-painter:ci-v1.0
+      image: yazilimperver/sdl-painter:ci-v1.1
     env:
       CONAN_HOME: /root/.conan2
     steps:
@@ -52,7 +52,7 @@ jobs:
     name: build:linux:release
     runs-on: ubuntu-latest
     container:
-      image: yazilimperver/sdl-painter:ci-v1.0
+      image: yazilimperver/sdl-painter:ci-v1.1
     env:
       CONAN_HOME: /root/.conan2
     steps:
@@ -157,12 +157,16 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-linux-debug, build-linux-release]
     container:
-      image: yazilimperver/sdl-painter:ci-v1.0
+      image: yazilimperver/sdl-painter:ci-v1.1
     env:
       CONAN_HOME: /root/.conan2
       SDL_VIDEODRIVER: offscreen
       # Font yoksa metin testleri sessizce atlanmasin, hata versin.
       SDLPAINTER_REQUIRE_FONT: "1"
+      # Backend kurulamazsa GPU testleri SKIP yerine HATA versin.
+      SDLPAINTER_REQUIRE_BACKEND: "1"
+      # Debug + Vulkan: validation katmani etkin degilse Vulkan testleri HATA versin.
+      SDLPAINTER_REQUIRE_VALIDATION: "1"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -214,12 +218,14 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-linux-debug, build-linux-release]
     container:
-      image: yazilimperver/sdl-painter:ci-v1.0
+      image: yazilimperver/sdl-painter:ci-v1.1
     env:
       CONAN_HOME: /root/.conan2
       SDL_VIDEODRIVER: offscreen
       # Font yoksa metin testleri sessizce atlanmasin, hata versin.
       SDLPAINTER_REQUIRE_FONT: "1"
+      # Backend kurulamazsa GPU testleri SKIP yerine HATA versin.
+      SDLPAINTER_REQUIRE_BACKEND: "1"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -274,12 +280,16 @@ jobs:
     needs: []
     continue-on-error: true
     container:
-      image: yazilimperver/sdl-painter:ci-v1.0
+      image: yazilimperver/sdl-painter:ci-v1.1
     env:
       CONAN_HOME: /root/.conan2
       SDL_VIDEODRIVER: offscreen
       # Font yoksa metin testleri sessizce atlanmasin, HATA versin.
       SDLPAINTER_REQUIRE_FONT: "1"
+      # Backend kurulamazsa GPU testleri SKIP yerine HATA versin.
+      SDLPAINTER_REQUIRE_BACKEND: "1"
+      # Debug + Vulkan: validation katmani etkin degilse Vulkan testleri HATA versin.
+      SDLPAINTER_REQUIRE_VALIDATION: "1"
     steps:
       - uses: actions/checkout@v7
         with:
@@ -404,7 +414,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-linux-debug]
     container:
-      image: yazilimperver/sdl-painter:ci-v1.0
+      image: yazilimperver/sdl-painter:ci-v1.1
     env:
       CONAN_HOME: /root/.conan2
     steps:
@@ -454,7 +464,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-linux-debug]
     container:
-      image: yazilimperver/sdl-painter:ci-v1.0
+      image: yazilimperver/sdl-painter:ci-v1.1
     env:
       CONAN_HOME: /root/.conan2
     steps:
@@ -513,7 +523,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-linux-debug]
     container:
-      image: yazilimperver/sdl-painter:ci-v1.0
+      image: yazilimperver/sdl-painter:ci-v1.1
     env:
       CONAN_HOME: /root/.conan2
     steps:
@@ -534,7 +544,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test-unit, test-unit-asan]
     container:
-      image: yazilimperver/sdl-painter:ci-v1.0
+      image: yazilimperver/sdl-painter:ci-v1.1
     steps:
       - uses: actions/checkout@v7
       # Kapsam bilincli olarak include/ + src/ ile sinirli. tests/ altindaki
@@ -549,7 +559,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test-unit, test-unit-asan]
     container:
-      image: yazilimperver/sdl-painter:ci-v1.0
+      image: yazilimperver/sdl-painter:ci-v1.1
     env:
       CONAN_HOME: /root/.conan2
     steps:

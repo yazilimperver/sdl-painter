@@ -4,6 +4,8 @@
 
 #include <SDL3/SDL.h>
 
+#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <cstdlib>
 #include <gtest/gtest.h>
@@ -75,6 +77,27 @@ class HiddenWindow {
   const char* mError{""};
 };
 
+/// @brief Vulkan bağlamı validation'sız kurulduğunda test düşmeli mi?
+///
+/// `ValidationGuard` validation hatalarını ancak validation etkinken görür.
+/// Katman kurulu değilse (ör. CI imajında paket yoksa) hata sayacı hiç artmaz
+/// ve Vulkan testleri "hata yok" diye sessizce geçer.
+///
+/// `SDLPAINTER_REQUIRE_VALIDATION=1` ayarlandığında koruyucu, kapsamında
+/// validation'ı tam etkin olmayan bir Vulkan bağlamı kurulduysa testi düşürür
+/// (bkz. `vk_detail::ValidationState`). Yalnızca Vulkan bağlamı kuran testler
+/// etkilenir; OpenGL testleri ve Vulkan'sız derleme etkilenmez. CI bunu
+/// yalnızca Debug + Vulkan Linux işlerinde ayarlar.
+///
+/// Release derlemede validation tasarım gereği kapalıdır; değişken yine de
+/// ayarlıysa test atlanmaz, açık mesajla düşer. Değişken "bu koşu doğrulanmış
+/// olmalı" iddiasıdır: atlamak aynı sessizliği geri getirirdi, üstelik
+/// koruyucu test gövdesi koştuktan sonra yıkıldığı için atlama anlamsızdır.
+inline bool ValidationIsRequired() {
+  const char* env = std::getenv("SDLPAINTER_REQUIRE_VALIDATION");
+  return env != nullptr && env[0] != '\0' && env[0] != '0';
+}
+
 /// @brief Bir blok boyunca yeni Vulkan validation hatası çıkmadığını doğrular.
 ///
 /// Validation mesajları yalnızca log'a yazılıyor, testleri düşürmüyordu;
@@ -84,9 +107,17 @@ class HiddenWindow {
 ///
 /// Vulkan derlenmemişse veya validation katmanı yoksa sayaç sabit kalır ve
 /// koruyucu hiçbir şey yapmaz; yani OpenGL-only ortamda zararsızdır.
+/// `SDLPAINTER_REQUIRE_VALIDATION` ayarlıysa ikinci durum hatadır (bkz.
+/// `ValidationIsRequired()`).
 class ValidationGuard {
  public:
-  ValidationGuard() : mBefore(CurrentCount()) {}
+  ValidationGuard() : mBefore(CurrentCount()) {
+#ifdef SDLPAINTER_HAS_VULKAN
+    for (std::size_t i = 0; i < kUnvalidatedStates.size(); ++i) {
+      mUnvalidatedBefore[i] = vk_detail::ContextCount(kUnvalidatedStates[i]);
+    }
+#endif
+  }
 
   ~ValidationGuard() {
     const uint64_t after = CurrentCount();
@@ -95,6 +126,11 @@ class ValidationGuard {
                     << " yeni hata raporladi (ayrinti icin test ciktisindaki "
                        "[Vulkan] satirlarina bakin).";
     }
+#ifdef SDLPAINTER_HAS_VULKAN
+    if (ValidationIsRequired()) {
+      ExpectNoUnvalidatedContext();
+    }
+#endif
   }
 
   ValidationGuard(const ValidationGuard&) = delete;
@@ -108,6 +144,48 @@ class ValidationGuard {
     return 0;
 #endif
   }
+
+#ifdef SDLPAINTER_HAS_VULKAN
+  static constexpr std::size_t kUnvalidatedCount = 3;
+  static constexpr std::array<vk_detail::ValidationState, kUnvalidatedCount>
+      kUnvalidatedStates = {vk_detail::ValidationState::kDisabledInBuild,
+                            vk_detail::ValidationState::kLayerMissing,
+                            vk_detail::ValidationState::kMessengerFailed};
+
+  static const char* Reason(vk_detail::ValidationState state) {
+    switch (state) {
+      case vk_detail::ValidationState::kDisabledInBuild:
+        return "kutuphane Release (NDEBUG) derlenmis, validation tasarim "
+               "geregi kapali. Degiskeni yalnizca Debug derlemede ayarlayin.";
+      case vk_detail::ValidationState::kLayerMissing:
+        return "VK_LAYER_KHRONOS_validation katmani bulunamadi. Katmani "
+               "kurun (Debian/Ubuntu: vulkan-validationlayers) ya da "
+               "VK_LAYER_PATH ile gosterin.";
+      case vk_detail::ValidationState::kMessengerFailed:
+        return "katman acik ama debug messenger kurulamadi; validation "
+               "hatalari sayilamaz (log'daki messenger uyarisina bakin).";
+      case vk_detail::ValidationState::kEnabled:
+      case vk_detail::ValidationState::kCount:
+        break;
+    }
+    return "";
+  }
+
+  void ExpectNoUnvalidatedContext() const {
+    for (std::size_t i = 0; i < kUnvalidatedStates.size(); ++i) {
+      const uint64_t created = vk_detail::ContextCount(kUnvalidatedStates[i]) -
+                               mUnvalidatedBefore[i];
+      if (created != 0) {
+        ADD_FAILURE() << created
+                      << " Vulkan baglami validation'siz kuruldu, ancak "
+                         "SDLPAINTER_REQUIRE_VALIDATION ayarli: "
+                      << Reason(kUnvalidatedStates[i]);
+      }
+    }
+  }
+
+  std::array<uint64_t, kUnvalidatedCount> mUnvalidatedBefore{};
+#endif
 
   uint64_t mBefore{0};
 };

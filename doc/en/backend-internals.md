@@ -266,25 +266,52 @@ update.
 
 ### 3.5 Swapchain Recreate
 
-When the window is resized:
+The swapchain is rebuilt by two triggers:
 
 ```mermaid
 flowchart LR
+    S["BeginFrame<br/>window pixel size ≠ mRequestedExtent"] --> N["mSwapchainNeedsRecreate = true"]
     A["AcquireNextImage<br/>VK_ERROR_OUT_OF_DATE_KHR"] --> B["mSwapchainOutOfDate = true"]
-    B --> C["Recreate flow:"]
+    N --> C["Recreate flow:"]
+    B --> C
     C --> D["vkDeviceWaitIdle"]
     D --> E["VkSwapchain.Destroy"]
     E --> F["VkSwapchain.Create(new w, new h)"]
     F --> G["New framebuffers"]
-    G --> H["mSwapchainOutOfDate = false"]
-    H --> I["Retry the frame"]
+    G --> H["mRequestedExtent = (w, h)<br/>mSwapchainNeedsRecreate = false"]
+    H --> I["The next acquire uses the new swapchain"]
 
+    style S fill:#cf222e,color:#fff
     style A fill:#cf222e,color:#fff
     style I fill:#2da44e,color:#fff
 ```
 
+The first trigger is the size check in `BeginFrame`. On surfaces that report a
+`currentExtent` of 0xFFFFFFFF (Wayland, the headless surface of SDL's
+`offscreen` driver) the swapchain determines the surface size; when the window
+changes the swapchain does not become incompatible and the driver does not have
+to report `OUT_OF_DATE`. That is why `BeginFrame` polls the window's pixel size
+(`SDL_GetWindowSizeInPixels`) every frame and, if it differs, rebuilds the
+swapchain before acquiring an image. The comparison is made against the size
+requested at the last successful build (`mRequestedExtent`), not against the
+swapchain extent: the extent may have been clamped by
+`minImageExtent`/`maxImageExtent` or stayed at the size the surface reports,
+and the swapchain would then be rebuilt every frame. `mRequestedExtent` is
+updated in `Initialize` and on every successful rebuild along either path.
+
+A rebuild moves the viewport to the new extent only if `SetViewport` has never
+been called, so in that case the viewport tracks the surface. A viewport given
+through `SetViewport` (`mViewportSetByCaller`) is preserved, just as OpenGL
+writes `glViewport` only in `SetViewport`; on a size change Painter itself sends
+the new viewport before `BeginFrame`.
+
 The `QueuePresentKHR` call can also return `OUT_OF_DATE_KHR` or
 `SUBOPTIMAL_KHR`; the same recreate path is triggered.
+
+If the surface is not renderable (minimized, 0x0), `BeginFrame` skips the frame
+before reaching the size check and sets `mSwapchainNeedsRecreate`; the rebuild
+is deferred until the window comes back. If a rebuild fails, the flag stays set
+and the next frame tries again.
 
 ### 3.6 Texture Lifecycle (Vulkan)
 

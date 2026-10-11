@@ -268,25 +268,52 @@ descriptor set güncellemesi gerektirmez.
 
 ### 3.5 Swapchain Recreate
 
-Pencere yeniden boyutlandığında:
+Swapchain iki tetikleyiciyle yeniden oluşturulur:
 
 ```mermaid
 flowchart LR
+    S["BeginFrame<br/>pencere piksel boyutu ≠ mRequestedExtent"] --> N["mSwapchainNeedsRecreate = true"]
     A["AcquireNextImage<br/>VK_ERROR_OUT_OF_DATE_KHR"] --> B["mSwapchainOutOfDate = true"]
-    B --> C["Recreate akışı:"]
+    N --> C["Recreate akışı:"]
+    B --> C
     C --> D["vkDeviceWaitIdle"]
     D --> E["VkSwapchain.Destroy"]
     E --> F["VkSwapchain.Create(new w, new h)"]
     F --> G["Yeni framebuffer'lar"]
-    G --> H["mSwapchainOutOfDate = false"]
-    H --> I["Frame'i tekrar dene"]
+    G --> H["mRequestedExtent = (w, h)<br/>mSwapchainNeedsRecreate = false"]
+    H --> I["Sonraki acquire yeni swapchain'i kullanır"]
 
+    style S fill:#cf222e,color:#fff
     style A fill:#cf222e,color:#fff
     style I fill:#2da44e,color:#fff
 ```
 
+Birinci tetikleyici `BeginFrame`'deki boyut kontrolüdür. `currentExtent`
+değerini 0xFFFFFFFF bildiren yüzeylerde (Wayland, SDL `offscreen`
+sürücüsünün headless yüzeyi) yüzeyin boyutunu swapchain belirler; pencere
+değişince swapchain uyumsuz hale gelmez ve sürücü `OUT_OF_DATE` bildirmek
+zorunda değildir. Bu yüzden `BeginFrame` pencerenin piksel boyutunu
+(`SDL_GetWindowSizeInPixels`) her karede yoklar ve farklıysa image almadan
+önce swapchain'i yeniden oluşturur. Karşılaştırma swapchain extent'iyle değil,
+son başarılı inşada istenen boyutla (`mRequestedExtent`) yapılır: extent
+`minImageExtent`/`maxImageExtent` ile kelepçelenmiş ya da yüzeyin bildirdiği
+boyutta kalmış olabilir ve o zaman swapchain her karede yeniden inşa edilirdi.
+`mRequestedExtent` `Initialize`'da ve iki yoldaki her başarılı yeniden
+oluşturmada güncellenir.
+
+Yeniden oluşturma viewport'u yalnızca `SetViewport` hiç çağrılmadıysa yeni
+extent'e çeker, yani viewport o durumda yüzeyi izler. `SetViewport` ile
+verilmiş viewport (`mViewportSetByCaller`) korunur, OpenGL'de `glViewport`'un
+yalnızca `SetViewport`'ta yazılması gibi; Painter boyut değişiminde yeni
+viewport'u `BeginFrame`'den önce kendisi gönderir.
+
 `QueuePresentKHR` çağrısı da `OUT_OF_DATE_KHR` veya `SUBOPTIMAL_KHR`
 dönebilir; aynı recreate yolu tetiklenir.
+
+Yüzey çizilemez durumdaysa (simge durumu, 0x0) `BeginFrame` boyut
+kontrolüne gelmeden kareyi atlar ve `mSwapchainNeedsRecreate`'i işaretler;
+yeniden oluşturma pencere geri gelene kadar ertelenir. Yeniden oluşturma
+başarısız olursa bayrak işaretli kalır ve sonraki kare yeniden dener.
 
 ### 3.6 Texture Yaşam Döngüsü (Vulkan)
 

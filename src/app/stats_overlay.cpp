@@ -186,11 +186,14 @@ void StatsOverlay::Draw(Painter& painter, StatsOverlayMode mode,
   const float panel_h =
       (kPadding * 2.0F) + (line_h * static_cast<float>(lines.size()));
 
-  // Uygulamanin cizim durumunu bozma: transform, clip ve opaklik geri alinir.
+  // Uygulamanin cizim durumunu bozma: transform, clip, opaklik ve karisim
+  // modu geri alinir. Karisim modu da sabitlenir; yoksa gosterge uygulamanin
+  // modunda (or. kMultiply, kNone) okunamaz hale geliyordu.
   painter.Save();
   painter.ResetTransform();
   painter.ClearClip();
   painter.SetOpacity(1.0F);
+  painter.SetBlendMode(BlendMode::kAlpha);
 
   painter.SetBrush(Brush(kPanelColor));
   painter.FillRect(kPadding, kPadding, panel_w, panel_h);
