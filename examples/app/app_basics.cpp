@@ -1,14 +1,3 @@
-/// @brief app_basics — Application çatısıyla en kısa animasyonlu uygulama.
-///
-/// Geliştirme Fazı 6 demosu (eski ad: phase6_app_demo).
-///
-/// `transforms` örneğindeki dönen dikdörtgen ve nabız gibi ölçeklenen daire,
-/// bu kez ~250 satırlık SDL boilerplate'i olmadan. SDL kurulumu, pencere, GL
-/// context, olay döngüsü ve yıkım sdl_painter::Application'ın işi; geriye
-/// yalnızca OnUpdate ve OnRender kalıyor.
-///
-/// ESC veya pencereyi kapatmak çıkar.
-
 #include "sdl_painter/app/application.h"
 
 #include <cmath>

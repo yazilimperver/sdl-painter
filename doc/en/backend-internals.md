@@ -340,8 +340,8 @@ Creation steps:
 7. `vkCreateSampler` (LINEAR + CLAMP_TO_EDGE)
 8. Bind to the descriptor set: `combined image sampler`
 
-Destruction: `vkDestroy*` on the objects above in reverse order. The RAII helper
-classes (`vk_raii.h`) guarantee this order.
+Destruction: `vkDestroy*` on the objects above in reverse order. The
+`VulkanTexture` destructor (`Destroy()`) guarantees this order.
 
 ---
 

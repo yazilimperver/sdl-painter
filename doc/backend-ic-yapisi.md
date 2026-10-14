@@ -342,8 +342,8 @@ Yaratım adımları:
 7. `vkCreateSampler` (LINEAR + CLAMP_TO_EDGE)
 8. Descriptor set'e bind: `combined image sampler`
 
-Yıkım: yukarıdaki nesnelerin tersi sırada `vkDestroy*`. RAII helper
-sınıfları (`vk_raii.h`) bu sırayı garanti eder.
+Yıkım: yukarıdaki nesnelerin tersi sırada `vkDestroy*`. Bu sırayı
+`VulkanTexture`'ın destructor'ı (`Destroy()`) garanti eder.
 
 ---
 
