@@ -4,31 +4,20 @@
 
 #include <array>
 #include <cstdio>
-#include <spdlog/sinks/ansicolor_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/spdlog.h>
 
 #include "app/event_translator.h"
 #include "app/frame_timing.h"
 #include "app/stats_overlay.h"
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
 namespace sdl_painter {
 
 namespace {
 
-/// @brief spdlog varsayılan logger'ını kur (renkli konsol + Win32 VT modu).
+/// @brief spdlog varsayılan logger'ını kur (renkli konsol).
 void InitDefaultLogger() {
-#ifdef _WIN32
-  HANDLE h_out = GetStdHandle(STD_OUTPUT_HANDLE);
-  DWORD mode = 0;
-  if (GetConsoleMode(h_out, &mode)) {
-    SetConsoleMode(h_out, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-  }
-#endif
-  auto sink = std::make_shared<spdlog::sinks::ansicolor_stdout_sink_mt>();
+  auto sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
   sink->set_pattern("[%H:%M:%S][%L] %v");
   auto logger = std::make_shared<spdlog::logger>("sdlpainter", sink);
   logger->set_level(spdlog::level::trace);

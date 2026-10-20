@@ -59,6 +59,7 @@ The [helper scripts](scripts.md) wrap all of the above:
 | `SDLPAINTER_WITH_VULKAN` | `OFF` | Build the Vulkan backend |
 | `SDLPAINTER_BUILD_EXAMPLES` | `ON` as top-level project, `OFF` via `add_subdirectory`/FetchContent | Build the demos in `examples/` |
 | `SDLPAINTER_BUILD_TESTS` | `ON` as top-level project, `OFF` via `add_subdirectory`/FetchContent | Build the GTest suite |
+| `SDLPAINTER_WARNINGS_AS_ERRORS` | `ON` as top-level project, `OFF` via `add_subdirectory`/FetchContent | Treat compiler warnings as errors (`-Werror` / `/WX`) |
 | `SDLPAINTER_REGENERATE_SHADERS` | `OFF` | Expose the `regenerate_shaders` target (needs `glslc`) |
 
 Presets, and the full option reference, are documented in

@@ -77,6 +77,7 @@ class SdlPainterConan(ConanFile):
         tc.cache_variables["SDLPAINTER_WITH_VULKAN"] = bool(self.options.with_vulkan)
         tc.cache_variables["SDLPAINTER_BUILD_EXAMPLES"] = False
         tc.cache_variables["SDLPAINTER_BUILD_TESTS"] = False
+        tc.cache_variables["SDLPAINTER_WARNINGS_AS_ERRORS"] = False
         tc.generate()
         deps = CMakeDeps(self)
         deps.generate()

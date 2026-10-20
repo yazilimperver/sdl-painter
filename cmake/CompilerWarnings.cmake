@@ -1,11 +1,25 @@
 # Her target için compiler warning'lerini ayarlar.
 # Kullanım: set_target_warnings(<target>)
 
+# Uyarıları hata say (-Werror / /WX). Yalnızca üst projede varsayılan olarak
+# açık: paket yöneticileri (Conan Center, vcpkg) ve add_subdirectory ile
+# ekleyen tüketici, bizim CI'da denemediğimiz derleyici ve bağımlılık
+# sürümleriyle derler; orada yeni bir uyarı derlemeyi kırmamalı.
+option(SDLPAINTER_WARNINGS_AS_ERRORS "Treat compiler warnings as errors"
+       ${PROJECT_IS_TOP_LEVEL})
+
 function(set_target_warnings target)
+    if(SDLPAINTER_WARNINGS_AS_ERRORS)
+        if(MSVC)
+            target_compile_options(${target} PRIVATE /WX)
+        else()
+            target_compile_options(${target} PRIVATE -Werror)
+        endif()
+    endif()
+
     if(MSVC)
         target_compile_options(${target} PRIVATE
             /W4
-            /WX
             /w14640  # thread-unsafe static member initialization
             /w14826  # conversion from 'type1' to 'type2' is sign-extended
             /w14905  # wide string literal cast to 'LPSTR'
@@ -30,7 +44,6 @@ function(set_target_warnings target)
         target_compile_options(${target} PRIVATE
             -Wall
             -Wextra
-            -Werror
             -Wshadow
             -Wnon-virtual-dtor
             -Wpedantic

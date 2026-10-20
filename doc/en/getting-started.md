@@ -110,6 +110,7 @@ chmod +x scripts/*.sh
 | `SDLPAINTER_WITH_VULKAN` | `OFF` | Vulkan backend |
 | `SDLPAINTER_BUILD_EXAMPLES` | `ON` as top-level project, `OFF` via `add_subdirectory`/FetchContent | Example applications |
 | `SDLPAINTER_BUILD_TESTS` | `ON` as top-level project, `OFF` via `add_subdirectory`/FetchContent | GTest unit tests |
+| `SDLPAINTER_WARNINGS_AS_ERRORS` | `ON` as top-level project, `OFF` via `add_subdirectory`/FetchContent | Treat warnings as errors (`-Werror` / `/WX`) |
 | `ENABLE_SANITIZERS` | `OFF` | ASan + UBSan (GCC/Clang) |
 
 Building with everything, Vulkan included:

@@ -231,6 +231,11 @@ class SDLPainterConan(ConanFile):
         core.libs = ["sdl_painter"]
         core.requires = ["sdl::sdl", "glm::glm", "sdl_ttf::sdl_ttf",
                          "glad::glad", "stb::stb", "spdlog::spdlog"]
+        # CMake bu tanimi statik derlemede PUBLIC veriyor; Conan projenin
+        # kendi config'ini sildigi icin tuketiciye yalnizca buradan ulasir.
+        # Yoksa Windows'ta basliklar sembolleri dllimport ile gorur.
+        if not self.options.shared:
+            core.defines.append("SDLPAINTER_STATIC_DEFINE")
         if self.options.with_vulkan:
             core.requires += ["vulkan-loader::vulkan-loader",
                               "vulkan-headers::vulkan-headers"]
@@ -247,4 +252,7 @@ class SDLPainterConan(ConanFile):
         app = self.cpp_info.components["app"]
         app.set_property("cmake_target_name", "sdl_painter::app")
         app.libs = ["sdl_painter_app"]
-        app.requires = ["core"]
+        # spdlog app'e PRIVATE bagli; statik derlemede tuketici de linklemeli.
+        app.requires = ["core", "spdlog::spdlog"]
+        if not self.options.shared:
+            app.defines.append("SDLPAINTER_APP_STATIC_DEFINE")

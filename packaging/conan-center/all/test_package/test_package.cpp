@@ -1,3 +1,4 @@
+#include "sdl_painter/app/application.h"
 #include "sdl_painter/pen.h"
 #include "sdl_painter/renderer.h"
 #include "sdl_painter/version.h"
@@ -11,7 +12,8 @@ int main() {
               static_cast<int>(sdl_painter::kVersionString.size()),
               sdl_painter::kVersionString.data(), pen.GetWidth());
 
-  // No window or GPU context: only checks that a compiled symbol links.
+  // No window or GPU context. Application does not touch SDL until Run().
+  const sdl_painter::Application app;
   auto renderer = sdl_painter::CreateRenderer(sdl_painter::RendererBackend::kOpenGL);
   return renderer != nullptr ? EXIT_SUCCESS : EXIT_FAILURE;
 }

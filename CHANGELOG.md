@@ -9,6 +9,20 @@
 
 ### Düzeltildi
 
+- **Windows'ta derlenmiş spdlog ile `sdl_painter_app` link edilemiyordu.**
+  `Application` logger'ı `ansicolor_stdout_sink_mt` kullanıyordu; derlenmiş
+  (`header_only=False`) spdlog bu sink'i Windows'ta örneklemediği için shared
+  derlemede DLL, statik derlemede ise `sdl_painter::app`'i kullanan uygulama
+  `LNK2019` ile kırılıyordu. Artık platforma göre doğru sink'i seçen
+  `stdout_color_sink_mt` kullanılıyor; Windows'ta konsol VT modunu açan kod da
+  gereksizleşti.
+- **Conan paketi statik derlemede export tanımlarını tüketiciye
+  iletmiyordu.** CMake `SDLPAINTER_STATIC_DEFINE` ve
+  `SDLPAINTER_APP_STATIC_DEFINE`'ı PUBLIC veriyor, ancak Conan projenin kendi
+  CMake config'ini kullanmadığı için tanımlar paketten gelmiyordu; Windows'ta
+  statik tüketici başlıkları `dllimport` ile görüyordu. `conanfile.py`
+  `package_info` artık ikisini de tanımlıyor; `app` bileşeni spdlog
+  bağımlılığını da bildiriyor.
 - **Painter durum yönetimi ve kaynak sahipliği.** Move işlemleri artık çizim
   durumunun tamamını taşıyor; frame, hedefe bağlı bitmiyor; viewport ve yüzey
   değişiminde kırpma yeniden hesaplanıyor; hedefler renderer sahipliğine göre
@@ -114,6 +128,11 @@
 
 ### Eklendi
 
+- **`SDLPAINTER_WARNINGS_AS_ERRORS` CMake seçeneği.** `-Werror` / `/WX`
+  artık koşulsuz değil. Varsayılan üst projede `ON` (CI ve yerel geliştirme
+  davranışı değişmedi), `add_subdirectory`/FetchContent ile eklenince ve
+  paket yöneticisi derlemelerinde `OFF`. Böylece denenmemiş bir derleyici ya
+  da bağımlılık sürümündeki yeni bir uyarı tüketicinin derlemesini kırmıyor.
 - **`SDLPAINTER_REQUIRE_VALIDATION` sözleşmesi:** ortam değişkeni ayarlıyken
   (boş ya da `0` değilse) Vulkan bağlamı kuran bir testte validation tam
   etkin değilse (kütüphane Release derlenmiş, `VK_LAYER_KHRONOS_validation`

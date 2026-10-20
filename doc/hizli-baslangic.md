@@ -115,6 +115,7 @@ chmod +x scripts/*.sh
 | `SDLPAINTER_WITH_VULKAN` | `OFF` | Vulkan backend |
 | `SDLPAINTER_BUILD_EXAMPLES` | Üst projede `ON`, `add_subdirectory`/FetchContent ile `OFF` | Örnek uygulamalar |
 | `SDLPAINTER_BUILD_TESTS` | Üst projede `ON`, `add_subdirectory`/FetchContent ile `OFF` | GTest birim testleri |
+| `SDLPAINTER_WARNINGS_AS_ERRORS` | Üst projede `ON`, `add_subdirectory`/FetchContent ile `OFF` | Uyarıları hata say (`-Werror` / `/WX`) |
 | `ENABLE_SANITIZERS` | `OFF` | ASan + UBSan (GCC/Clang) |
 
 Vulkan dahil tüm özelliklerle derleme:

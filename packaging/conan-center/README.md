@@ -49,7 +49,9 @@ Etiket atmadan önce HEAD'i sınamak için yerel arşiv ve geçici bir
 VER=$(grep -oP 'kVersionString = "\K[^"]+' include/sdl_painter/version.h)
 TMP=$(mktemp -d)
 cp -r packaging/conan-center/all/. "$TMP"
-git archive --format=tar.gz --prefix="sdl-painter-$VER/" -o "$TMP/src.tar.gz" HEAD
+# Commit'lenmemiş değişiklikler de girsin diye geçici bir stash commit'i kullanılır
+REF=$(git stash create); REF=${REF:-HEAD}
+git archive --format=tar.gz --prefix="sdl-painter-$VER/" -o "$TMP/src.tar.gz" "$REF"
 SHA=$(sha256sum "$TMP/src.tar.gz" | cut -d' ' -f1)
 cat > "$TMP/conandata.yml" <<EOF
 sources:
@@ -57,8 +59,11 @@ sources:
     url: "file:///$(cygpath -m "$TMP/src.tar.gz" 2>/dev/null || echo "$TMP/src.tar.gz")"
     sha256: "$SHA"
 EOF
-conan create "$TMP" --version="$VER" --build=missing -s compiler.cppstd=17
+conan create "$TMP" --version="$VER" --user=local --channel=head --build=missing -s compiler.cppstd=17
 ```
+
+`--user=local --channel=head`, önbellekteki etiketten derlenmiş paketle
+karışmasını önler.
 
 ## Yeni sürüm
 

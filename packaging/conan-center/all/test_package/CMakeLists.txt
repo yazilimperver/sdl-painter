@@ -4,5 +4,5 @@ project(test_package LANGUAGES CXX)
 find_package(sdl_painter REQUIRED CONFIG)
 
 add_executable(${PROJECT_NAME} test_package.cpp)
-target_link_libraries(${PROJECT_NAME} PRIVATE sdl_painter::sdl_painter)
+target_link_libraries(${PROJECT_NAME} PRIVATE sdl_painter::sdl_painter sdl_painter::app)
 target_compile_features(${PROJECT_NAME} PRIVATE cxx_std_17)
