@@ -37,7 +37,7 @@ bildirilmiş olabilir. Güvenlik açığıysa SECURITY.md'ye göre özel bildiri
 | C++ standardı | C++17 |
 | Backend | (OpenGL / Vulkan) |
 | GPU + sürücü | (örn. NVIDIA RTX 3060 / 545.29.06) |
-| SDL3 sürümü | (Conan'dan, örn. 3.2.14) |
+| SDL3 sürümü | (Conan'dan, örn. 3.4.16) |
 
 ## Loglar / Ekran Görüntüleri
 

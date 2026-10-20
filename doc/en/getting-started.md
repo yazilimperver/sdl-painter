@@ -17,7 +17,7 @@ the design, see the [Architecture Overview](architecture.md) please.
 | Conan | 2.x | `pip install conan` |
 | Git | — | to clone the repository |
 | OpenGL driver | 3.3 Core | present on most systems |
-| Vulkan loader | 1.1+ runtime (optional) | target API is 1.1; the Conan package is `vulkan-loader/1.3.290` (backward compatible) |
+| Vulkan loader | 1.1+ runtime (optional) | target API is 1.1; the Conan package is `vulkan-loader/1.4.357` (backward compatible) |
 
 ---
 

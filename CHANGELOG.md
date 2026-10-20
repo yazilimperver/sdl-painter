@@ -7,6 +7,11 @@
 - Kullanılmayan `sdl_painter::Size` türü public API'den kaldırıldı. Bu kaynak
   uyumluluğunu bozan değişiklik 1.4 sürümü içindir.
 
+### Bağımlılıklar
+
+- SDL 3.2.14 → **3.4.16**, spdlog 1.15.3 → **1.17.0**, Vulkan loader/headers
+  1.3.290.0 → **1.4.357.0**. Conan Center artık eski sürümleri listelemediği için güncellendi.
+
 ### Düzeltildi
 
 - **Windows'ta derlenmiş spdlog ile `sdl_painter_app` link edilemiyordu.**

@@ -19,7 +19,7 @@ mimarisi ve diğer üst seviye hususlar için [Mimari Genel Bakış](mimari-gene
 | Conan | 2.x | `pip install conan` |
 | Git | — | repoyu klonlamak için |
 | OpenGL sürücüsü | 3.3 Core | Çoğu sistemde mevcut |
-| Vulkan loader | 1.1+ runtime (opsiyonel) | Hedef API 1.1; Conan paketi `vulkan-loader/1.3.290` (geri uyumlu) |
+| Vulkan loader | 1.1+ runtime (opsiyonel) | Hedef API 1.1; Conan paketi `vulkan-loader/1.4.357` (geri uyumlu) |
 
 ---
 

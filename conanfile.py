@@ -147,18 +147,18 @@ class SDLPainterConan(ConanFile):
     def requirements(self):
         # SDL3: tuketici pencereyi kendisi olusturup Painter'a veriyor, yani
         # SDL basliklarina ihtiyaci var.
-        self.requires("sdl/3.2.14", transitive_headers=True,
+        self.requires("sdl/3.4.16", transitive_headers=True,
                       transitive_libs=True)
         # glm: painter.h dogrudan <glm/glm.hpp> include ediyor
         self.requires("glm/1.0.3", transitive_headers=True)
         self.requires("glad/0.1.36")
         self.requires("stb/cci.20240531")
-        self.requires("spdlog/1.15.3", options={"spdlog/*:header_only": True})
+        self.requires("spdlog/1.17.0", options={"spdlog/*:header_only": True})
         self.requires("sdl_ttf/3.2.2")
 
         if self.options.with_vulkan:
-            self.requires("vulkan-loader/1.3.290.0")
-            self.requires("vulkan-headers/1.3.290.0")
+            self.requires("vulkan-loader/1.4.357.0")
+            self.requires("vulkan-headers/1.4.357.0")
 
     def build_requirements(self):
         # GTest yalnizca bu recipe'in kendi testlerini derlemek icin gerekli;
