@@ -36,20 +36,22 @@
 ## Neden SDLPainter?
 
 SDL3 size pencereyi, girdiyi ve üçgen seviyesinde yetenekli bir renderer'ı
-verir. SDLPainter bunun üzerine bir katman ekler — kalın çizgi geometrisi,
-poligon triangulation'ı, adaptif tessellation, transform stack ve batching —
+verir. SDLPainter bunun üzerine bir katman ekler, kalın çizgi geometrisi,
+poligon triangulation'ı, adaptif tessellation, transform stack ve batching,
 böylece vertex yerine **şekil** düşünebilirsiniz.
 
-- **Tek API, iki backend** — Aynı kod hem OpenGL 3.3 ve Vulkan 1.1'de aynı sonucu
-  üretir. Backend değiştirmek tek satır.
-- **Doğru geometri** — Kalın çizgiler `glLineWidth` yerine quad tabanlı
+- **Tek API, iki backend**, Aynı çizim kodu OpenGL 3.3 ve Vulkan 1.1'de
+  çalışır; backend değiştirmek tek satır. Bir parite testi aynı sahneyi iki
+  backend'de çizim hedefine çizip pikselleri karşılaştırır; gerçek sürücülerde
+  sonuç bayt bayt aynıdır. Tek özellik farkı: 4× MSAA yalnızca OpenGL'de.
+- **Doğru geometri**, Kalın çizgiler `glLineWidth` yerine quad tabanlı
   (platformlar arası tutarlı), konkav çokgenler "ear clipping" ile doğru
   dolduruluyor, daire segment sayısı yarıçapa göre uyarlanabiliyor.
-- **Draw call'ları biriktirir** — `RenderBatcher` aynı mod/texture/opacity'deki
+- **Draw call'ları biriktirir**, `RenderBatcher` aynı mod/texture/opacity'deki
   çizimleri birleştirir; binlerce küçük şekili çizmek daha maliyet etkin olur.
-- **İsteğe bağlı uygulama çatısı** — `sdl_painter_app` ile pencere, olay döngüsü
+- **İsteğe bağlı uygulama çatısı**, `sdl_painter_app` ile pencere, olay döngüsü
   ve zamanlamaya yönelik hazır bir takım altyapılar sunulmakta; istenirse kullanılabilir.
-- **Tanıdık API** — QT ya da QPainter kullandıysanız çoğu API sizlere tanıdık gelecektir. Kullanmadıysanız da isimlendirmeler sizlere bir fikir verecektir (elbette API dokümantasyonu da mevcut):
+- **Tanıdık API**, QT ya da QPainter kullandıysanız çoğu API sizlere tanıdık gelecektir. Kullanmadıysanız da isimlendirmeler sizlere bir fikir verecektir (elbette API dokümantasyonu da mevcut):
   `DrawRect`, `FillCircle`, `Save`/`Restore`.
 
 ## Özellikler
@@ -61,12 +63,12 @@ böylece vertex yerine **şekil** düşünebilirsiniz.
 | **Yol (Path)** | Doğru parçaları ve quadratic/cubic Bézier'lerden oluşan `Path`; kalemin tüm stilleriyle çizilir veya alt yol başına doldurulur (even-odd/nonzero dolgu kuralı yok, bu yüzden delik açılamaz) |
 | **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` |
 | **Clipping** | Scissor tabanlı dikdörtgen kırpma |
-| **Çizim hedefi** | Ekran yerine dokuya çizim — mini harita, son işlem efektleri, iz efekti — ve pikselleri geri okuma |
+| **Çizim hedefi** | Ekran yerine dokuya çizim, mini harita, son işlem efektleri, iz efekti, ve pikselleri geri okuma |
 | **Kenar yumuşatma** | 4× MSAA, **yalnızca OpenGL** ve yalnızca `Application` üzerinden (bir GL pencere özniteliği). Vulkan backend'i ve tüm çizim hedefleri tek örneklemli |
-| **Viewport** | Alt dikdörtgene yerel koordinatlarla çizim — bölünmüş ekran, mini harita |
+| **Viewport** | Alt dikdörtgene yerel koordinatlarla çizim, bölünmüş ekran, mini harita |
 | **Image** | PNG / JPG yükleme (stb_image), kaynak→hedef ölçekleme, atlas dilimleme, tint, aynalama, nearest/linear filtre, yerinde doku güncelleme, serbest dokulu ızgara |
 | **Metin** | SDL_ttf 3.x, glyph cache, left/center/right hizalama, çok satırlı ve sözcük kaydırmalı, fontun `kern` tablosundan kerning. Yalnızca soldan sağa: ligatür, çift yönlü metin ve karmaşık yazım biçimlendirmesi yok |
-| **Backend** | OpenGL 3.3 Core ve Vulkan 1.1 — `IRenderer` ile değiştirilebilir. Süreç başına aynı anda tek `Painter`; çoklu GL context desteklenmiyor |
+| **Backend** | OpenGL 3.3 Core ve Vulkan 1.1, `IRenderer` ile değiştirilebilir. Süreç başına aynı anda tek `Painter`; çoklu GL context desteklenmiyor |
 
 ## Blog Yazıları
 
@@ -111,7 +113,7 @@ Aşağıdaki yazılar ise SDL2 ile olan yazılar:
 
 ## Kurulum
 
-### CMake — `find_package`
+### CMake, `find_package`
 
 SDLPainter'ı bir kez derleyip kurun ([Hızlı Başlangıç](doc/hizli-baslangic.md)),
 sonra:
@@ -124,7 +126,7 @@ target_link_libraries(my_app PRIVATE sdl_painter::sdl_painter)
 
 CMake'i kurulum dizinine `-DCMAKE_PREFIX_PATH=/kurulum/yolu` ile yönlendirin.
 
-### CMake — `FetchContent`
+### CMake, `FetchContent`
 
 ```cmake
 include(FetchContent)
@@ -143,6 +145,15 @@ FetchContent_MakeAvailable(sdl_painter)
 target_link_libraries(my_app PRIVATE sdl_painter::sdl_painter)
 ```
 
+FetchContent SDLPainter'ı projenizin içinde derler; bu yüzden bağımlılıkları
+(SDL3, SDL3_ttf, glm, glad, stb, spdlog) `find_package` ile bulunabilir olmalı.
+Bunları sağlamanın en kolay yolu Conan, bkz.
+[Hızlı Başlangıç](doc/hizli-baslangic.md).
+
+Vulkan backend'i **varsayılan olarak kapalıdır**. `-DSDLPAINTER_WITH_VULKAN=ON`
+ile (ya da `FetchContent_MakeAvailable`'dan önce `set(SDLPAINTER_WITH_VULKAN ON)`
+ile) açılır; bu durumda Vulkan loader ve başlıkları da gerekir.
+
 Her iki yol da **aynı hedef isimlerini** sunar; target'lar birbirinin yerine
 kullanılabilir. Opsiyonel pencere / olay döngüsü / zamanlama katmanı ayrı bir
 hedef olarak sunulur ([ADR-008](adr/ADR-008-application-framework-layer.md)):
@@ -152,11 +163,13 @@ target_link_libraries(my_app PRIVATE sdl_painter::app)
 ```
 
 **Windows'ta** SDL3 ve bağımlılıkları shared kütüphane olarak sunulmakta; executable'ınızın
-yanında olmazlarsa program `0xC0000135` ile kapanabilir — bkz.
+yanında olmazlarsa program `0xC0000135` ile kapanabilir, bkz.
 [Çalışma zamanı DLL'leri](doc/en/building.md#deploying-runtime-dlls-windows)
-*(İngilizce)*. Mevcut, cmake betiği bu dll'leri otomatik kopyalamakta, benzer bir yaklaşımı uygulamalarınızda izleyebilirsiniz.
+*(İngilizce)*. Reponun kendi örnekleri ve testleri bu DLL'leri otomatik
+kopyalar; kendi uygulamanızda bir kopyalama adımı gerekir. Bağlantıdaki bölüm
+tek satırlık CMake kuralını ve metin çizimi için ek gereken DLL'leri anlatır.
 
-SDLPainter **henüz Conan Center'da değil** — Conan şu an yalnızca SDLPainter'ın
+SDLPainter **henüz Conan Center'da değil**, Conan şu an yalnızca SDLPainter'ın
 *kendi* bağımlılıklarını çözmek için kullanılıyor. Bununla birlikte inşallah yakın zamanda conan-center'a da eklenecek :)
 
 ## Kısa örnek
@@ -200,7 +213,7 @@ SDL3'ün `SDL_Renderer`'ı ile üçgenlerden oluşan şekilleri çizebilirsiniz,
 |---|---|---|
 | 3 px kalınlığında çizgi | Normal vektör hesapla, quad kur, 2 üçgen üret | `SetPen(Pen(color, 3.0F)); DrawLine(...)` |
 | Konkav poligon doldur | Triangle fan yetmez → ear clipping yaz | `FillPolygon(points)` |
-| Yarıçapa göre pürüzsüz daire | Segment sayısını elle ayarla, fan kur | `FillCircle(cx, cy, r)` — segment adaptif |
+| Yarıçapa göre pürüzsüz daire | Segment sayısını elle ayarla, fan kur | `FillCircle(cx, cy, r)`, segment adaptif |
 | Döndürülmüş bir grup şekil | Vertex'leri elle çarp | `Save(); Rotate(45); …; Restore()` |
 | 5.000 küçük şekil | Elle grupla, draw call'ları birleştir | `RenderBatcher` otomatik yapar |
 
@@ -209,11 +222,11 @@ SDL3'ün `SDL_Renderer`'ı ile üçgenlerden oluşan şekilleri çizebilirsiniz,
 
 Mimari temel olarak beş katman üzerine kurulu, her biri tek bir sorumluluğa odaklı:
 
-1. **Application** *(opsiyonel)* — pencere, olay döngüsü, zamanlama gibi işler ([ADR-008](adr/ADR-008-application-framework-layer.md))
-2. **Painter** — public API; çizim komutlarını toplar, güncel state'i uygular
-3. **RenderState + Tessellator** — transform/pen/brush/opacity/clip yığını; şekilleri vertex'e çevirir. Transform 3×3 affine `glm::mat3`, column-major ([ADR-007](adr/ADR-007-glm-transform-matrix.md))
-4. **RenderBatcher → IRenderer** — draw call'ları birleştirip backend'e iletir
-5. **Backend** — `OpenGLRenderer` / `VulkanRenderer`, SDL3 platform katmanı üzerinde
+1. **Application** *(opsiyonel)*, pencere, olay döngüsü, zamanlama gibi işler ([ADR-008](adr/ADR-008-application-framework-layer.md))
+2. **Painter**, public API; çizim komutlarını toplar, güncel state'i uygular
+3. **RenderState + Tessellator**, transform/pen/brush/opacity/clip yığını; şekilleri vertex'e çevirir. Transform 3×3 affine `glm::mat3`, column-major ([ADR-007](adr/ADR-007-glm-transform-matrix.md))
+4. **RenderBatcher → IRenderer**, draw call'ları birleştirip backend'e iletir
+5. **Backend**, `OpenGLRenderer` / `VulkanRenderer`, SDL3 platform katmanı üzerinde
 
 Yeni bir backend eklemek yalnızca `IRenderer`'ı implemente etmeyi gerektirir;
 Painter kodu değişmez. Bu katmanları şekillendiren her karar bir
@@ -229,8 +242,8 @@ Painter kodu değişmez. Bu katmanları şekillendiren her karar bir
 | Linux | GCC / Clang | ✅ | ✅ |
 | Windows | MSVC (VS 2022) | ✅ | ✅ |
 | Windows | Linux'ta MinGW cross-compile | ✅ | ❌ |
-| macOS | — | ❌ | ❌ |
-| Android | — | ❌ | ❌ |
+| macOS |, | ❌ | ❌ |
+| Android |, | ❌ | ❌ |
 
 
 ## Dokümantasyon
@@ -257,7 +270,7 @@ Diğer tasarım dokümanları:
 
 ## Katkı
 
-Issue ve pull request'ler açıktır — commit formatı, branch stratejisi ve ADR'nin
+Issue ve pull request'ler açıktır, commit formatı, branch stratejisi ve ADR'nin
 ne zaman zorunlu olduğu için [CONTRIBUTING.md](CONTRIBUTING.md). Format kontrolü
 CI'da zorunlu; push'tan önce `./scripts/format-check.sh --fix` çalıştırın.
 
@@ -265,4 +278,4 @@ Değişiklikler [CHANGELOG.md](CHANGELOG.md) içinde izleniyor.
 
 ## Lisans
 
-MIT — bkz. [LICENSE](LICENSE).
+MIT, bkz. [LICENSE](LICENSE).

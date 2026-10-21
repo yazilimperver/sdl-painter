@@ -36,20 +36,21 @@
 ## Why SDLPainter?
 
 SDL3 gives you the window, the input and a capable triangle-level renderer.
-SDLPainter adds a higher-level 2d drawing API on top of it — thick-line geometry, polygon
-triangulation, adaptive tessellation, a transform stack and batching — so you
+SDLPainter adds a higher-level 2d drawing API on top of it, thick-line geometry, polygon
+triangulation, adaptive tessellation, a transform stack and batching, so you
 can think in **shapes** instead of vertices.
 
-- **One API, two backends** — the same code produces the same result on OpenGL
-  3.3 and Vulkan 1.1. Switching is a
-  one-line change.
-- **Correct geometry** — thick lines are quad-based rather than `glLineWidth`, concave polygons are filled via ear clipping,
+- **One API, two backends**, the same drawing code runs on OpenGL 3.3 and
+  Vulkan 1.1, and switching is a one-line change. A parity test draws the same
+  scene into a render target on both and compares the pixels; on real drivers
+  they match byte for byte. The one feature gap: 4× MSAA is OpenGL-only.
+- **Correct geometry**, thick lines are quad-based rather than `glLineWidth`, concave polygons are filled via ear clipping,
   and circle segment counts adapt to the radius.
-- **Batches draw calls** — `RenderBatcher` merges draws sharing
+- **Batches draw calls**, `RenderBatcher` merges draws sharing
   mode/texture/opacity, so thousands of small shapes stay cheap.
-- **Optional application framework** — `sdl_painter_app` also gives you the
+- **Optional application framework**, `sdl_painter_app` also gives you the
   window, event loop and timing; skip it entirely if you don't want it.
-- **Familiar API** — if you have used QPainter, most of this will feel like home:
+- **Familiar API**, if you have used QPainter, most of this will feel like home:
   `DrawRect`, `FillCircle`, `Save`/`Restore`.
 
 ## Features
@@ -61,12 +62,12 @@ can think in **shapes** instead of vertices.
 | **Paths** | `Path` of lines and quadratic/cubic Béziers, stroked with the full pen style set or filled per sub-path (no even-odd/nonzero rule, so no holes) |
 | **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` stack |
 | **Clipping** | Scissor-based rectangular clipping |
-| **Render target** | Draw into a texture instead of the screen — minimaps, post-processing, trails — plus pixel read-back |
+| **Render target** | Draw into a texture instead of the screen, minimaps, post-processing, trails, plus pixel read-back |
 | **Anti-aliasing** | 4× MSAA, **OpenGL only**, and only through `Application` (it is a GL window attribute). The Vulkan backend and every render target are single-sample. |
-| **Viewport** | Draw into a sub-rectangle with local coordinates — split screen, minimaps |
+| **Viewport** | Draw into a sub-rectangle with local coordinates, split screen, minimaps |
 | **Image** | PNG / JPG loading (stb_image), source→destination scaling, atlas slicing, tint, mirroring, nearest/linear filtering, in-place texture update, free-form textured meshes |
 | **Text** | SDL_ttf 3.x, glyph cache, left/center/right alignment, multi-line and word wrap, kerning from the font's `kern` table. Left-to-right only: no ligatures, bidirectional text or complex shaping |
-| **Backend** | OpenGL 3.3 Core and Vulkan 1.1 — interchangeable through `IRenderer`. One `Painter` per process at a time; multiple GL contexts are not supported |
+| **Backend** | OpenGL 3.3 Core and Vulkan 1.1, interchangeable through `IRenderer`. One `Painter` per process at a time; multiple GL contexts are not supported |
 
 ## Blog Posts
 
@@ -110,7 +111,7 @@ Followings are about SDL2:
 
 ## Installation
 
-### CMake — `find_package`
+### CMake, `find_package`
 
 Build and install SDLPainter once (see [Building](doc/en/building.md)), then:
 
@@ -122,7 +123,7 @@ target_link_libraries(my_app PRIVATE sdl_painter::sdl_painter)
 
 Point CMake at the install prefix with `-DCMAKE_PREFIX_PATH=/path/to/prefix`.
 
-### CMake — `FetchContent`
+### CMake, `FetchContent`
 
 ```cmake
 include(FetchContent)
@@ -140,6 +141,15 @@ FetchContent_MakeAvailable(sdl_painter)
 target_link_libraries(my_app PRIVATE sdl_painter::sdl_painter)
 ```
 
+FetchContent builds SDLPainter inside your project, so its dependencies (SDL3,
+SDL3_ttf, glm, glad, stb, spdlog) must already be findable with
+`find_package`. The easiest way to provide them is Conan, see
+[Building](doc/en/building.md).
+
+The Vulkan backend is **off by default**. Turn it on with
+`-DSDLPAINTER_WITH_VULKAN=ON` (or `set(SDLPAINTER_WITH_VULKAN ON)` before
+`FetchContent_MakeAvailable`); it then also needs the Vulkan loader and headers.
+
 Both routes expose the **same target names**, so the snippets are
 interchangeable. The optional window/event-loop/timing layer is a separate
 target ([ADR-008](adr/ADR-008-application-framework-layer.md)):
@@ -149,10 +159,13 @@ target_link_libraries(my_app PRIVATE sdl_painter::app)
 ```
 
 On **Windows**, SDL3 and its dependencies are shared libraries and must sit next
-to your executable or the program exits with `0xC0000135` — see
-[Deploying runtime DLLs](doc/en/building.md#deploying-runtime-dlls-windows). By the way, cmake script already copies given files.
+to your executable or the program exits with `0xC0000135`, see
+[Deploying runtime DLLs](doc/en/building.md#deploying-runtime-dlls-windows).
+The repository's own examples and tests copy them automatically; your
+application needs its own copy step, the linked section gives the CMake
+one-liner and the extra DLLs that text rendering pulls in.
 
-SDLPainter is **not on Conan Center yet** — Conan is currently used only to
+SDLPainter is **not on Conan Center yet**, Conan is currently used only to
 resolve SDLPainter's own dependencies when building from source.
 
 ## Quick example
@@ -198,7 +211,7 @@ picks a backend per platform. SDLPainter takes on the shape-level work you would
 |---|---|---|
 | A 3 px thick line | Compute the normal, build a quad, emit 2 triangles | `SetPen(Pen(color, 3.0F)); DrawLine(...)` |
 | Fill a concave polygon | A triangle fan is not enough → write ear clipping | `FillPolygon(points)` |
-| A smooth circle at any radius | Tune the segment count by hand, build the fan | `FillCircle(cx, cy, r)` — segments adapt |
+| A smooth circle at any radius | Tune the segment count by hand, build the fan | `FillCircle(cx, cy, r)`, segments adapt |
 | Rotate a group of shapes | Multiply the vertices yourself | `Save(); Rotate(45); …; Restore()` |
 | 5,000 small shapes | Group them and merge draw calls by hand | `RenderBatcher` does it |
 
@@ -215,11 +228,11 @@ picks a backend per platform. SDLPainter takes on the shape-level work you would
 
 Five layers, each with a single responsibility:
 
-1. **Application** *(optional)* — window, event loop, timing ([ADR-008](adr/ADR-008-application-framework-layer.md))
-2. **Painter** — public API; collects drawing commands and applies the current state
-3. **RenderState + Tessellator** — transform/pen/brush/opacity/clip stack; turns shapes into vertices. The transform is a 3×3 affine `glm::mat3`, column-major ([ADR-007](adr/ADR-007-glm-transform-matrix.md))
-4. **RenderBatcher → IRenderer** — merges draw calls and forwards them to the backend
-5. **Backend** — `OpenGLRenderer` / `VulkanRenderer` on top of the SDL3 platform layer
+1. **Application** *(optional)*, window, event loop, timing ([ADR-008](adr/ADR-008-application-framework-layer.md))
+2. **Painter**, public API; collects drawing commands and applies the current state
+3. **RenderState + Tessellator**, transform/pen/brush/opacity/clip stack; turns shapes into vertices. The transform is a 3×3 affine `glm::mat3`, column-major ([ADR-007](adr/ADR-007-glm-transform-matrix.md))
+4. **RenderBatcher → IRenderer**, merges draw calls and forwards them to the backend
+5. **Backend**, `OpenGLRenderer` / `VulkanRenderer` on top of the SDL3 platform layer
 
 Adding a backend only requires implementing `IRenderer`; Painter code stays
 untouched. Every decision that shaped these layers is recorded as an
@@ -234,8 +247,8 @@ untouched. Every decision that shaped these layers is recorded as an
 | Linux | GCC / Clang | ✅ | ✅ |
 | Windows | MSVC (VS 2022) | ✅ | ✅ |
 | Windows | MinGW cross-compile from Linux | ✅ | ❌ |
-| Android | — | ❌ | ❌ |
-| macOS | — | ❌ | ❌ |
+| Android |, | ❌ | ❌ |
+| macOS |, | ❌ | ❌ |
 
 ## Documentation
 
@@ -268,7 +281,7 @@ It helps other SDL3 and C++ developers to discover the project.
 
 ## Contributing
 
-Issues and pull requests are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md)
+Issues and pull requests are welcome, see [CONTRIBUTING.md](CONTRIBUTING.md)
 for the commit format, branch strategy and when an ADR is required. Formatting
 is enforced by CI; run `./scripts/format-check.sh --fix` before pushing.
 
@@ -276,4 +289,4 @@ Changes are tracked in [CHANGELOG.md](CHANGELOG.md).
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE).
