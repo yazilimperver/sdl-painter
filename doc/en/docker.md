@@ -188,11 +188,11 @@ flowchart TD
 The same pipeline was also moved to GitHub Actions (`.github/workflows/ci.yml`).
 The Linux jobs again use the image built from this repo's `Dockerfile`; the
 difference is that the image is pulled from **Docker Hub** instead of the GitLab
-Container Registry (`yazilimperver/sdl-painter:ci-v1.1`).
+Container Registry (`yazilimperver/sdl-painter:ci-v1.2`).
 
 | Job | Environment | Source |
 |---|---|---|
-| `build-linux-*`, `test-unit*`, `quality-*` | `container: yazilimperver/sdl-painter:ci-v1.1` | `Dockerfile` `ci` target → Docker Hub |
+| `build-linux-*`, `test-unit*`, `quality-*` | `container: yazilimperver/sdl-painter:ci-v1.2` | `Dockerfile` `ci` target → Docker Hub |
 | `build-windows-*` | `windows-latest` runner (**no** container) | Native MSVC + `actions/cache` |
 | `docs` | `ubuntu-latest`, Doxygen via apt | Output is an artifact only (no Pages publish) |
 | `release` | `ubuntu-latest`, `softprops/action-gh-release` | On a `v*.*.*` tag, notes from `CHANGELOG.md` |
@@ -212,7 +212,7 @@ Where it diverges from GitLab:
   `pip`. Since there is no custom image, the Conan cache is stored with
   `actions/cache`, keyed on `hashFiles('conanfile.py')` — the cache is refreshed
   automatically when the dependencies change.
-- **Image versioning:** The Docker Hub tag is versioned (`ci-v1.1`).
+- **Image versioning:** The Docker Hub tag is versioned (`ci-v1.2`).
   When `conanfile.py` changes, a new tag must be pushed and the image reference
   in the workflow updated.
 - **DAG difference:** In GitLab `test:unit:asan` and `quality:clang-format` run
@@ -262,22 +262,22 @@ especially because of the Conan pre-warming):
 
 | Tag | Dockerfile target | Size (compressed) | Description |
 |---|---|---|---|
-| `ci-v1.1` | `Dockerfile` → `ci` | ~2.2 GB | Versioned tag used by the GitHub Actions Linux jobs |
+| `ci-v1.2` | `Dockerfile` → `ci` | ~2.2 GB | Versioned tag used by the GitHub Actions Linux jobs |
 | `ci` | `Dockerfile` → `ci` | ~2.2 GB | Unversioned tracking tag — points to the latest ci image |
 | `windows-cross-v1.0` | `Dockerfile` → `windows-cross` | ~3.5 GB | Linux + MinGW-w64 cross-compile (Linux container) |
 | `windows-v1.0` | `Dockerfile.windows` → `windows-msvc` | ~7.9 GB | Native MSVC + Vulkan (**Windows container** — requires Windows containers mode) |
 
 ```powershell
 # Pull the ready-made image instead of building locally
-docker pull yazilimperver/sdl-painter:ci-v1.1
+docker pull yazilimperver/sdl-painter:ci-v1.2
 
 # The commands from the ci flow above work the same way:
-docker run --rm -v "${PWD}:/workspace" yazilimperver/sdl-painter:ci-v1.1 bash -c `
+docker run --rm -v "${PWD}:/workspace" yazilimperver/sdl-painter:ci-v1.2 bash -c `
   "conan install . --output-folder=build/linux-debug/generators --build=missing -s build_type=Debug -s compiler=gcc -s compiler.version=13 -s compiler.libcxx=libstdc++11 && cmake --preset linux-debug && cmake --build --preset linux-debug && ctest --preset linux-debug --output-on-failure"
 ```
 
 > **Versioning:** When `conanfile.py` or a Dockerfile changes, a new versioned tag
-> (`ci-v1.1` etc.) is pushed and the image reference in the GitHub workflow is
+> (`ci-v1.2` etc.) is pushed and the image reference in the GitHub workflow is
 > updated. Versioned tags are treated as immutable; the `ci` tracking tag, on the
 > other hand, is moved to the latest image on every release. The GitLab side uses
 > the same images from its own Container Registry (`$CI_REGISTRY_IMAGE`).
@@ -291,6 +291,6 @@ docker run --rm -v "${PWD}:/workspace" yazilimperver/sdl-painter:ci-v1.1 bash -c
 | `Dockerfile` → `builder` | `sdl-painter:dev` | Local Linux development |
 | `Dockerfile` → `ci` | `sdl-painter:ci` | Headless tests, code coverage, Vulkan (lavapipe) |
 | `Dockerfile` → `ci` | `$CI_REGISTRY_IMAGE` | GitLab CI Linux jobs |
-| `Dockerfile` → `ci` | `yazilimperver/sdl-painter:ci-v1.1` (Docker Hub) | GitHub Actions Linux jobs |
+| `Dockerfile` → `ci` | `yazilimperver/sdl-painter:ci-v1.2` (Docker Hub) | GitHub Actions Linux jobs |
 | `Dockerfile` → `windows-cross` | `sdl-painter:windows-cross` / `$CI_REGISTRY_IMAGE/sdl-painter-win-cross` / `yazilimperver/sdl-painter:windows-cross-v1.0` (Docker Hub) | Windows cross-compile (MinGW, no Vulkan) |
 | `Dockerfile.windows` → `windows-msvc` | `sdl-painter-windows:latest` / `yazilimperver/sdl-painter:windows-v1.0` (Docker Hub) | Local native MSVC build + test (with Vulkan) |

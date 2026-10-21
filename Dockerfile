@@ -60,7 +60,8 @@ RUN conan install . \
     -s compiler.version=13 \
     -s compiler.libcxx=libstdc++11 \
     -c tools.system.package_manager:mode=install \
-    -c tools.system.package_manager:sudo=False
+    -c tools.system.package_manager:sudo=False \
+    && conan cache clean "*" --source --build --download --temp
 
 RUN conan install . \
     --output-folder=build/linux-release/generators \
@@ -70,7 +71,8 @@ RUN conan install . \
     -s compiler.version=13 \
     -s compiler.libcxx=libstdc++11 \
     -c tools.system.package_manager:mode=install \
-    -c tools.system.package_manager:sudo=False
+    -c tools.system.package_manager:sudo=False \
+    && conan cache clean "*" --source --build --download --temp
 
 # Vulkan variantı için Conan cache pre-warm (with_vulkan=True).
 # vulkan-loader, vulkan-headers, shaderc + transitive deps (glslang, spirv-tools)
@@ -87,7 +89,8 @@ RUN conan install . \
     -o "&:with_vulkan=True" \
     -c tools.system.package_manager:mode=install \
     -c tools.system.package_manager:sudo=False \
-    && rm -rf /tmp/vk-precache
+    && rm -rf /tmp/vk-precache \
+    && conan cache clean "*" --source --build --download --temp
 
 RUN conan install . \
     --output-folder=/tmp/vk-precache \
@@ -99,7 +102,8 @@ RUN conan install . \
     -o "&:with_vulkan=True" \
     -c tools.system.package_manager:mode=install \
     -c tools.system.package_manager:sudo=False \
-    && rm -rf /tmp/vk-precache
+    && rm -rf /tmp/vk-precache \
+    && conan cache clean "*" --source --build --download --temp
 
 # ─── CI Stage ────────────────────────────────────────────────────────────────
 # Builder üzerine coverage araçları + Vulkan runtime (lavapipe) ekler, headless
@@ -186,7 +190,8 @@ RUN conan install . \
     --profile:build=default \
     --profile:host=windows-mingw \
     -c tools.system.package_manager:mode=install \
-    -c tools.system.package_manager:sudo=False
+    -c tools.system.package_manager:sudo=False \
+    && conan cache clean "*" --source --build --download --temp
 
 RUN conan install . \
     --output-folder=build/windows-mingw-release/generators \
@@ -195,7 +200,8 @@ RUN conan install . \
     --profile:build=default \
     --profile:host=windows-mingw \
     -c tools.system.package_manager:mode=install \
-    -c tools.system.package_manager:sudo=False
+    -c tools.system.package_manager:sudo=False \
+    && conan cache clean "*" --source --build --download --temp
 
 # NOT: Windows MinGW cross-compile'da Vulkan DESTEKLENMİYOR. vulkan-loader
 # Conan recipe'ı Windows'ta USE_MASM=True'yu hardcoded set ediyor ve MinGW

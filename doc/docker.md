@@ -183,11 +183,11 @@ flowchart TD
 Aynı pipeline GitHub Actions'a da taşındı (`.github/workflows/ci.yml`). Linux
 job'ları yine bu repodaki `Dockerfile`'dan üretilen imajı kullanır; fark, imajın
 GitLab Container Registry yerine **Docker Hub**'dan çekilmesidir
-(`yazilimperver/sdl-painter:ci-v1.1`).
+(`yazilimperver/sdl-painter:ci-v1.2`).
 
 | Job | Ortam | Kaynak |
 |---|---|---|
-| `build-linux-*`, `test-unit*`, `quality-*` | `container: yazilimperver/sdl-painter:ci-v1.1` | `Dockerfile` `ci` hedefi → Docker Hub |
+| `build-linux-*`, `test-unit*`, `quality-*` | `container: yazilimperver/sdl-painter:ci-v1.2` | `Dockerfile` `ci` hedefi → Docker Hub |
 | `build-windows-*` | `windows-latest` runner (container **yok**) | Native MSVC + `actions/cache` |
 | `docs` | `ubuntu-latest`, apt ile Doxygen | Çıktı yalnız artifact (Pages publish yok) |
 | `release` | `ubuntu-latest`, `softprops/action-gh-release` | `v*.*.*` tag'inde, notlar `CHANGELOG.md`'den |
@@ -207,7 +207,7 @@ GitLab'dan ayrışan noktalar:
   imaj olmadığından Conan cache'i `actions/cache` ile,
   `hashFiles('conanfile.py')` anahtarına bağlanarak saklanır — bağımlılık
   değişince cache otomatik tazelenir.
-- **İmaj sürümleme:** Docker Hub etiketi sürümlüdür (`ci-v1.1`).
+- **İmaj sürümleme:** Docker Hub etiketi sürümlüdür (`ci-v1.2`).
   `conanfile.py` değiştiğinde yeni etiket push'lanıp workflow'daki imaj
   referansı güncellenmelidir.
 - **DAG farkı:** GitLab'da `test:unit:asan` ve `quality:clang-format`
@@ -255,22 +255,22 @@ sürer) yerine doğrudan çekilebilir:
 
 | Etiket | Dockerfile hedefi | Boyut (sıkıştırılmış) | Açıklama |
 |---|---|---|---|
-| `ci-v1.1` | `Dockerfile` → `ci` | ~2,2 GB | GitHub Actions Linux job'larının kullandığı sürümlü etiket |
+| `ci-v1.2` | `Dockerfile` → `ci` | ~2,2 GB | GitHub Actions Linux job'larının kullandığı sürümlü etiket |
 | `ci` | `Dockerfile` → `ci` | ~2,2 GB | Sürümsüz takip etiketi — en güncel ci imajını gösterir |
 | `windows-cross-v1.0` | `Dockerfile` → `windows-cross` | ~3,5 GB | Linux + MinGW-w64 cross-compile (Linux container) |
 | `windows-v1.0` | `Dockerfile.windows` → `windows-msvc` | ~7,9 GB | Native MSVC + Vulkan (**Windows container** — Windows containers modu gerekir) |
 
 ```powershell
 # Lokal build yerine hazır imajı çek
-docker pull yazilimperver/sdl-painter:ci-v1.1
+docker pull yazilimperver/sdl-painter:ci-v1.2
 
 # Yukarıdaki ci akışındaki komutlar aynı şekilde çalışır:
-docker run --rm -v "${PWD}:/workspace" yazilimperver/sdl-painter:ci-v1.1 bash -c `
+docker run --rm -v "${PWD}:/workspace" yazilimperver/sdl-painter:ci-v1.2 bash -c `
   "conan install . --output-folder=build/linux-debug/generators --build=missing -s build_type=Debug -s compiler=gcc -s compiler.version=13 -s compiler.libcxx=libstdc++11 && cmake --preset linux-debug && cmake --build --preset linux-debug && ctest --preset linux-debug --output-on-failure"
 ```
 
 > **Sürümleme:** `conanfile.py` veya Dockerfile değiştiğinde yeni sürümlü etiket
-> (`ci-v1.1` vb.) push'lanır ve GitHub workflow'undaki imaj referansı
+> (`ci-v1.2` vb.) push'lanır ve GitHub workflow'undaki imaj referansı
 > güncellenir. Sürümlü etiketler değişmez (immutable) kabul edilir; `ci` takip
 > etiketi ise her yayında en güncel imaja kaydırılır. GitLab tarafı ise aynı
 > imajları kendi Container Registry'sinden (`$CI_REGISTRY_IMAGE`) kullanır.
@@ -284,6 +284,6 @@ docker run --rm -v "${PWD}:/workspace" yazilimperver/sdl-painter:ci-v1.1 bash -c
 | `Dockerfile` → `builder` | `sdl-painter:dev` | Yerel Linux geliştirme |
 | `Dockerfile` → `ci` | `sdl-painter:ci` | Headless test, kod kapsama, Vulkan (lavapipe) |
 | `Dockerfile` → `ci` | `$CI_REGISTRY_IMAGE` | GitLab CI Linux job'ları |
-| `Dockerfile` → `ci` | `yazilimperver/sdl-painter:ci-v1.1` (Docker Hub) | GitHub Actions Linux job'ları |
+| `Dockerfile` → `ci` | `yazilimperver/sdl-painter:ci-v1.2` (Docker Hub) | GitHub Actions Linux job'ları |
 | `Dockerfile` → `windows-cross` | `sdl-painter:windows-cross` / `$CI_REGISTRY_IMAGE/sdl-painter-win-cross` / `yazilimperver/sdl-painter:windows-cross-v1.0` (Docker Hub) | Windows cross-compile (MinGW, Vulkan'sız) |
 | `Dockerfile.windows` → `windows-msvc` | `sdl-painter-windows:latest` / `yazilimperver/sdl-painter:windows-v1.0` (Docker Hub) | Yerel native MSVC build + test (Vulkan destekli) |

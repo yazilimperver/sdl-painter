@@ -73,7 +73,7 @@ Doxygen configuration and comment conventions:
 ## CI/CD
 
 The primary pipeline is **GitHub Actions** (`.github/workflows/ci.yml`). Linux
-jobs run in the prebuilt Docker Hub image (`yazilimperver/sdl-painter:ci-v1.1`);
+jobs run in the prebuilt Docker Hub image (`yazilimperver/sdl-painter:ci-v1.2`);
 Windows jobs run on a native MSVC runner.
 
 | Job | Environment | What it does |

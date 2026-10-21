@@ -18,7 +18,7 @@ jobs:
     name: build:linux:debug
     runs-on: ubuntu-latest
     container:
-      image: yazilimperver/sdl-painter:ci-v1.1
+      image: yazilimperver/sdl-painter:ci-v1.2
     env:
       CONAN_HOME: /root/.conan2
     steps:
@@ -52,7 +52,7 @@ jobs:
     name: build:linux:release
     runs-on: ubuntu-latest
     container:
-      image: yazilimperver/sdl-painter:ci-v1.1
+      image: yazilimperver/sdl-painter:ci-v1.2
     env:
       CONAN_HOME: /root/.conan2
     steps:
@@ -157,7 +157,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-linux-debug, build-linux-release]
     container:
-      image: yazilimperver/sdl-painter:ci-v1.1
+      image: yazilimperver/sdl-painter:ci-v1.2
     env:
       CONAN_HOME: /root/.conan2
       SDL_VIDEODRIVER: offscreen
@@ -218,7 +218,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-linux-debug, build-linux-release]
     container:
-      image: yazilimperver/sdl-painter:ci-v1.1
+      image: yazilimperver/sdl-painter:ci-v1.2
     env:
       CONAN_HOME: /root/.conan2
       SDL_VIDEODRIVER: offscreen
@@ -280,7 +280,7 @@ jobs:
     needs: []
     continue-on-error: true
     container:
-      image: yazilimperver/sdl-painter:ci-v1.1
+      image: yazilimperver/sdl-painter:ci-v1.2
     env:
       CONAN_HOME: /root/.conan2
       SDL_VIDEODRIVER: offscreen
@@ -414,7 +414,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-linux-debug]
     container:
-      image: yazilimperver/sdl-painter:ci-v1.1
+      image: yazilimperver/sdl-painter:ci-v1.2
     env:
       CONAN_HOME: /root/.conan2
     steps:
@@ -464,7 +464,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-linux-debug]
     container:
-      image: yazilimperver/sdl-painter:ci-v1.1
+      image: yazilimperver/sdl-painter:ci-v1.2
     env:
       CONAN_HOME: /root/.conan2
     steps:
@@ -523,7 +523,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [build-linux-debug]
     container:
-      image: yazilimperver/sdl-painter:ci-v1.1
+      image: yazilimperver/sdl-painter:ci-v1.2
     env:
       CONAN_HOME: /root/.conan2
     steps:
@@ -544,7 +544,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test-unit, test-unit-asan]
     container:
-      image: yazilimperver/sdl-painter:ci-v1.1
+      image: yazilimperver/sdl-painter:ci-v1.2
     steps:
       - uses: actions/checkout@v7
       # Kapsam bilincli olarak include/ + src/ ile sinirli. tests/ altindaki
@@ -559,7 +559,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [test-unit, test-unit-asan]
     container:
-      image: yazilimperver/sdl-painter:ci-v1.1
+      image: yazilimperver/sdl-painter:ci-v1.2
     env:
       CONAN_HOME: /root/.conan2
     steps:

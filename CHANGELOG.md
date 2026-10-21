@@ -11,6 +11,7 @@
 
 - SDL 3.2.14 → **3.4.16**, spdlog 1.15.3 → **1.17.0**, Vulkan loader/headers
   1.3.290.0 → **1.4.357.0**. Conan Center artık eski sürümleri listelemediği için güncellendi.
+- CI imajı `ci-v1.2`: Conan önbelleği yeni sürümlerle güncellendi; derleme ve kaynak dizinleri imaja girmiyor (sıkıştırılmış boyut 2,2 GB → 1,0 GB).
 
 ### Düzeltildi
 
