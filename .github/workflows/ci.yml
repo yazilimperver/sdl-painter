@@ -5,6 +5,8 @@ on:
     branches: ["**"]
     tags: ["v*.*.*"]
   pull_request:
+  # Actions sekmesinden elle calistirmak icin
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

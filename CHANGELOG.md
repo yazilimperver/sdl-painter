@@ -157,6 +157,10 @@
 
 ### Değişti
 
+- Test preset'leri hiç test bulamazsa hata veriyor (`noTestsAction: error`);
+  önceden kırık bir derleme "No tests were found" ile başarılı görünebiliyordu.
+  `conan-install.ps1` C++17 ile kuruyor. CI Actions sekmesinden elle
+  çalıştırılabiliyor (`workflow_dispatch`).
 - `Painter::Clear` ve `IRenderer::Clear` belgelerine kapsam beklentileri
   yazıldı; `RenderTarget` belgesine başlangıç içeriği eklendi; `Font`
   belgesine tek-renderer kuralı eklendi.

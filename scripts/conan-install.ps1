@@ -36,11 +36,14 @@ if ($NoTests)    { $ConanOptions += @("-o", "sdl_painter/*:build_tests=False") }
 $OptionsSummary = if ($ConanOptions.Count -gt 0) { ($ConanOptions -join ' ') } else { '(defaults)' }
 Write-Output ">>> Conan install: build_type=$script:BUILD_TYPE, output=$OutputFolder, options=$OptionsSummary"
 
-# Install Conan dependencies
+# Install Conan dependencies.
+# MSVC's detected profile defaults to cppstd=14, which the recipe rejects
+# (C++17 required); CI passes the same setting.
 conan install . `
     --output-folder="$OutputFolder" `
     --build=missing `
     -s build_type="$script:BUILD_TYPE" `
+    -s:a compiler.cppstd=17 `
     @ConanOptions
 if (-not $?) { exit $LASTEXITCODE }
 

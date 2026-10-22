@@ -165,44 +165,51 @@
       "displayName": "Test Windows Debug",
       "configurePreset": "windows-debug",
       "configuration": "Debug",
-      "output": { "outputOnFailure": true }
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
     },
     {
       "name": "windows-release",
       "displayName": "Test Windows Release",
       "configurePreset": "windows-release",
       "configuration": "Release",
-      "output": { "outputOnFailure": true }
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
     },
     {
       "name": "linux-debug",
       "displayName": "Test Linux Debug",
       "configurePreset": "linux-debug",
-      "output": { "outputOnFailure": true }
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
     },
     {
       "name": "linux-release",
       "displayName": "Test Linux Release",
       "configurePreset": "linux-release",
-      "output": { "outputOnFailure": true }
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
     },
     {
       "name": "linux-debug-coverage",
       "displayName": "Test Linux Debug + kod kapsama",
       "configurePreset": "linux-debug-coverage",
-      "output": { "outputOnFailure": true }
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
     },
     {
       "name": "linux-debug-asan",
       "displayName": "Test Linux Debug + ASan",
       "configurePreset": "linux-debug-asan",
-      "output": { "outputOnFailure": true }
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
     },
     {
       "name": "windows-mingw-debug",
       "displayName": "Test Windows MinGW Debug",
       "configurePreset": "windows-mingw-debug",
-      "output": { "outputOnFailure": true }
+      "output": { "outputOnFailure": true },
+      "execution": { "noTestsAction": "error" }
     }
   ]
 }
