@@ -98,11 +98,22 @@ endif()
 ```
 
 > This covers imported targets that report their DLL location — in practice
-> SDL3, SDL3_ttf and the Vulkan loader. It does **not** reliably catch
-> *transitive* DLLs: SDL_ttf pulls in freetype, harfbuzz, glib, plutosvg and
-> zlib, and several Conan recipes leave `IMPORTED_LOCATION` unset for those. If
-> you render text, deploy that chain too — the least error-prone route is
-> Conan's `VirtualRunEnv` generator or a deployer.
+> SDL3, SDL3_ttf and the Vulkan loader. When SDLPainter itself is shared
+> (`BUILD_SHARED_LIBS=ON`, Conan `shared=True`) it copies only SDL3 and
+> `sdl_painter.dll`: the DLL's private dependencies are not in your target's
+> list. It does **not** reliably catch *transitive* DLLs: SDL_ttf pulls in
+> freetype, harfbuzz, glib, plutosvg and zlib, and several Conan recipes leave
+> `IMPORTED_LOCATION` unset for those. If you render text, or if SDLPainter is
+> shared (`sdl_painter.dll` loads SDL3_ttf at startup), deploy that chain too.
+> With Conan, the `runtime_deploy` deployer copies every shared library in the
+> dependency graph:
+>
+> ```bash
+> conan install . --deployer=runtime_deploy --deployer-folder=<exe dir>
+> ```
+>
+> Alternatively, run the program inside Conan's `VirtualRunEnv`
+> (`conanrun.bat`).
 
 The repository's own build uses an internal helper
 (`sdlpainter_copy_runtime_dlls`) for this. It is deliberately **not** exported:
