@@ -1,11 +1,28 @@
 # Changelog
 
-## [Yayımlanmamış]
+## [1.4.0] - 2026-10-22
 
-### Kaldırıldı
+### ⚠️ Kırıcı değişiklikler
 
-- Kullanılmayan `sdl_painter::Size` türü public API'den kaldırıldı. Bu kaynak
-  uyumluluğunu bozan değişiklik 1.4 sürümü içindir.
+Bu sürüm, `v1.3.0`'a göre public API'den tek bir tür kaldırıyor; diğer
+kırılmalar ikili uyumluluk ve çizim çıktısıyla ilgili.
+
+- **`sdl_painter::Size` kaldırıldı.** Kütüphanenin hiçbir API'si onu
+  kullanmıyordu. Kendi kodunuzda kullanıyorsanız tanımı kendiniz yapın:
+
+  ```cpp
+  struct Size { float w{0.0F}; float h{0.0F}; };
+  ```
+- **Shared derlemede ikili uyumluluk yok.** `SOVERSION` yalnızca ana sürümü
+  izliyor (Linux'ta `libsdl_painter.so.1`), ama `Painter`, `Font`,
+  `RenderTarget` ve `Application`'ın private üyeleri değişti. 1.3.0'a karşı
+  derlenmiş uygulama 1.4.0 ile yeniden derlenmeli; kütüphane dosyasını tek
+  başına değiştirmek yetmez.
+- **Çıktıyı değiştiren düzeltmeler** (ayrıntılar Düzeltildi bölümünde): yarı
+  saydam çizim hedefi artık doğrudan çizimle aynı sonucu veriyor; `MeasureText`
+  genişliği kerning yüzünden biraz değişebilir; `Clear` kırpmadan bağımsız
+  olarak yüzeyin tamamını siliyor; Vulkan'da `IRenderer::SetViewport` ile
+  verilen viewport yeniden boyutlandırmada korunuyor.
 
 ### Bağımlılıklar
 
