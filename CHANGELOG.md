@@ -64,11 +64,12 @@
   Offscreen render pass ilk bağlanmada `loadOp = CLEAR` ile `mClearValue`
   kullanıyordu ve o değer en son `Clear` çağrısından kalıyordu. Yeni hedefin
   başlangıç içeriği artık iki backend'de de (0, 0, 0, 0); OpenGL tarafında
-  FBO oluşturulurken açıkça temizleniyor.
+  FBO oluşturulurken açıkça temizleniyor. Vulkan'da bu, hedef ilk kez
+  bağlandığında geçerli (bkz. Bilinen Eksikler).
 - **Aynı `Font` ikinci bir renderer'da birincinin texture handle'ını
   veriyordu.** Glyph önbelleği yalnızca kod noktasına göre tutuluyordu; texture
   tanımlayıcıları ise renderer'a yereldir. Bir Font tek
-  bir Painter'a ait olacka şekilde güncelleme yapıldı; yabancı renderer ile çağrı `nullptr` döner ve hata loglar.
+  bir Painter'a ait olacak şekilde güncelleme yapıldı; yabancı renderer ile çağrı `nullptr` döner ve hata loglar.
 - **Aktif çizim hedefi yok edilince Painter hâlâ hedefe çizdiğini
   sanıyordu.** Viewport hedefin boyutunda, projeksiyon hedefin Y yönünde
   kalıyor ve frame sonuna kadar ekrana o durumla çiziliyordu. `RenderTarget`
@@ -131,6 +132,55 @@
   kullanıyorsa panel sahneyi karartıyor ya da opak siyah blok oluyordu.
   Gösterge artık `Save`/`Restore` arasında `BlendMode::kAlpha` ile çiziliyor;
   uygulamanın modu çizimden sonra geri geliyor.
+- **Konkav poligonun çentiği doluyordu.** Ear clipping, aday kulağın
+  köşegeni üzerinde duran reflex köşeyi dışarıda sayıyor ve çentiği kapatan
+  üçgen üretiyordu; (0,0), (4,0), (4,4), (2,2), (0,4) için alan 12 yerine 20
+  çıkıyordu. Köşegen üzerindeki nokta artık içeride sayılıyor; tolerans
+  üçgenin alanıyla ölçekleniyor.
+- **Başlangıç noktasına dönen açık polyline'ın son segmenti çizilmiyordu.**
+  Tekrarlı nokta temizliği, ilk noktayla çakışan son noktayı kapalı
+  konturdaki gibi siliyordu. Artık yalnızca kapalı konturda siliniyor (düz ve
+  kesikli çizgide).
+- **Yarı saydam kalın çizgide uçlar ve köşeler iki kez karışıyordu.**
+  Yuvarlak uç tam disk olarak gövdenin üstüne biniyor, köşelerde iki
+  segmentin gövdesi iç tarafta örtüşüyordu; örtüşen bölge daha koyu
+  çıkıyordu. Gövdeler artık iç köşede kenarlarının kesişim noktasında
+  kırpılıyor, uç geometrisi gövdeyle yalnızca kenarını paylaşıyor. Çok keskin
+  köşede ya da kırpma payı komşu segmentin yarısını aşınca o köşe kırpılmıyor
+  ve örtüşme kalıyor.
+- **Büyük bir şeklin içine düşen küçük radial gradient kayboluyordu.**
+  Üçgen bölme kararı yalnızca köşelere ve kenar orta noktalarına bakıyordu;
+  gradient merkezi bir üçgenin içinde kalıp yarıçap küçükse o bölge bitiş
+  rengiyle çiziliyordu. Bölme artık üçgenin merkeze en yakın noktasını da
+  hesaba katıyor.
+- **Yarı saydam çizim hedefi ekrana çizilirken alfa iki kez çarpılıyordu.**
+  Hedefte renk alfayla çarpılmış (premultiplied) birikir; `DrawRenderTarget`
+  onu sıradan bir görüntü gibi yeniden alfayla çarpıyordu: doğrudan çizilen
+  alfa 128 kırmızı 128, hedef üzerinden 64 veriyordu. Hedef texture'ı artık
+  iki backend'de de premultiplied karıştırılıyor (`kAlpha` ve `kAdditive`;
+  `kMultiply` ve `kNone` değişmedi), tint alfası ve opaklık RGB'ye de
+  uygulanıyor. Hedefe yarı saydam renkle `Clear` da premultiplied yazıyor.
+  Yarı saydam hedef kullanan sahnelerde sonuç değişir, artık doğrudan çizimle
+  aynıdır. `ReadRenderTarget`'ın premultiplied değer döndürdüğü belgelendi.
+- **`SetFont` kuyruktaki metnin glyph atlasını silebiliyordu.** Painter eski
+  fontun son sahibiyse atlas atama anında siliniyor, aynı frame'de daha önce
+  kuyruğa giren metin silinmiş texture ile çiziliyordu. `SetFont` artık önce
+  kuyruğu gönderiyor; aynı fontu yeniden atamak etkisiz.
+- **`OnInit` başarısız olunca `Application` çökebiliyordu.** Painter,
+  türeyen sınıfın `Image`/`Font` üyelerinden önce yıkılıyor, üyeler sonra
+  yıkılmış renderer'a dokunuyordu. Yıkım, başarılı yoldaki gibi
+  `~Application`'a bırakıldı.
+- **Vulkan'da frame içinde yıkılan çizim hedefi komut buffer'ını
+  bozuyordu.** Hedefin framebuffer'ı ve image'ı kayıtlı komutlarda
+  kullanılırken siliniyor, validation `vkCmdEndRenderPass` ve
+  `vkEndCommandBuffer`'da hata veriyordu. Hedef artık uçuştaki frame'ler
+  bitince siliniyor. `RenderTarget` yıkılırken o hedefi örnekleyen bekleyen
+  çizimler de önce gönderiliyor (iki backend).
+- **Vulkan'da frame içinde silinen texture bir frame erken serbest
+  bırakılıyordu.** Gecikmeli silme sayacı frame sonunda arttığı için o
+  frame'in komut buffer'ı texture'ı hâlâ kullanıyor olabiliyordu
+  (`VUID-vkFreeDescriptorSets-pDescriptorSets-00309`). Frame içinde silinen
+  texture artık bir frame fazla bekletiliyor.
 
 ### Eklendi
 
@@ -152,8 +202,17 @@
   `SDLPAINTER_REQUIRE_VALIDATION=1` de açık.
 - **CI imajı `ci-v1.1`:** Dockerfile'ın `ci` aşamasına Vulkan validation
   katmanı (`vulkan-validationlayers`) eklendi; GitHub Actions'ın Linux işleri
-  `yazilimperver/sdl-painter:ci-v1.1` kullanıyor. GitLab etiketsiz
-  `$CI_REGISTRY_IMAGE` kullandığı için imaj orada yeniden push edilmeli.
+  önce `ci-v1.1`'e, sonra `ci-v1.2`'ye geçti (bkz. Bağımlılıklar). GitLab
+  etiketsiz `$CI_REGISTRY_IMAGE` kullandığı için imaj orada yeniden push
+  edilmeli.
+- **`Font::Kerning(previous, current)`:** iki ardışık kod noktası arasındaki
+  kerning düzeltmesini fontun `kern` tablosundan piksel olarak verir.
+  `MeasureText` ve metin çizimi bunu kullanıyor.
+- **Dört showcase örneği:** `shapes_showcase`, `color_showcase`,
+  `transform_showcase`, `images_showcase`. `hero`'nun dört perdesi, uygulama
+  çatısı üzerinde ayrı ayrı ve döngüde oynuyor.
+- **Conan Center recipe'i** `packaging/conan-center/` altında (CCI'ye
+  gönderilecek kopya).
 
 ### Değişti
 
@@ -163,7 +222,23 @@
   çalıştırılabiliyor (`workflow_dispatch`).
 - `Painter::Clear` ve `IRenderer::Clear` belgelerine kapsam beklentileri
   yazıldı; `RenderTarget` belgesine başlangıç içeriği eklendi; `Font`
-  belgesine tek-renderer kuralı eklendi.
+  belgesine tek-renderer kuralı eklendi; `Painter` belgesine süreç başına
+  aynı anda tek Painter kuralı eklendi (OpenGL renderer'ı çizerken kendi
+  context'ini seçmiyor).
+- `Image::CreateFromData` kanal sayısını 1–4 aralığında kabul ediyor;
+  dışındaki değerde boş `Image` döner.
+- `sdl_painter` ve `sdl_painter_app` C++17 gereksinimini hedef üzerinde
+  taşıyor (`target_compile_features(... PUBLIC cxx_std_17)`); tüketicinin
+  kendi standardını ayarlaması gerekmiyor.
+- Sürüm job'ı iki pipeline'da da tüm build, test, paketleme ve shader
+  tazeliği job'larını bekliyor; önce GitHub'da yalnızca format ve
+  clang-tidy'yi, GitLab'da hiçbir job'u beklemiyordu. Dockerfile'lar
+  `conan install` öncesi `version.h`'i de kopyalıyor; `set_version()` onu
+  okuduğu için imaj derlemesi kırılıyordu.
+- Belgeler: `doc/` altındaki Türkçe belgelerin İngilizce karşılıkları
+  `doc/en/` altına eklendi; İngilizce belgeler oraya taşındı, Türkçe dosya
+  adlarındaki `sdl-painter-` öneki kaldırıldı. Eski yollara verilen
+  bağlantılar kırılır.
 - `Tessellator::IsClockwise` kaldırıldı.
   `Painter::PushTexturedQuad` dokulu dörtgeni elle kurmak yerine
   `Tessellator::TessellateTexturedRect` kullanacak hale getirildi.
@@ -200,6 +275,27 @@
   için), `DestroyingActiveTargetRestoresScreenState`,
   `TargetOutlivingPainterDoesNotTouchRenderer`, `OpacityIsClampedToUnitRange`,
   `NegativeClipSizeBecomesEmptyClip`, `FontOwnership.*`.
+- Yukarıdaki düzeltmelerin her biri için regresyon testi (ör.
+  `ReflexVertexOnDiagonalKeepsArea`, `TranslucentTargetComposesLikeDirectDraw`,
+  `TranslucentRoundCapBlendsOnce`, `DestroyingBoundTargetMidFrameIsSafe`,
+  `RightAlignedTextEndsAtRectEdge`).
+- Tessellator için alan ve kapsama oracle'ları (`geometry_oracle.h`),
+  `MockRenderer` sözleşme testleri, piksel yardımcılarının kendi testleri ve
+  gerçek backend'de kırpma, blend ve texture piksel testleri. Backend ya da
+  font yokken sessizce geçen testler `SDLPAINTER_REQUIRE_BACKEND` /
+  `SDLPAINTER_REQUIRE_FONT` ayarlıysa düşüyor. Vulkan'sız derlemede Vulkan'a
+  özgü testler derlenmiyor.
+
+### Bilinen Eksikler
+
+- Vulkan'da hiç bağlanmadan örneklenen ya da okunan yeni çizim hedefinin
+  içeriği tanımsız; hedef oluşturulurken temizlenmiyor, yalnızca layout
+  geçişi yapılıyor. `SetRenderTarget` ile bir kez bağlanan hedef (0, 0, 0, 0)
+  başlar. OpenGL'de sorun yok.
+- Yarı saydam kesikli çizgide iki durumda çift karışım kalıyor: kapalı
+  yolda başlangıç noktasında ilk ve son kesik ayrı kalıyor ve yuvarlak uçları
+  üst üste biniyor; bir köşeyi birkaç piksel geçip biten kesikte o köşe
+  kırpılamıyor.
 
 ## [1.3.0] - 2026-08-28
 
