@@ -218,8 +218,10 @@ You can check out other examples given at **[Examples](examples/README.md)**.
 
 ### How it relates to SDL_Renderer
 
-SDL3's `SDL_Renderer` draws arbitrary triangles through `SDL_RenderGeometry`,
-picks a backend per platform. SDLPainter takes on the shape-level work you would otherwise write yourself:
+Often SDL3's own `SDL_Renderer` is all you need: it has no extra dependencies,
+picks a backend per platform and draws arbitrary triangles through
+`SDL_RenderGeometry`. SDLPainter takes on the shape-level work you would
+otherwise write yourself:
 
 | Need | Written by hand | With SDLPainter |
 |---|---|---|
@@ -229,14 +231,40 @@ picks a backend per platform. SDLPainter takes on the shape-level work you would
 | Rotate a group of shapes | Multiply the vertices yourself | `Save(); Rotate(45); …; Restore()` |
 | 5,000 small shapes | Group them and merge draw calls by hand | `RenderBatcher` does it |
 
-### What can you build with it?
+SDLPainter also lets you choose the backend (OpenGL 3.3 or Vulkan 1.1) and add
+your own by implementing `IRenderer`. The trade-off is real: `SDL_Renderer`
+also covers Direct3D and Metal, SDLPainter does not.
 
-- 2D games
-- Tools and editors
-- Drawing applications
-- Visualizers
-- Graphics experiments
-- Lightweight 2D UI / canvas applications
+### SDL_GPU and NanoVG
+
+- **SDL_GPU**, SDL3's lower-level GPU API, is not used today; SDLPainter's
+  backends are OpenGL 3.3 and Vulkan 1.1.
+- **NanoVG** is the closest alternative and is ahead on vector features: paths
+  with holes, built-in edge anti-aliasing, a very small code base and a longer
+  track record. Pick it if you need those; pick SDLPainter for a type-safe C++17
+  drawing layer in an SDL3 application, a Vulkan option and CMake/Conan
+  packaging.
+
+### Is it a good fit?
+
+**A good fit if you**
+
+- are writing an SDL3 application and want shapes, not triangles,
+- build tools and editors, visualizations, simulations or 2D games,
+- need thick lines, concave polygons or transforms without writing the geometry,
+- want the same drawing code to run on OpenGL and Vulkan,
+- want a library installed through CMake or Conan rather than a file to copy in
+
+**Look elsewhere if you need**
+
+- paths with holes, multi-stop gradients or high-quality anti-aliasing →
+  [NanoVG](https://github.com/memononen/nanovg) or
+  [Blend2D](https://blend2d.com/)
+- the simplest option with no extra dependencies → SDL3's `SDL_Renderer`
+- Direct3D or Metal backends, macOS or Android → not supported
+- several windows, each with its own painter → one `Painter` per process today
+- a game engine, a UI framework, a 3D renderer or a scene graph → SDLPainter is
+  none of these
 
 ## Architecture
 

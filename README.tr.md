@@ -221,7 +221,10 @@ Diğer örnekler için **[Examples](examples/README.md)**'e başvurabilirsiniz.
 
 ### SDL_Renderer ile ilişkisi
 
-SDL3'ün `SDL_Renderer`'ı ile üçgenlerden oluşan şekilleri çizebilirsiniz, backend'i platforma göre kendisi seçer. SDLPainter ise daha çok şekil seviyesindeki işi üstlenir:
+Çoğu zaman SDL3'ün kendi `SDL_Renderer`'ı yeterlidir: ek bağımlılık istemez,
+backend'i platforma göre kendisi seçer ve `SDL_RenderGeometry` ile istediğiniz
+üçgenleri çizer. SDLPainter ise elle yazacağınız şekil seviyesindeki işi
+üstlenir:
 
 | İhtiyaç | Elle yazınca | SDLPainter ile |
 |---|---|---|
@@ -230,6 +233,45 @@ SDL3'ün `SDL_Renderer`'ı ile üçgenlerden oluşan şekilleri çizebilirsiniz,
 | Yarıçapa göre pürüzsüz daire | Segment sayısını elle ayarla, fan kur | `FillCircle(cx, cy, r)`, segment adaptif |
 | Döndürülmüş bir grup şekil | Vertex'leri elle çarp | `Save(); Rotate(45); …; Restore()` |
 | 5.000 küçük şekil | Elle grupla, draw call'ları birleştir | `RenderBatcher` otomatik yapar |
+
+SDLPainter'da backend'i siz seçersiniz (OpenGL 3.3 ya da Vulkan 1.1) ve
+`IRenderer`'ı uygulayarak yenisini ekleyebilirsiniz. Bunun bir bedeli de var elbet:
+`SDL_Renderer` Direct3D ve Metal'i de destekler, SDLPainter desteklemez.
+
+### SDL_GPU ve NanoVG
+
+- **SDL_GPU**, SDL3'ün daha alt seviyedeki GPU API'si, şu an kullanılmıyor;
+  SDLPainter'ın backend'leri OpenGL 3.3 ve Vulkan 1.1.
+- **NanoVG** en yakın alternatif ve vektör tarafında önde: delikli yollar,
+  yerleşik kenar yumuşatma (anti-aliasing), çok küçük bir kod tabanı ve daha
+  uzun bir geçmiş. Bunlara ihtiyacınız varsa NanoVG'yi seçin; SDL3
+  uygulamanızda tip güvenli bir C++17 çizim katmanı, Vulkan seçeneği ve
+  CMake/Conan paketi istiyorsanız SDLPainter'ı.
+
+### Size uygun mu?
+
+**Uygunsa, eğer**
+
+- SDL3 uygulaması yazıyor ve üçgen değil şekil çizmek istiyorsanız
+- araç ve editör, görselleştirme, simülasyon ya da 2B oyun geliştiriyorsanız
+- kalın çizgi, konkav poligon ya da dönüşümleri geometriyi kendiniz yazmadan
+  istiyorsanız
+- aynı çizim kodunun OpenGL'de ve Vulkan'da çalışmasını istiyorsanız
+- kopyalanacak bir dosya yerine CMake ya da Conan ile kurulan bir kütüphane
+  istiyorsanız
+
+**Başka yere bakın, eğer**
+
+- delikli yollar, çok duraklı gradient ya da yüksek kaliteli kenar yumuşatma
+  gerekiyorsa → [NanoVG](https://github.com/memononen/nanovg) ya da
+  [Blend2D](https://blend2d.com/)
+- ek bağımlılık olmadan en basit çözüm yetiyorsa → SDL3'ün `SDL_Renderer`'ı
+- Direct3D ya da Metal backend'i, macOS veya Android gerekiyorsa →
+  desteklenmiyor
+- her biri kendi Painter'ına sahip birden çok pencere gerekiyorsa → bugün süreç
+  başına tek `Painter`
+- oyun motoru, UI çatısı, 3B renderer ya da sahne grafiği arıyorsanız →
+  SDLPainter bunların hiçbiri değil
 
 
 ## Mimari
