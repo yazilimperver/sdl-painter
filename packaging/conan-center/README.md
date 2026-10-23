@@ -27,16 +27,16 @@ paketlerde kullanılabilir (cmake, zlib, OpenSSL…); `sdl` bu listede değil.
 cd packaging/conan-center/all
 
 # Temel (MSVC'de profil cppstd'si 14 ise 17 verilmeli)
-conan create . --version=1.3.0 --build=missing -s compiler.cppstd=17
+conan create . --version=1.4.0 --build=missing -s compiler.cppstd=17
 
 # Diğer konfigürasyonlar
-conan create . --version=1.3.0 --build=missing -s compiler.cppstd=17 -o "&:shared=True"
-conan create . --version=1.3.0 --build=missing -s compiler.cppstd=17 -o "&:with_vulkan=True"
-conan create . --version=1.3.0 --build=missing -s compiler.cppstd=17 -s build_type=Debug
-conan create . --version=1.3.0 --build=missing -s compiler.cppstd=17 -o "spdlog/*:header_only=True"
+conan create . --version=1.4.0 --build=missing -s compiler.cppstd=17 -o "&:shared=True"
+conan create . --version=1.4.0 --build=missing -s compiler.cppstd=17 -o "&:with_vulkan=True"
+conan create . --version=1.4.0 --build=missing -s compiler.cppstd=17 -s build_type=Debug
+conan create . --version=1.4.0 --build=missing -s compiler.cppstd=17 -o "spdlog/*:header_only=True"
 
 # macOS açık bir hatayla reddedilmeli (ConanInvalidConfiguration)
-conan graph info . --version=1.3.0 -s os=Macos -s compiler=apple-clang -s compiler.version=15 -s compiler.libcxx=libc++
+conan graph info . --version=1.4.0 -s os=Macos -s compiler=apple-clang -s compiler.version=15 -s compiler.libcxx=libc++
 ```
 
 ## Etiketlenmemiş HEAD'i sınamak
@@ -67,17 +67,23 @@ karışmasını önler.
 
 ## Yeni sürüm
 
-1. Etiket ve GitHub Release yayımlandıktan sonra arşivin sha256'sını al:
-   `curl -sL https://github.com/yazilimperver/sdl-painter/archive/refs/tags/vX.Y.Z.tar.gz | sha256sum`
+1. Etiket ve GitHub Release yayımlandıktan sonra kaynak arşivini üret, Release'e
+   asset olarak yükle ve sha256'sını al. GitHub'ın otomatik arşivi yerine
+   yüklenen asset kullanılır; sha256'sı değişmez:
+   ```bash
+   git archive --format=tar.gz --prefix=sdl-painter-X.Y.Z/ -o sdl-painter-X.Y.Z.tar.gz vX.Y.Z
+   curl -sL https://github.com/yazilimperver/sdl-painter/releases/download/vX.Y.Z/sdl-painter-X.Y.Z.tar.gz | sha256sum
+   ```
 2. `all/conandata.yml`'a yeni sürümü ekle. `config.yml`'a satır ekle; ilk PR'da
    yalnızca en son sürüm bulunmalı.
 3. CCI fork'unda (`D:\home-repos\conan-center-index`), `master`'dan dal aç ve
-   bu dizini `recipes/sdl_painter/` altına kopyala:
+   bu dizini `recipes/sdl_painter/` altına kopyala (repo kökünden, yani
+   `D:\home-repos\sdl-painter\code`'dan):
    ```bash
-   git -C ../conan-center-index switch -c sdl_painter-X.Y.Z upstream/master
-   mkdir -p ../conan-center-index/recipes/sdl_painter
+   git -C ../../conan-center-index switch -c sdl_painter-X.Y.Z upstream/master
+   mkdir -p ../../conan-center-index/recipes/sdl_painter
    cp -r packaging/conan-center/config.yml packaging/conan-center/all \
-         ../conan-center-index/recipes/sdl_painter/
+         ../../conan-center-index/recipes/sdl_painter/
    ```
    `README.md` CCI'a kopyalanmaz.
 4. PR başlığı: ilk sürümde `sdl_painter/X.Y.Z: add recipe`, sonrakilerde

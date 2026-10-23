@@ -1,4 +1,4 @@
 sources:
-  "1.3.0":
-    url: "https://github.com/yazilimperver/sdl-painter/archive/refs/tags/v1.3.0.tar.gz"
-    sha256: "5dc6b4e33309953f790e31e3cb186457b5c3223693717a0a77d89c088b4af9e8"
+  "1.4.0":
+    url: "https://github.com/yazilimperver/sdl-painter/releases/download/v1.4.0/sdl-painter-1.4.0.tar.gz"
+    sha256: "fa9b3cb75d3ac69d7deeb4238515dda5c6aedc960a35908953552135c2a99ccd"
