@@ -80,7 +80,7 @@ karışmasını önler.
    bu dizini `recipes/sdl_painter/` altına kopyala (repo kökünden, yani
    `D:\home-repos\sdl-painter\code`'dan):
    ```bash
-   git -C ../../conan-center-index switch -c sdl_painter-X.Y.Z upstream/master
+   git -C ../../conan-center-index switch -c package/sdl_painter upstream/master
    mkdir -p ../../conan-center-index/recipes/sdl_painter
    cp -r packaging/conan-center/config.yml packaging/conan-center/all \
          ../../conan-center-index/recipes/sdl_painter/

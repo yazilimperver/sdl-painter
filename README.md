@@ -165,8 +165,22 @@ The repository's own examples and tests copy them automatically; your
 application needs its own copy step, the linked section gives the CMake
 one-liner and the extra DLLs that text rendering pulls in.
 
-SDLPainter is **not on Conan Center yet**, Conan is currently used only to
-resolve SDLPainter's own dependencies when building from source.
+### Conan
+
+The Conan Center recipe is under review
+([conan-center-index#31238](https://github.com/conan-io/conan-center-index/pull/31238)).
+Until it is merged, create the package in your local Conan cache from the
+release tag:
+
+```bash
+git clone --branch v1.4.0 https://github.com/yazilimperver/sdl-painter.git
+conan create sdl-painter --build=missing -o "sdl_painter/*:build_tests=False" -o "sdl_painter/*:build_examples=False"
+```
+
+Add `-s compiler.cppstd=17` if your profile uses an older standard (MSVC's
+detected profile defaults to C++14), and `-o "sdl_painter/*:with_vulkan=True"`
+for the Vulkan backend. Your project can then require `sdl_painter/1.4.0`; the
+CMake targets are the same as above.
 
 ## Quick example
 

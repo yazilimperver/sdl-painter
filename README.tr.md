@@ -169,8 +169,22 @@ yanında olmazlarsa program `0xC0000135` ile kapanabilir, bkz.
 kopyalar; kendi uygulamanızda bir kopyalama adımı gerekir. Bağlantıdaki bölüm
 tek satırlık CMake kuralını ve metin çizimi için ek gereken DLL'leri anlatır.
 
-SDLPainter **henüz Conan Center'da değil**, Conan şu an yalnızca SDLPainter'ın
-*kendi* bağımlılıklarını çözmek için kullanılıyor. Bununla birlikte inşallah yakın zamanda conan-center'a da eklenecek :)
+### Conan
+
+Conan Center recipe'i incelemede
+([conan-center-index#31238](https://github.com/conan-io/conan-center-index/pull/31238)).
+Birleşene kadar paketi sürüm etiketinden yerel Conan önbelleğinize
+oluşturabilirsiniz:
+
+```bash
+git clone --branch v1.4.0 https://github.com/yazilimperver/sdl-painter.git
+conan create sdl-painter --build=missing -o "sdl_painter/*:build_tests=False" -o "sdl_painter/*:build_examples=False"
+```
+
+Profiliniz daha eski bir standart kullanıyorsa `-s compiler.cppstd=17` ekleyin
+(MSVC için algılanan profil varsayılan olarak C++14 kullanır); Vulkan backend'i
+için `-o "sdl_painter/*:with_vulkan=True"`. Ardından projenizde
+`sdl_painter/1.4.0`'ı kullanabilirsiniz; CMake hedefleri yukarıdakilerle aynıdır.
 
 ## Kısa örnek
 
