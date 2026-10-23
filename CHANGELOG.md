@@ -2,317 +2,118 @@
 
 ## [1.4.0] - 2026-10-22
 
-### ⚠️ Kırıcı değişiklikler
+**SDLPainter 1.4.0** düzeltme ve gürbüzleştirme sürümü. Öne çıkanlar:
 
-Bu sürüm, `v1.3.0`'a göre public API'den tek bir tür kaldırıyor; diğer
-kırılmalar ikili uyumluluk ve çizim çıktısıyla ilgili.
+- **İki backend aynı resmi çiziyor.** Vulkan'ın büyük sahnede geometri
+  düşürmesi, yeniden boyutlandırmada swapchain ve viewport davranışı, `Clear`
+  kapsamı ve yeni çizim hedefinin ilk içeriği OpenGL ile hizalandı.
+- **Çizim doğruluğu:** konkav poligon çentiği, yarı saydam kalın çizginin uç ve
+  köşelerindeki çift karışım, kaybolan küçük radial gradient ve yarı saydam
+  hedefteki çift alfa düzeltildi. Metin ölçümü ile çizimi artık aynı (kerning).
+- **Kaynak ömrü:** frame içinde silinen texture ve hedef, `SetFont`, başarısız
+  `OnInit` ve HiDPI'da fare koordinatları düzeltildi.
+- **Bağımlılıklar Conan Center ile aynı:** SDL 3.4.16, spdlog 1.17.0, Vulkan
+  1.4.357.0. Conan Center recipe'i hazır (`packaging/conan-center/`).
+- **Test ve CI:** 750 test. Linux CI'da GPU testleri sessizce atlanamıyor ve
+  Vulkan validation zorunlu. Sürüm job'ı tüm build, test ve paketleme
+  job'larını bekliyor.
+- **Kırıcı değişiklikler:** `sdl_painter::Size` kaldırıldı. Shared derlemede
+  1.3.0'a karşı derlenmiş uygulamalar yeniden derlenmeli. Ayrıntılar aşağıda.
 
-- **`sdl_painter::Size` kaldırıldı.** Kütüphanenin hiçbir API'si onu
-  kullanmıyordu. Kendi kodunuzda kullanıyorsanız tanımı kendiniz yapın:
+### Yükseltmeden önce
 
-  ```cpp
-  struct Size { float w{0.0F}; float h{0.0F}; };
-  ```
-- **Shared derlemede ikili uyumluluk yok.** `SOVERSION` yalnızca ana sürümü
-  izliyor (Linux'ta `libsdl_painter.so.1`), ama `Painter`, `Font`,
-  `RenderTarget` ve `Application`'ın private üyeleri değişti. 1.3.0'a karşı
-  derlenmiş uygulama 1.4.0 ile yeniden derlenmeli; kütüphane dosyasını tek
-  başına değiştirmek yetmez.
-- **Çıktıyı değiştiren düzeltmeler** (ayrıntılar Düzeltildi bölümünde): yarı
-  saydam çizim hedefi artık doğrudan çizimle aynı sonucu veriyor; `MeasureText`
-  genişliği kerning yüzünden biraz değişebilir; `Clear` kırpmadan bağımsız
-  olarak yüzeyin tamamını siliyor; Vulkan'da `IRenderer::SetViewport` ile
-  verilen viewport yeniden boyutlandırmada korunuyor.
+- **`sdl_painter::Size` kaldırıldı** (hiçbir API kullanmıyordu). Gerekiyorsa:
+  `struct Size { float w{0.0F}; float h{0.0F}; };` kullanılabilir.
+- **Shared derlemede binary uyumluluk geriye yönelik kırıldı:** 1.3.0'a karşı
+  derlenmiş uygulamayı yeniden derleyin.
+- **Çıktısı değişebilecekler:** yarı saydam çizim hedefi artık doğrudan çizimle
+  aynı sonucu veriyor; `MeasureText` genişliği kerning yüzünden biraz
+  değişebilir; `Clear` kırpmadan bağımsız olarak tüm yüzeyi siliyor; Vulkan'da
+  `IRenderer::SetViewport` ile verilen viewport yeniden boyutlandırmada
+  korunuyor.
 
 ### Bağımlılıklar
 
-- SDL 3.2.14 → **3.4.16**, spdlog 1.15.3 → **1.17.0**, Vulkan loader/headers
-  1.3.290.0 → **1.4.357.0**. Conan Center artık eski sürümleri listelemediği için güncellendi.
-- CI imajı `ci-v1.2`: Conan önbelleği yeni sürümlerle güncellendi; derleme ve kaynak dizinleri imaja girmiyor (sıkıştırılmış boyut 2,2 GB → 1,0 GB).
+Conan Center'a yükleme öncesi bağımlılıklar güncellendi.
+
+SDL 3.2.14 → **3.4.16**, spdlog 1.15.3 → **1.17.0**, Vulkan loader/headers
+1.3.290.0 → **1.4.357.0** (Conan Center ile aynı).
 
 ### Düzeltildi
 
-- **Windows'ta derlenmiş spdlog ile `sdl_painter_app` link edilemiyordu.**
-  `Application` logger'ı `ansicolor_stdout_sink_mt` kullanıyordu; derlenmiş
-  (`header_only=False`) spdlog bu sink'i Windows'ta örneklemediği için shared
-  derlemede DLL, statik derlemede ise `sdl_painter::app`'i kullanan uygulama
-  `LNK2019` ile kırılıyordu. Artık platforma göre doğru sink'i seçen
-  `stdout_color_sink_mt` kullanılıyor; Windows'ta konsol VT modunu açan kod da
-  gereksizleşti.
-- **Conan paketi statik derlemede export tanımlarını tüketiciye
-  iletmiyordu.** CMake `SDLPAINTER_STATIC_DEFINE` ve
-  `SDLPAINTER_APP_STATIC_DEFINE`'ı PUBLIC veriyor, ancak Conan projenin kendi
-  CMake config'ini kullanmadığı için tanımlar paketten gelmiyordu; Windows'ta
-  statik tüketici başlıkları `dllimport` ile görüyordu. `conanfile.py`
-  `package_info` artık ikisini de tanımlıyor; `app` bileşeni spdlog
-  bağımlılığını da bildiriyor.
-- **Painter durum yönetimi ve kaynak sahipliği.** Move işlemleri artık çizim
-  durumunun tamamını taşıyor; frame, hedefe bağlı bitmiyor; viewport ve yüzey
-  değişiminde kırpma yeniden hesaplanıyor; hedefler renderer sahipliğine göre
-  doğrulanıyor. Gradient dolgular geçiş sınırlarında bölünerek şekil içinde
-  doğru rengi üretiyor.
-- **Move constructor başlatma sırası** üye bildirim sırasıyla hizalandı.
-- **Vulkan'da hedefe yeniden bağlanma ve frame içi texture güncelleme sırası**
+**Backend eşitliği**
+- Vulkan, frame başına ~4 MB'tan sonraki geometriyi sessizce düşürüyordu,
   düzeltildi.
-- **`font.h`** düzeltildi.
-- **Metin ölçümü ile çizim farklı genişlik veriyordu.** `MeasureText`
-  `TTF_GetStringSize` ile HarfBuzz kerning'i uyguluyor, çizim ise glyph
-  advance'lerini kerning'siz topluyordu; sağa ve ortaya hizalama ile sözcük
-  kaydırma bu yüzden kayıyordu (Arial 48 pt `AVAVAVAVAV`: 32 px). Artık ikisi
-  aynı konumları kullanıyor: advance + fontun `kern` tablosundan
-  `Font::Kerning` (yeni). `MeasureText`'in döndürdüğü genişlik biraz
-  değişebilir; kerning'i yalnızca GPOS'ta tanımlayan fontlar kerning'siz
-  çizilir ve ölçülür. Ayrıca glyph'ler sol boşlukları (bearing) kadar fazladan
-  sağa çiziliyordu; düzeltildi.
+- `Clear` kırpma etkinken iki backend'de farklı alanı siliyordu; artık her
+  zaman tüm yüzeyi siliyor.
+- Vulkan'da swapchain bazı yüzeylerde (Wayland, headless) yeniden
+  boyutlandırmada eski boyutta kalıyor, özel viewport eziliyordu, düzeltildi.
+- Vulkan'da ekranın temizleme rengi yeni çizim hedefine sızıyordu, düzeltildi.
+- Vulkan push constant bloğu 128 baytı aşıyordu; 128 bayt bildiren cihazlarda
+  Vulkan backend başlamıyordu, düzeltildi.
 
-- **Vulkan frame başına ~4 MB'tan sonraki geometriyi sessizce düşürüyordu.**
-  Vertex ring'i frame slotu başına 4 MB idi; dolduğunda `VulkanBuffer::Write`
-  `false` dönüyor ve çizim komutu hiç kaydedilmiyordu. Kullanıcıya giden tek
-  işaret bir log satırıydı; OpenGL'de böyle bir tavan olmadığı için **aynı
-  sahne bir backend'de eksik çiziliyordu** (ölçüm: 70.000 dikdörtgen). Ring
-  artık zincirlenmiş tamponlardan oluşuyor ve dolduğunda büyüyor; taşan ilk
-  frame tahsis bedelini öder, sonrakiler aynı zinciri yeniden kullanır.
-- **`Clear` kırpma etkinken iki backend'de farklı alanı siliyordu.** `glClear`
-  scissor testine tabidir, `vkCmdClearAttachments`'a verilen dikdörtgen ise
-  tüm yüzeydi. Sözleşme netleşti: **`Clear` yüzeyin tamamını siler**, kırpma
-  ve viewport onu sınırlamaz (`SDL_RenderClear` ile aynı anlam). Alt bölge
-  boyamak için `FillRect` kullanılmalı.
-- **Vulkan'da ekranın temizleme rengi yeni bir çizim hedefine sızıyordu.**
-  Offscreen render pass ilk bağlanmada `loadOp = CLEAR` ile `mClearValue`
-  kullanıyordu ve o değer en son `Clear` çağrısından kalıyordu. Yeni hedefin
-  başlangıç içeriği artık iki backend'de de (0, 0, 0, 0); OpenGL tarafında
-  FBO oluşturulurken açıkça temizleniyor. Vulkan'da bu, hedef ilk kez
-  bağlandığında geçerli (bkz. Bilinen Eksikler).
-- **Aynı `Font` ikinci bir renderer'da birincinin texture handle'ını
-  veriyordu.** Glyph önbelleği yalnızca kod noktasına göre tutuluyordu; texture
-  tanımlayıcıları ise renderer'a yereldir. Bir Font tek
-  bir Painter'a ait olacak şekilde güncelleme yapıldı; yabancı renderer ile çağrı `nullptr` döner ve hata loglar.
-- **Aktif çizim hedefi yok edilince Painter hâlâ hedefe çizdiğini
-  sanıyordu.** Viewport hedefin boyutunda, projeksiyon hedefin Y yönünde
-  kalıyor ve frame sonuna kadar ekrana o durumla çiziliyordu. `RenderTarget`
-  artık yıkılırken Painter'a haber veriyor. Aynı mekanizma, Painter'dan sonra
-  yıkılan bir hedefin ölü renderer'a dokunmasını da engelliyor.
-- **OpenGL GPU süre ölçümü birkaç frame sonra kalıcı olarak donuyordu.**
-  `CollectGpuTime` yalnızca tek bir sorgu slotunu yokluyor, `BeginFrame` ise
-  slot doluyken indeksi ilerletmiyordu; senkron bir kez kayınca o slot bir
-  daha hiç sorgulanmıyordu (400 framenin 396'sında aynı değer). Artık tüm
-  slotlar yoklanıyor ve indeks her durumda ilerliyor.
-- **Fare koordinatları HiDPI'da çizim koordinatlarıyla aynı uzayda
-  değildi.** SDL olayları mantıksal pencere koordinatı verir, `Painter` ise
-  piksel çizer; `high_dpi` açıkken tıklama testi ekran ölçeği kadar
-  kayıyordu. `Application` olayları piksel yoğunluğuyla ölçekliyor (HiDPI
-  kapalıyken çarpan 1.0, davranış değişmiyor).
-- **`SetOpacity` ve `SetClipRect` arayüzlerini doğrulamıyordu.** Opaklık
-  artık `[0, 1]` aralığına kırpılıyor (başlık zaten bunu vaat ediyordu);
-  negatif boyutlu kırpma dikdörtgeni boş kırpmaya dönüşüyor; ham hali
-  OpenGL'de `GL_INVALID_VALUE` üretip önceki scissor'ı yürürlükte bırakıyor,
-  Vulkan'da ise her şeyi kırpıyordu.
-- **Vulkan push constant bloğu (148 bayt), Vulkan'ın garanti ettiği asgari
-  `maxPushConstantsSize` değerini (128 bayt) aşıyordu.** 128 bildiren bir
-  cihazda Vulkan backend başlamıyordu. Blok 84 bayta indi: model matrisi
-  ayrı alan olarak gönderilmiyor, `SetModelMatrix` onu CPU'da projeksiyonla
-  çarpıyor (IRenderer'ı doğrudan kullanan kod için anlamı değişmedi).
-  Sınır artık derleme zamanında `static_assert` ile korunuyor.
-- **OpenGL fonksiyonları yüklenemeyince Painter yıkılırken çöküyordu.**
-  GLAD başarısız olursa `Initialize` context'i bırakmadan `false` dönüyor,
-  yıkım ise yüklenmemiş (null) bir GL fonksiyonunu çağırıyordu. Context artık
-  hata anında bırakılıyor.
-- **Vulkan'da pencere yeniden boyutlandırılınca swapchain bazı yüzeylerde
-  eski boyutunda kalıyordu.** Yeniden oluşturma yalnızca sürücünün
-  `VK_ERROR_OUT_OF_DATE_KHR` ya da `VK_SUBOPTIMAL_KHR` bildirmesine bağlıydı;
-  yüzey boyutunu swapchain'in belirlediği yüzeyler (`currentExtent`
-  0xFFFFFFFF) bunu bildirmek zorunda değil. SDL `offscreen` sürücüsünün
-  headless yüzeyinde (Linux, lavapipe) `currentExtent` 0xFFFFFFFF ölçüldü ve
-  pencere 128x96'dan 192x144'e büyürken swapchain 128x96'da kaldı. Wayland
-  aynı sınıftadır: WSLg'nin Wayland yüzeyi de 0xFFFFFFFF bildiriyor (yeniden
-  boyutlandırma hatası Wayland'de ayrıca ölçülmedi). Windows'ta (NVIDIA)
-  sürücü OUT_OF_DATE bildirdiği için görülmüyordu. `BeginFrame` artık
-  pencerenin piksel boyutunu her karede swapchain'in son inşasında istenen
-  boyutla karşılaştırıyor ve farklıysa swapchain'i image alınmadan önce
-  yeniden oluşturuyor.
-- **Vulkan'da swapchain yeniden oluşturulurken özel viewport eziliyordu.**
-  Yeniden oluşturma viewport'un genişlik ve yüksekliğini her seferinde yeni
-  extent'e yazıyordu; Painter'ın aynı karede `BeginFrame`'den önce gönderdiği
-  özel viewport kayboluyordu. 1.3.0'daki "Yeniden boyutlandırma, kullanıcının
-  seçtiği viewport'u ezmiyor" ifadesi Vulkan'ın bu yolunda geçerli değildi.
-  Hata Windows'ta sürücünün OUT_OF_DATE bildirdiği yolda da vardı; yukarıdaki
-  swapchain düzeltmesi onu Wayland ve headless yüzeylerde her boyut
-  değişimine yaymıştı. Artık `SetViewport` ile verilmiş viewport yeniden
-  oluşturmada korunuyor (OpenGL'deki `glViewport` gibi); hiç verilmediyse
-  viewport yüzeyi izlemeye devam ediyor. `IRenderer`'ı doğrudan kullanıp
-  `SetViewport`'u bir kez çağıran kod, viewport'un yeni extent'i izlemesini
-  artık görmez.
+**Çizim**
+- Konkav poligonun çentiği doluyordu, düzeltildi.
+- Başlangıç noktasına dönen açık polyline'ın son segmenti çizilmiyordu,
+  düzeltildi.
+- Yarı saydam kalın çizginin uçları ve köşeleri iki kez karışıyordu,
+  düzeltildi.
+- Büyük bir şeklin içine düşen küçük radial gradient kayboluyordu; gradient
+  dolgular geçiş sınırlarında yanlış renk üretiyordu, düzeltildi.
+- Yarı saydam çizim hedefi ekrana çizilirken alfa iki kez çarpılıyordu,
+  düzeltildi.
+- Metin ölçümü (`MeasureText`) ile çizim farklı genişlik veriyordu (kerning,
+  bearing), düzeltildi.
 
-- **Ekran üstü gösterge uygulamanın karışım moduyla çiziliyordu.**
-  `StatsOverlay` opaklığı ve dönüşümü kendi çizimi için sıfırlıyor ama
-  karışım modunu ayarlamıyordu; uygulama `kMultiply` ya da `kNone`
-  kullanıyorsa panel sahneyi karartıyor ya da opak siyah blok oluyordu.
-  Gösterge artık `Save`/`Restore` arasında `BlendMode::kAlpha` ile çiziliyor;
-  uygulamanın modu çizimden sonra geri geliyor.
-- **Konkav poligonun çentiği doluyordu.** Ear clipping, aday kulağın
-  köşegeni üzerinde duran reflex köşeyi dışarıda sayıyor ve çentiği kapatan
-  üçgen üretiyordu; (0,0), (4,0), (4,4), (2,2), (0,4) için alan 12 yerine 20
-  çıkıyordu. Köşegen üzerindeki nokta artık içeride sayılıyor; tolerans
-  üçgenin alanıyla ölçekleniyor.
-- **Başlangıç noktasına dönen açık polyline'ın son segmenti çizilmiyordu.**
-  Tekrarlı nokta temizliği, ilk noktayla çakışan son noktayı kapalı
-  konturdaki gibi siliyordu. Artık yalnızca kapalı konturda siliniyor (düz ve
-  kesikli çizgide).
-- **Yarı saydam kalın çizgide uçlar ve köşeler iki kez karışıyordu.**
-  Yuvarlak uç tam disk olarak gövdenin üstüne biniyor, köşelerde iki
-  segmentin gövdesi iç tarafta örtüşüyordu; örtüşen bölge daha koyu
-  çıkıyordu. Gövdeler artık iç köşede kenarlarının kesişim noktasında
-  kırpılıyor, uç geometrisi gövdeyle yalnızca kenarını paylaşıyor. Çok keskin
-  köşede ya da kırpma payı komşu segmentin yarısını aşınca o köşe kırpılmıyor
-  ve örtüşme kalıyor.
-- **Büyük bir şeklin içine düşen küçük radial gradient kayboluyordu.**
-  Üçgen bölme kararı yalnızca köşelere ve kenar orta noktalarına bakıyordu;
-  gradient merkezi bir üçgenin içinde kalıp yarıçap küçükse o bölge bitiş
-  rengiyle çiziliyordu. Bölme artık üçgenin merkeze en yakın noktasını da
-  hesaba katıyor.
-- **Yarı saydam çizim hedefi ekrana çizilirken alfa iki kez çarpılıyordu.**
-  Hedefte renk alfayla çarpılmış (premultiplied) birikir; `DrawRenderTarget`
-  onu sıradan bir görüntü gibi yeniden alfayla çarpıyordu: doğrudan çizilen
-  alfa 128 kırmızı 128, hedef üzerinden 64 veriyordu. Hedef texture'ı artık
-  iki backend'de de premultiplied karıştırılıyor (`kAlpha` ve `kAdditive`;
-  `kMultiply` ve `kNone` değişmedi), tint alfası ve opaklık RGB'ye de
-  uygulanıyor. Hedefe yarı saydam renkle `Clear` da premultiplied yazıyor.
-  Yarı saydam hedef kullanan sahnelerde sonuç değişir, artık doğrudan çizimle
-  aynıdır. `ReadRenderTarget`'ın premultiplied değer döndürdüğü belgelendi.
-- **`SetFont` kuyruktaki metnin glyph atlasını silebiliyordu.** Painter eski
-  fontun son sahibiyse atlas atama anında siliniyor, aynı frame'de daha önce
-  kuyruğa giren metin silinmiş texture ile çiziliyordu. `SetFont` artık önce
-  kuyruğu gönderiyor; aynı fontu yeniden atamak etkisiz.
-- **`OnInit` başarısız olunca `Application` çökebiliyordu.** Painter,
-  türeyen sınıfın `Image`/`Font` üyelerinden önce yıkılıyor, üyeler sonra
-  yıkılmış renderer'a dokunuyordu. Yıkım, başarılı yoldaki gibi
-  `~Application`'a bırakıldı.
-- **Vulkan'da frame içinde yıkılan çizim hedefi komut buffer'ını
-  bozuyordu.** Hedefin framebuffer'ı ve image'ı kayıtlı komutlarda
-  kullanılırken siliniyor, validation `vkCmdEndRenderPass` ve
-  `vkEndCommandBuffer`'da hata veriyordu. Hedef artık uçuştaki frame'ler
-  bitince siliniyor. `RenderTarget` yıkılırken o hedefi örnekleyen bekleyen
-  çizimler de önce gönderiliyor (iki backend).
-- **Vulkan'da frame içinde silinen texture bir frame erken serbest
-  bırakılıyordu.** Gecikmeli silme sayacı frame sonunda arttığı için o
-  frame'in komut buffer'ı texture'ı hâlâ kullanıyor olabiliyordu
-  (`VUID-vkFreeDescriptorSets-pDescriptorSets-00309`). Frame içinde silinen
-  texture artık bir frame fazla bekletiliyor.
+**Kaynak ömrü ve durum**
+- Frame içinde silinen texture ya da çizim hedefi Vulkan'da komut buffer'ını
+  bozabiliyordu, düzeltildi.
+- `SetFont` kuyruktaki metnin glyph atlasını silebiliyordu, düzeltildi.
+- `OnInit` başarısız olunca `Application` çökebiliyordu, düzeltildi.
+- Aktif çizim hedefi yok edilince Painter hedefe çizdiğini sanmaya devam
+  ediyordu, düzeltildi.
+- Aynı `Font` ikinci bir renderer'da yanlış texture veriyordu; bir font artık
+  tek bir Painter'a ait, düzeltildi.
+- Move işlemleri çizim durumunun tamamını taşımıyordu, düzeltildi.
+- OpenGL fonksiyonları yüklenemeyince Painter yıkılırken çöküyordu,
+  düzeltildi.
+
+**Diğer**
+- HiDPI'da fare koordinatları çizim koordinatlarıyla aynı uzayda değildi,
+  düzeltildi.
+- `SetOpacity` `[0, 1]` dışındaki değeri, `SetClipRect` negatif boyutu
+  doğrulamıyordu, düzeltildi.
+- OpenGL GPU süre ölçümü birkaç frame sonra donuyordu, düzeltildi.
+- Ekran üstü gösterge uygulamanın karışım moduyla çiziliyordu, düzeltildi.
+- Windows'ta derlenmiş spdlog ile `sdl_painter_app` link edilemiyordu; Conan
+  paketi statik derlemede export tanımlarını tüketiciye iletmiyordu,
+  düzeltildi.
 
 ### Eklendi
 
-- **`SDLPAINTER_WARNINGS_AS_ERRORS` CMake seçeneği.** `-Werror` / `/WX`
-  artık koşulsuz değil. Varsayılan üst projede `ON` (CI ve yerel geliştirme
-  davranışı değişmedi), `add_subdirectory`/FetchContent ile eklenince ve
-  paket yöneticisi derlemelerinde `OFF`. Böylece denenmemiş bir derleyici ya
-  da bağımlılık sürümündeki yeni bir uyarı tüketicinin derlemesini kırmıyor.
-- **`SDLPAINTER_REQUIRE_VALIDATION` sözleşmesi:** ortam değişkeni ayarlıyken
-  (boş ya da `0` değilse) Vulkan bağlamı kuran bir testte validation tam
-  etkin değilse (kütüphane Release derlenmiş, `VK_LAYER_KHRONOS_validation`
-  katmanı yok ya da debug messenger kurulamadı) test **düşüyor**. Yalnızca
-  Debug derlemede anlamlıdır; Release'de ayarlanırsa Vulkan testleri
-  atlanmaz, düşer.
-- **Linux CI'da GPU testleri sessizce atlanamıyor:** iki pipeline'da
-  `test:unit`, `test:unit:asan` ve `quality:coverage` işlerinde
-  `SDLPAINTER_REQUIRE_BACKEND=1`; backend kurulamazsa GPU testleri SKIP
-  yerine düşüyor. Debug + Vulkan işlerinde (`test:unit`, `quality:coverage`)
-  `SDLPAINTER_REQUIRE_VALIDATION=1` de açık.
-- **CI imajı `ci-v1.1`:** Dockerfile'ın `ci` aşamasına Vulkan validation
-  katmanı (`vulkan-validationlayers`) eklendi; GitHub Actions'ın Linux işleri
-  önce `ci-v1.1`'e, sonra `ci-v1.2`'ye geçti (bkz. Bağımlılıklar). GitLab
-  etiketsiz `$CI_REGISTRY_IMAGE` kullandığı için imaj orada yeniden push
-  edilmeli.
-- **`Font::Kerning(previous, current)`:** iki ardışık kod noktası arasındaki
-  kerning düzeltmesini fontun `kern` tablosundan piksel olarak verir.
-  `MeasureText` ve metin çizimi bunu kullanıyor.
-- **Dört showcase örneği:** `shapes_showcase`, `color_showcase`,
-  `transform_showcase`, `images_showcase`. `hero`'nun dört perdesi, uygulama
-  çatısı üzerinde ayrı ayrı ve döngüde oynuyor.
-- **Conan Center recipe'i** `packaging/conan-center/` altında (CCI'ye
-  gönderilecek kopya).
+- `Font::Kerning(previous, current)`.
+- `SDLPAINTER_WARNINGS_AS_ERRORS` CMake seçeneği: `-Werror` / `/WX` yalnızca
+  üst projede açık; `add_subdirectory`/FetchContent ve paket yöneticisi
+  derlemelerinde kapalı.
+- Dört showcase örneği: `shapes_showcase`, `color_showcase`,
+  `transform_showcase`, `images_showcase`.
+- Conan Center recipe'i (`packaging/conan-center/`).
 
 ### Değişti
 
-- Test preset'leri hiç test bulamazsa hata veriyor (`noTestsAction: error`);
-  önceden kırık bir derleme "No tests were found" ile başarılı görünebiliyordu.
-  `conan-install.ps1` C++17 ile kuruyor. CI Actions sekmesinden elle
-  çalıştırılabiliyor (`workflow_dispatch`).
-- `Painter::Clear` ve `IRenderer::Clear` belgelerine kapsam beklentileri
-  yazıldı; `RenderTarget` belgesine başlangıç içeriği eklendi; `Font`
-  belgesine tek-renderer kuralı eklendi; `Painter` belgesine süreç başına
-  aynı anda tek Painter kuralı eklendi (OpenGL renderer'ı çizerken kendi
-  context'ini seçmiyor).
-- `Image::CreateFromData` kanal sayısını 1–4 aralığında kabul ediyor;
-  dışındaki değerde boş `Image` döner.
-- `sdl_painter` ve `sdl_painter_app` C++17 gereksinimini hedef üzerinde
-  taşıyor (`target_compile_features(... PUBLIC cxx_std_17)`); tüketicinin
-  kendi standardını ayarlaması gerekmiyor.
-- Sürüm job'ı iki pipeline'da da tüm build, test, paketleme ve shader
-  tazeliği job'larını bekliyor; önce GitHub'da yalnızca format ve
-  clang-tidy'yi, GitLab'da hiçbir job'u beklemiyordu. Dockerfile'lar
-  `conan install` öncesi `version.h`'i de kopyalıyor; `set_version()` onu
-  okuduğu için imaj derlemesi kırılıyordu.
-- Belgeler: `doc/` altındaki Türkçe belgelerin İngilizce karşılıkları
-  `doc/en/` altına eklendi; İngilizce belgeler oraya taşındı, Türkçe dosya
-  adlarındaki `sdl-painter-` öneki kaldırıldı. Eski yollara verilen
-  bağlantılar kırılır.
-- `Tessellator::IsClockwise` kaldırıldı.
-  `Painter::PushTexturedQuad` dokulu dörtgeni elle kurmak yerine
-  `Tessellator::TessellateTexturedRect` kullanacak hale getirildi.
-- `.claude/rules/shaders.md` tek kaynak kuralına çevrildi.
-- CTest test kaydı `gtest_add_tests` yerine
-  `gtest_discover_tests(DISCOVERY_MODE PRE_TEST)` ile yapılıyor. CTest
-  kayıtları artık derlenmiş testlerle birebir (Windows'ta 716 = 696 + 20, önce
-  652): `TEST_P` örnekleri ayrı kayıt, derlenmeyen testler için boş "Passed"
-  kayıt yok, atlanan testler "Skipped" görünüyor. Çapraz derlemede (MinGW)
-  eski yol korunuyor. Yer tutucu `BackendParity.SkippedWithoutVulkan`
-  kaldırıldı.
-- Vulkan validation mesajları log'a mesaj kimliğiyle (VUID) birlikte
-  yazılıyor. Katmanın 1.4 sürümleri kimliği mesaj metnine artık koymuyor; CI
-  log'unda hatanın hangi kurala takıldığı görünsün diye kimlik, metinde yoksa
-  başa ekleniyor.
-- Conan kaynak export'una kök dizindeki `sdl-logo-small.png` eklendi.
-  `ImageLoadFile.LoadsProjectLogo` bu dosyayı okuyor; testlerle
-  `conan create` yapıldığında dosya pakette olmadığı için test düşerdi.
+- `Image::CreateFromData` yalnızca 1–4 kanal kabul ediyor.
+- C++17 gereksinimi hedef üzerinde taşınıyor; tüketicinin standardı ayarlaması
+  gerekmiyor.
+- Süreç başına aynı anda tek Painter kuralı belgelendi.
+- İngilizce belgeler `doc/en/` altına taşındı; eski bağlantılar kırılır.
 
-### Test
+### Bilinen eksikler
 
-- `Application` ve ekran üstü gösterge testleri (`test_application.cpp`,
-  `test_stats_overlay.cpp`): sabit adım zamanlaması (delta sınırı, kare başına
-  adım sınırı, artık zaman, alpha), yaşam döngüsü sırası, tek seferlik `Run`,
-  başarısız `OnInit`, gösterge tuşu, ham olay tüketimi, olay alanlarının
-  iletimi, FPS örneklemesi ve göstergenin Painter durumunu geri yüklemesi.
-  Zamanlama hesabı (`app/frame_timing.h`) ve fare olayı çevirisi
-  (`event_translator`) bunun için `Run`/`ProcessEvents` içinden dahili saf
-  fonksiyonlara çıkarıldı; davranış değişmedi. HiDPI ölçeklemesi (konum ve
-  hareket yoğunlukla çarpılır, tekerlek adımı çarpılmaz) bu fonksiyonlar
-  üzerinden yoğunluk 2 ile sınanıyor.
-- Yeni regresyon testleri: `FreshTargetStartsTransparent`,
-  `LargeFrameKeepsAllGeometry`, `ClearIgnoresClipRect` (üçü de iki backend
-  için), `DestroyingActiveTargetRestoresScreenState`,
-  `TargetOutlivingPainterDoesNotTouchRenderer`, `OpacityIsClampedToUnitRange`,
-  `NegativeClipSizeBecomesEmptyClip`, `FontOwnership.*`.
-- Yukarıdaki düzeltmelerin her biri için regresyon testi (ör.
-  `ReflexVertexOnDiagonalKeepsArea`, `TranslucentTargetComposesLikeDirectDraw`,
-  `TranslucentRoundCapBlendsOnce`, `DestroyingBoundTargetMidFrameIsSafe`,
-  `RightAlignedTextEndsAtRectEdge`).
-- Tessellator için alan ve kapsama oracle'ları (`geometry_oracle.h`),
-  `MockRenderer` sözleşme testleri, piksel yardımcılarının kendi testleri ve
-  gerçek backend'de kırpma, blend ve texture piksel testleri. Backend ya da
-  font yokken sessizce geçen testler `SDLPAINTER_REQUIRE_BACKEND` /
-  `SDLPAINTER_REQUIRE_FONT` ayarlıysa düşüyor. Vulkan'sız derlemede Vulkan'a
-  özgü testler derlenmiyor.
+- Vulkan'da hiç bağlanmadan okunan yeni çizim hedefinin içeriği tanımsız.
+- Yarı saydam kesikli çizgide iki köşe durumunda çift karışım kalıyor.
 
-### Bilinen Eksikler
-
-- Vulkan'da hiç bağlanmadan örneklenen ya da okunan yeni çizim hedefinin
-  içeriği tanımsız; hedef oluşturulurken temizlenmiyor, yalnızca layout
-  geçişi yapılıyor. `SetRenderTarget` ile bir kez bağlanan hedef (0, 0, 0, 0)
-  başlar. OpenGL'de sorun yok.
-- Yarı saydam kesikli çizgide iki durumda çift karışım kalıyor: kapalı
-  yolda başlangıç noktasında ilk ve son kesik ayrı kalıyor ve yuvarlak uçları
-  üst üste biniyor; bir köşeyi birkaç piksel geçip biten kesikte o köşe
-  kırpılamıyor.
+Kök neden açıklamaları ile test ve CI değişikliklerini içeren ayrıntılı liste:
+[v1.4.0 etiketindeki CHANGELOG](https://github.com/yazilimperver/sdl-painter/blob/v1.4.0/CHANGELOG.md#140---2026-10-22)
 
 ## [1.3.0] - 2026-08-28
 
