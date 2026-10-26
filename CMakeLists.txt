@@ -29,7 +29,6 @@ option(SDLPAINTER_BUILD_TESTS "Build tests" ${PROJECT_IS_TOP_LEVEL})
 find_package(SDL3 REQUIRED)
 find_package(SDL3_ttf REQUIRED)
 find_package(glad REQUIRED)
-find_package(stb REQUIRED)
 find_package(spdlog REQUIRED)
 find_package(glm REQUIRED)
 find_package(OpenGL REQUIRED)
@@ -46,6 +45,15 @@ else()
         "hedefi tanimli. Beklenmeyen bir spdlog paketi kullaniliyor.")
 endif()
 message(STATUS "spdlog hedefi: ${SDLPAINTER_SPDLOG_TARGET}")
+
+# stb yalnizca baslik: Conan `stb::stb` config'i verir, vcpkg ise config
+# kurmaz (yalnizca FindStb modulu). Config yoksa baslik yolu dogrudan aranir.
+find_package(stb CONFIG QUIET)
+if(NOT TARGET stb::stb)
+    find_path(SDLPAINTER_STB_INCLUDE_DIR stb_image.h PATH_SUFFIXES stb REQUIRED)
+    add_library(stb::stb INTERFACE IMPORTED)
+    target_include_directories(stb::stb INTERFACE "${SDLPAINTER_STB_INCLUDE_DIR}")
+endif()
 
 # Compiler warnings + sanitizer seçenekleri
 include(CompilerWarnings)
@@ -174,15 +182,18 @@ target_link_libraries(sdl_painter
     PRIVATE OpenGL::GL
     PUBLIC  glm::glm
     PRIVATE glad::glad
-    PRIVATE stb::stb
+    # Yalnizca baslik ve yalnizca src/image.cpp'de: export'a girmesin, kurulu
+    # paketi kullanan tuketici stb aramak zorunda kalmasin.
+    PRIVATE $<BUILD_INTERFACE:stb::stb>
     PRIVATE ${SDLPAINTER_SPDLOG_TARGET}
 )
 
 if(SDLPAINTER_WITH_VULKAN)
     target_compile_definitions(sdl_painter PUBLIC SDLPAINTER_HAS_VULKAN)
+    # Iki hedef adi da Conan'da ve vcpkg'de ayni.
     target_link_libraries(sdl_painter
         PRIVATE Vulkan::Loader
-        PRIVATE vulkan-headers::vulkan-headers
+        PRIVATE Vulkan::Headers
     )
 endif()
 

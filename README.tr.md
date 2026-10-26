@@ -186,6 +186,22 @@ Profiliniz daha eski bir standart kullanıyorsa `-s compiler.cppstd=17` ekleyin
 için `-o "sdl_painter/*:with_vulkan=True"`. Ardından projenizde
 `sdl_painter/1.4.0`'ı kullanabilirsiniz; CMake hedefleri yukarıdakilerle aynıdır.
 
+### vcpkg
+
+SDLPainter henüz vcpkg kayıt deposunda yok; repo bir overlay port içerir:
+[`packaging/vcpkg/ports`](packaging/vcpkg/ports). Port v1.4.0 sürümünü kendisi
+indirir, klon yalnızca port dosyaları için gerekir:
+
+```bash
+git clone https://github.com/yazilimperver/sdl-painter.git
+vcpkg install sdl-painter --overlay-ports=sdl-painter/packaging/vcpkg/ports
+```
+
+Vulkan backend'i için `sdl-painter[vulkan]` kullanın. Manifest modunda
+`vcpkg.json`'daki bağımlılıklara `"sdl-painter"`, `vcpkg-configuration.json`'daki
+`"overlay-ports"` listesine aynı dizini ekleyin. CMake hedefleri yukarıdakilerle
+aynıdır.
+
 ## Kısa örnek
 
 ```cpp

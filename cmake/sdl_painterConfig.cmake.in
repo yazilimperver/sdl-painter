@@ -19,7 +19,6 @@ find_dependency(OpenGL)
 # $<LINK_ONLY:...> olarak girer; hedeflerinin tüketici tarafında var olması
 # gerekir, aksi halde link aşamasında "target not found" alınır.
 find_dependency(glad)
-find_dependency(stb)
 find_dependency(spdlog)
 find_dependency(SDL3_ttf)
 

@@ -182,6 +182,22 @@ detected profile defaults to C++14), and `-o "sdl_painter/*:with_vulkan=True"`
 for the Vulkan backend. Your project can then require `sdl_painter/1.4.0`; the
 CMake targets are the same as above.
 
+### vcpkg
+
+SDLPainter is not in the vcpkg registry yet; the repository ships an overlay
+port in [`packaging/vcpkg/ports`](packaging/vcpkg/ports). The port downloads
+the v1.4.0 release itself, the clone only provides the port files:
+
+```bash
+git clone https://github.com/yazilimperver/sdl-painter.git
+vcpkg install sdl-painter --overlay-ports=sdl-painter/packaging/vcpkg/ports
+```
+
+Use `sdl-painter[vulkan]` for the Vulkan backend. In manifest mode, add
+`"sdl-painter"` to your `vcpkg.json` dependencies and the same directory to
+`"overlay-ports"` in `vcpkg-configuration.json`. The CMake targets are the same
+as above.
+
 ## Quick example
 
 ```cpp

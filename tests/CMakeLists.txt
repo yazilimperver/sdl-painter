@@ -94,7 +94,7 @@ else()
     # oldugundan test hedefine ayrica verilmeli.
     if(SDLPAINTER_WITH_VULKAN)
         target_link_libraries(sdl_painter_tests
-            PRIVATE vulkan-headers::vulkan-headers
+            PRIVATE Vulkan::Headers
             PRIVATE ${SDLPAINTER_SPDLOG_TARGET}
         )
     endif()

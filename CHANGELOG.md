@@ -1,5 +1,21 @@
 # Changelog
 
+## [Yayımlanmamış]
+
+### Eklendi
+
+- vcpkg overlay port'u (`packaging/vcpkg/ports/sdl-painter`): `vcpkg install
+  sdl-painter --overlay-ports=…`, Vulkan için `sdl-painter[vulkan]`. README'de
+  kurulum tarifi var.
+
+### Değişti
+
+- stb CMake config'i olmadan da bulunuyor (vcpkg'de olduğu gibi); `stb_image.h`
+  `find_path` ile aranıyor. stb artık kurulu paketin export'una girmiyor ve
+  `sdl_painterConfig.cmake` onu aramıyor.
+- Vulkan başlıkları `vulkan-headers::vulkan-headers` yerine `Vulkan::Headers`
+  hedefiyle bağlanıyor; bu ad Conan'da ve vcpkg'de aynı.
+
 ## [1.4.0] - 2026-10-22
 
 **SDLPainter 1.4.0** düzeltme ve gürbüzleştirme sürümü. Öne çıkanlar:
