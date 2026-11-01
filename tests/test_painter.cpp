@@ -537,6 +537,192 @@ TEST(PainterPrimitives, DegenerateInputProducesNoDrawCall) {
   EXPECT_EQ(DrawAndCount(h3, [](Painter& p) { p.DrawPolyline({{0, 0}}); }), 0u);
 }
 
+// ─── Point ve Rect aşırı yüklemeleri ────────────────────────────────────────
+
+TEST(PainterPrimitives, DrawLinePointOverloadMatchesFloat) {
+  Harness a;
+  a.painter.Begin();
+  a.painter.DrawLine(10.0F, 20.0F, 100.0F, 50.0F);
+  a.painter.End();
+
+  Harness b;
+  b.painter.Begin();
+  b.painter.DrawLine(Point{10.0F, 20.0F}, Point{100.0F, 50.0F});
+  b.painter.End();
+
+  ASSERT_EQ(a.mock->last_vertices.size(), b.mock->last_vertices.size());
+  for (std::size_t i = 0; i < a.mock->last_vertices.size(); ++i) {
+    EXPECT_FLOAT_EQ(a.mock->last_vertices[i].x, b.mock->last_vertices[i].x);
+    EXPECT_FLOAT_EQ(a.mock->last_vertices[i].y, b.mock->last_vertices[i].y);
+  }
+
+  // Braced calls compile
+  Harness c;
+  c.painter.Begin();
+  c.painter.DrawLine({10.0F, 20.0F}, {100.0F, 50.0F});
+  c.painter.End();
+  EXPECT_EQ(a.mock->last_vertices.size(), c.mock->last_vertices.size());
+}
+
+TEST(PainterPrimitives, DrawRectOverloadMatchesFloat) {
+  Harness a;
+  a.painter.Begin();
+  a.painter.DrawRect(10.0F, 20.0F, 100.0F, 50.0F);
+  a.painter.End();
+
+  Harness b;
+  b.painter.Begin();
+  b.painter.DrawRect(Rect{10.0F, 20.0F, 100.0F, 50.0F});
+  b.painter.End();
+
+  ASSERT_EQ(a.mock->last_vertices.size(), b.mock->last_vertices.size());
+  for (std::size_t i = 0; i < a.mock->last_vertices.size(); ++i) {
+    EXPECT_FLOAT_EQ(a.mock->last_vertices[i].x, b.mock->last_vertices[i].x);
+    EXPECT_FLOAT_EQ(a.mock->last_vertices[i].y, b.mock->last_vertices[i].y);
+  }
+
+  // Braced calls compile
+  Harness c;
+  c.painter.Begin();
+  c.painter.DrawRect({10.0F, 20.0F, 100.0F, 50.0F});
+  c.painter.End();
+  EXPECT_EQ(a.mock->last_vertices.size(), c.mock->last_vertices.size());
+}
+
+TEST(PainterPrimitives, FillRectOverloadMatchesFloat) {
+  Harness a;
+  a.painter.Begin();
+  a.painter.SetBrush(Brush(Color::Red()));
+  a.painter.FillRect(10.0F, 20.0F, 100.0F, 50.0F);
+  a.painter.End();
+
+  Harness b;
+  b.painter.Begin();
+  b.painter.SetBrush(Brush(Color::Red()));
+  b.painter.FillRect(Rect{10.0F, 20.0F, 100.0F, 50.0F});
+  b.painter.End();
+
+  ASSERT_EQ(a.mock->last_vertices.size(), b.mock->last_vertices.size());
+  for (std::size_t i = 0; i < a.mock->last_vertices.size(); ++i) {
+    EXPECT_FLOAT_EQ(a.mock->last_vertices[i].x, b.mock->last_vertices[i].x);
+    EXPECT_FLOAT_EQ(a.mock->last_vertices[i].y, b.mock->last_vertices[i].y);
+  }
+
+  // Braced calls compile
+  Harness c;
+  c.painter.Begin();
+  c.painter.SetBrush(Brush(Color::Red()));
+  c.painter.FillRect({10.0F, 20.0F, 100.0F, 50.0F});
+  c.painter.End();
+  EXPECT_EQ(a.mock->last_vertices.size(), c.mock->last_vertices.size());
+}
+
+TEST(PainterPrimitives, DrawRoundedRectOverloadMatchesFloat) {
+  Harness a;
+  a.painter.Begin();
+  a.painter.DrawRoundedRect(10.0F, 20.0F, 100.0F, 50.0F, 8.0F);
+  a.painter.End();
+
+  Harness b;
+  b.painter.Begin();
+  b.painter.DrawRoundedRect(Rect{10.0F, 20.0F, 100.0F, 50.0F}, 8.0F);
+  b.painter.End();
+
+  ASSERT_EQ(a.mock->last_vertices.size(), b.mock->last_vertices.size());
+  for (std::size_t i = 0; i < a.mock->last_vertices.size(); ++i) {
+    EXPECT_FLOAT_EQ(a.mock->last_vertices[i].x, b.mock->last_vertices[i].x);
+    EXPECT_FLOAT_EQ(a.mock->last_vertices[i].y, b.mock->last_vertices[i].y);
+  }
+
+  // Braced calls compile
+  Harness c;
+  c.painter.Begin();
+  c.painter.DrawRoundedRect({10.0F, 20.0F, 100.0F, 50.0F}, 8.0F);
+  c.painter.End();
+  EXPECT_EQ(a.mock->last_vertices.size(), c.mock->last_vertices.size());
+}
+
+TEST(PainterPrimitives, FillRoundedRectOverloadMatchesFloat) {
+  Harness a;
+  a.painter.Begin();
+  a.painter.SetBrush(Brush(Color::Red()));
+  a.painter.FillRoundedRect(10.0F, 20.0F, 100.0F, 50.0F, 8.0F);
+  a.painter.End();
+
+  Harness b;
+  b.painter.Begin();
+  b.painter.SetBrush(Brush(Color::Red()));
+  b.painter.FillRoundedRect(Rect{10.0F, 20.0F, 100.0F, 50.0F}, 8.0F);
+  b.painter.End();
+
+  ASSERT_EQ(a.mock->last_vertices.size(), b.mock->last_vertices.size());
+  for (std::size_t i = 0; i < a.mock->last_vertices.size(); ++i) {
+    EXPECT_FLOAT_EQ(a.mock->last_vertices[i].x, b.mock->last_vertices[i].x);
+    EXPECT_FLOAT_EQ(a.mock->last_vertices[i].y, b.mock->last_vertices[i].y);
+  }
+
+  // Braced calls compile
+  Harness c;
+  c.painter.Begin();
+  c.painter.SetBrush(Brush(Color::Red()));
+  c.painter.FillRoundedRect({10.0F, 20.0F, 100.0F, 50.0F}, 8.0F);
+  c.painter.End();
+  EXPECT_EQ(a.mock->last_vertices.size(), c.mock->last_vertices.size());
+}
+
+TEST(PainterPrimitives, DrawCircleOverloadMatchesFloat) {
+  Harness a;
+  a.painter.Begin();
+  a.painter.DrawCircle(50.0F, 60.0F, 25.0F);
+  a.painter.End();
+
+  Harness b;
+  b.painter.Begin();
+  b.painter.DrawCircle(Point{50.0F, 60.0F}, 25.0F);
+  b.painter.End();
+
+  ASSERT_EQ(a.mock->last_vertices.size(), b.mock->last_vertices.size());
+  for (std::size_t i = 0; i < a.mock->last_vertices.size(); ++i) {
+    EXPECT_FLOAT_EQ(a.mock->last_vertices[i].x, b.mock->last_vertices[i].x);
+    EXPECT_FLOAT_EQ(a.mock->last_vertices[i].y, b.mock->last_vertices[i].y);
+  }
+
+  // Braced calls compile
+  Harness c;
+  c.painter.Begin();
+  c.painter.DrawCircle({50.0F, 60.0F}, 25.0F);
+  c.painter.End();
+  EXPECT_EQ(a.mock->last_vertices.size(), c.mock->last_vertices.size());
+}
+
+TEST(PainterPrimitives, FillCircleOverloadMatchesFloat) {
+  Harness a;
+  a.painter.Begin();
+  a.painter.SetBrush(Brush(Color::Green()));
+  a.painter.FillCircle(50.0F, 60.0F, 25.0F);
+  a.painter.End();
+
+  Harness b;
+  b.painter.Begin();
+  b.painter.SetBrush(Brush(Color::Green()));
+  b.painter.FillCircle(Point{50.0F, 60.0F}, 25.0F);
+  b.painter.End();
+
+  ASSERT_EQ(a.mock->last_vertices.size(), b.mock->last_vertices.size());
+  for (std::size_t i = 0; i < a.mock->last_vertices.size(); ++i) {
+    EXPECT_FLOAT_EQ(a.mock->last_vertices[i].x, b.mock->last_vertices[i].x);
+    EXPECT_FLOAT_EQ(a.mock->last_vertices[i].y, b.mock->last_vertices[i].y);
+  }
+
+  // Braced calls compile
+  Harness c;
+  c.painter.Begin();
+  c.painter.SetBrush(Brush(Color::Green()));
+  c.painter.FillCircle({50.0F, 60.0F}, 25.0F);
+  c.painter.End();
+  EXPECT_EQ(a.mock->last_vertices.size(), c.mock->last_vertices.size());
+}
+
 // ─── Transform, tüm primitiflere uygulanıyor mu? ────────────────────────────
 
 TEST(PainterPrimitives, TransformReachesEveryPrimitive) {
