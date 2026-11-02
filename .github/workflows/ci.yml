@@ -541,6 +541,53 @@ jobs:
             -c tools.system.package_manager:mode=install \
             -c tools.system.package_manager:sudo=False
 
+  # Overlay port'u dener. Port kaynagi surum etiketinden indirir, HEAD'i degil;
+  # PR koduyla ilgisi olmadigi icin PR'larda kosmaz. sdl3'un varsayilan
+  # ozellikleri kapali: ibus zinciri autotools ister, bkz. packaging/vcpkg/README.md.
+  package-vcpkg:
+    name: package:vcpkg
+    runs-on: ubuntu-latest
+    needs: [build-linux-debug]
+    if: github.event_name != 'pull_request'
+    container:
+      image: yazilimperver/sdl-painter:ci-v1.2
+    env:
+      VCPKG_COMMIT: 9a5dfef5d1a0438a7d24856a85bd60f309d355e9
+      VCPKG_DEFAULT_BINARY_CACHE: /root/vcpkg-archives
+    steps:
+      - uses: actions/checkout@v7
+      - name: Cache vcpkg packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ env.VCPKG_DEFAULT_BINARY_CACHE }}
+          key: vcpkg-linux-${{ env.VCPKG_COMMIT }}-${{ hashFiles('packaging/vcpkg/ports/**') }}
+          restore-keys: |
+            vcpkg-linux-${{ env.VCPKG_COMMIT }}-
+      - name: vcpkg kur
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends curl zip unzip tar
+          mkdir -p "$VCPKG_DEFAULT_BINARY_CACHE"
+          git clone -q --filter=blob:none https://github.com/microsoft/vcpkg.git /root/vcpkg
+          git -C /root/vcpkg checkout -q "$VCPKG_COMMIT"
+          /root/vcpkg/bootstrap-vcpkg.sh -disableMetrics
+      - name: Manifest moduyla tuket
+        env:
+          VCPKG_OVERLAY_PORTS: ${{ github.workspace }}/packaging/vcpkg/ports
+        run: |
+          cat > packaging/consumer/vcpkg.json <<'EOF'
+          {
+            "dependencies": [
+              { "name": "sdl3", "default-features": false },
+              { "name": "sdl-painter", "features": ["vulkan"] }
+            ]
+          }
+          EOF
+          cmake -S packaging/consumer -B build/vcpkg-consumer -G Ninja -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_TOOLCHAIN_FILE=/root/vcpkg/scripts/buildsystems/vcpkg.cmake
+          cmake --build build/vcpkg-consumer
+          ./build/vcpkg-consumer/consumer
+
   quality-clang-format:
     name: quality:clang-format
     runs-on: ubuntu-latest

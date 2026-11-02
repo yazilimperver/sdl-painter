@@ -198,6 +198,11 @@ Use `sdl-painter[vulkan]` for the Vulkan backend. In manifest mode, add
 `"overlay-ports"` in `vcpkg-configuration.json`. The CMake targets are the same
 as above.
 
+On **Linux**, the default features of `sdl3` need extra system packages,
+including autotools. To avoid them, add
+`{ "name": "sdl3", "default-features": false }` to your manifest; see
+[`packaging/vcpkg/README.md`](packaging/vcpkg/README.md).
+
 ## Quick example
 
 ```cpp

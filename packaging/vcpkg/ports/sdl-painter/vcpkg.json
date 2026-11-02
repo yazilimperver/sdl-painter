@@ -9,7 +9,20 @@
     "glad",
     "glm",
     "opengl",
-    "sdl3",
+    {
+      "name": "sdl3",
+      "default-features": false,
+      "features": [
+        {
+          "name": "wayland",
+          "platform": "linux"
+        },
+        {
+          "name": "x11",
+          "platform": "linux"
+        }
+      ]
+    },
     "sdl3-ttf",
     "spdlog",
     "stb",

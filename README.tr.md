@@ -202,6 +202,11 @@ Vulkan backend'i için `sdl-painter[vulkan]` kullanın. Manifest modunda
 `"overlay-ports"` listesine aynı dizini ekleyin. CMake hedefleri yukarıdakilerle
 aynıdır.
 
+**Linux'ta** `sdl3`'ün varsayılan özellikleri autotools dahil ek sistem paketleri
+ister. Bunlardan kaçınmak için manifest'inize
+`{ "name": "sdl3", "default-features": false }` ekleyin, bkz.
+[`packaging/vcpkg/README.md`](packaging/vcpkg/README.md).
+
 ## Kısa örnek
 
 ```cpp
