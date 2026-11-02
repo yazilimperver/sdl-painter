@@ -805,6 +805,10 @@ void Painter::DrawLine(float x1, float y1, float x2, float y2) {
   PushStroke(verts, pen.GetColor());
 }
 
+void Painter::DrawLine(const Point& from, const Point& to) {
+  DrawLine(from.x, from.y, to.x, to.y);
+}
+
 void Painter::DrawRect(float x, float y, float w, float h) {
   if (!CanDrawPen()) {
     return;
@@ -822,12 +826,20 @@ void Painter::DrawRect(float x, float y, float w, float h) {
   PushStroke(verts, pen.GetColor());
 }
 
+void Painter::DrawRect(const Rect& rect) {
+  DrawRect(rect.x, rect.y, rect.w, rect.h);
+}
+
 void Painter::FillRect(float x, float y, float w, float h) {
   if (!CanDrawBrush()) {
     return;
   }
   auto verts = Tessellator::TessellateFilledRect(x, y, w, h);
   PushFilled(verts);
+}
+
+void Painter::FillRect(const Rect& rect) {
+  FillRect(rect.x, rect.y, rect.w, rect.h);
 }
 
 void Painter::DrawRoundedRect(float x, float y, float w, float h,
@@ -850,6 +862,10 @@ void Painter::DrawRoundedRect(float x, float y, float w, float h,
   PushStroke(verts, pen.GetColor());
 }
 
+void Painter::DrawRoundedRect(const Rect& rect, float radius) {
+  DrawRoundedRect(rect.x, rect.y, rect.w, rect.h, radius);
+}
+
 void Painter::FillRoundedRect(float x, float y, float w, float h,
                               float radius) {
   if (!CanDrawBrush()) {
@@ -863,6 +879,10 @@ void Painter::FillRoundedRect(float x, float y, float w, float h,
   // Dis hat konveks oldugu icin ear clipping ek mantik gerektirmez.
   auto verts = Tessellator::TessellateFilledPolygon(pts);
   PushFilled(verts);
+}
+
+void Painter::FillRoundedRect(const Rect& rect, float radius) {
+  FillRoundedRect(rect.x, rect.y, rect.w, rect.h, radius);
 }
 
 void Painter::DrawCircle(float cx, float cy, float radius) {
@@ -882,12 +902,20 @@ void Painter::DrawCircle(float cx, float cy, float radius) {
   PushStroke(verts, pen.GetColor());
 }
 
+void Painter::DrawCircle(const Point& center, float radius) {
+  DrawCircle(center.x, center.y, radius);
+}
+
 void Painter::FillCircle(float cx, float cy, float radius) {
   if (!CanDrawBrush()) {
     return;
   }
   auto verts = Tessellator::TessellateFilledCircle(cx, cy, radius);
   PushFilled(verts);
+}
+
+void Painter::FillCircle(const Point& center, float radius) {
+  FillCircle(center.x, center.y, radius);
 }
 
 void Painter::DrawEllipse(float cx, float cy, float rx, float ry) {

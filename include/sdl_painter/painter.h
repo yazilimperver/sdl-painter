@@ -269,21 +269,19 @@ class SDLPAINTER_API Painter {
   void DrawLine(float x1, float y1, float x2, float y2);
 
   /// @brief İki nokta arasına çizgi çiz.
-  void DrawLine(const Point& from, const Point& to) {
-    DrawLine(from.x, from.y, to.x, to.y);
-  }
+  void DrawLine(const Point& from, const Point& to);
 
   /// @brief Dikdörtgen çerçeve çiz (dolgu yok).
   void DrawRect(float x, float y, float w, float h);
 
   /// @brief Dikdörtgen çerçeve çiz (dolgu yok).
-  void DrawRect(const Rect& rect) { DrawRect(rect.x, rect.y, rect.w, rect.h); }
+  void DrawRect(const Rect& rect);
 
   /// @brief Dikdörtgeni doldur.
   void FillRect(float x, float y, float w, float h);
 
   /// @brief Dikdörtgeni doldur.
-  void FillRect(const Rect& rect) { FillRect(rect.x, rect.y, rect.w, rect.h); }
+  void FillRect(const Rect& rect);
 
   /// @brief Yuvarlatılmış köşeli dikdörtgen çerçevesi çiz.
   ///
@@ -297,9 +295,7 @@ class SDLPAINTER_API Painter {
   void DrawRoundedRect(float x, float y, float w, float h, float radius);
 
   /// @brief Yuvarlatılmış köşeli dikdörtgen çerçevesi çiz.
-  void DrawRoundedRect(const Rect& rect, float radius) {
-    DrawRoundedRect(rect.x, rect.y, rect.w, rect.h, radius);
-  }
+  void DrawRoundedRect(const Rect& rect, float radius);
 
   /// @brief Yuvarlatılmış köşeli dikdörtgeni doldur.
   ///
@@ -307,25 +303,19 @@ class SDLPAINTER_API Painter {
   void FillRoundedRect(float x, float y, float w, float h, float radius);
 
   /// @brief Yuvarlatılmış köşeli dikdörtgeni doldur.
-  void FillRoundedRect(const Rect& rect, float radius) {
-    FillRoundedRect(rect.x, rect.y, rect.w, rect.h, radius);
-  }
+  void FillRoundedRect(const Rect& rect, float radius);
 
   /// @brief Daire çerçeve çiz.
   void DrawCircle(float cx, float cy, float radius);
 
   /// @brief Daire çerçeve çiz.
-  void DrawCircle(const Point& center, float radius) {
-    DrawCircle(center.x, center.y, radius);
-  }
+  void DrawCircle(const Point& center, float radius);
 
   /// @brief Daireyi doldur.
   void FillCircle(float cx, float cy, float radius);
 
   /// @brief Daireyi doldur.
-  void FillCircle(const Point& center, float radius) {
-    FillCircle(center.x, center.y, radius);
-  }
+  void FillCircle(const Point& center, float radius);
 
   /// @brief Elips çerçeve çiz.
   void DrawEllipse(float cx, float cy, float rx, float ry);
