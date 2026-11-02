@@ -4,6 +4,9 @@
 
 ### Eklendi
 
+- `Painter` çizim fonksiyonları için `Point` ve `Rect` aşırı yüklemeleri eklendi
+  (`DrawLine`, `DrawRect`, `FillRect`, `DrawRoundedRect`, `FillRoundedRect`,
+  `DrawCircle`, `FillCircle`).
 - vcpkg overlay port'u (`packaging/vcpkg/ports/sdl-painter`): `vcpkg install
   sdl-painter --overlay-ports=…`, Vulkan için `sdl-painter[vulkan]`. README'de
   kurulum tarifi var.
