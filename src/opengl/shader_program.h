@@ -24,10 +24,6 @@ class ShaderProgram {
   /// @return Derleme/bağlama başarılı mı?
   bool Build(const std::string& vert_src, const std::string& frag_src);
 
-  /// @brief Shader dosyalarından program oluştur.
-  bool BuildFromFile(const std::string& vert_path,
-                     const std::string& frag_path);
-
   /// @brief Programı aktif et.
   void Use() const;
 

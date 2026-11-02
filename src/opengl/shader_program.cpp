@@ -1,9 +1,7 @@
 #include "shader_program.h"
 
-#include <fstream>
 #include <glad/glad.h>
 #include <spdlog/spdlog.h>
-#include <sstream>
 #include <vector>
 
 namespace sdl_painter {
@@ -95,29 +93,6 @@ bool ShaderProgram::Build(const std::string& vert_src,
     return false;
   }
   return true;
-}
-
-bool ShaderProgram::BuildFromFile(const std::string& vert_path,
-                                  const std::string& frag_path) {
-  auto read_file = [](const std::string& path) -> std::string {
-    std::ifstream file(path);
-    if (!file.is_open()) {
-      spdlog::error("[ShaderProgram] Failed to open file: {}", path);
-      return "";
-    }
-    std::stringstream ss;
-    ss << file.rdbuf();
-    return ss.str();
-  };
-
-  std::string vert_src = read_file(vert_path);
-  std::string frag_src = read_file(frag_path);
-
-  if (vert_src.empty() || frag_src.empty()) {
-    return false;
-  }
-
-  return Build(vert_src, frag_src);
 }
 
 void ShaderProgram::Use() const {
