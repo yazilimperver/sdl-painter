@@ -111,6 +111,11 @@ Followings are about SDL2:
 
 ## Installation
 
+Starting a new project? The
+[sdl-painter-starter](https://github.com/yazilimperver/sdl-painter-starter)
+template gives you a working window, Conan, CMake and CI for Linux and Windows:
+click **Use this template**.
+
 ### CMake, `find_package`
 
 Build and install SDLPainter once (see [Building](doc/en/building.md)), then:

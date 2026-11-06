@@ -113,6 +113,11 @@ Aşağıdaki yazılar ise SDL2 ile olan yazılar:
 
 ## Kurulum
 
+Yeni bir projeye mi başlıyorsunuz?
+[sdl-painter-starter](https://github.com/yazilimperver/sdl-painter-starter)
+şablonu çalışan bir pencere, Conan, CMake ve Linux ile Windows için CI ile gelir:
+**Use this template**'e tıklamanız yeterli.
+
 ### CMake, `find_package`
 
 SDLPainter'ı bir kez derleyip kurun ([Hızlı Başlangıç](doc/hizli-baslangic.md)),
