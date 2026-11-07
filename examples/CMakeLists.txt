@@ -36,6 +36,9 @@ sdlpainter_add_example(paint      app/paint.cpp      APP)
 sdlpainter_add_example(stats_overlay
     app/stats_overlay.cpp benchmarks/screenshot.cpp
     APP LIBS stb::stb)
+sdlpainter_add_example(gamepad
+    app/gamepad.cpp benchmarks/screenshot.cpp
+    APP LIBS stb::stb)
 
 # --- Tam uygulamalar ---
 # tictactoe ve breakout metin çizer; sdl_painter::Font public başlık olduğu

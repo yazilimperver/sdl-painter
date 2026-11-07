@@ -16,6 +16,10 @@
   standart 15 düğme), `GamepadAxis`, `GamepadType` (Xbox, PlayStation,
   Nintendo). Eksenler normalize gelir (çubuk −1…1, tetik 0…1); ölü bölge
   uygulamaya bırakılır. Çatı takılan gamepad'i açar, çıkarılınca kapatır.
+- `gamepad` örneği: kol SDLPainter ile çiziliyor (`Path`, gradient, metin).
+  Çatının gamepad olaylarının yanında SDL'in doğrudan kullanımıyla ad, pil,
+  ham eksen değerleri, ek düğmeler, touchpad, jiroskop ve tetik titreşimi
+  gösteriliyor. `input` örneğine de gamepad eklendi.
 
 ### Değişti
 

@@ -27,9 +27,9 @@
 ///   ESC               — çıkış
 ///
 ///   Gamepad (ilk bağlanan kareyi sürer):
-///   Sol çubuk / d-pad — kareyi hareket ettirir (DURUM; çubuk analog)
-///   South (A / ✕)     — daireyi büyütür, kısa titreşir (OLAY)
-///   Start             — sıfırla
+///   Sol çubuk / d-pad: kareyi hareket ettirir (DURUM; çubuk analog)
+///   South (A / ✕):     daireyi büyütür, kısa titreşir (OLAY)
+///   Start:             sıfırla
 
 #include "sdl_painter/app/application.h"
 
@@ -38,7 +38,7 @@
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
+#include <spdlog/spdlog.h>
 #include <vector>
 
 namespace sp = sdl_painter;
@@ -255,8 +255,8 @@ class InputDemo : public sp::Application {
 
   void OnGamepadAdded(const sp::GamepadDeviceEvent& event) override {
     mPads.push_back(event);
-    std::printf("Gamepad baglandi: kimlik %u, aile %s\n",
-                static_cast<unsigned>(event.id), StyleFor(event.type).name);
+    spdlog::info("Gamepad baglandi: kimlik {}, aile {}", event.id,
+                 StyleFor(event.type).name);
   }
 
   void OnGamepadRemoved(const sp::GamepadDeviceEvent& event) override {
@@ -270,8 +270,7 @@ class InputDemo : public sp::Application {
     if (was_active) {
       mPad = PadState{};
     }
-    std::printf("Gamepad cikarildi: kimlik %u\n",
-                static_cast<unsigned>(event.id));
+    spdlog::info("Gamepad cikarildi: kimlik {}", event.id);
   }
 
   void OnGamepadButtonDown(const sp::GamepadButtonEvent& event) override {

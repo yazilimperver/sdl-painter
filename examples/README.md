@@ -79,6 +79,7 @@ target (`sdl_painter::app` — see
 | [`game_loop`](app/game_loop.cpp) | Fixed-timestep simulation with render interpolation — a bouncing ball stays smooth even at a low `fixed_update_hz`. | — |
 | [`paint`](app/paint.cpp) | A real drawing program: freehand strokes, a colour palette, brush size, eraser and undo. Strokes are stored as point lists and re-drawn each frame, which makes undo a one-liner. | — |
 | [`stats_overlay`](app/stats_overlay.cpp) | The on-screen FPS / frame-stats overlay: `AppConfig::stats_overlay`, `show_fps_in_title`, **F1** to cycle modes, and `SPACE` to switch between a batch-friendly and a batch-breaking draw pattern so the draw-call difference is visible live. | SDL_ttf |
+| [`gamepad`](app/gamepad.cpp) | A live gamepad viewer, the controller itself drawn with SDLPainter (a cubic-Bézier `Path`, gradients, rounded rects, text). Shows every input and every piece of device data: the framework's buttons, axes, family and rumble, plus direct SDL calls for the name, vendor/product, battery, raw axis values, face-button labels, extra buttons, touchpad, gyro/accelerometer and trigger rumble. **T** turns the triggers into a rumble test. | SDL_ttf |
 
 ## Games and worlds
 
