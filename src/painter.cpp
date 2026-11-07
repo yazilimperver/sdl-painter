@@ -871,13 +871,10 @@ void Painter::FillRoundedRect(float x, float y, float w, float h,
   if (!CanDrawBrush()) {
     return;
   }
-  const std::vector<Point> pts =
-      Tessellator::BuildRoundedRectPoints(x, y, w, h, radius);
-  if (pts.size() < 3) {
+  auto verts = Tessellator::TessellateFilledRoundedRect(x, y, w, h, radius);
+  if (verts.empty()) {
     return;
   }
-  // Dis hat konveks oldugu icin ear clipping ek mantik gerektirmez.
-  auto verts = Tessellator::TessellateFilledPolygon(pts);
   PushFilled(verts);
 }
 

@@ -42,8 +42,8 @@ class Tessellator {
   /// @brief Yuvarlatılmış dikdörtgenin dış hat noktalarını üret.
   ///
   /// Dört köşe yayı ve onları birleştiren dört doğru parçası. Sonuç
-  /// konvekstir, bu yüzden hem @ref TessellateFilledPolygon hem de
-  /// @ref TessellateStrokedPolygon ek bir mantık gerektirmeden çalışır.
+  /// konvekstir; dolgusu @ref TessellateFilledRoundedRect ile üretilir,
+  /// @ref TessellateStrokedPolygon ise ek bir mantık gerektirmeden çalışır.
   ///
   /// Köşe çözünürlüğü @ref AdaptiveSegments ile belirlenir; yarıçap büyüdükçe
   /// daire ile aynı oranda artar.
@@ -53,6 +53,19 @@ class Tessellator {
   /// @return En az dört nokta; `w` veya `h` pozitif değilse boş.
   static std::vector<Point> BuildRoundedRectPoints(float x, float y, float w,
                                                    float h, float radius);
+
+  /// @brief Dolu yuvarlatılmış dikdörtgen: merkezden üçgen fanı.
+  ///
+  /// Dış hat konveks ve merkez daima içeride olduğu için fan her boyutta
+  /// şeklin tamamını kaplar. Ear clipping burada güvenilir değildi: yarıçap
+  /// kısa kenarın yarısına eşitken (hap şekli) bazı boyutlarda kulak
+  /// bulamıyor ve şeklin bir kısmını atlıyordu.
+  ///
+  /// @param radius @ref BuildRoundedRectPoints ile aynı kurallar.
+  /// @return Üçgen listesi; `w` veya `h` pozitif değilse boş.
+  static std::vector<Vertex> TessellateFilledRoundedRect(float x, float y,
+                                                         float w, float h,
+                                                         float radius);
 
   // Açı birimi derece. 0° = +x ekseni; açı, @ref Painter::Rotate ile aynı
   // yönde artar (dolayısıyla dolu daire tessellation'ıyla da aynı yönde).

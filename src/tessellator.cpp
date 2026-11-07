@@ -291,6 +291,29 @@ std::vector<Point> Tessellator::BuildRoundedRectPoints(float x, float y,
   return pts;
 }
 
+std::vector<Vertex> Tessellator::TessellateFilledRoundedRect(float x, float y,
+                                                             float w, float h,
+                                                             float radius) {
+  const std::vector<Point> outline = BuildRoundedRectPoints(x, y, w, h, radius);
+  if (outline.size() < 3) {
+    return {};
+  }
+  // Merkezden üçgen fanı. Çakışık komşu noktalar sıfır alanlı üçgen üretir;
+  // zararsızdır, ear clipping'deki gibi şeklin geri kalanını düşürmez.
+  const float cx = x + (w * 0.5F);
+  const float cy = y + (h * 0.5F);
+  std::vector<Vertex> result;
+  result.reserve(outline.size() * 3);
+  for (std::size_t i = 0; i < outline.size(); ++i) {
+    const Point& a = outline[i];
+    const Point& b = outline[(i + 1) % outline.size()];
+    result.emplace_back(cx, cy);
+    result.emplace_back(a.x, a.y);
+    result.emplace_back(b.x, b.y);
+  }
+  return result;
+}
+
 std::vector<Point> Tessellator::BuildArcPoints(float cx, float cy, float rx,
                                                float ry, float start_degrees,
                                                float sweep_degrees) {
@@ -879,7 +902,7 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& raw) {
     // şeklin büyük kısmı hiçbir iz bırakmadan kaybolur.
     if (!found_ear) {
       spdlog::warn(
-          "Tessellator: poligon tam ucgenlenemedi — {} kose atlandi "
+          "Tessellator: poligon tam ucgenlenemedi, {} kose atlandi "
           "(kendini kesen veya dejenere poligon?).",
           indices.size() - 3);
       break;

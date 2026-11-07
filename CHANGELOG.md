@@ -25,6 +25,13 @@
 - Vulkan başlıkları `vulkan-headers::vulkan-headers` yerine `Vulkan::Headers`
   hedefiyle bağlanıyor; bu ad Conan'da ve vcpkg'de aynı.
 
+### Düzeltildi
+
+- `FillRoundedRect`: yarıçap kısa kenarın yarısına eşitken (hap şekli) bazı
+  boyutlarda dolgunun yaklaşık %38'i çizilmiyor ve log'a "poligon tam
+  ucgenlenemedi" uyarısı düşüyordu. Dolgu artık ear clipping yerine merkezden
+  üçgen fanıyla üretiliyor.
+
 ### Yükseltmeden önce
 
 - **Shared derlemede `Application`'ın binary uyumluluğu değişti** (yeni sanal

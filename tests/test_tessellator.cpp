@@ -341,6 +341,39 @@ TEST(RoundedRect, FilledPolygonAcceptsTheOutline) {
   EXPECT_EQ(verts.size() % 3, 0u);
 }
 
+// Hap şeklinde (yarıçap kısa kenarın yarısı) ear clipping bazı boyutlarda
+// kulak bulamıyor ve dolgunun yaklaşık %38'i kayboluyordu: 0,05 px adımlı bu
+// taramada 920 yüksekliğin 64'ü. Tetiğe basıldıkça dolan bir kutu (gamepad
+// örneği) tam bu boyutlardan geçer.
+TEST(RoundedRect, FillCoversTheWholeShapeAtEverySize) {
+  for (int32_t i = 1; i <= 920; ++i) {
+    const float h = 0.05F * static_cast<float>(i);
+    const float y = 116.0F - h;
+    const float r = std::min(8.0F, h * 0.5F);
+    const auto outline =
+        Tessellator::BuildRoundedRectPoints(150.0F, y, 110.0F, h, r);
+    const auto verts =
+        Tessellator::TessellateFilledRoundedRect(150.0F, y, 110.0F, h, r);
+    ASSERT_EQ(verts.size() % 3, 0U) << "h=" << h;
+    const double expected = ShoelaceArea(outline);
+    EXPECT_NEAR(TriangleListArea(verts), expected, expected * 1e-4)
+        << "h=" << h;
+  }
+}
+
+TEST(RoundedRect, FillWithZeroRadiusCoversThePlainRectangle) {
+  const auto verts = Tessellator::TessellateFilledRoundedRect(
+      10.0F, 20.0F, 100.0F, 50.0F, 0.0F);
+  EXPECT_NEAR(TriangleListArea(verts), 5000.0, 1e-3);
+}
+
+TEST(RoundedRect, FillOfEmptyRectIsEmpty) {
+  EXPECT_TRUE(
+      Tessellator::TessellateFilledRoundedRect(0, 0, 0, 40, 5.0F).empty());
+  EXPECT_TRUE(
+      Tessellator::TessellateFilledRoundedRect(0, 0, 80, -1, 5.0F).empty());
+}
+
 // ─── Yay / dilim / kiriş ────────────────────────────────────────────────────
 
 TEST(ArcPoints, EndpointsMatchStartAndSweepAngles) {
