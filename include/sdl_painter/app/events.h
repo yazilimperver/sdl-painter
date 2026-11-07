@@ -172,7 +172,7 @@ struct ResizeEvent {
 /// kimlik alır.
 using GamepadId = uint32_t;
 
-/// @brief Gamepad düğmesi — etikete göre değil, konuma göre adlandırılır.
+/// @brief Gamepad düğmesi: etikete göre değil, konuma göre adlandırılır.
 ///
 /// @ref GamepadButton::kSouth Xbox'ta A, PlayStation'da ✕, Nintendo'da B'dir.
 /// Sıra SDL_GamepadButton'ın ilk on beş değeriyle aynıdır. Ek düğmeler
@@ -208,7 +208,11 @@ enum class GamepadAxis : uint8_t {
   kRightTrigger,
 };
 
-/// @brief Gamepad ailesi — ekrandaki tuş ipuçlarını seçmek için.
+/// @brief Gamepad ailesi: Xbox, PlayStation ya da Nintendo.
+///
+/// Kaba tuş ipuçları için yeterlidir. Yüz düğmelerinin etiketi aile içinde
+/// de değişebilir (Switch'te güneydeki düğme B, GameCube'de A); kesin etiket
+/// için SDL'in `SDL_GetGamepadButtonLabel` fonksiyonu kullanılabilir.
 enum class GamepadType : uint8_t {
   kUnknown = 0,
   kStandard,     ///< Tanınan ama belirli bir aileye girmeyen gamepad.

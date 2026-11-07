@@ -84,7 +84,8 @@ class SDLPAINTER_APP_API Application {
   /// @brief Pencere başlığını güncelle.
   void SetTitle(const std::string& title);
 
-  /// @brief Alttaki SDL penceresi — belgelenmiş kaçış kapısı (ileri kullanım).
+  /// @brief Alttaki SDL penceresi: SDL'in doğrudan kullanımı için (ileri
+  ///        kullanım).
   [[nodiscard]] SDL_Window* GetWindow() const noexcept { return mWindow; }
 
   /// @brief Yumuşatılmış kare hızı (kare/saniye).
@@ -192,7 +193,7 @@ class SDLPAINTER_APP_API Application {
   /// @brief Pencere yeniden boyutlandı.
   virtual void OnResize(const ResizeEvent& event) { (void)event; }
 
-  /// @brief Ham SDL olayı — kaçış kapısı.
+  /// @brief Ham SDL olayı: SDL'in doğrudan kullanımı için.
   /// @return `true` dönerse olay tüketilmiş sayılır; çeviri ve varsayılan
   ///         (quit dahil) işleme atlanır. Kullanan .cpp `<SDL3/SDL.h>` dahil
   ///         etmelidir (SDL3, sdl_painter'a PUBLIC bağlıdır).

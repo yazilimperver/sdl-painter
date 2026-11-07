@@ -2,7 +2,7 @@
 
 - **Durum:** Kabul edildi
 - **Tarih:** 2026-07-04
-- **Güncelleme:** 2026-11-07 — gamepad desteği (en altta)
+- **Güncelleme:** 2026-11-07, gamepad desteği (en altta)
 
 ## Bağlam
 
@@ -22,7 +22,7 @@ Referans olarak da, uEngine4'teki `SdlApplication` (SDL2)'dan esinlendik; ancak 
 | API modeli | — | Client interface + listener kaydı | `Application`'dan türet |
 | Zamanlama | Elle | Fixed timestep + interpolasyon | Değişken delta-time |
 | Bağımlılık | — | Asset/gamepad/touch/JSON | Sıfır yeni bağımlılık |
-| Esneklik | Tam kontrol | Yüksek | Yeterli + ham olay kaçış kapısı |
+| Esneklik | Tam kontrol | Yüksek | Yeterli + ham olayla SDL'in doğrudan kullanımı |
 
 ## Karar
 
@@ -33,10 +33,10 @@ uygulamalar yalnızca core'a link etmeye devam eder.
 - **Kalıtım tabanlı API:** Kullanıcı `sdl_painter::Application`'dan türeyip
   korumalı sanal metotları (`OnRender` zorunlu; `OnInit`/`OnUpdate`/`OnKeyDown`/
   fare/`OnResize`/`OnShutdown` opsiyonel) override eder. `Run()` → `int` (main).
-- **Kendi olay tipleri + kaçış kapısı:** `Key`/`KeyModifier`/`MouseButton` enum'ları
+- **Kendi olay tipleri + SDL'in doğrudan kullanımı:** `Key`/`KeyModifier`/`MouseButton` enum'ları
   ve `KeyEvent`/`MouseButtonEvent`/... struct'ları SDL'den bağımsızdır. Public app
-  başlıkları SDL başlığı **içermez**. İleri ihtiyaçlar için
-  `virtual bool OnRawEvent(const SDL_Event&)` kaçış kapısı sunulur; başlıkta
+  başlıkları SDL başlığı **içermez**. İleri ihtiyaçlarda SDL doğrudan
+  kullanılabilsin diye `virtual bool OnRawEvent(const SDL_Event&)` sunulur; başlıkta
   `union SDL_Event;` forward-decl kullanılır (SDL3'te `SDL_Event` bir union'dır,
   mevcut `struct SDL_Window;` deseniyle aynı).
 - **Opsiyon yok:** `SDLPAINTER_BUILD_APP` gibi bir CMake/Conan opsiyonu
@@ -117,7 +117,7 @@ Gamepad, klavye ve fareyle aynı kalıpla eklenir; katman ince kalır.
 **Kapsam dışı:** eylem eşleme, ölü bölge, durum sorgusu (`IsButtonDown`),
 touchpad, jiroskop, LED. Dairesel ölü bölge iki ekseni birlikte ister ama
 olaylar eksen eksen gelir; klavyede olduğu gibi durumu uygulama tutar.
-Gerekirse `OnRawEvent` ve `GetWindow` kaçış kapıları duruyor.
+Gerekirse SDL doğrudan kullanılabilir: `OnRawEvent` ve `GetWindow` duruyor.
 
 ### Sonuçlar
 
