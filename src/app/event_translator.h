@@ -42,4 +42,28 @@ MouseWheelEvent MakeMouseWheelEvent(float dx, float dy, float mouse_x,
                                     float mouse_y,
                                     float pixel_density) noexcept;
 
+/// @brief SDL gamepad düğmesini @ref GamepadButton değerine çevir.
+/// @param sdl_button SDL_GamepadButtonEvent::button (SDL_GamepadButton).
+/// @return İlk on beş düğmenin dışındakiler için @ref GamepadButton::kUnknown.
+GamepadButton TranslateGamepadButton(uint8_t sdl_button) noexcept;
+
+/// @brief SDL gamepad eksenini @ref GamepadAxis değerine çevir.
+/// @param sdl_axis SDL_GamepadAxisEvent::axis (SDL_GamepadAxis).
+GamepadAxis TranslateGamepadAxis(uint8_t sdl_axis) noexcept;
+
+/// @brief SDL gamepad türünü @ref GamepadType ailesine indir.
+/// @param sdl_type SDL_GamepadType değeri.
+GamepadType TranslateGamepadType(int32_t sdl_type) noexcept;
+
+/// @brief Ham eksen değerini (−32768…32767) [-1, 1] aralığına çevir.
+///
+/// 32767'ye bölünür ve −1'de kırpılır; tetikler (0…32767) böylece [0, 1]
+/// olur.
+float NormalizeGamepadAxis(int16_t value) noexcept;
+
+/// @brief [0, 1] titreşim şiddetini SDL'in 0…0xFFFF aralığına çevir.
+///
+/// Aralık dışı değerler kırpılır; NaN 0 sayılır.
+uint16_t RumbleIntensity(float intensity) noexcept;
+
 }  // namespace sdl_painter::internal

@@ -1,6 +1,7 @@
 #include <SDL3/SDL.h>
 
 #include <gtest/gtest.h>
+#include <limits>
 
 #include "app/event_translator.h"
 
@@ -151,6 +152,118 @@ TEST(EventTranslatorTest, UnitPixelDensityLeavesMouseValuesUnchanged) {
       internal::MakeMouseWheelEvent(0.5F, 3.0F, 7.0F, 9.0F, 1.0F);
   EXPECT_FLOAT_EQ(w.dy, 3.0F);
   EXPECT_FLOAT_EQ(w.mouse_x, 7.0F);
+}
+
+// --- Gamepad ---
+
+TEST(EventTranslatorTest, GamepadButtonsTranslate) {
+  using internal::TranslateGamepadButton;
+  EXPECT_EQ(TranslateGamepadButton(SDL_GAMEPAD_BUTTON_SOUTH),
+            GamepadButton::kSouth);
+  EXPECT_EQ(TranslateGamepadButton(SDL_GAMEPAD_BUTTON_EAST),
+            GamepadButton::kEast);
+  EXPECT_EQ(TranslateGamepadButton(SDL_GAMEPAD_BUTTON_WEST),
+            GamepadButton::kWest);
+  EXPECT_EQ(TranslateGamepadButton(SDL_GAMEPAD_BUTTON_NORTH),
+            GamepadButton::kNorth);
+  EXPECT_EQ(TranslateGamepadButton(SDL_GAMEPAD_BUTTON_BACK),
+            GamepadButton::kBack);
+  EXPECT_EQ(TranslateGamepadButton(SDL_GAMEPAD_BUTTON_GUIDE),
+            GamepadButton::kGuide);
+  EXPECT_EQ(TranslateGamepadButton(SDL_GAMEPAD_BUTTON_START),
+            GamepadButton::kStart);
+  EXPECT_EQ(TranslateGamepadButton(SDL_GAMEPAD_BUTTON_LEFT_STICK),
+            GamepadButton::kLeftStick);
+  EXPECT_EQ(TranslateGamepadButton(SDL_GAMEPAD_BUTTON_RIGHT_STICK),
+            GamepadButton::kRightStick);
+  EXPECT_EQ(TranslateGamepadButton(SDL_GAMEPAD_BUTTON_LEFT_SHOULDER),
+            GamepadButton::kLeftShoulder);
+  EXPECT_EQ(TranslateGamepadButton(SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER),
+            GamepadButton::kRightShoulder);
+  EXPECT_EQ(TranslateGamepadButton(SDL_GAMEPAD_BUTTON_DPAD_UP),
+            GamepadButton::kDpadUp);
+  EXPECT_EQ(TranslateGamepadButton(SDL_GAMEPAD_BUTTON_DPAD_DOWN),
+            GamepadButton::kDpadDown);
+  EXPECT_EQ(TranslateGamepadButton(SDL_GAMEPAD_BUTTON_DPAD_LEFT),
+            GamepadButton::kDpadLeft);
+  EXPECT_EQ(TranslateGamepadButton(SDL_GAMEPAD_BUTTON_DPAD_RIGHT),
+            GamepadButton::kDpadRight);
+}
+
+TEST(EventTranslatorTest, ExtraGamepadButtonsReturnUnknown) {
+  using internal::TranslateGamepadButton;
+  EXPECT_EQ(TranslateGamepadButton(SDL_GAMEPAD_BUTTON_MISC1),
+            GamepadButton::kUnknown);
+  EXPECT_EQ(TranslateGamepadButton(SDL_GAMEPAD_BUTTON_TOUCHPAD),
+            GamepadButton::kUnknown);
+  EXPECT_EQ(TranslateGamepadButton(SDL_GAMEPAD_BUTTON_MISC6),
+            GamepadButton::kUnknown);
+  EXPECT_EQ(TranslateGamepadButton(255), GamepadButton::kUnknown);
+}
+
+TEST(EventTranslatorTest, GamepadAxesTranslate) {
+  using internal::TranslateGamepadAxis;
+  EXPECT_EQ(TranslateGamepadAxis(SDL_GAMEPAD_AXIS_LEFTX), GamepadAxis::kLeftX);
+  EXPECT_EQ(TranslateGamepadAxis(SDL_GAMEPAD_AXIS_LEFTY), GamepadAxis::kLeftY);
+  EXPECT_EQ(TranslateGamepadAxis(SDL_GAMEPAD_AXIS_RIGHTX),
+            GamepadAxis::kRightX);
+  EXPECT_EQ(TranslateGamepadAxis(SDL_GAMEPAD_AXIS_RIGHTY),
+            GamepadAxis::kRightY);
+  EXPECT_EQ(TranslateGamepadAxis(SDL_GAMEPAD_AXIS_LEFT_TRIGGER),
+            GamepadAxis::kLeftTrigger);
+  EXPECT_EQ(TranslateGamepadAxis(SDL_GAMEPAD_AXIS_RIGHT_TRIGGER),
+            GamepadAxis::kRightTrigger);
+  EXPECT_EQ(TranslateGamepadAxis(SDL_GAMEPAD_AXIS_COUNT),
+            GamepadAxis::kUnknown);
+  EXPECT_EQ(TranslateGamepadAxis(255), GamepadAxis::kUnknown);
+}
+
+TEST(EventTranslatorTest, GamepadTypesCollapseToFamilies) {
+  using internal::TranslateGamepadType;
+  EXPECT_EQ(TranslateGamepadType(SDL_GAMEPAD_TYPE_UNKNOWN),
+            GamepadType::kUnknown);
+  EXPECT_EQ(TranslateGamepadType(SDL_GAMEPAD_TYPE_STANDARD),
+            GamepadType::kStandard);
+  EXPECT_EQ(TranslateGamepadType(SDL_GAMEPAD_TYPE_XBOX360), GamepadType::kXbox);
+  EXPECT_EQ(TranslateGamepadType(SDL_GAMEPAD_TYPE_XBOXONE), GamepadType::kXbox);
+  EXPECT_EQ(TranslateGamepadType(SDL_GAMEPAD_TYPE_PS3),
+            GamepadType::kPlayStation);
+  EXPECT_EQ(TranslateGamepadType(SDL_GAMEPAD_TYPE_PS4),
+            GamepadType::kPlayStation);
+  EXPECT_EQ(TranslateGamepadType(SDL_GAMEPAD_TYPE_PS5),
+            GamepadType::kPlayStation);
+  EXPECT_EQ(TranslateGamepadType(SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_PRO),
+            GamepadType::kNintendo);
+  EXPECT_EQ(TranslateGamepadType(SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_JOYCON_LEFT),
+            GamepadType::kNintendo);
+  EXPECT_EQ(TranslateGamepadType(SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_JOYCON_RIGHT),
+            GamepadType::kNintendo);
+  EXPECT_EQ(TranslateGamepadType(SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_JOYCON_PAIR),
+            GamepadType::kNintendo);
+  EXPECT_EQ(TranslateGamepadType(SDL_GAMEPAD_TYPE_GAMECUBE),
+            GamepadType::kNintendo);
+  EXPECT_EQ(TranslateGamepadType(SDL_GAMEPAD_TYPE_COUNT),
+            GamepadType::kUnknown);
+}
+
+TEST(EventTranslatorTest, GamepadAxisNormalizesToUnitRange) {
+  using internal::NormalizeGamepadAxis;
+  EXPECT_FLOAT_EQ(NormalizeGamepadAxis(0), 0.0F);
+  EXPECT_FLOAT_EQ(NormalizeGamepadAxis(SDL_JOYSTICK_AXIS_MAX), 1.0F);
+  EXPECT_FLOAT_EQ(NormalizeGamepadAxis(-SDL_JOYSTICK_AXIS_MAX), -1.0F);
+  // Aralık asimetrik: en uç negatif değer −1'de kırpılır.
+  EXPECT_FLOAT_EQ(NormalizeGamepadAxis(SDL_JOYSTICK_AXIS_MIN), -1.0F);
+  EXPECT_NEAR(NormalizeGamepadAxis(16384), 0.5F, 1e-4F);
+}
+
+TEST(EventTranslatorTest, RumbleIntensityMapsAndClamps) {
+  using internal::RumbleIntensity;
+  EXPECT_EQ(RumbleIntensity(0.0F), 0U);
+  EXPECT_EQ(RumbleIntensity(1.0F), 0xFFFFU);
+  EXPECT_EQ(RumbleIntensity(0.5F), 0x8000U);
+  EXPECT_EQ(RumbleIntensity(-0.5F), 0U);
+  EXPECT_EQ(RumbleIntensity(2.0F), 0xFFFFU);
+  EXPECT_EQ(RumbleIntensity(std::numeric_limits<float>::quiet_NaN()), 0U);
 }
 
 }  // namespace sdl_painter

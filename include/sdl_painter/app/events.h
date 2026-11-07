@@ -166,4 +166,78 @@ struct ResizeEvent {
   int32_t height{0};
 };
 
+/// @brief Bağlı bir gamepad'in kimliği (SDL_JoystickID ile aynı değer).
+///
+/// Bağlantı süresince sabittir; cihaz çıkarılıp yeniden takılınca yeni bir
+/// kimlik alır.
+using GamepadId = uint32_t;
+
+/// @brief Gamepad düğmesi — etikete göre değil, konuma göre adlandırılır.
+///
+/// @ref GamepadButton::kSouth Xbox'ta A, PlayStation'da ✕, Nintendo'da B'dir.
+/// Sıra SDL_GamepadButton'ın ilk on beş değeriyle aynıdır. Ek düğmeler
+/// (paddle, misc, touchpad) @ref GamepadButton::kUnknown olarak gelir; ham
+/// değerleri `OnRawEvent` ile okunabilir.
+enum class GamepadButton : uint8_t {
+  kUnknown = 0,
+  kSouth,
+  kEast,
+  kWest,
+  kNorth,
+  kBack,
+  kGuide,
+  kStart,
+  kLeftStick,
+  kRightStick,
+  kLeftShoulder,
+  kRightShoulder,
+  kDpadUp,
+  kDpadDown,
+  kDpadLeft,
+  kDpadRight,
+};
+
+/// @brief Gamepad analog ekseni.
+enum class GamepadAxis : uint8_t {
+  kUnknown = 0,
+  kLeftX,
+  kLeftY,
+  kRightX,
+  kRightY,
+  kLeftTrigger,
+  kRightTrigger,
+};
+
+/// @brief Gamepad ailesi — ekrandaki tuş ipuçlarını seçmek için.
+enum class GamepadType : uint8_t {
+  kUnknown = 0,
+  kStandard,     ///< Tanınan ama belirli bir aileye girmeyen gamepad.
+  kXbox,         ///< Xbox 360, Xbox One ve uyumluları.
+  kPlayStation,  ///< PS3, PS4, PS5 ve uyumluları.
+  kNintendo,     ///< Switch Pro, Joy-Con, GameCube ve uyumluları.
+};
+
+/// @brief Gamepad takıldı / çıkarıldı olayı.
+struct GamepadDeviceEvent {
+  GamepadId id{0};
+  GamepadType type{GamepadType::kUnknown};
+};
+
+/// @brief Gamepad düğme olayı.
+struct GamepadButtonEvent {
+  GamepadId id{0};
+  GamepadButton button{GamepadButton::kUnknown};
+};
+
+/// @brief Gamepad eksen olayı.
+struct GamepadAxisEvent {
+  GamepadId id{0};
+  GamepadAxis axis{GamepadAxis::kUnknown};
+  /// @brief Normalize değer: çubuklarda [-1, 1], tetiklerde [0, 1].
+  ///
+  /// Ölü bölge (dead zone) uygulanmaz; çubuklar bırakıldığında da sıfırın
+  /// biraz yanında durabilir.
+  float value{0.0F};
+};
+
 }  // namespace sdl_painter

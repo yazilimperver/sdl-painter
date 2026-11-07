@@ -10,6 +10,12 @@
 - vcpkg overlay port'u (`packaging/vcpkg/ports/sdl-painter`): `vcpkg install
   sdl-painter --overlay-ports=…`, Vulkan için `sdl-painter[vulkan]`. README'de
   kurulum tarifi var.
+- `Application`'a gamepad desteği: `AppConfig::enable_gamepad` (varsayılan
+  kapalı), `OnGamepadAdded/Removed`, `OnGamepadButtonDown/Up`, `OnGamepadAxis`
+  ve `RumbleGamepad`. Türler `events.h`'de: `GamepadButton` (konuma göre,
+  standart 15 düğme), `GamepadAxis`, `GamepadType` (Xbox, PlayStation,
+  Nintendo). Eksenler normalize gelir (çubuk −1…1, tetik 0…1); ölü bölge
+  uygulamaya bırakılır. Çatı takılan gamepad'i açar, çıkarılınca kapatır.
 
 ### Değişti
 
@@ -18,6 +24,11 @@
   `sdl_painterConfig.cmake` onu aramıyor.
 - Vulkan başlıkları `vulkan-headers::vulkan-headers` yerine `Vulkan::Headers`
   hedefiyle bağlanıyor; bu ad Conan'da ve vcpkg'de aynı.
+
+### Yükseltmeden önce
+
+- **Shared derlemede `Application`'ın binary uyumluluğu değişti** (yeni sanal
+  metotlar ve üye): 1.4.0'a karşı derlenmiş uygulamayı yeniden derleyin.
 
 ## [1.4.0] - 2026-10-22
 

@@ -8,9 +8,11 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
 
 // SDL forward declaration'ları — public başlığa SDL sızmasın.
 struct SDL_Window;
+struct SDL_Gamepad;
 union SDL_Event;  // SDL3'te SDL_Event bir union'dır (typedef ile aynı etiket).
 
 namespace sdl_painter {
@@ -102,6 +104,16 @@ class SDLPAINTER_APP_API Application {
     return mStatsMode;
   }
 
+  /// @brief Gamepad'i titreştir.
+  /// @param id Çatının açtığı gamepad (@ref GamepadDeviceEvent::id).
+  /// @param low_frequency Düşük frekanslı (sol) motorun şiddeti, [0, 1].
+  /// @param high_frequency Yüksek frekanslı (sağ) motorun şiddeti, [0, 1].
+  /// @param duration_ms Süre (ms). Yeni çağrı öncekini iptal eder; iki şiddet
+  ///        de 0 ise titreşim durur.
+  /// @return Gamepad açık değilse ya da titreşimi desteklemiyorsa `false`.
+  bool RumbleGamepad(GamepadId id, float low_frequency, float high_frequency,
+                     uint32_t duration_ms);
+
  protected:
   /// @brief Aktif Painter — yalnızca @ref Run çalışırken (OnInit dahil) geçerli.
   [[nodiscard]] Painter& GetPainter() { return *mPainter; }
@@ -153,6 +165,30 @@ class SDLPAINTER_APP_API Application {
   /// @brief Fare tekerleği döndü.
   virtual void OnMouseWheel(const MouseWheelEvent& event) { (void)event; }
 
+  /// @brief Gamepad takıldı ve çatı onu açtı.
+  /// @note `OnGamepad*` metotları yalnızca @ref AppConfig::enable_gamepad
+  ///       açıkken çağrılır. Uygulama başlarken takılı olan gamepad'ler için
+  ///       de ilk karede gelir.
+  virtual void OnGamepadAdded(const GamepadDeviceEvent& event) { (void)event; }
+
+  /// @brief Gamepad çıkarıldı; @p event içindeki kimlik artık geçersizdir.
+  virtual void OnGamepadRemoved(const GamepadDeviceEvent& event) {
+    (void)event;
+  }
+
+  /// @brief Gamepad düğmesine basıldı.
+  virtual void OnGamepadButtonDown(const GamepadButtonEvent& event) {
+    (void)event;
+  }
+
+  /// @brief Gamepad düğmesi bırakıldı.
+  virtual void OnGamepadButtonUp(const GamepadButtonEvent& event) {
+    (void)event;
+  }
+
+  /// @brief Gamepad ekseni değişti.
+  virtual void OnGamepadAxis(const GamepadAxisEvent& event) { (void)event; }
+
   /// @brief Pencere yeniden boyutlandı.
   virtual void OnResize(const ResizeEvent& event) { (void)event; }
 
@@ -181,6 +217,28 @@ class SDLPAINTER_APP_API Application {
   /// @brief Pencere başlığındaki FPS'i (gerekiyorsa) güncelle.
   void UpdateTitleFps(uint64_t frame_ns);
 
+  /// @brief Gamepad olayını çevirip ilgili `OnGamepad*` metoduna ilet.
+  void DispatchGamepadEvent(const SDL_Event& event);
+
+  /// @brief Takılan gamepad'i aç ve @ref OnGamepadAdded ile bildir.
+  void HandleGamepadAdded(GamepadId id);
+
+  /// @brief Çatının açtığı gamepad'i kapat ve @ref OnGamepadRemoved ile bildir.
+  void HandleGamepadRemoved(GamepadId id);
+
+  /// @brief Çatının açtığı gamepad'in tutamacı; yoksa `nullptr`.
+  [[nodiscard]] SDL_Gamepad* FindGamepad(GamepadId id) const noexcept;
+
+  /// @brief Çatının açtığı bir gamepad.
+  ///
+  /// Kimlik ve tür açılışta saklanır: cihaz çıkarıldıktan sonra SDL'e
+  /// sorulmaları gerekmez.
+  struct OpenedGamepad {
+    SDL_Gamepad* handle{nullptr};
+    GamepadId id{0};
+    GamepadType type{GamepadType::kUnknown};
+  };
+
   AppConfig mConfig;
   SDL_Window* mWindow{nullptr};
   std::unique_ptr<Painter> mPainter;
@@ -201,6 +259,10 @@ class SDLPAINTER_APP_API Application {
   std::unique_ptr<app_detail::StatsOverlay> mStatsOverlay;
   StatsOverlayMode mStatsMode{StatsOverlayMode::kNone};
   uint64_t mTitleUpdateNs{0};
+
+  /// @brief Çatının açtığı gamepad'ler. SDL düğme ve eksen olaylarını
+  ///        yalnızca açılmış gamepad'ler için üretir.
+  std::vector<OpenedGamepad> mGamepads;
 };
 
 }  // namespace sdl_painter

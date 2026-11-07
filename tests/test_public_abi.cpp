@@ -276,6 +276,10 @@ TEST(PublicAbi, ApplicationSymbolsResolveAcrossBoundary) {
   void (sdl_painter::Application::*quit)() noexcept =
       &sdl_painter::Application::Quit;
   EXPECT_NE(quit, nullptr);
+  bool (sdl_painter::Application::*rumble)(sdl_painter::GamepadId, float, float,
+                                           uint32_t) =
+      &sdl_painter::Application::RumbleGamepad;
+  EXPECT_NE(rumble, nullptr);
 }
 
 // --- Satir ici tipler --------------------------------------------------------

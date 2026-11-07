@@ -24,6 +24,7 @@ TEST(AppConfigTest, Defaults) {
   EXPECT_FALSE(cfg.show_fps_in_title);
   EXPECT_TRUE(cfg.stats_overlay_font.empty());
   EXPECT_EQ(cfg.stats_overlay_font_size, 14);
+  EXPECT_FALSE(cfg.enable_gamepad);
 }
 
 TEST(AppConfigTest, FixedTimingFields) {

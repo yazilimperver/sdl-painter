@@ -2,6 +2,7 @@
 
 #include <SDL3/SDL.h>
 
+#include <algorithm>
 #include <array>
 #include <cstdio>
 #include <spdlog/sinks/stdout_color_sinks.h>
@@ -69,6 +70,12 @@ bool Application::Initialize() {
     return false;
   }
   mSdlInitialized = true;
+
+  // Gamepad isteğe bağlı bir girdi: alt sistem kurulamazsa uygulama klavye ve
+  // fareyle çalışmaya devam eder. Kapanışı SDL_Quit üstlenir.
+  if (mConfig.enable_gamepad && !SDL_InitSubSystem(SDL_INIT_GAMEPAD)) {
+    spdlog::warn("Gamepad alt sistemi başlatılamadı: {}", SDL_GetError());
+  }
 
   // OpenGL: pencere piksel formatını etkileyen attribute'lar pencereden
   // once ayarlanmalı. Context sürüm attribute'larını renderer da set eder
@@ -152,6 +159,10 @@ void Application::Teardown() noexcept {
     SDL_DestroyWindow(mWindow);
     mWindow = nullptr;
   }
+  for (const OpenedGamepad& gamepad : mGamepads) {
+    SDL_CloseGamepad(gamepad.handle);
+  }
+  mGamepads.clear();
   if (mSdlInitialized) {
     SDL_Quit();
     mSdlInitialized = false;
@@ -212,6 +223,18 @@ void Application::ProcessEvents() {
         OnMouseWheel(internal::MakeMouseWheelEvent(
             event.wheel.x, event.wheel.y, event.wheel.mouse_x,
             event.wheel.mouse_y, mPixelDensity));
+        break;
+
+      // Bayrak kapalıyken çatı gamepad'lere dokunmaz: alt sistemi kendisi
+      // başlatıp OnRawEvent ile yöneten uygulamada çift açılış olmasın.
+      case SDL_EVENT_GAMEPAD_ADDED:
+      case SDL_EVENT_GAMEPAD_REMOVED:
+      case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+      case SDL_EVENT_GAMEPAD_BUTTON_UP:
+      case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+        if (mConfig.enable_gamepad) {
+          DispatchGamepadEvent(event);
+        }
         break;
 
       // Piksel boyutu değişimi hem yeniden boyutlandırmada hem de pencere
@@ -359,6 +382,90 @@ void Application::SetTitle(const std::string& title) {
   if (mWindow != nullptr) {
     SDL_SetWindowTitle(mWindow, title.c_str());
   }
+}
+
+void Application::DispatchGamepadEvent(const SDL_Event& event) {
+  switch (event.type) {
+    case SDL_EVENT_GAMEPAD_ADDED:
+      HandleGamepadAdded(event.gdevice.which);
+      break;
+
+    case SDL_EVENT_GAMEPAD_REMOVED:
+      HandleGamepadRemoved(event.gdevice.which);
+      break;
+
+    case SDL_EVENT_GAMEPAD_BUTTON_DOWN:
+      OnGamepadButtonDown(GamepadButtonEvent{
+          event.gbutton.which,
+          internal::TranslateGamepadButton(event.gbutton.button)});
+      break;
+
+    case SDL_EVENT_GAMEPAD_BUTTON_UP:
+      OnGamepadButtonUp(GamepadButtonEvent{
+          event.gbutton.which,
+          internal::TranslateGamepadButton(event.gbutton.button)});
+      break;
+
+    case SDL_EVENT_GAMEPAD_AXIS_MOTION:
+      OnGamepadAxis(GamepadAxisEvent{
+          event.gaxis.which, internal::TranslateGamepadAxis(event.gaxis.axis),
+          internal::NormalizeGamepadAxis(event.gaxis.value)});
+      break;
+
+    default:
+      break;
+  }
+}
+
+void Application::HandleGamepadAdded(GamepadId id) {
+  // Eşleme değişince SDL aynı cihaz için ADDED'i yeniden gönderir. İkinci kez
+  // açmak referans sayacını artırır, REMOVED'daki tek kapanış onu sıfırlamaz.
+  if (FindGamepad(id) != nullptr) {
+    return;
+  }
+  SDL_Gamepad* handle = SDL_OpenGamepad(id);
+  if (handle == nullptr) {
+    spdlog::warn("Gamepad açılamadı (kimlik {}): {}", id, SDL_GetError());
+    return;
+  }
+  const GamepadType kType =
+      internal::TranslateGamepadType(SDL_GetGamepadType(handle));
+  mGamepads.push_back(OpenedGamepad{handle, id, kType});
+  OnGamepadAdded(GamepadDeviceEvent{id, kType});
+}
+
+void Application::HandleGamepadRemoved(GamepadId id) {
+  const auto kIt =
+      std::find_if(mGamepads.begin(), mGamepads.end(),
+                   [id](const OpenedGamepad& g) { return g.id == id; });
+  // Çatının açmadığı (ya da açamadığı) cihaz: uygulamaya ADDED de gitmemişti.
+  if (kIt == mGamepads.end()) {
+    return;
+  }
+  const GamepadDeviceEvent kEvent{kIt->id, kIt->type};
+  SDL_CloseGamepad(kIt->handle);
+  mGamepads.erase(kIt);
+  OnGamepadRemoved(kEvent);
+}
+
+SDL_Gamepad* Application::FindGamepad(GamepadId id) const noexcept {
+  for (const OpenedGamepad& gamepad : mGamepads) {
+    if (gamepad.id == id) {
+      return gamepad.handle;
+    }
+  }
+  return nullptr;
+}
+
+bool Application::RumbleGamepad(GamepadId id, float low_frequency,
+                                float high_frequency, uint32_t duration_ms) {
+  SDL_Gamepad* handle = FindGamepad(id);
+  if (handle == nullptr) {
+    return false;
+  }
+  return SDL_RumbleGamepad(handle, internal::RumbleIntensity(low_frequency),
+                           internal::RumbleIntensity(high_frequency),
+                           duration_ms);
 }
 
 }  // namespace sdl_painter

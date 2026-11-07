@@ -2,6 +2,7 @@
 
 - **Durum:** Kabul edildi
 - **Tarih:** 2026-07-04
+- **Güncelleme:** 2026-11-07 — gamepad desteği (en altta)
 
 ## Bağlam
 
@@ -81,3 +82,53 @@ uygulamalar yalnızca core'a link etmeye devam eder.
   tarafından seçildiğinden yoksayılır (`AppConfig` Doxygen'inde belgelendi).
 - Risk: `union SDL_Event;` forward-decl SDL 3.2.x'e karşı doğrulandı; ileride
   kırılırsa opt-in `application_sdl.h` başlığına geçilebilir.
+
+## Güncelleme (2026-11-07): Gamepad desteği
+
+### Bağlam
+
+İlk karar gamepad'i uEngine4'ün ağır kısımları arasında sayıp dışarıda
+bırakmıştı; ihtiyacı olan uygulama `OnRawEvent` ile kendisi çözecekti. Planlanan
+shoot 'em up oyunu ve örnekler gamepad istiyor. Her uygulamanın aynı
+tak-çıkar, açma-kapama ve eksen normalizasyonu kodunu tekrar yazması, bu
+katmanın kaldırmak için kurulduğu boilerplate'in ta kendisi.
+
+### Karar
+
+Gamepad, klavye ve fareyle aynı kalıpla eklenir; katman ince kalır.
+
+- **Açık rıza:** `AppConfig::enable_gamepad` (varsayılan `false`). Açıkken
+  `SDL_INIT_GAMEPAD` başlatılır; başlatılamazsa uyarı loglanır ve uygulama
+  gamepad olmadan devam eder. Kapalıyken çatı gamepad olaylarına hiç
+  dokunmaz: alt sistemi kendisi başlatıp `OnRawEvent` ile yöneten uygulamada
+  çift açılış olmaz.
+- **Cihaz yönetimi çatıda:** SDL düğme ve eksen olaylarını yalnızca açılmış
+  gamepad'ler için üretir. Çatı `SDL_EVENT_GAMEPAD_ADDED`'da gamepad'i açar,
+  `REMOVED`'da ve yıkımda kapatır. Eşleme değişince aynı cihaz için tekrar
+  gelen ADDED yeniden açılmaz. Açılamayan cihaz uygulamaya bildirilmez.
+- **SDL'den bağımsız türler** (`events.h`): `GamepadButton` konuma göre
+  adlandırılır ve SDL'in standart 15 düğmesini kapsar (ek düğmeler
+  `kUnknown`); `GamepadAxis`; `GamepadType` SDL türlerini ekrandaki tuş
+  ipuçları için aileye indirir (Xbox, PlayStation, Nintendo).
+- **Olaylar:** `OnGamepadAdded/Removed`, `OnGamepadButtonDown/Up`,
+  `OnGamepadAxis`. Eksen değeri normalize gelir: çubuk −1…1, tetik 0…1.
+- **Titreşim:** `RumbleGamepad(id, low, high, duration_ms)`, şiddetler 0…1.
+
+**Kapsam dışı:** eylem eşleme, ölü bölge, durum sorgusu (`IsButtonDown`),
+touchpad, jiroskop, LED. Dairesel ölü bölge iki ekseni birlikte ister ama
+olaylar eksen eksen gelir; klavyede olduğu gibi durumu uygulama tutar.
+Gerekirse `OnRawEvent` ve `GetWindow` kaçış kapıları duruyor.
+
+### Sonuçlar
+
+- `Application`'a sanal metot ve üye eklendi: shared derlemede binary
+  uyumluluk değişti, uygulamalar yeniden derlenmeli (CHANGELOG).
+- Cihaz tutamaçları public başlıkta `struct SDL_Gamepad;` forward-decl'i ile
+  tutulur; başlık SDL içermez.
+- SDL, pencere odakta değilken joystick girdisini atar
+  (`SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS`). `AppConfig` belgesinde
+  yazılı; testler bu ipucuyla çalışır.
+- Testler donanım gerektirmez: çeviriler saf fonksiyon
+  (`test_event_translator.cpp`), olay iletimi sentetik `SDL_PushEvent` ile,
+  tak-çıkar → düğme → eksen → titreşim → çıkarma zinciri SDL'in sanal
+  joystick'iyle (`SDL_AttachVirtualJoystick`) sınanır (`test_application.cpp`).

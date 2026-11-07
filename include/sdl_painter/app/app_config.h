@@ -123,6 +123,20 @@ struct AppConfig {
 
   /// @brief Gösterge yazı boyutu (punto).
   int32_t stats_overlay_font_size{14};
+
+  /// @brief Gamepad desteği (`SDL_INIT_GAMEPAD`).
+  ///
+  /// `true` ise çatı gamepad alt sistemini başlatır, takılan gamepad'leri
+  /// açar ve `OnGamepad*` metotlarını çağırır. Alt sistem başlatılamazsa
+  /// uyarı loglanır ve uygulama gamepad olmadan devam eder.
+  ///
+  /// Varsayılan `false`: alt sistem başlatılmaz ve çatı gamepad olaylarına
+  /// dokunmaz; isteyen uygulama gamepad'i `OnRawEvent` ile kendisi yönetebilir.
+  ///
+  /// @note SDL, pencere odakta değilken gamepad girdisini yok sayar. Arka
+  ///       planda da girdi gerekiyorsa `Run`'dan önce
+  ///       `SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS` ipucunu `"1"` yapın.
+  bool enable_gamepad{false};
 };
 
 }  // namespace sdl_painter

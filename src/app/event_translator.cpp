@@ -2,7 +2,21 @@
 
 #include <SDL3/SDL.h>
 
+#include <algorithm>
+
 namespace sdl_painter::internal {
+
+// GamepadButton ve GamepadAxis, SDL'in ilk değerleriyle aynı sırada; 0
+// kUnknown'a ayrıldığı için çeviri bir kaydırmadır. SDL bu sırayı ABI
+// gereği değiştirmez, yine de kayarsa derleme dursun.
+static_assert(SDL_GAMEPAD_BUTTON_SOUTH == 0 &&
+                  static_cast<int>(GamepadButton::kDpadRight) ==
+                      SDL_GAMEPAD_BUTTON_DPAD_RIGHT + 1,
+              "GamepadButton, SDL_GamepadButton sirasini izlemeli");
+static_assert(SDL_GAMEPAD_AXIS_LEFTX == 0 &&
+                  static_cast<int>(GamepadAxis::kRightTrigger) ==
+                      SDL_GAMEPAD_AXIS_RIGHT_TRIGGER + 1,
+              "GamepadAxis, SDL_GamepadAxis sirasini izlemeli");
 
 Key TranslateKey(uint32_t sdl_keycode) noexcept {
   // Harfler ve rakamlar SDL3'te ASCII olarak bitişik; Key enum'unda da
@@ -125,6 +139,60 @@ MouseWheelEvent MakeMouseWheelEvent(float dx, float dy, float mouse_x,
                                     float pixel_density) noexcept {
   return MouseWheelEvent{dx, dy, mouse_x * pixel_density,
                          mouse_y * pixel_density};
+}
+
+GamepadButton TranslateGamepadButton(uint8_t sdl_button) noexcept {
+  if (static_cast<int>(sdl_button) <= SDL_GAMEPAD_BUTTON_DPAD_RIGHT) {
+    return static_cast<GamepadButton>(sdl_button + 1);
+  }
+  return GamepadButton::kUnknown;
+}
+
+GamepadAxis TranslateGamepadAxis(uint8_t sdl_axis) noexcept {
+  if (static_cast<int>(sdl_axis) <= SDL_GAMEPAD_AXIS_RIGHT_TRIGGER) {
+    return static_cast<GamepadAxis>(sdl_axis + 1);
+  }
+  return GamepadAxis::kUnknown;
+}
+
+GamepadType TranslateGamepadType(int32_t sdl_type) noexcept {
+  switch (sdl_type) {
+    case SDL_GAMEPAD_TYPE_STANDARD:
+      return GamepadType::kStandard;
+    case SDL_GAMEPAD_TYPE_XBOX360:
+    case SDL_GAMEPAD_TYPE_XBOXONE:
+      return GamepadType::kXbox;
+    case SDL_GAMEPAD_TYPE_PS3:
+    case SDL_GAMEPAD_TYPE_PS4:
+    case SDL_GAMEPAD_TYPE_PS5:
+      return GamepadType::kPlayStation;
+    case SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_PRO:
+    case SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_JOYCON_LEFT:
+    case SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_JOYCON_RIGHT:
+    case SDL_GAMEPAD_TYPE_NINTENDO_SWITCH_JOYCON_PAIR:
+    case SDL_GAMEPAD_TYPE_GAMECUBE:
+      return GamepadType::kNintendo;
+    default:
+      return GamepadType::kUnknown;
+  }
+}
+
+float NormalizeGamepadAxis(int16_t value) noexcept {
+  constexpr float kAxisMax = static_cast<float>(SDL_JOYSTICK_AXIS_MAX);
+  // Aralık simetrik değil (−32768…32767); en uç negatif değer −1'i aşmasın.
+  return std::max(-1.0F, static_cast<float>(value) / kAxisMax);
+}
+
+uint16_t RumbleIntensity(float intensity) noexcept {
+  constexpr float kMax = 65535.0F;
+  // `!(x > 0)` NaN'ı da yakalar; NaN'ın tam sayıya dönüşümü tanımsızdır.
+  if (!(intensity > 0.0F)) {
+    return 0;
+  }
+  if (intensity >= 1.0F) {
+    return UINT16_MAX;
+  }
+  return static_cast<uint16_t>(intensity * kMax + 0.5F);
 }
 
 }  // namespace sdl_painter::internal
