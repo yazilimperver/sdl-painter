@@ -40,7 +40,7 @@ demo is one line in [`CMakeLists.txt`](CMakeLists.txt); the helper is
 | [`images`](graphics/images.cpp) | `DrawImage` in all three overloads — original size, scaled destination rect, atlas slicing — with alpha blending and a rotating texture. | — |
 | [`text`](graphics/text.cpp) | `DrawText` at a point and aligned inside a rect, `Font::MeasureText`, multiple point sizes, coloured and semi-transparent text. | SDL_ttf |
 | [`viewports`](basics/viewports.cpp) | Split screen and a minimap. `SetViewport` makes coordinates **panel-local**, so all four panels call the same drawing function with no offset arithmetic — and clip rects are panel-local too. | — |
-| [`input`](basics/input.cpp) | The difference between key **events** (one-shot) and key **state** (continuous) — and why writing movement with events feels wrong. Mouse tracking and a dashed crosshair. | — |
+| [`input`](basics/input.cpp) | The difference between key **events** (one-shot) and key **state** (continuous) — and why writing movement with events feels wrong. Mouse tracking and a dashed crosshair. Gamepad: left stick with a radial dead zone and a live gauge, d-pad, rumble on press. | — |
 
 ## Drawing in depth
 
