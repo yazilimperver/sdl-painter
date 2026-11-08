@@ -23,6 +23,11 @@
 
 ### Değişti
 
+- Kaynak arşivi 18,9 MB'tan yaklaşık 1 MB'a indi: belge görselleri, tanıtım
+  GIF'i ve videosu, büyük logo ve Doxygen temasının demo dosyaları
+  `export-ignore` ile arşive girmiyor (GitHub'ın otomatik arşivi, `git archive`
+  ve Release asset'i). Derleme ve testler için gereken her şey arşivde. Bayat
+  `.gitmodules` silindi; Doxygen teması submodule değil, repoda.
 - stb CMake config'i olmadan da bulunuyor (vcpkg'de olduğu gibi); `stb_image.h`
   `find_path` ile aranıyor. stb artık kurulu paketin export'una girmiyor ve
   `sdl_painterConfig.cmake` onu aramıyor.

@@ -13,3 +13,16 @@ Doxyfile* text eol=lf
 *.jpg binary
 *.gif binary
 *.ttf binary
+
+# Kaynak arsivi (GitHub'in otomatik arsivi, git archive ve Release asset'i):
+# derleme ve testler icin gerekmeyen agir medya arsive girmez. README ve
+# belgeler bunlari repodan gosterir. tests/ sdl-logo-small.png'yi okudugu icin
+# o dislanmaz; doxygen-awesome-css'in kullanilan CSS/JS dosyalari da kalir.
+doc/images export-ignore
+doc/hero.gif export-ignore
+doc/hero.mp4 export-ignore
+sdl-logo.png export-ignore
+third_party/doxygen-awesome-css/.github export-ignore
+third_party/doxygen-awesome-css/docs export-ignore
+third_party/doxygen-awesome-css/img export-ignore
+third_party/doxygen-awesome-css/include export-ignore
