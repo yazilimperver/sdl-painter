@@ -91,11 +91,15 @@ does not manage your deployment layout; the standard CMake one-liner is:
 ```cmake
 if(WIN32)
     add_custom_command(TARGET my_app POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                $<TARGET_RUNTIME_DLLS:my_app> $<TARGET_FILE_DIR:my_app>
-        COMMAND_EXPAND_LISTS)
+        COMMAND "$<$<BOOL:$<TARGET_RUNTIME_DLLS:my_app>>:${CMAKE_COMMAND};-E;copy_if_different;$<TARGET_RUNTIME_DLLS:my_app>;$<TARGET_FILE_DIR:my_app>>"
+        COMMAND_EXPAND_LISTS
+        VERBATIM)
 endif()
 ```
+
+The `$<BOOL:...>` guard matters with static packages (Conan's default,
+vcpkg's `*-static` and `*-static-md` triplets): there the list is empty, and
+`copy_if_different` with only a destination fails the build.
 
 > This covers imported targets that report their DLL location — in practice
 > SDL3, SDL3_ttf and the Vulkan loader. When SDLPainter itself is shared

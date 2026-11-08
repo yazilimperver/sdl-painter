@@ -40,8 +40,8 @@ else()
     message(STATUS "consumer: yardimci YOK — README'deki TARGET_RUNTIME_DLLS deseni kullaniliyor")
     if(WIN32)
         add_custom_command(TARGET consumer POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    $<TARGET_RUNTIME_DLLS:consumer> $<TARGET_FILE_DIR:consumer>
-            COMMAND_EXPAND_LISTS)
+            COMMAND "$<$<BOOL:$<TARGET_RUNTIME_DLLS:consumer>>:${CMAKE_COMMAND};-E;copy_if_different;$<TARGET_RUNTIME_DLLS:consumer>;$<TARGET_FILE_DIR:consumer>>"
+            COMMAND_EXPAND_LISTS
+            VERBATIM)
     endif()
 endif()

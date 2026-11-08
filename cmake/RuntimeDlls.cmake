@@ -78,11 +78,12 @@ function(sdlpainter_copy_runtime_dlls target)
         return()
     endif()
 
+    # Statik bagimliliklarda liste bostur; copy_if_different yalnizca hedefle
+    # cagrilinca hata verir. $<BOOL:...> o durumda komutu hic uretmez.
     add_custom_command(TARGET ${target} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-            $<TARGET_RUNTIME_DLLS:${target}>
-            $<TARGET_FILE_DIR:${target}>
+        COMMAND "$<$<BOOL:$<TARGET_RUNTIME_DLLS:${target}>>:${CMAKE_COMMAND};-E;copy_if_different;$<TARGET_RUNTIME_DLLS:${target}>;$<TARGET_FILE_DIR:${target}>>"
         COMMAND_EXPAND_LISTS
+        VERBATIM
         COMMENT "Copying detected runtime DLLs for ${target}"
     )
 

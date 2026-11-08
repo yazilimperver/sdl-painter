@@ -38,6 +38,12 @@
 - Vulkan backend 32-bit hedeflerde (x86 Windows) derlenmiyordu: `VkFence`,
   `VkSemaphore`, `VkFramebuffer` ve `VkImageView` orada işaretçi değil
   `uint64_t` olduğu halde döngülerde `auto*` ile dolaşılıyordu.
+- Windows'ta çalışma zamanı DLL'lerini kopyalayan adım, statik bağımlılıklarda
+  (Conan'ın varsayılanı, vcpkg'nin `*-static` ve `*-static-md` triplet'leri)
+  derlemeyi düşürüyordu: DLL listesi boş kalınca `copy_if_different` yalnızca
+  hedefle çağrılıyordu. `sdlpainter_copy_runtime_dlls()`,
+  `doc/en/building.md`'deki tarif ve `packaging/consumer` artık boş listede
+  komutu atlıyor.
 
 ### Yükseltmeden önce
 
