@@ -35,6 +35,9 @@
   boyutlarda dolgunun yaklaşık %38'i çizilmiyor ve log'a "poligon tam
   ucgenlenemedi" uyarısı düşüyordu. Dolgu artık ear clipping yerine merkezden
   üçgen fanıyla üretiliyor.
+- Vulkan backend 32-bit hedeflerde (x86 Windows) derlenmiyordu: `VkFence`,
+  `VkSemaphore`, `VkFramebuffer` ve `VkImageView` orada işaretçi değil
+  `uint64_t` olduğu halde döngülerde `auto*` ile dolaşılıyordu.
 
 ### Yükseltmeden önce
 
