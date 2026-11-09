@@ -9,7 +9,7 @@ if [[ "${1:-}" == "--fix" ]]; then
     FIX_MODE=true
 fi
 
-FILES=$(find include/ src/ -name '*.h' -o -name '*.cpp' | sort)
+FILES=$(find include/ src/ tests/ examples/ \( -name '*.h' -o -name '*.cpp' \) | sort)
 
 if $FIX_MODE; then
     echo ">>> Format duzeltiliyor..."

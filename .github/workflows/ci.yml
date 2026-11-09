@@ -596,12 +596,8 @@ jobs:
       image: yazilimperver/sdl-painter:ci-v1.2
     steps:
       - uses: actions/checkout@v7
-      # Kapsam bilincli olarak include/ + src/ ile sinirli. tests/ altindaki
-      # dosyalar bugune kadar hic kontrol edilmedigi icin 8 dosyada 67 ihlal
-      # birikmis; kapsami genisletmek once o dosyalarin formatlanmasini
-      # gerektirir (ayri bir temizlik isi).
       - name: clang-format --dry-run --Werror
-        run: find include/ src/ -name '*.h' -o -name '*.cpp' | xargs clang-format-18 --dry-run --Werror
+        run: find include/ src/ tests/ examples/ \( -name '*.h' -o -name '*.cpp' \) | xargs clang-format-18 --dry-run --Werror
 
   quality-clang-tidy:
     name: quality:clang-tidy

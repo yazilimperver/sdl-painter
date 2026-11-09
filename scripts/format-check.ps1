@@ -10,12 +10,16 @@ Write-Output "Starting format check script."
 
 # Find all headers and sources recursively
 $Files = @()
-$Files += Get-ChildItem -Path "include" -Recurse -Include "*.h"  | Select-Object -ExpandProperty FullName
-$Files += Get-ChildItem -Path "src"     -Recurse -Include "*.h"  | Select-Object -ExpandProperty FullName
-$Files += Get-ChildItem -Path "src"     -Recurse -Include "*.cpp"| Select-Object -ExpandProperty FullName
+$Files += Get-ChildItem -Path "include"  -Recurse -Include "*.h"  | Select-Object -ExpandProperty FullName
+$Files += Get-ChildItem -Path "src"      -Recurse -Include "*.h"  | Select-Object -ExpandProperty FullName
+$Files += Get-ChildItem -Path "src"      -Recurse -Include "*.cpp"| Select-Object -ExpandProperty FullName
+$Files += Get-ChildItem -Path "tests"    -Recurse -Include "*.h"  | Select-Object -ExpandProperty FullName
+$Files += Get-ChildItem -Path "tests"    -Recurse -Include "*.cpp"| Select-Object -ExpandProperty FullName
+$Files += Get-ChildItem -Path "examples" -Recurse -Include "*.h"  | Select-Object -ExpandProperty FullName
+$Files += Get-ChildItem -Path "examples" -Recurse -Include "*.cpp"| Select-Object -ExpandProperty FullName
 
 if ($Files.Count -eq 0) {
-    Write-Warning "No header or source files found in include/ or src/."
+    Write-Warning "No header or source files found in include/, src/, tests/ or examples/."
     exit 0
 }
 

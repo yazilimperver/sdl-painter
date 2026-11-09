@@ -339,7 +339,7 @@ quality:clang-format:
   # clang-format-18 base imajda zaten kurulu (bkz. Dockerfile builder stage);
   # apt ile yeniden kurmaya gerek yok (imajda apt list'leri silinmiş durumda).
   script:
-    - find include/ src/ -name '*.h' -o -name '*.cpp' | xargs clang-format-18 --dry-run --Werror
+    - find include/ src/ tests/ examples/ \( -name '*.h' -o -name '*.cpp' \) | xargs clang-format-18 --dry-run --Werror
   # SERT KAPI: allow_failure YOK. GitHub tarafında da öyle; ikisi ayrışırsa
   # biçim ihlali yalnızca bir pipeline'da görünür ve diğerinde birikir.
   # (clang-tidy bilinçli olarak yumuşak kalır: yanlış pozitif üretebiliyor.)
