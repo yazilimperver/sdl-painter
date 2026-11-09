@@ -98,7 +98,7 @@ int main() {
   config.height = 700;
   config.timing = sp::TimingMode::kFixed;
   config.fixed_update_hz =
-      30;                 // düşük sim hızı; interpolasyon akıcılığı sağlar
+      30;  // düşük sim hızı; interpolasyon akıcılığı sağlar
   config.target_fps = 0;  // vsync sınırlasın
 
   GameLoopDemo app(config);

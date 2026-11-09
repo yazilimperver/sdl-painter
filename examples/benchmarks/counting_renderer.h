@@ -30,13 +30,13 @@ namespace bench {
 
 /// @brief Bir kare boyunca biriken renderer çağrı sayaçları.
 struct RendererStats {
-  uint64_t draw_calls{0};        ///< DrawTriangles + DrawTextured toplamı.
-  uint64_t basic_calls{0};       ///< DrawTriangles çağrısı sayısı.
-  uint64_t textured_calls{0};    ///< DrawTextured çağrısı sayısı.
-  uint64_t vertices{0};          ///< Gönderilen toplam vertex sayısı.
-  uint64_t model_uploads{0};     ///< SetModelMatrix (uniform yükleme) sayısı.
-  uint64_t opacity_uploads{0};   ///< SetOpacity çağrısı sayısı.
-  uint64_t scissor_changes{0};   ///< SetScissor + ClearScissor sayısı.
+  uint64_t draw_calls{0};       ///< DrawTriangles + DrawTextured toplamı.
+  uint64_t basic_calls{0};      ///< DrawTriangles çağrısı sayısı.
+  uint64_t textured_calls{0};   ///< DrawTextured çağrısı sayısı.
+  uint64_t vertices{0};         ///< Gönderilen toplam vertex sayısı.
+  uint64_t model_uploads{0};    ///< SetModelMatrix (uniform yükleme) sayısı.
+  uint64_t opacity_uploads{0};  ///< SetOpacity çağrısı sayısı.
+  uint64_t scissor_changes{0};  ///< SetScissor + ClearScissor sayısı.
 
   void Reset() noexcept { *this = RendererStats{}; }
 };
@@ -48,9 +48,9 @@ class CountingRenderer final : public sdl_painter::IRenderer {
   /// @param inner Sarmalanan gerçek renderer; `nullptr` ise yalnızca sayım
   ///        yapılır (GPU işi yok).
   /// @param backend `inner` yokken raporlanacak backend tipi.
-  explicit CountingRenderer(
-      std::unique_ptr<IRenderer> inner,
-      sdl_painter::RendererBackend backend = sdl_painter::RendererBackend::kOpenGL)
+  explicit CountingRenderer(std::unique_ptr<IRenderer> inner,
+                            sdl_painter::RendererBackend backend =
+                                sdl_painter::RendererBackend::kOpenGL)
       : mInner(std::move(inner)), mBackend(backend) {}
 
   [[nodiscard]] const RendererStats& Stats() const noexcept { return mStats; }
@@ -101,7 +101,8 @@ class CountingRenderer final : public sdl_painter::IRenderer {
       mInner->SetViewport(x, y, width, height);
     }
   }
-  void SetScissor(int32_t x, int32_t y, int32_t width, int32_t height) override {
+  void SetScissor(int32_t x, int32_t y, int32_t width,
+                  int32_t height) override {
     ++mStats.scissor_changes;
     if (mInner) {
       mInner->SetScissor(x, y, width, height);
@@ -127,7 +128,8 @@ class CountingRenderer final : public sdl_painter::IRenderer {
 
   // --- Çizim ---
 
-  void DrawTriangles(const std::vector<sdl_painter::Vertex>& vertices) override {
+  void DrawTriangles(
+      const std::vector<sdl_painter::Vertex>& vertices) override {
     ++mStats.draw_calls;
     ++mStats.basic_calls;
     mStats.vertices += vertices.size();

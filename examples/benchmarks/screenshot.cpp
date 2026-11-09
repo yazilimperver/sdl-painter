@@ -63,7 +63,8 @@ bool SaveBackBufferPng(const std::string& path, int32_t width, int32_t height,
   // GL'de (0,0) sol ALT kösedir; PNG satirlari yukaridan asagi gider.
   std::vector<uint8_t> flipped(pixels.size());
   for (int32_t y = 0; y < height; ++y) {
-    const uint8_t* src = pixels.data() + (static_cast<std::size_t>(height - 1 - y) * row_bytes);
+    const uint8_t* src =
+        pixels.data() + (static_cast<std::size_t>(height - 1 - y) * row_bytes);
     uint8_t* dst = flipped.data() + (static_cast<std::size_t>(y) * row_bytes);
     for (std::size_t i = 0; i < row_bytes; ++i) {
       dst[i] = src[i];

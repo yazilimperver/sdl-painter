@@ -7,6 +7,7 @@
 /// ESC veya pencere kapat ile sonlandırılır.
 
 #include <SDL3/SDL.h>
+
 #include <spdlog/sinks/ansicolor_sink.h>
 #include <spdlog/spdlog.h>
 
@@ -14,15 +15,15 @@
 #include <windows.h>
 #endif
 
-#include <cmath>
-#include <vector>
-
 #include "sdl_painter/brush.h"
 #include "sdl_painter/color.h"
 #include "sdl_painter/geometry.h"
 #include "sdl_painter/painter.h"
 #include "sdl_painter/pen.h"
 #include "sdl_painter/renderer.h"
+
+#include <cmath>
+#include <vector>
 
 namespace {
 
@@ -53,9 +54,9 @@ int main() {
     return 1;
   }
 
-  SDL_Window* window = SDL_CreateWindow(
-      "SDLPainter — vulkan_triangles (Phase 5b)", 800, 600,
-      SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+  SDL_Window* window =
+      SDL_CreateWindow("SDLPainter — vulkan_triangles (Phase 5b)", 800, 600,
+                       SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
   if (!window) {
     spdlog::error("SDL_CreateWindow failed: {}", SDL_GetError());
     SDL_Quit();
@@ -63,8 +64,7 @@ int main() {
   }
 
   {  // Painter scope: window'dan önce destroy edilmeli (surface leak önleme).
-    sdl_painter::Painter painter(window,
-                                 sdl_painter::RendererBackend::kVulkan);
+    sdl_painter::Painter painter(window, sdl_painter::RendererBackend::kVulkan);
     if (!painter.IsValid()) {
       spdlog::error("Vulkan painter initialization failed.");
       SDL_DestroyWindow(window);
@@ -87,15 +87,16 @@ int main() {
     while (running) {
       SDL_Event event;
       while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_EVENT_QUIT) running = false;
-        if (event.type == SDL_EVENT_KEY_DOWN &&
-            event.key.key == SDLK_ESCAPE) {
+        if (event.type == SDL_EVENT_QUIT)
+          running = false;
+        if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE) {
           running = false;
         }
       }
 
       angle += 0.5f;
-      if (angle >= 360.0f) angle -= 360.0f;
+      if (angle >= 360.0f)
+        angle -= 360.0f;
 
       painter.Begin();
       painter.Clear(kBg);
@@ -127,8 +128,8 @@ int main() {
         for (int i = 0; i < 6; ++i) {
           const float theta =
               static_cast<float>(i) * (2.0f * 3.14159265f / 6.0f);
-          hex.push_back({kCx + kR * std::cos(theta),
-                         kCy + kR * std::sin(theta)});
+          hex.push_back(
+              {kCx + kR * std::cos(theta), kCy + kR * std::sin(theta)});
         }
         painter.FillPolygon(hex);
       }

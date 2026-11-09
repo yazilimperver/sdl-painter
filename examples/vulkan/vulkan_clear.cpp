@@ -7,6 +7,7 @@
 /// ESC veya pencere kapat ile sonlandırılır.
 
 #include <SDL3/SDL.h>
+
 #include <spdlog/sinks/ansicolor_sink.h>
 #include <spdlog/spdlog.h>
 
@@ -48,9 +49,9 @@ int main() {
     return 1;
   }
 
-  SDL_Window* window = SDL_CreateWindow(
-      "SDLPainter — vulkan_clear (Phase 5a)", 800, 600,
-      SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+  SDL_Window* window =
+      SDL_CreateWindow("SDLPainter — vulkan_clear (Phase 5a)", 800, 600,
+                       SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
   if (!window) {
     spdlog::error("SDL_CreateWindow failed: {}", SDL_GetError());
     SDL_Quit();
@@ -58,8 +59,7 @@ int main() {
   }
 
   {  // Painter scope: window'dan önce destroy edilmeli (surface leak önleme).
-    sdl_painter::Painter painter(window,
-                                 sdl_painter::RendererBackend::kVulkan);
+    sdl_painter::Painter painter(window, sdl_painter::RendererBackend::kVulkan);
     if (!painter.IsValid()) {
       spdlog::error("Vulkan painter initialization failed.");
       SDL_DestroyWindow(window);
@@ -76,9 +76,9 @@ int main() {
     while (running) {
       SDL_Event event;
       while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_EVENT_QUIT) running = false;
-        if (event.type == SDL_EVENT_KEY_DOWN &&
-            event.key.key == SDLK_ESCAPE) {
+        if (event.type == SDL_EVENT_QUIT)
+          running = false;
+        if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE) {
           running = false;
         }
       }

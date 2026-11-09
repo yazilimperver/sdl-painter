@@ -21,6 +21,7 @@
 ///   --screenshot  Her senaryonun çıktısını `<senaryo>.png` olarak kaydet
 ///                 (yalnızca OpenGL modunda; `--null` ile yok sayılır).
 
+// clang-format off
 #include <SDL3/SDL.h>
 #include <spdlog/spdlog.h>
 
@@ -43,6 +44,11 @@
 #include "sdl_painter/geometry.h"
 #include "sdl_painter/painter.h"
 #include "sdl_painter/pen.h"
+// clang-format on
+
+#ifdef DrawText
+#undef DrawText
+#endif
 
 namespace {
 
@@ -430,7 +436,8 @@ int main(int argc, char** argv) {
   }
 
   if (!screenshot_dir.empty() && null_mode) {
-    std::printf("--screenshot yalnizca OpenGL modunda calisir; yok sayiliyor.\n");
+    std::printf(
+        "--screenshot yalnizca OpenGL modunda calisir; yok sayiliyor.\n");
     screenshot_dir.clear();
   }
 
@@ -503,8 +510,7 @@ int main(int argc, char** argv) {
       }
       results.push_back(RunScenario(scenario, painter, counter, items, frames));
       if (!screenshot_dir.empty()) {
-        const std::string path =
-            screenshot_dir + "/" + scenario.name + ".png";
+        const std::string path = screenshot_dir + "/" + scenario.name + ".png";
         if (CaptureScenario(scenario, painter, counter, items, path)) {
           std::printf("  ekran goruntusu: %s\n", path.c_str());
         } else {

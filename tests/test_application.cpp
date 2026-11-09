@@ -8,8 +8,6 @@
 //    SDLPAINTER_BACKEND_UNAVAILABLE kuralına uyar. Olaylar OnInit içinde SDL
 //    kuyruğuna sentetik olarak itilir ve ilk karede işlenir.
 
-#include "app/frame_timing.h"
-
 #include "sdl_painter/app/app_config.h"
 #include "sdl_painter/app/application.h"
 #include "sdl_painter/app/events.h"
@@ -25,6 +23,7 @@
 #include <utility>
 #include <vector>
 
+#include "app/frame_timing.h"
 #include "pixel_test_support.h"
 #include "test_support.h"
 
@@ -128,8 +127,8 @@ TEST(FrameTiming, LagCarriesOverBetweenFrames) {
 
 TEST(FrameTiming, ClampedSpikeYieldsAtMostCapSteps) {
   const uint64_t step = timing::FixedStepNs(TimingMode::kFixed, 60);
-  const timing::FixedStepResult r = timing::AdvanceFixedStep(
-      0, timing::ClampFrameDelta(10'000 * kMs), step);
+  const timing::FixedStepResult r =
+      timing::AdvanceFixedStep(0, timing::ClampFrameDelta(10'000 * kMs), step);
   EXPECT_EQ(r.steps, timing::kMaxFixedStepsPerFrame);
   EXPECT_EQ(r.lag_ns, 0U);
 }
@@ -342,7 +341,9 @@ bool SDLCALL RecordRumble(void* userdata, Uint16 low, Uint16 high) {
 ///
 /// `Initialize` başarısızsa `OnInit` hiç çağrılmaz; bu durum pencere/backend
 /// kurulamadığı anlamına gelir (bkz. SDLPAINTER_BACKEND_UNAVAILABLE).
-bool InitializeFailed(const RecordingApp& app) { return app.log.empty(); }
+bool InitializeFailed(const RecordingApp& app) {
+  return app.log.empty();
+}
 
 class ApplicationRun : public ::testing::TestWithParam<RendererBackend> {};
 
@@ -360,8 +361,8 @@ TEST_P(ApplicationRun, SuccessfulRunCallsInitUpdateRenderShutdownInOrder) {
   }
 
   EXPECT_EQ(kResult, 0);
-  EXPECT_EQ(app.log, (std::vector<std::string>{"init", "update", "render",
-                                               "shutdown"}));
+  EXPECT_EQ(app.log,
+            (std::vector<std::string>{"init", "update", "render", "shutdown"}));
 }
 
 TEST_P(ApplicationRun, SecondRunIsRejectedWithoutCallbacks) {
@@ -553,8 +554,8 @@ TEST(ApplicationEvents, KeyAndMouseFieldsAreForwarded) {
   EXPECT_TRUE(found_up);
   bool found_move = false;
   for (const auto& m : app.moves) {
-    found_move = found_move || (m.x == 30.0F && m.y == 31.0F &&
-                                m.dx == -1.5F && m.dy == 2.5F);
+    found_move = found_move || (m.x == 30.0F && m.y == 31.0F && m.dx == -1.5F &&
+                                m.dy == 2.5F);
   }
   EXPECT_TRUE(found_move);
   bool found_wheel = false;

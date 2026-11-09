@@ -114,7 +114,7 @@ class MockRenderer : public IRenderer {
   /// böylece "çizim doğru transform ile mi gitti?" sorusu test edilebilir.
   std::vector<std::array<float, 9>> model_at_draw;
 
-  std::vector<RectCall> scissor_calls;   ///< SetScissor çağrıları (sırayla)
+  std::vector<RectCall> scissor_calls;  ///< SetScissor çağrıları (sırayla)
   std::vector<RectCall> viewport_calls;  ///< SetViewport çağrıları (sırayla)
   int32_t clear_scissor_count{0};        ///< ClearScissor kaç kez çağrıldı
 

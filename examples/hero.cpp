@@ -125,8 +125,8 @@ const ActLabel kActs[kActCount] = {
 
 /// @brief Sahnenin kullandığı font boyutları.
 struct Fonts {
-  std::shared_ptr<sp::Font> brand;    ///< Künyedeki isim (22 px).
-  std::shared_ptr<sp::Font> title;    ///< Perde başlığı (17 px).
+  std::shared_ptr<sp::Font> brand;  ///< Künyedeki isim (22 px).
+  std::shared_ptr<sp::Font> title;  ///< Perde başlığı (17 px).
   std::shared_ptr<sp::Font> caption;  ///< Hücre açıklamaları ve künye (12 px).
 
   [[nodiscard]] bool Valid() const { return brand && title && caption; }

@@ -54,8 +54,8 @@ constexpr int32_t kFrameW = 24;
 constexpr int32_t kFrameH = 32;
 constexpr int32_t kFrameCount = 8;  ///< Sütun sayısı = yürüyüş karesi.
 constexpr int32_t kRowLeft = 2;     ///< Sola bakan satır.
-constexpr int32_t kRowRight = 3;    ///< Sağa bakan satır (satır 2'nin aynası).
-constexpr float kScale = 3.0F;      ///< Piksel sanatı büyütme katsayısı.
+constexpr int32_t kRowRight = 3;  ///< Sağa bakan satır (satır 2'nin aynası).
+constexpr float kScale = 3.0F;    ///< Piksel sanatı büyütme katsayısı.
 constexpr int32_t kWalkerCount = 18;
 constexpr float kFrameDuration = 0.10F;
 

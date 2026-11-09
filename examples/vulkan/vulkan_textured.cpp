@@ -11,16 +11,13 @@
 /// ESC veya pencere kapat ile sonlandırılır.
 
 #include <SDL3/SDL.h>
+
 #include <spdlog/sinks/ansicolor_sink.h>
 #include <spdlog/spdlog.h>
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
-
-#include <cmath>
-#include <cstring>
-#include <vector>
 
 #include "sdl_painter/brush.h"
 #include "sdl_painter/color.h"
@@ -29,6 +26,10 @@
 #include "sdl_painter/painter.h"
 #include "sdl_painter/pen.h"
 #include "sdl_painter/renderer.h"
+
+#include <cmath>
+#include <cstring>
+#include <vector>
 
 namespace {
 
@@ -55,8 +56,8 @@ void InitLogger() {
 /// @param col_b İkinci renk.
 /// @return RGBA piksel verisi (256*256*4 byte).
 std::vector<uint8_t> MakeCheckerboard(int32_t tile_size,
-                                       sdl_painter::Color col_a,
-                                       sdl_painter::Color col_b) {
+                                      sdl_painter::Color col_a,
+                                      sdl_painter::Color col_b) {
   constexpr int32_t kSize = 256;
   std::vector<uint8_t> data(static_cast<size_t>(kSize * kSize * 4));
   for (int32_t y = 0; y < kSize; ++y) {
@@ -84,9 +85,9 @@ int main() {
     return 1;
   }
 
-  SDL_Window* window = SDL_CreateWindow(
-      "SDLPainter — vulkan_textured (Phase 5c)", 800, 600,
-      SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+  SDL_Window* window =
+      SDL_CreateWindow("SDLPainter — vulkan_textured (Phase 5c)", 800, 600,
+                       SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
   if (!window) {
     spdlog::error("SDL_CreateWindow failed: {}", SDL_GetError());
     SDL_Quit();
@@ -126,15 +127,16 @@ int main() {
     while (running) {
       SDL_Event event;
       while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_EVENT_QUIT) running = false;
-        if (event.type == SDL_EVENT_KEY_DOWN &&
-            event.key.key == SDLK_ESCAPE) {
+        if (event.type == SDL_EVENT_QUIT)
+          running = false;
+        if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE) {
           running = false;
         }
       }
 
       angle += 0.4f;
-      if (angle >= 360.0f) angle -= 360.0f;
+      if (angle >= 360.0f)
+        angle -= 360.0f;
 
       painter.Begin();
       painter.Clear(kBg);

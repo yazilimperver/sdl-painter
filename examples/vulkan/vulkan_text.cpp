@@ -25,16 +25,16 @@
 #include <windows.h>
 #endif
 
+#include "sdl_painter/brush.h"
+#include "sdl_painter/color.h"
+#include "sdl_painter/font.h"
+#include "sdl_painter/geometry.h"
+#include "sdl_painter/painter.h"
+#include "sdl_painter/pen.h"
+
 #include <cmath>
 #include <cstdint>
 #include <string>
-
-#include "sdl_painter/brush.h"
-#include "sdl_painter/color.h"
-#include "sdl_painter/geometry.h"
-#include "sdl_painter/font.h"
-#include "sdl_painter/painter.h"
-#include "sdl_painter/pen.h"
 
 namespace {
 
@@ -158,23 +158,25 @@ int main() {
     // MeasureText kontrolü
     int32_t mw = 0, mh = 0;
     font_md->MeasureText("SDLPainter vulkan_text", mw, mh);
-    spdlog::info("MeasureText: \"SDLPainter vulkan_text\" → {}×{} piksel", mw, mh);
+    spdlog::info("MeasureText: \"SDLPainter vulkan_text\" → {}×{} piksel", mw,
+                 mh);
 
-    float angle     = 0.0f;
+    float angle = 0.0f;
     uint32_t frames = 0;
 
     bool running = true;
     while (running) {
       SDL_Event event;
       while (SDL_PollEvent(&event)) {
-        if (event.type == SDL_EVENT_QUIT) running = false;
-        if (event.type == SDL_EVENT_KEY_DOWN &&
-            event.key.key == SDLK_ESCAPE)
+        if (event.type == SDL_EVENT_QUIT)
+          running = false;
+        if (event.type == SDL_EVENT_KEY_DOWN && event.key.key == SDLK_ESCAPE)
           running = false;
       }
 
       angle += 0.5f;
-      if (angle >= 360.0f) angle -= 360.0f;
+      if (angle >= 360.0f)
+        angle -= 360.0f;
       ++frames;
 
       painter.Begin();
@@ -194,17 +196,17 @@ int main() {
                        sdl_painter::Alignment::kRight);
 
       // 3. Hizalama karşılaştırması — sol / orta / sağ
-      constexpr float kBoxY   = 120.0f;
-      constexpr float kBoxW   = 280.0f;
-      constexpr float kBoxH   = 40.0f;
-      constexpr float kGap    = 10.0f;
+      constexpr float kBoxY = 120.0f;
+      constexpr float kBoxW = 280.0f;
+      constexpr float kBoxH = 40.0f;
+      constexpr float kGap = 10.0f;
       constexpr float kStartX = 15.0f;
 
       painter.SetFont(font_sm);
 
-      DrawLabelBox(painter, {kStartX, kBoxY, kBoxW, kBoxH},
-                   "Sol hizalı metin", sdl_painter::Alignment::kLeft,
-                   {40, 60, 80, 200}, {200, 220, 255, 255});
+      DrawLabelBox(painter, {kStartX, kBoxY, kBoxW, kBoxH}, "Sol hizalı metin",
+                   sdl_painter::Alignment::kLeft, {40, 60, 80, 200},
+                   {200, 220, 255, 255});
 
       DrawLabelBox(painter, {kStartX + kBoxW + kGap, kBoxY, kBoxW, kBoxH},
                    "Orta hizalı metin", sdl_painter::Alignment::kCenter,
@@ -232,7 +234,7 @@ int main() {
       painter.SetFont(font_md);
       const float col_y = 308.0f;
       const sdl_painter::Color kColors[] = {
-          {235, 66,  66,  255},  // kırmızı
+          {235, 66, 66, 255},    // kırmızı
           {166, 227, 161, 255},  // yeşil
           {137, 180, 250, 255},  // mavi
           {249, 226, 175, 255},  // sarı
@@ -256,9 +258,9 @@ int main() {
       // 7. SetOpacity ile yarı saydam metin
       painter.SetFont(font_lg);
       painter.SetPen(sdl_painter::Pen({255, 255, 255, 255}, 0.0f));
-      const float op_base    = 390.0f;
+      const float op_base = 390.0f;
       const float kOpacities[] = {1.0f, 0.7f, 0.4f, 0.15f};
-      const char* kOpLabels[]  = {"100%", "70%", "40%", "15%"};
+      const char* kOpLabels[] = {"100%", "70%", "40%", "15%"};
       for (int32_t i = 0; i < 4; ++i) {
         painter.SetOpacity(kOpacities[i]);
         painter.DrawText(20.0f + static_cast<float>(i) * 210.0f, op_base,

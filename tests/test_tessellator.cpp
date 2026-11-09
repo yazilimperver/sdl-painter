@@ -1065,8 +1065,8 @@ double SegmentDistance(double px, double py, const Point& a, const Point& b,
 /// @brief Kalın çizgi mesh'ini bir nokta ızgarasında tarayıp hataları say.
 struct StrokeScan {
   int32_t overlaps{0};  ///< Birden fazla üçgende kalan nokta.
-  int32_t gaps{0};      ///< Çizginin içinde olup hiçbir üçgende olmayan nokta.
-  int32_t strays{0};    ///< Çizginin erişebileceği mesafenin dışında boyanan.
+  int32_t gaps{0};  ///< Çizginin içinde olup hiçbir üçgende olmayan nokta.
+  int32_t strays{0};  ///< Çizginin erişebileceği mesafenin dışında boyanan.
 };
 
 StrokeScan ScanStroke(const std::vector<Vertex>& v,
