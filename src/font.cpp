@@ -69,12 +69,14 @@ Font::Font(Font&& other) noexcept
       mPointSize(other.mPointSize),
       mGlyphCache(std::move(other.mGlyphCache)),
       mAtlas(std::move(other.mAtlas)),
-      mOwner(other.mOwner) {
+      mOwner(other.mOwner),
+      mOwnerAlive(std::move(other.mOwnerAlive)) {
   other.mHandle = nullptr;
   other.mPointSize = 0;
   other.mGlyphCache.clear();
   // Onbellek ve atlas tasindi; kaynagin artik bir sahibi yok.
   other.mOwner = nullptr;
+  other.mOwnerAlive.reset();
 }
 
 Font& Font::operator=(Font&& other) noexcept {
@@ -90,10 +92,12 @@ Font& Font::operator=(Font&& other) noexcept {
     mGlyphCache = std::move(other.mGlyphCache);
     mAtlas = std::move(other.mAtlas);
     mOwner = other.mOwner;
+    mOwnerAlive = std::move(other.mOwnerAlive);
     other.mHandle = nullptr;
     other.mPointSize = 0;
     other.mGlyphCache.clear();
     other.mOwner = nullptr;
+    other.mOwnerAlive.reset();
   }
   return *this;
 }
@@ -177,11 +181,21 @@ const Glyph* Font::GetGlyph(IRenderer& renderer, char32_t codepoint) const {
     return nullptr;
   }
 
+  // Sahip renderer yikildiysa (Painter yok oldu) glyph'ler ve atlas ona
+  // aitti: birak ve yeni renderer'a baglan. Atlasin texture'lari kendi yasam
+  // belirteclerine bakar; olu renderer'a dokunmadan kapanir.
+  if (mOwner != nullptr && mOwnerAlive.expired()) {
+    mGlyphCache.clear();
+    mAtlas.reset();
+    mOwner = nullptr;
+  }
+
   // Font ilk cagrida bir renderer'a baglanir. Onbellekteki texture
   // tanimlayicilari o renderer'a yereldir; sahibi karsilastirmadan onbellek
   // isabetini dondurmek, ikinci bir renderer'a bir handle vermek anlamına geliyor.
   if (mOwner == nullptr) {
     mOwner = &renderer;
+    mOwnerAlive = renderer.LifetimeToken();
   } else if (mOwner != &renderer) {
     spdlog::error(
         "Font: bu font baska bir renderer'a bagli; her Painter icin ayri bir "

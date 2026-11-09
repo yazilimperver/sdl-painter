@@ -50,8 +50,8 @@ class Painter;
 ///
 /// @note Painter'dan sonra yıkılan bir RenderTarget güvenlidir: Painter'ın
 /// yıkıldığını bilir ve renderer'a dokunmaz (kaynakları renderer ile
-/// birlikte bırakılmıştır). @ref Image ve @ref Font'ta bu koruma yoktur;
-/// onlar Painter yaşarken yıkılmalıdır.
+/// birlikte bırakılmıştır). @ref Image ve @ref Font da aynı korumaya sahiptir
+/// (bkz. @ref IRenderer::LifetimeToken).
 ///
 /// @warning Bir hedefe çizerken o hedefin kendi içeriğini örneklemek
 /// tanımsızdır. Önce @ref Painter::ResetRenderTarget çağırın.

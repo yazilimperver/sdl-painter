@@ -56,23 +56,22 @@ enum class TextWrap : uint8_t {
   kWord,
 };
 
-/// @brief Font sarmalayıcı — SDL_ttf üzerinden
-/// @warning Font, glyph önbelleğindeki
-/// texture'ları yükleyen Painter (ve dolayısıyla IRenderer) yaşıyorken
-/// yıkılmalıdır. Painter yok olduktan sonra Font yıkılırsa, glyph
-/// önbelleğindeki her `Texture` raw IRenderer pointer'ı dangling olur ve
-/// davranış tanımsızdır. Painter `std::shared_ptr<Font>` ile tuttuğu için
-/// genelde sözleşme kendiliğinden sağlanır; ancak kullanıcı font'u
-/// Painter'dan bağımsız olarak `static` veya global tutarsa bu garanti
-/// kaybolur.
+/// @brief Font sarmalayıcı (SDL_ttf üzerinden).
 ///
-/// @warning **Bir Font tek bir Painter'a aittir.** İlk @ref GetGlyph çağrısı
-/// fontu o çağrının renderer'ına bağlar; glyph atlası o renderer'ın
-/// texture'larından oluşur ve texture tanımlayıcıları renderer'a yereldir.
-/// Aynı Font ikinci bir Painter ile kullanılırsa @ref GetGlyph `nullptr`
-/// döner ve hata loglanır — birincinin texture handle'ını ikinciye vermek
-/// sessizce yanlış (veya hiç) çizerdi. Çok pencereli uygulamalar Painter
-/// başına ayrı bir Font açmalıdır.
+/// @note Font, glyph texture'larını yükleyen Painter'dan uzun yaşayabilir
+/// (`static`, global ya da Painter'dan sonra yıkılan bir üye): Painter yok
+/// olunca glyph önbelleği geçersiz sayılır ve Font yıkılırken ölü renderer'a
+/// dokunulmaz.
+///
+/// @warning **Bir Font aynı anda tek bir Painter'a aittir.** İlk
+/// @ref GetGlyph çağrısı fontu o çağrının renderer'ına bağlar; glyph atlası o
+/// renderer'ın texture'larından oluşur ve texture tanımlayıcıları renderer'a
+/// yereldir. Bağlı Painter yaşarken aynı Font ikinci bir Painter ile
+/// kullanılırsa @ref GetGlyph `nullptr` döner ve hata loglanır: birincinin
+/// texture handle'ını ikinciye vermek sessizce yanlış (veya hiç) çizerdi. Çok
+/// pencereli uygulamalar Painter başına ayrı bir Font açmalıdır. Bağlı Painter
+/// yıkıldıktan sonra Font yeni bir Painter ile kullanılabilir; glyph'ler ona
+/// yeniden yüklenir.
 class SDLPAINTER_API Font {
  public:
   // Govde .cpp'de: sinif dllexport edildiginde derleyici bu ctor'u her
@@ -137,8 +136,9 @@ class SDLPAINTER_API Font {
 
   /// @brief Karakter için Glyph al; yoksa oluşturur.
   ///
-  /// İlk çağrı fontu @p renderer'a bağlar. Sonraki çağrılar başka bir
-  /// renderer ile gelirse `nullptr` döner (bkz. sınıf belgesindeki uyarı).
+  /// İlk çağrı fontu @p renderer'a bağlar. Bağlı renderer yaşarken başka bir
+  /// renderer ile gelen çağrılar `nullptr` döner; bağlı renderer yıkılmışsa
+  /// önbellek bırakılır ve font @p renderer'a bağlanır (bkz. sınıf belgesi).
   const Glyph* GetGlyph(IRenderer& renderer, char32_t codepoint) const;
 
   /// @brief Glyph atlasının açtığı sayfa sayısı (teşhis/test).
@@ -161,6 +161,13 @@ class SDLPAINTER_API Font {
   /// karşılaştırmadan önbellek isabetini döndürmek, ikinci bir renderer'a
   /// yabancı bir handle vermek demekti.
   mutable IRenderer* mOwner{nullptr};
+
+  /// @brief @ref mOwner'ın yaşam belirteci (@ref IRenderer::LifetimeToken).
+  ///
+  /// Sahip renderer yıkılınca font önbelleği bırakıp bir sonraki renderer'a
+  /// bağlanabilir. İşaretçi karşılaştırması tek başına yetmez: ölen
+  /// renderer'ın adresinde yeni bir renderer oluşabilir.
+  mutable std::weak_ptr<const void> mOwnerAlive;
 };
 
 }  // namespace sdl_painter

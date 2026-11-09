@@ -29,12 +29,11 @@ enum class ImageFlip : uint8_t {
 ///
 /// stb_image üzerinden dosya yükler. Texture, renderer üzerinden oluşturulur.
 ///
-/// @warning  Bir Image, ona ait texture'ı yükleyen
-/// Painter (ve dolayısıyla IRenderer) yaşıyorken yıkılmalıdır. Painter yok
-/// olduktan sonra Image yıkılırsa, sahip pointer (raw IRenderer*) dangling
-/// olur ve `~Image()` davranışı tanımsızdır. Pratikte: Image'ı Painter
-/// scope'una göre dar tutun, asla `static` veya `Painter`'dan daha uzun
-/// yaşayan bir konuma koymayın.
+/// @note Image, texture'ını yükleyen Painter'dan uzun yaşayabilir (`static`,
+/// global ya da Painter'dan sonra yıkılan bir üye): Painter yok olunca
+/// texture geçersiz sayılır, Image yıkılırken ölü renderer'a dokunulmaz. Aynı
+/// Image daha sonra yeni bir Painter ile çizilirse ona yeniden yüklenir; piksel
+/// verisi Image'da durduğu için dosya yeniden okunmaz.
 class SDLPAINTER_API Image {
  public:
   Image() = default;

@@ -285,6 +285,20 @@ class IRenderer {
   /// beklemek yerine hazır olan en son değeri döndürmelidir (bekleme,
   /// ölçtüğü şeyi bozan bir CPU–GPU senkronizasyonu yaratır).
   [[nodiscard]] virtual double GetLastGpuFrameMs() const { return 0.0; }
+
+  /// @brief Bu renderer nesnesi yaşadıkça geçerli kalan belirteç.
+  ///
+  /// Renderer yıkılınca `expired()` olur. @ref Texture bunu saklar; renderer
+  /// ondan önce yıkılırsa texture'ın serbest bırakılması sessizce atlanır
+  /// (kaynaklar renderer kapanırken zaten bırakılmıştır). Sanal değildir:
+  /// tüketicinin kendi renderer'ı da korumayı kendiliğinden alır.
+  [[nodiscard]] std::weak_ptr<const void> LifetimeToken() const noexcept {
+    return mLifetime;
+  }
+
+ private:
+  /// Yalnızca sahipliği sayılır; içeriği kullanılmaz.
+  std::shared_ptr<const int> mLifetime{std::make_shared<const int>(0)};
 };
 
 /// @brief Seçilen backend için IRenderer örneği oluştur.

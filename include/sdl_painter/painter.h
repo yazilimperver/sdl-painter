@@ -50,11 +50,9 @@ struct RenderState {
 /// Painter, SDL penceresi üzerinde 2B çizim yapar. Backend (OpenGL/Vulkan)
 /// IRenderer arayüzü üzerinden soyutlanır.
 ///
-/// @warning  Painter'a texture yükleyen tüm
-/// @ref Image ve @ref Font nesneleri, Painter yıkılmadan önce
-/// yıkılmalıdır. Image veya Font'u global / `static` ya da daha uzun
-/// yaşayan bir konuma yerleştirmek tanımsız davranışa yol açar — yıkım
-/// sırasında dangling IRenderer pointer kullanılır.
+/// @note @ref Image, @ref Font ve @ref RenderTarget Painter'dan uzun
+///       yaşayabilir: Painter yıkılınca geçersiz sayılırlar ve sonradan
+///       yıkılırken ölü renderer'a dokunmazlar.
 ///
 /// @note Süreç başına aynı anda tek Painter desteklenir. OpenGL renderer'ı
 ///       çizerken kendi context'ini seçmez; aynı anda yaşayan ikinci bir

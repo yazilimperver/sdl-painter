@@ -49,10 +49,10 @@ class StatsOverlay;
 /// }
 /// @endcode
 ///
-/// @warning **Yaşam döngüsü:** Türeyen sınıfın @ref Image / @ref Font üyeleri,
+/// @note **Yaşam döngüsü:** Türeyen sınıfın @ref Image / @ref Font üyeleri,
 /// temel sınıf yıkıcısı çalışmadan önce (yani içteki Painter yıkılmadan
-/// önce) yok edilir. Bu sıralama kasıtlıdır ve @ref Painter yaşam sözleşmesini
-/// otomatik olarak sağlar — kaynakları düz üye olarak tutmak güvenlidir.
+/// önce) yok edilir; kaynakları düz üye olarak tutmak güvenlidir. Painter'dan
+/// uzun yaşayan kaynaklar da güvenlidir (bkz. @ref Painter).
 class SDLPAINTER_APP_API Application {
  public:
   /// @brief Verilen yapılandırma ile uygulamayı oluştur (init @ref Run içinde).

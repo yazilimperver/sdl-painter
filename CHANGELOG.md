@@ -20,6 +20,9 @@
   Çatının gamepad olaylarının yanında SDL'in doğrudan kullanımıyla ad, pil,
   ham eksen değerleri, ek düğmeler, touchpad, jiroskop ve tetik titreşimi
   gösteriliyor. `input` örneğine de gamepad eklendi.
+- `IRenderer::LifetimeToken()`: renderer nesnesi yaşadıkça geçerli kalan bir
+  `std::weak_ptr`. Sanal değil; kendi renderer'ını yazan tüketici de
+  kendiliğinden alır.
 
 ### Değişti
 
@@ -28,6 +31,10 @@
   `export-ignore` ile arşive girmiyor (GitHub'ın otomatik arşivi, `git archive`
   ve Release asset'i). Derleme ve testler için gereken her şey arşivde. Bayat
   `.gitmodules` silindi; Doxygen teması submodule değil, repoda.
+- `Font`, bağlı olduğu Painter yıkıldıktan sonra yeni bir Painter ile
+  kullanılabiliyor: glyph önbelleği bırakılıp yeni renderer'a yükleniyor.
+  Bağlı Painter yaşarken ikinci bir Painter ile kullanım eskisi gibi
+  reddediliyor.
 - stb CMake config'i olmadan da bulunuyor (vcpkg'de olduğu gibi); `stb_image.h`
   `find_path` ile aranıyor. stb artık kurulu paketin export'una girmiyor ve
   `sdl_painterConfig.cmake` onu aramıyor.
@@ -36,6 +43,13 @@
 
 ### Düzeltildi
 
+- `Image`, `Font` ve `Texture`, onları yükleyen Painter'dan uzun yaşayınca
+  (`static`, global, Painter'dan sonra yıkılan üye) yıkılırken ölü renderer
+  üzerinden `DestroyTexture` çağırıyordu (tanımsız davranış). Artık renderer'ın
+  yaşam belirtecine bakıyorlar: Painter yok olunca geçersiz sayılıyor ve
+  sessizce kapanıyorlar. Ölen renderer'ın adresinde yenisi kurulursa eski
+  texture tanımlayıcısının ona verilmesi de böylece önlendi; `Image` yeni
+  Painter'a yeniden yükleniyor. `RenderTarget` bu korumaya zaten sahipti.
 - `FillRoundedRect`: yarıçap kısa kenarın yarısına eşitken (hap şekli) bazı
   boyutlarda dolgunun yaklaşık %38'i çizilmiyor ve log'a "poligon tam
   ucgenlenemedi" uyarısı düşüyordu. Dolgu artık ear clipping yerine merkezden
@@ -52,8 +66,10 @@
 
 ### Yükseltmeden önce
 
-- **Shared derlemede `Application`'ın binary uyumluluğu değişti** (yeni sanal
-  metotlar ve üye): 1.4.0'a karşı derlenmiş uygulamayı yeniden derleyin.
+- **Shared derlemede binary uyumluluk değişti:** `Application` (yeni sanal
+  metotlar ve üye), `IRenderer`, `Texture`, `Image` ve `Font` (yaşam
+  belirteci için yeni üyeler). 1.4.0'a karşı derlenmiş uygulamayı yeniden
+  derleyin; kaynak düzeyinde değişiklik gerekmez.
 
 ## [1.4.0] - 2026-10-22
 
