@@ -57,9 +57,7 @@ TEST(Texture, DestructorCallsDestroyTexture) {
 
 TEST(Texture, DestructorDestroysTheOwnedHandleExactlyOnce) {
   MockRenderer r;
-  {
-    Texture t(&r, 7);
-  }
+  { Texture t(&r, 7); }
   const std::vector<TextureHandle> expected{7};
   EXPECT_EQ(r.destroyed_textures, expected);
 }

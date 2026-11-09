@@ -16,21 +16,22 @@
 /// çıkar; `--pattern=opacity` batch'i kıran desenle başlatır (doküman
 /// görselleri bu şekilde üretilir).
 
-#include <SDL3/SDL.h>
-#include <spdlog/spdlog.h>
-
-#include <cmath>
-#include <cstdint>
-#include <cstring>
-#include <string>
-#include <vector>
-
-#include "benchmarks/screenshot.h"
 #include "sdl_painter/app/application.h"
 #include "sdl_painter/brush.h"
 #include "sdl_painter/color.h"
 #include "sdl_painter/painter.h"
 #include "sdl_painter/pen.h"
+
+#include <SDL3/SDL.h>
+
+#include <cmath>
+#include <cstdint>
+#include <cstring>
+#include <spdlog/spdlog.h>
+#include <string>
+#include <vector>
+
+#include "benchmarks/screenshot.h"
 
 namespace {
 

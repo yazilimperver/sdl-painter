@@ -5,8 +5,6 @@
 // gerektirenler sistem fontunu kullanır (SDLPAINTER_REQUIRE_FONT_OR_SKIP).
 // Font tek bir renderer'a bağlandığı için her test kendi Painter'ını kurar.
 
-#include "app/stats_overlay.h"
-
 #include "sdl_painter/brush.h"
 #include "sdl_painter/color.h"
 #include "sdl_painter/font.h"
@@ -25,6 +23,7 @@
 #include <utility>
 #include <vector>
 
+#include "app/stats_overlay.h"
 #include "mock_renderer.h"
 #include "test_support.h"
 

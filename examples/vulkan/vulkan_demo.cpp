@@ -15,16 +15,13 @@
 /// 'R' tuşuna basılarak projeksiyon güncellemesi zorlanabilir.
 
 #include <SDL3/SDL.h>
+
 #include <spdlog/sinks/ansicolor_sink.h>
 #include <spdlog/spdlog.h>
 
 #ifdef _WIN32
 #include <windows.h>
 #endif
-
-#include <cmath>
-#include <cstring>
-#include <vector>
 
 #include "sdl_painter/brush.h"
 #include "sdl_painter/color.h"
@@ -33,6 +30,10 @@
 #include "sdl_painter/painter.h"
 #include "sdl_painter/pen.h"
 #include "sdl_painter/renderer.h"
+
+#include <cmath>
+#include <cstring>
+#include <vector>
 
 namespace {
 
@@ -55,8 +56,8 @@ void InitLogger() {
 
 /// @brief 2B n-gen düzenli poligon noktaları üretir.
 std::vector<sdl_painter::Point> RegularPolygon(float cx, float cy, float r,
-                                                int32_t sides,
-                                                float offset_deg = 0.0f) {
+                                               int32_t sides,
+                                               float offset_deg = 0.0f) {
   std::vector<sdl_painter::Point> pts;
   pts.reserve(static_cast<size_t>(sides));
   for (int32_t i = 0; i < sides; ++i) {
@@ -77,8 +78,8 @@ std::vector<uint8_t> MakeGradientTexture() {
       const float t = static_cast<float>(x) / static_cast<float>(kSize - 1);
       const size_t idx = static_cast<size_t>((y * kSize + x) * 4);
       data[idx + 0] = 235;                                        // R: sabit
-      data[idx + 1] = static_cast<uint8_t>(t * 226.0f);          // G: 0→226
-      data[idx + 2] = static_cast<uint8_t>((1.0f - t) * 100.0f); // B: 100→0
+      data[idx + 1] = static_cast<uint8_t>(t * 226.0f);           // G: 0→226
+      data[idx + 2] = static_cast<uint8_t>((1.0f - t) * 100.0f);  // B: 100→0
       data[idx + 3] = 255;
     }
   }
@@ -90,7 +91,8 @@ std::vector<uint8_t> MakeGradientTexture() {
 int main() {
   InitLogger();
   spdlog::info("SDLPainter vulkan_demo (polish & dogrulama) basliyor...");
-  spdlog::info("Pencereyi yeniden boyutlandirarak resize testini yapabilirsiniz.");
+  spdlog::info(
+      "Pencereyi yeniden boyutlandirarak resize testini yapabilirsiniz.");
   spdlog::info("ESC veya pencereyi kapat ile cikis.");
 
   if (!SDL_Init(SDL_INIT_VIDEO)) {
@@ -98,9 +100,9 @@ int main() {
     return 1;
   }
 
-  SDL_Window* window = SDL_CreateWindow(
-      "SDLPainter — vulkan_demo (Phase 5d)", 900, 650,
-      SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
+  SDL_Window* window =
+      SDL_CreateWindow("SDLPainter — vulkan_demo (Phase 5d)", 900, 650,
+                       SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE);
   if (!window) {
     spdlog::error("SDL_CreateWindow hata: {}", SDL_GetError());
     SDL_Quit();
@@ -108,158 +110,164 @@ int main() {
   }
 
   {  // Painter scope: window'dan önce destroy edilmeli (surface leak önleme).
-  sdl_painter::Painter painter(window, sdl_painter::RendererBackend::kVulkan);
-  if (!painter.IsValid()) {
-    spdlog::error("Vulkan Painter baslatilamadi.");
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-    return 1;
-  }
-
-  // --- Gradyan texture ---
-  auto grad_data = MakeGradientTexture();
-  sdl_painter::Image grad_img =
-      sdl_painter::Image::CreateFromData(grad_data.data(), 256, 256, 4);
-
-  // --- Sabit renkler (Catppuccin Mocha paleti) ---
-  const sdl_painter::Color kBg{30, 30, 46, 255};       // Base
-  const sdl_painter::Color kRed{235, 66, 66, 255};
-  const sdl_painter::Color kGreen{166, 227, 161, 255};
-  const sdl_painter::Color kBlue{137, 180, 250, 255};
-  const sdl_painter::Color kYellow{249, 226, 175, 255};
-  const sdl_painter::Color kPeach{250, 179, 135, 200}; // yarı saydam
-  const sdl_painter::Color kMauve{203, 166, 247, 255};
-  const sdl_painter::Color kTeal{148, 226, 213, 255};
-  const sdl_painter::Color kWhite{205, 214, 244, 255}; // Text
-  const sdl_painter::Color kSurface{49, 50, 68, 255};  // Surface0
-
-  float angle = 0.0f;  // animasyon açısı
-  uint32_t frame_count = 0;
-
-  bool running = true;
-  while (running) {
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-      if (event.type == SDL_EVENT_QUIT) running = false;
-      if (event.type == SDL_EVENT_KEY_DOWN) {
-        if (event.key.key == SDLK_ESCAPE) running = false;
-      }
-      // SDL_EVENT_WINDOW_RESIZED: Painter::Begin() otomatik algılar.
+    sdl_painter::Painter painter(window, sdl_painter::RendererBackend::kVulkan);
+    if (!painter.IsValid()) {
+      spdlog::error("Vulkan Painter baslatilamadi.");
+      SDL_DestroyWindow(window);
+      SDL_Quit();
+      return 1;
     }
 
-    angle += 0.4f;
-    if (angle >= 360.0f) angle -= 360.0f;
-    ++frame_count;
+    // --- Gradyan texture ---
+    auto grad_data = MakeGradientTexture();
+    sdl_painter::Image grad_img =
+        sdl_painter::Image::CreateFromData(grad_data.data(), 256, 256, 4);
 
-    painter.Begin();
-    painter.Clear(kBg);
+    // --- Sabit renkler (Catppuccin Mocha paleti) ---
+    const sdl_painter::Color kBg{30, 30, 46, 255};  // Base
+    const sdl_painter::Color kRed{235, 66, 66, 255};
+    const sdl_painter::Color kGreen{166, 227, 161, 255};
+    const sdl_painter::Color kBlue{137, 180, 250, 255};
+    const sdl_painter::Color kYellow{249, 226, 175, 255};
+    const sdl_painter::Color kPeach{250, 179, 135, 200};  // yarı saydam
+    const sdl_painter::Color kMauve{203, 166, 247, 255};
+    const sdl_painter::Color kTeal{148, 226, 213, 255};
+    const sdl_painter::Color kWhite{205, 214, 244, 255};  // Text
+    const sdl_painter::Color kSurface{49, 50, 68, 255};   // Surface0
 
-    // 1. Sol sütun — dolu şekiller: Brush kullanılır, Pen yok sayılır.
-    painter.SetBrush(sdl_painter::Brush(kRed));
-    painter.SetPen(sdl_painter::Pen(kRed, 0.0f));
-    painter.FillRect(20.0f, 20.0f, 120.0f, 80.0f);
+    float angle = 0.0f;  // animasyon açısı
+    uint32_t frame_count = 0;
 
-    painter.SetBrush(sdl_painter::Brush(kGreen));
-    painter.SetPen(sdl_painter::Pen(kGreen, 0.0f));
-    painter.FillCircle(80.0f, 200.0f, 55.0f);
+    bool running = true;
+    while (running) {
+      SDL_Event event;
+      while (SDL_PollEvent(&event)) {
+        if (event.type == SDL_EVENT_QUIT)
+          running = false;
+        if (event.type == SDL_EVENT_KEY_DOWN) {
+          if (event.key.key == SDLK_ESCAPE)
+            running = false;
+        }
+        // SDL_EVENT_WINDOW_RESIZED: Painter::Begin() otomatik algılar.
+      }
 
-    painter.SetBrush(sdl_painter::Brush(kBlue));
-    painter.SetPen(sdl_painter::Pen(kBlue, 0.0f));
-    painter.FillEllipse(80.0f, 340.0f, 70.0f, 40.0f);
+      angle += 0.4f;
+      if (angle >= 360.0f)
+        angle -= 360.0f;
+      ++frame_count;
 
-    // Konveks poligon: triangle fan yeter, ear clipping'e gerek yok.
-    painter.SetBrush(sdl_painter::Brush(kYellow));
-    painter.SetPen(sdl_painter::Pen(kYellow, 0.0f));
-    painter.FillPolygon(RegularPolygon(80.0f, 470.0f, 55.0f, 6, 30.0f));
+      painter.Begin();
+      painter.Clear(kBg);
 
-    // 2. Orta sütun — çerçeveli şekiller: kalınlık geometry-based quad
-    //    ile üretilir, iki backend'de de aynı görüntüyü vermeli.
-    painter.SetPen(sdl_painter::Pen(kTeal, 3.0f));
-    painter.SetBrush(sdl_painter::Brush({0, 0, 0, 0}));
-    painter.DrawRect(210.0f, 20.0f, 120.0f, 80.0f);
+      // 1. Sol sütun — dolu şekiller: Brush kullanılır, Pen yok sayılır.
+      painter.SetBrush(sdl_painter::Brush(kRed));
+      painter.SetPen(sdl_painter::Pen(kRed, 0.0f));
+      painter.FillRect(20.0f, 20.0f, 120.0f, 80.0f);
 
-    painter.SetPen(sdl_painter::Pen(kMauve, 2.5f));
-    painter.DrawCircle(270.0f, 200.0f, 55.0f);
+      painter.SetBrush(sdl_painter::Brush(kGreen));
+      painter.SetPen(sdl_painter::Pen(kGreen, 0.0f));
+      painter.FillCircle(80.0f, 200.0f, 55.0f);
 
-    painter.SetPen(sdl_painter::Pen(kYellow, 2.0f));
-    painter.DrawEllipse(270.0f, 340.0f, 70.0f, 40.0f);
+      painter.SetBrush(sdl_painter::Brush(kBlue));
+      painter.SetPen(sdl_painter::Pen(kBlue, 0.0f));
+      painter.FillEllipse(80.0f, 340.0f, 70.0f, 40.0f);
 
-    painter.SetPen(sdl_painter::Pen(kWhite, 2.0f));
-    painter.DrawPolygon(RegularPolygon(270.0f, 470.0f, 55.0f, 8));
+      // Konveks poligon: triangle fan yeter, ear clipping'e gerek yok.
+      painter.SetBrush(sdl_painter::Brush(kYellow));
+      painter.SetPen(sdl_painter::Pen(kYellow, 0.0f));
+      painter.FillPolygon(RegularPolygon(80.0f, 470.0f, 55.0f, 6, 30.0f));
 
-    // 3. Transform yığını: dönüşüm CPU'da vertex'lere uygulanır, yani
-    //    backend'den bağımsızdır — Vulkan tarafında da aynı sonuç.
-    painter.Save();
-    painter.Translate(450.0f, 100.0f);
-    painter.Rotate(angle);
-    painter.SetBrush(sdl_painter::Brush(kRed));
-    painter.SetPen(sdl_painter::Pen(kRed, 0.0f));
-    painter.FillRect(-55.0f, -35.0f, 110.0f, 70.0f);
-    painter.Restore();
+      // 2. Orta sütun — çerçeveli şekiller: kalınlık geometry-based quad
+      //    ile üretilir, iki backend'de de aynı görüntüyü vermeli.
+      painter.SetPen(sdl_painter::Pen(kTeal, 3.0f));
+      painter.SetBrush(sdl_painter::Brush({0, 0, 0, 0}));
+      painter.DrawRect(210.0f, 20.0f, 120.0f, 80.0f);
 
-    painter.Save();
-    painter.Translate(450.0f, 260.0f);
-    painter.Rotate(-angle * 0.7f);
-    painter.SetBrush(sdl_painter::Brush(kMauve));
-    painter.SetPen(sdl_painter::Pen(kMauve, 0.0f));
-    painter.FillPolygon(RegularPolygon(0.0f, 0.0f, 55.0f, 5, -90.0f));
-    painter.Restore();
+      painter.SetPen(sdl_painter::Pen(kMauve, 2.5f));
+      painter.DrawCircle(270.0f, 200.0f, 55.0f);
 
-    // Scale çizgi kalınlığını da ölçekler.
-    const float scale_factor = 0.6f + 0.4f * std::sin(angle * kPi / 180.0f);
-    painter.Save();
-    painter.Translate(450.0f, 430.0f);
-    painter.Scale(scale_factor, scale_factor);
-    painter.SetBrush(sdl_painter::Brush(kTeal));
-    painter.SetPen(sdl_painter::Pen(kTeal, 0.0f));
-    painter.FillCircle(0.0f, 0.0f, 50.0f);
-    painter.Restore();
+      painter.SetPen(sdl_painter::Pen(kYellow, 2.0f));
+      painter.DrawEllipse(270.0f, 340.0f, 70.0f, 40.0f);
 
-    // 4. Doku çizimi: Vulkan tarafında descriptor set / sampler yolu.
-    painter.DrawImage(grad_img, sdl_painter::Rect{590.0f, 20.0f, 200.0f, 150.0f});
+      painter.SetPen(sdl_painter::Pen(kWhite, 2.0f));
+      painter.DrawPolygon(RegularPolygon(270.0f, 470.0f, 55.0f, 8));
 
-    // Opaklık dokulu çizimde de geçerli.
-    painter.SetOpacity(0.5f);
-    painter.DrawImage(grad_img, sdl_painter::Rect{590.0f, 190.0f, 200.0f, 150.0f});
-    painter.SetOpacity(1.0f);
+      // 3. Transform yığını: dönüşüm CPU'da vertex'lere uygulanır, yani
+      //    backend'den bağımsızdır — Vulkan tarafında da aynı sonuç.
+      painter.Save();
+      painter.Translate(450.0f, 100.0f);
+      painter.Rotate(angle);
+      painter.SetBrush(sdl_painter::Brush(kRed));
+      painter.SetPen(sdl_painter::Pen(kRed, 0.0f));
+      painter.FillRect(-55.0f, -35.0f, 110.0f, 70.0f);
+      painter.Restore();
 
-    painter.Save();
-    painter.Translate(690.0f, 430.0f);
-    painter.Rotate(angle * 0.5f);
-    painter.DrawImage(grad_img, sdl_painter::Rect{-75.0f, -75.0f, 150.0f, 150.0f});
-    painter.Restore();
+      painter.Save();
+      painter.Translate(450.0f, 260.0f);
+      painter.Rotate(-angle * 0.7f);
+      painter.SetBrush(sdl_painter::Brush(kMauve));
+      painter.SetPen(sdl_painter::Pen(kMauve, 0.0f));
+      painter.FillPolygon(RegularPolygon(0.0f, 0.0f, 55.0f, 5, -90.0f));
+      painter.Restore();
 
-    // 5. Üst üste binen yarı saydam katmanlar: alfa karıştırma sırası
-    //    iki backend'de aynı olmalı.
-    // Yarı saydam peach dikdörtgen (tüm genişliğe yayılmış, alt kısım)
-    painter.SetOpacity(0.35f);
-    painter.SetBrush(sdl_painter::Brush(kPeach));
-    painter.SetPen(sdl_painter::Pen(kPeach, 0.0f));
-    painter.FillRect(0.0f, 590.0f, 900.0f, 60.0f);
-    painter.SetOpacity(1.0f);
+      // Scale çizgi kalınlığını da ölçekler.
+      const float scale_factor = 0.6f + 0.4f * std::sin(angle * kPi / 180.0f);
+      painter.Save();
+      painter.Translate(450.0f, 430.0f);
+      painter.Scale(scale_factor, scale_factor);
+      painter.SetBrush(sdl_painter::Brush(kTeal));
+      painter.SetPen(sdl_painter::Pen(kTeal, 0.0f));
+      painter.FillCircle(0.0f, 0.0f, 50.0f);
+      painter.Restore();
 
-    // Surface0 arka plan dikdörtgeni alt panele
-    painter.SetBrush(sdl_painter::Brush(kSurface));
-    painter.SetPen(sdl_painter::Pen(kSurface, 0.0f));
-    painter.FillRect(0.0f, 580.0f, 900.0f, 10.0f);
+      // 4. Doku çizimi: Vulkan tarafında descriptor set / sampler yolu.
+      painter.DrawImage(grad_img,
+                        sdl_painter::Rect{590.0f, 20.0f, 200.0f, 150.0f});
 
-    // 6. Çizgiler: DrawLine tek segment, DrawPolyline köşe birleşimli.
-    painter.SetPen(sdl_painter::Pen(kWhite, 1.5f));
-    painter.DrawLine(20.0f, 540.0f, 560.0f, 540.0f);
+      // Opaklık dokulu çizimde de geçerli.
+      painter.SetOpacity(0.5f);
+      painter.DrawImage(grad_img,
+                        sdl_painter::Rect{590.0f, 190.0f, 200.0f, 150.0f});
+      painter.SetOpacity(1.0f);
 
-    // Yıldırım şekli polyline
-    const std::vector<sdl_painter::Point> lightning = {
-        {600.0f, 530.0f}, {640.0f, 555.0f}, {625.0f, 555.0f},
-        {665.0f, 580.0f}, {630.0f, 568.0f}, {645.0f, 568.0f},
-        {610.0f, 590.0f},
-    };
-    painter.SetPen(sdl_painter::Pen(kYellow, 2.0f));
-    painter.DrawPolyline(lightning);
+      painter.Save();
+      painter.Translate(690.0f, 430.0f);
+      painter.Rotate(angle * 0.5f);
+      painter.DrawImage(grad_img,
+                        sdl_painter::Rect{-75.0f, -75.0f, 150.0f, 150.0f});
+      painter.Restore();
 
-    painter.End();
-  }
+      // 5. Üst üste binen yarı saydam katmanlar: alfa karıştırma sırası
+      //    iki backend'de aynı olmalı.
+      // Yarı saydam peach dikdörtgen (tüm genişliğe yayılmış, alt kısım)
+      painter.SetOpacity(0.35f);
+      painter.SetBrush(sdl_painter::Brush(kPeach));
+      painter.SetPen(sdl_painter::Pen(kPeach, 0.0f));
+      painter.FillRect(0.0f, 590.0f, 900.0f, 60.0f);
+      painter.SetOpacity(1.0f);
 
-  spdlog::info("Kapatiliyor. Toplam frame: {}", frame_count);
+      // Surface0 arka plan dikdörtgeni alt panele
+      painter.SetBrush(sdl_painter::Brush(kSurface));
+      painter.SetPen(sdl_painter::Pen(kSurface, 0.0f));
+      painter.FillRect(0.0f, 580.0f, 900.0f, 10.0f);
+
+      // 6. Çizgiler: DrawLine tek segment, DrawPolyline köşe birleşimli.
+      painter.SetPen(sdl_painter::Pen(kWhite, 1.5f));
+      painter.DrawLine(20.0f, 540.0f, 560.0f, 540.0f);
+
+      // Yıldırım şekli polyline
+      const std::vector<sdl_painter::Point> lightning = {
+          {600.0f, 530.0f}, {640.0f, 555.0f}, {625.0f, 555.0f},
+          {665.0f, 580.0f}, {630.0f, 568.0f}, {645.0f, 568.0f},
+          {610.0f, 590.0f},
+      };
+      painter.SetPen(sdl_painter::Pen(kYellow, 2.0f));
+      painter.DrawPolyline(lightning);
+
+      painter.End();
+    }
+
+    spdlog::info("Kapatiliyor. Toplam frame: {}", frame_count);
   }  // painter destructor burada çalışır — VkSurface henüz geçerli.
   SDL_DestroyWindow(window);
   SDL_Quit();
