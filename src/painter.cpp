@@ -838,7 +838,7 @@ void Painter::DrawRoundedRect(float x, float y, float w, float h,
     return;
   }
   const std::vector<Point> pts =
-      Tessellator::BuildRoundedRectPoints(x, y, w, h, radius);
+      Tessellator::BuildRoundedRectPoints(x, y, w, h, radius, SegmentScale());
   if (pts.size() < 3) {
     return;
   }
@@ -854,7 +854,8 @@ void Painter::FillRoundedRect(float x, float y, float w, float h,
   if (!CanDrawBrush()) {
     return;
   }
-  auto verts = Tessellator::TessellateFilledRoundedRect(x, y, w, h, radius);
+  auto verts = Tessellator::TessellateFilledRoundedRect(x, y, w, h, radius,
+                                                        SegmentScale());
   PushFilled(verts);
 }
 
@@ -866,8 +867,9 @@ void Painter::DrawCircle(float cx, float cy, float radius) {
   if (!CanDrawPen()) {
     return;
   }
-  StrokePoints(Tessellator::BuildEllipsePoints(cx, cy, radius, radius),
-               /*closed=*/true);
+  StrokePoints(
+      Tessellator::BuildEllipsePoints(cx, cy, radius, radius, SegmentScale()),
+      /*closed=*/true);
 }
 
 void Painter::DrawCircle(const Point& center, float radius) {
@@ -878,7 +880,8 @@ void Painter::FillCircle(float cx, float cy, float radius) {
   if (!CanDrawBrush()) {
     return;
   }
-  auto verts = Tessellator::TessellateFilledCircle(cx, cy, radius);
+  auto verts =
+      Tessellator::TessellateFilledCircle(cx, cy, radius, SegmentScale());
   PushFilled(verts);
 }
 
@@ -890,7 +893,7 @@ void Painter::DrawEllipse(float cx, float cy, float rx, float ry) {
   if (!CanDrawPen()) {
     return;
   }
-  StrokePoints(Tessellator::BuildEllipsePoints(cx, cy, rx, ry),
+  StrokePoints(Tessellator::BuildEllipsePoints(cx, cy, rx, ry, SegmentScale()),
                /*closed=*/true);
 }
 
@@ -898,7 +901,8 @@ void Painter::FillEllipse(float cx, float cy, float rx, float ry) {
   if (!CanDrawBrush()) {
     return;
   }
-  auto verts = Tessellator::TessellateFilledEllipse(cx, cy, rx, ry);
+  auto verts =
+      Tessellator::TessellateFilledEllipse(cx, cy, rx, ry, SegmentScale());
   PushFilled(verts);
 }
 
@@ -922,8 +926,8 @@ void Painter::DrawArc(float cx, float cy, float rx, float ry,
   if (!CanDrawPen()) {
     return;
   }
-  const std::vector<Point> arc =
-      Tessellator::BuildArcPoints(cx, cy, rx, ry, start_degrees, sweep_degrees);
+  const std::vector<Point> arc = Tessellator::BuildArcPoints(
+      cx, cy, rx, ry, start_degrees, sweep_degrees, SegmentScale());
   if (arc.size() < 2) {
     return;
   }
@@ -935,8 +939,8 @@ void Painter::DrawPie(float cx, float cy, float rx, float ry,
   if (!CanDrawPen()) {
     return;
   }
-  std::vector<Point> outline =
-      Tessellator::BuildArcPoints(cx, cy, rx, ry, start_degrees, sweep_degrees);
+  std::vector<Point> outline = Tessellator::BuildArcPoints(
+      cx, cy, rx, ry, start_degrees, sweep_degrees, SegmentScale());
   if (outline.size() < 2) {
     return;
   }
@@ -952,7 +956,7 @@ void Painter::FillPie(float cx, float cy, float rx, float ry,
     return;
   }
   auto verts = Tessellator::TessellateFilledPie(cx, cy, rx, ry, start_degrees,
-                                                sweep_degrees);
+                                                sweep_degrees, SegmentScale());
   PushFilled(verts);
 }
 
@@ -961,8 +965,8 @@ void Painter::DrawChord(float cx, float cy, float rx, float ry,
   if (!CanDrawPen()) {
     return;
   }
-  const std::vector<Point> arc =
-      Tessellator::BuildArcPoints(cx, cy, rx, ry, start_degrees, sweep_degrees);
+  const std::vector<Point> arc = Tessellator::BuildArcPoints(
+      cx, cy, rx, ry, start_degrees, sweep_degrees, SegmentScale());
   if (arc.size() < 2) {
     return;
   }
@@ -976,8 +980,8 @@ void Painter::FillChord(float cx, float cy, float rx, float ry,
   if (!CanDrawBrush()) {
     return;
   }
-  auto verts = Tessellator::TessellateFilledChord(cx, cy, rx, ry, start_degrees,
-                                                  sweep_degrees);
+  auto verts = Tessellator::TessellateFilledChord(
+      cx, cy, rx, ry, start_degrees, sweep_degrees, SegmentScale());
   PushFilled(verts);
 }
 
@@ -1483,6 +1487,10 @@ float Painter::PixelScale() const noexcept {
   const glm::mat3& m = mCurrentState.transform;
   const float kDet = (m[0][0] * m[1][1]) - (m[1][0] * m[0][1]);
   return std::sqrt(std::fabs(kDet));
+}
+
+float Painter::SegmentScale() const noexcept {
+  return mCurrentState.antialiasing ? PixelScale() : 0.0F;
 }
 
 Painter::StrokeWidth Painter::AdjustStrokeWidth(

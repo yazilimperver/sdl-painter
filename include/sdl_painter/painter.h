@@ -272,7 +272,9 @@ class SDLPAINTER_API Painter {
   /// sayı koordinatlı dikdörtgenler keskin kalır. Genişlik dönüşümün
   /// ölçeğinden hesaplanır, `Scale` ile büyütülen şekil bulanıklaşmaz.
   /// 1 pikselden ince kalem 1 piksel genişlikte çizilir, alfası genişlikle
-  /// orantılı azalır.
+  /// orantılı azalır. Daire, elips, yay ve yuvarlatılmış köşelerin segment
+  /// sayısı, kirişin eğriden ekranda en fazla 0,25 piksel sapacağı şekilde
+  /// seçilir; yumuşak kenarda köşeli görünüm oluşmaz.
   ///
   /// Metin (glyph'ler zaten yumuşak) ve görsellerin kenarları kapsam dışıdır.
   /// @ref Save / @ref Restore kapsamındadır. Varsayılan kapalı.
@@ -619,6 +621,10 @@ class SDLPAINTER_API Painter {
   /// Kenar yumuşatma şeridinin şekil koordinatlarındaki genişliği `1 / ölçek`
   /// olur; böylece şerit her ölçekte 1 ekran pikselidir.
   [[nodiscard]] float PixelScale() const noexcept;
+
+  /// @brief Eğri segment sayısı için ölçek: kenar yumuşatma açıkken
+  ///        @ref PixelScale, kapalıyken 0 (yarıçapa göre klasik kural).
+  [[nodiscard]] float SegmentScale() const noexcept;
 
   /// @brief Kalem genişliği ve ince kalem için alfa çarpanı.
   struct StrokeWidth {

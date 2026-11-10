@@ -28,8 +28,11 @@
   şeklin boyutu değişmez, tam sayı koordinatlı dikdörtgenler keskin kalır,
   yarı saydam renkte çift karışım olmaz. Genişlik dönüşümün ölçeğinden
   hesaplanır. 1 pikselden ince kalem 1 piksel genişlikte, orantılı alfayla
-  çizilir. Metin ve görsellerin kenarları kapsam dışı. `shapes_showcase`
-  örneğinde A tuşu açıp kapatır.
+  çizilir. Açıkken daire, elips, yay ve yuvarlatılmış köşelerin segment
+  sayısı ekrandaki sapma 0,25 pikseli geçmeyecek şekilde seçilir (küçük
+  dairelerde artar, büyüklerde azalır; kapalıyken eski kural geçerli). Metin
+  ve görsellerin kenarları kapsam dışı. `shapes_showcase` örneğinde A tuşu
+  açıp kapatır.
 - `IRenderer::LifetimeToken()`: renderer nesnesi yaşadıkça geçerli kalan bir
   `std::weak_ptr`. Sanal değil; kendi renderer'ını yazan tüketici de
   kendiliğinden alır.

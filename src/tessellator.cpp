@@ -209,14 +209,49 @@ std::vector<Vertex> Tessellator::TessellateFilledRect(float x, float y, float w,
   // clang-format on
 }
 
+int32_t Tessellator::AdaptiveSegments(float radius, float pixel_scale) {
+  constexpr int32_t kMinSegments = 16;
+  constexpr int32_t kMaxSegments = 512;
+  if (!(radius > 0.0F)) {  // NaN ve negatif yarıçap koruması
+    return kMinSegments;
+  }
+  if (!(pixel_scale > 0.0F)) {
+    const float kScaled = radius * 0.5F;
+    if (kScaled >= static_cast<float>(kMaxSegments)) {
+      return kMaxSegments;
+    }
+    return std::max(kMinSegments, static_cast<int32_t>(kScaled));
+  }
+  // Kirişin yaydan sapması r * (1 - cos(pi / n)); toleransa eşitlenip n
+  // çözülür. Tolerans yarıçapa yaklaşıyorsa (nokta kadar daire) alt sınır
+  // zaten fazlasıyla yeter.
+  constexpr float kTolerancePx = 0.25F;
+  const float kRadiusPx = radius * pixel_scale;
+  if (!(kRadiusPx > kTolerancePx)) {
+    return kMinSegments;
+  }
+  const float kHalfStep = std::acos(1.0F - (kTolerancePx / kRadiusPx));
+  if (!(kHalfStep > 0.0F)) {  // 1 - tolerans/r yuvarlanıp 1 oldu: dev yarıçap
+    return kMaxSegments;
+  }
+  const float kCount = (kTwoPi * 0.5F) / kHalfStep;
+  if (!(kCount < static_cast<float>(kMaxSegments))) {
+    return kMaxSegments;
+  }
+  return std::max(kMinSegments, static_cast<int32_t>(std::ceil(kCount)));
+}
+
 std::vector<Vertex> Tessellator::TessellateFilledCircle(float cx, float cy,
-                                                        float radius) {
-  return TessellateFilledEllipse(cx, cy, radius, radius);
+                                                        float radius,
+                                                        float pixel_scale) {
+  return TessellateFilledEllipse(cx, cy, radius, radius, pixel_scale);
 }
 
 std::vector<Vertex> Tessellator::TessellateFilledEllipse(float cx, float cy,
-                                                         float rx, float ry) {
-  const std::vector<Point> pts = BuildEllipsePoints(cx, cy, rx, ry);
+                                                         float rx, float ry,
+                                                         float pixel_scale) {
+  const std::vector<Point> pts =
+      BuildEllipsePoints(cx, cy, rx, ry, pixel_scale);
   std::vector<Vertex> result;
   result.reserve(pts.size() * 3);
   for (std::size_t i = 0; i < pts.size(); ++i) {
@@ -230,8 +265,9 @@ std::vector<Vertex> Tessellator::TessellateFilledEllipse(float cx, float cy,
 }
 
 std::vector<Point> Tessellator::BuildEllipsePoints(float cx, float cy, float rx,
-                                                   float ry) {
-  const int32_t kSegments = AdaptiveSegments(std::max(rx, ry));
+                                                   float ry,
+                                                   float pixel_scale) {
+  const int32_t kSegments = AdaptiveSegments(std::max(rx, ry), pixel_scale);
   std::vector<Point> pts;
   pts.reserve(static_cast<std::size_t>(kSegments));
   for (int32_t i = 0; i < kSegments; ++i) {
@@ -252,7 +288,8 @@ std::vector<Vertex> Tessellator::TessellateFilledPolygon(
 
 std::vector<Point> Tessellator::BuildRoundedRectPoints(float x, float y,
                                                        float w, float h,
-                                                       float radius) {
+                                                       float radius,
+                                                       float pixel_scale) {
   if (!(w > 0.0F) || !(h > 0.0F)) {
     return {};
   }
@@ -266,7 +303,10 @@ std::vector<Point> Tessellator::BuildRoundedRectPoints(float x, float y,
   }
 
   // Köşe başına segment sayısı: çeyrek daire olduğu için tam çemberin 1/4'ü.
-  const int32_t kQuarter = std::max(2, AdaptiveSegments(r) / 4);
+  // Kenar yumuşatmada sapma toleransı korunsun diye yukarı yuvarlanır.
+  const int32_t kFull = AdaptiveSegments(r, pixel_scale);
+  const int32_t kQuarter =
+      std::max(2, pixel_scale > 0.0F ? (kFull + 3) / 4 : kFull / 4);
   constexpr float kHalfPi = 3.14159265358979323846F * 0.5F;
 
   // Köşe merkezleri, saat yönünde: sol-üst, sağ-üst, sağ-alt, sol-alt.
@@ -295,10 +335,10 @@ std::vector<Point> Tessellator::BuildRoundedRectPoints(float x, float y,
   return pts;
 }
 
-std::vector<Vertex> Tessellator::TessellateFilledRoundedRect(float x, float y,
-                                                             float w, float h,
-                                                             float radius) {
-  const std::vector<Point> outline = BuildRoundedRectPoints(x, y, w, h, radius);
+std::vector<Vertex> Tessellator::TessellateFilledRoundedRect(
+    float x, float y, float w, float h, float radius, float pixel_scale) {
+  const std::vector<Point> outline =
+      BuildRoundedRectPoints(x, y, w, h, radius, pixel_scale);
   if (outline.size() < 3) {
     return {};
   }
@@ -320,7 +360,8 @@ std::vector<Vertex> Tessellator::TessellateFilledRoundedRect(float x, float y,
 
 std::vector<Point> Tessellator::BuildArcPoints(float cx, float cy, float rx,
                                                float ry, float start_degrees,
-                                               float sweep_degrees) {
+                                               float sweep_degrees,
+                                               float pixel_scale) {
   if (!(rx > 0.0F) || !(ry > 0.0F)) {
     return {};
   }
@@ -335,10 +376,12 @@ std::vector<Point> Tessellator::BuildArcPoints(float cx, float cy, float rx,
 
   // Segment sayısı yarıçapa göre uyarlanır, sonra taranan açı oranına
   // düşürülür. Alt sınır 2: bir yayı en az bir doğru parçası temsil etmeli.
-  const int32_t kFullSegments = AdaptiveSegments(std::max(rx, ry));
+  // Kenar yumuşatmada sapma toleransı korunsun diye yukarı yuvarlanır.
+  const int32_t kFullSegments = AdaptiveSegments(std::max(rx, ry), pixel_scale);
   const float kFraction = std::fabs(sweep) / 360.0F;
+  const float kExact = static_cast<float>(kFullSegments) * kFraction;
   const auto kSegments = std::max(
-      2, static_cast<int32_t>(static_cast<float>(kFullSegments) * kFraction));
+      2, static_cast<int32_t>(pixel_scale > 0.0F ? std::ceil(kExact) : kExact));
 
   std::vector<Point> pts;
   pts.reserve(static_cast<std::size_t>(kSegments) + 1);
@@ -353,9 +396,10 @@ std::vector<Point> Tessellator::BuildArcPoints(float cx, float cy, float rx,
 std::vector<Vertex> Tessellator::TessellateFilledPie(float cx, float cy,
                                                      float rx, float ry,
                                                      float start_degrees,
-                                                     float sweep_degrees) {
+                                                     float sweep_degrees,
+                                                     float pixel_scale) {
   const std::vector<Point> arc =
-      BuildArcPoints(cx, cy, rx, ry, start_degrees, sweep_degrees);
+      BuildArcPoints(cx, cy, rx, ry, start_degrees, sweep_degrees, pixel_scale);
   if (arc.size() < 2) {
     return {};
   }
@@ -374,9 +418,10 @@ std::vector<Vertex> Tessellator::TessellateFilledPie(float cx, float cy,
 std::vector<Vertex> Tessellator::TessellateFilledChord(float cx, float cy,
                                                        float rx, float ry,
                                                        float start_degrees,
-                                                       float sweep_degrees) {
+                                                       float sweep_degrees,
+                                                       float pixel_scale) {
   const std::vector<Point> arc =
-      BuildArcPoints(cx, cy, rx, ry, start_degrees, sweep_degrees);
+      BuildArcPoints(cx, cy, rx, ry, start_degrees, sweep_degrees, pixel_scale);
   if (arc.size() < 3) {
     return {};
   }

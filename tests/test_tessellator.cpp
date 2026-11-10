@@ -853,6 +853,124 @@ TEST(BuildEllipsePoints, CircleFillIsEllipseWithEqualRadii) {
   }
 }
 
+// ─── Kenar yumuşatmada sapma toleranslı segment sayısı ──────────────────────
+
+namespace {
+
+constexpr float kTolerancePx = 0.25f;
+
+/// @brief Ardışık noktaları birleştiren kirişlerin daireden en büyük sapması.
+float MaxChordSagitta(const std::vector<Point>& pts, const Point& centre,
+                      float radius, bool closed) {
+  float worst = 0.0f;
+  const std::size_t edges = closed ? pts.size() : pts.size() - 1;
+  for (std::size_t i = 0; i < edges; ++i) {
+    const Point& a = pts[i];
+    const Point& b = pts[(i + 1) % pts.size()];
+    const float mx = ((a.x + b.x) * 0.5f) - centre.x;
+    const float my = ((a.y + b.y) * 0.5f) - centre.y;
+    worst = std::fmax(worst, radius - std::sqrt((mx * mx) + (my * my)));
+  }
+  return worst;
+}
+
+}  // namespace
+
+TEST(AntialiasSegments, ClassicRuleWithoutScale) {
+  // Olcek yoksa (kenar yumusatma kapali) eski kural: max(16, r * 0.5).
+  EXPECT_EQ(Tessellator::BuildEllipsePoints(0, 0, 30.0f, 30.0f).size(), 16u);
+  EXPECT_EQ(Tessellator::BuildEllipsePoints(0, 0, 30.0f, 30.0f, 0.0f).size(),
+            16u);
+  EXPECT_EQ(Tessellator::BuildEllipsePoints(0, 0, 30.0f, 30.0f, -1.0f).size(),
+            16u);
+  EXPECT_EQ(
+      Tessellator::BuildEllipsePoints(0, 0, 30.0f, 30.0f, std::nanf("")).size(),
+      16u);
+}
+
+TEST(AntialiasSegments, KnownCounts) {
+  // n = ceil(pi / acos(1 - 0.25 / r_px)), [16, 512] araliginda.
+  EXPECT_EQ(Tessellator::BuildEllipsePoints(0, 0, 30.0f, 30.0f, 1.0f).size(),
+            25u);
+  EXPECT_EQ(Tessellator::BuildEllipsePoints(0, 0, 60.0f, 60.0f, 1.0f).size(),
+            35u);
+  EXPECT_EQ(Tessellator::BuildEllipsePoints(0, 0, 100.0f, 100.0f, 1.0f).size(),
+            45u);
+  // Buyuk yaricapta klasik kuraldan az: r=900 -> 450 yerine 134.
+  EXPECT_EQ(Tessellator::BuildEllipsePoints(0, 0, 900.0f, 900.0f, 1.0f).size(),
+            134u);
+  // Kucuk daire alt sinirda, dev daire ust sinirda kalir.
+  EXPECT_EQ(Tessellator::BuildEllipsePoints(0, 0, 2.0f, 2.0f, 1.0f).size(),
+            16u);
+  EXPECT_EQ(Tessellator::BuildEllipsePoints(0, 0, 1e5f, 1e5f, 1.0f).size(),
+            512u);
+  EXPECT_EQ(Tessellator::BuildEllipsePoints(0, 0, 1e30f, 1e30f, 1.0f).size(),
+            512u);
+}
+
+TEST(AntialiasSegments, RadiusIsMeasuredInScreenPixels) {
+  // Yaricap 30, olcek 2: ekranda 60 piksel.
+  EXPECT_EQ(Tessellator::BuildEllipsePoints(0, 0, 30.0f, 30.0f, 2.0f).size(),
+            Tessellator::BuildEllipsePoints(0, 0, 60.0f, 60.0f, 1.0f).size());
+  EXPECT_EQ(Tessellator::BuildEllipsePoints(0, 0, 60.0f, 60.0f, 0.5f).size(),
+            Tessellator::BuildEllipsePoints(0, 0, 30.0f, 30.0f, 1.0f).size());
+}
+
+TEST(AntialiasSegments, CircleChordStaysWithinTolerance) {
+  const Point kCentre{5.0f, -7.0f};
+  for (const float scale : {0.5f, 1.0f, 2.0f}) {
+    for (const float r : {3.0f, 10.0f, 30.0f, 61.0f, 100.0f, 250.0f, 900.0f}) {
+      SCOPED_TRACE("r=" + std::to_string(r) +
+                   " scale=" + std::to_string(scale));
+      const auto pts =
+          Tessellator::BuildEllipsePoints(kCentre.x, kCentre.y, r, r, scale);
+      EXPECT_LE(MaxChordSagitta(pts, kCentre, r, /*closed=*/true) * scale,
+                kTolerancePx + 1e-3f);
+    }
+  }
+}
+
+TEST(AntialiasSegments, ArcChordStaysWithinTolerance) {
+  // Yay, tam cemberin segment sayisini aciya oranlar; asagi yuvarlasaydi
+  // tolerans asilirdi.
+  const Point kCentre{0.0f, 0.0f};
+  for (const float sweep : {30.0f, 90.0f, 135.0f, 250.0f, -200.0f}) {
+    SCOPED_TRACE("sweep=" + std::to_string(sweep));
+    const auto arc = Tessellator::BuildArcPoints(0.0f, 0.0f, 40.0f, 40.0f,
+                                                 10.0f, sweep, 1.0f);
+    EXPECT_LE(MaxChordSagitta(arc, kCentre, 40.0f, /*closed=*/false),
+              kTolerancePx + 1e-3f);
+  }
+}
+
+TEST(AntialiasSegments, RoundedCornerStaysWithinTolerance) {
+  // r=25: klasik kuralda kose basina 4 segment (0,48 piksel sapma).
+  const float r = 25.0f;
+  const auto classic =
+      Tessellator::BuildRoundedRectPoints(0.0f, 0.0f, 100.0f, 80.0f, r);
+  EXPECT_EQ(classic.size(), 4u * 5u);
+
+  const auto pts =
+      Tessellator::BuildRoundedRectPoints(0.0f, 0.0f, 100.0f, 80.0f, r, 1.0f);
+  ASSERT_EQ(pts.size() % 4, 0u);
+  // Ilk kose sag-ust; merkezi (w - r, r).
+  const std::vector<Point> corner(
+      pts.begin(), pts.begin() + static_cast<std::ptrdiff_t>(pts.size() / 4));
+  EXPECT_LE(MaxChordSagitta(corner, Point{100.0f - r, r}, r, /*closed=*/false),
+            kTolerancePx + 1e-3f);
+  EXPECT_GT(pts.size(), classic.size());
+}
+
+TEST(AntialiasSegments, FillAndStrokeUseTheSameCount) {
+  const auto pts = Tessellator::BuildEllipsePoints(0, 0, 70.0f, 40.0f, 1.5f);
+  EXPECT_EQ(
+      Tessellator::TessellateFilledEllipse(0, 0, 70.0f, 40.0f, 1.5f).size(),
+      pts.size() * 3);
+  EXPECT_EQ(
+      Tessellator::TessellateFilledCircle(0, 0, 70.0f, 1.5f).size(),
+      Tessellator::BuildEllipsePoints(0, 0, 70.0f, 70.0f, 1.5f).size() * 3);
+}
+
 // ─── TessellateFilledPolygon / EarClipping ───────────────────────────────────
 
 TEST(TessellateFilledPolygon, LessThanThreePointsReturnsEmpty) {

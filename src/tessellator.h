@@ -4,7 +4,6 @@
 #include "sdl_painter/pen.h"
 #include "sdl_painter/vertex.h"
 
-#include <algorithm>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
@@ -26,22 +25,28 @@ class Tessellator {
                                                   float h);
 
   /// @brief Dolu daire için vertex üret (triangle fan).
-  /// Segment sayısı yarıçapa göre adaptif: max(16, radius * 0.5)
+  /// Segment sayısı yarıçapa göre adaptif (bkz. @ref AdaptiveSegments).
+  /// @param pixel_scale Bkz. @ref AdaptiveSegments.
   static std::vector<Vertex> TessellateFilledCircle(float cx, float cy,
-                                                    float radius);
+                                                    float radius,
+                                                    float pixel_scale = 0.0F);
 
   /// @brief Dolu elips için vertex üret (triangle fan).
   /// Çevre noktaları @ref BuildEllipsePoints'ten gelir; çizgisiyle aynıdır.
+  /// @param pixel_scale Bkz. @ref AdaptiveSegments.
   static std::vector<Vertex> TessellateFilledEllipse(float cx, float cy,
-                                                     float rx, float ry);
+                                                     float rx, float ry,
+                                                     float pixel_scale = 0.0F);
 
   /// @brief Elipsin çevre noktalarını üret (çizgi/dolgu için ortak kaynak).
   ///
   /// Nokta sayısı büyük yarıçaptan @ref AdaptiveSegments ile belirlenir;
   /// daire, iki yarıçapı eşit elipstir. İlk nokta 0°'dedir (+x ekseni). Yol
   /// kapalıdır: ilk nokta sonda tekrarlanmaz.
+  /// @param pixel_scale Bkz. @ref AdaptiveSegments.
   static std::vector<Point> BuildEllipsePoints(float cx, float cy, float rx,
-                                               float ry);
+                                               float ry,
+                                               float pixel_scale = 0.0F);
 
   /// @brief Dolu poligon için vertex üret (ear clipping triangulation).
   /// Konkav poligonları destekler.
@@ -59,9 +64,11 @@ class Tessellator {
   ///
   /// @param radius Köşe yarıçapı. `<= 0` ise düz dikdörtgenin dört köşesi
   ///        döner; `min(w, h) / 2`'yi aşarsa oraya kırpılır (stadyum şekli).
+  /// @param pixel_scale Bkz. @ref AdaptiveSegments.
   /// @return En az dört nokta; `w` veya `h` pozitif değilse boş.
   static std::vector<Point> BuildRoundedRectPoints(float x, float y, float w,
-                                                   float h, float radius);
+                                                   float h, float radius,
+                                                   float pixel_scale = 0.0F);
 
   /// @brief Dolu yuvarlatılmış dikdörtgen: merkezden üçgen fanı.
   ///
@@ -71,10 +78,11 @@ class Tessellator {
   /// bulamıyor ve şeklin bir kısmını atlıyordu.
   ///
   /// @param radius @ref BuildRoundedRectPoints ile aynı kurallar.
+  /// @param pixel_scale Bkz. @ref AdaptiveSegments.
   /// @return Üçgen listesi; `w` veya `h` pozitif değilse boş.
-  static std::vector<Vertex> TessellateFilledRoundedRect(float x, float y,
-                                                         float w, float h,
-                                                         float radius);
+  static std::vector<Vertex> TessellateFilledRoundedRect(
+      float x, float y, float w, float h, float radius,
+      float pixel_scale = 0.0F);
 
   // Açı birimi derece. 0° = +x ekseni; açı, @ref Painter::Rotate ile aynı
   // yönde artar (dolayısıyla dolu daire tessellation'ıyla da aynı yönde).
@@ -88,21 +96,27 @@ class Tessellator {
   ///
   /// @param sweep_degrees Taranan açı. Negatif olabilir (ters yön). Mutlak
   ///        değeri 360°'yi aşarsa 360°'ye kırpılır.
+  /// @param pixel_scale Bkz. @ref AdaptiveSegments.
   /// @return En az iki nokta; dejenere girdide boş.
   static std::vector<Point> BuildArcPoints(float cx, float cy, float rx,
                                            float ry, float start_degrees,
-                                           float sweep_degrees);
+                                           float sweep_degrees,
+                                           float pixel_scale = 0.0F);
 
   /// @brief Dolu dilim (pie): merkez + yay. Üçgen fanı.
+  /// @param pixel_scale Bkz. @ref AdaptiveSegments.
   static std::vector<Vertex> TessellateFilledPie(float cx, float cy, float rx,
                                                  float ry, float start_degrees,
-                                                 float sweep_degrees);
+                                                 float sweep_degrees,
+                                                 float pixel_scale = 0.0F);
 
   /// @brief Dolu kiriş (chord): yay uçları düz bir kirişle kapatılır.
+  /// @param pixel_scale Bkz. @ref AdaptiveSegments.
   static std::vector<Vertex> TessellateFilledChord(float cx, float cy, float rx,
                                                    float ry,
                                                    float start_degrees,
-                                                   float sweep_degrees);
+                                                   float sweep_degrees,
+                                                   float pixel_scale = 0.0F);
 
   /// @brief Çizgi segmenti için kalın quad vertex üret.
   /// @param cap Her iki uca uygulanacak uç stili.
@@ -185,23 +199,23 @@ class Tessellator {
                                                             float u1, float v1);
 
  private:
-  /// @brief Adaptif segment sayısı hesapla.
+  /// @brief Tam çember için adaptif segment sayısı hesapla.
   ///
-  /// Alt sınır görsel kalite, üst sınır ise bellek/CPU koruması içindir:
-  /// 512 segment zaten piksel altı hassasiyet demektir; sınırsız bırakmak
-  /// büyük yarıçaplarda tek çağrıda yüz binlerce vertex üretiyordu.
-  static int32_t AdaptiveSegments(float radius) {
-    constexpr int32_t kMinSegments = 16;
-    constexpr int32_t kMaxSegments = 512;
-    if (!(radius > 0.0F)) {  // NaN ve negatif yarıçap koruması
-      return kMinSegments;
-    }
-    const float kScaled = radius * 0.5F;
-    if (kScaled >= static_cast<float>(kMaxSegments)) {
-      return kMaxSegments;
-    }
-    return std::max(kMinSegments, static_cast<int32_t>(kScaled));
-  }
+  /// İki kural var:
+  /// - `pixel_scale <= 0` (kenar yumuşatma kapalı): `max(16, radius * 0.5)`.
+  ///   Basamaklı kenar küçük sapmaları zaten gizler.
+  /// - `pixel_scale > 0` (kenar yumuşatma açık): kirişin yaydan sapması
+  ///   ekranda 0,25 pikseli geçmeyecek kadar segment. Yumuşak kenarda köşeli
+  ///   görünüm fark ediliyordu (r=30'da 16 segment 0,58 piksel sapıyordu).
+  ///   Yarıçap `pixel_scale` ile ekran pikseline çevrilir; ölçek dönüşümün
+  ///   geometrik ortalamasıdır, eşit olmayan ölçekte sapma uzun eksende
+  ///   toleransı biraz aşabilir.
+  ///
+  /// Her iki kuralda sınırlar [16, 512]: alt sınır görsel kalite, üst sınır
+  /// bellek/CPU koruması içindir. 512 segment zaten piksel altı hassasiyet
+  /// demektir; sınırsız bırakmak büyük yarıçaplarda tek çağrıda yüz binlerce
+  /// vertex üretiyordu.
+  static int32_t AdaptiveSegments(float radius, float pixel_scale = 0.0F);
 
   /// @brief Ardışık çakışan noktaları eleyerek kopya döndür.
   /// @param closed `true` ise ilk noktayla çakışan son nokta da elenir; açık

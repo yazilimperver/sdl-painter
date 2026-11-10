@@ -344,6 +344,27 @@ TEST(PainterAntialiasing, GradientFillKeepsTheFringe) {
   EXPECT_LT(lo->r, hi->r) << "gradient renkleri kayboldu";
 }
 
+TEST(PainterAntialiasing, CurveSegmentsFollowToleranceOnlyWhenEnabled) {
+  // Dolu dairenin fanı n üçgen; kenar yumuşatma her çevre kenarına 2 şerit
+  // üçgeni ekler (bkz. FanSpokesAreInteriorEdges): 9n vertex.
+  auto fill_circle = [](bool antialias, float scale) {
+    Harness h;
+    h.painter.Begin();
+    h.painter.SetAntialiasing(antialias);
+    h.painter.SetBrush(Brush(Color::Red()));
+    h.painter.Scale(scale, scale);
+    h.painter.FillCircle(40.0F, 40.0F, 30.0F);
+    h.painter.End();
+    return h.mock->last_vertices.size();
+  };
+  // Kapalıyken klasik kural, ölçekten bağımsız: max(16, 30 * 0.5) = 16.
+  EXPECT_EQ(fill_circle(false, 1.0F), 16U * 3U);
+  EXPECT_EQ(fill_circle(false, 2.0F), 16U * 3U);
+  // Açıkken ekrandaki yarıçapa göre: 30 piksel -> 25, 60 piksel -> 35.
+  EXPECT_EQ(fill_circle(true, 1.0F), 25U * 9U);
+  EXPECT_EQ(fill_circle(true, 2.0F), 35U * 9U);
+}
+
 // --- GPU ---
 
 namespace {
