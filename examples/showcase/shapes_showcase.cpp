@@ -1,8 +1,18 @@
 /// @brief shapes_showcase — şekiller, yaylar, kesikli çizgiler ve Bézier yolları.
+///
+/// Kenar yumuşatma (`Painter::SetAntialiasing`) varsayılan olarak açık; A ile
+/// kapatılıp fark görülebilir. Karşılaştırma yalnızca tessellator'ın şeridini
+/// göstersin diye MSAA kapalı.
+///
 /// Kontroller:
-///   SPACE — animasyonu duraklat
-///   F1    — kare istatistiği (draw call / vertex)
-///   ESC   — çıkış
+///   A     - kenar yumuşatma aç/kapa
+///   SPACE - animasyonu duraklat
+///   F1    - kare istatistiği (draw call / vertex)
+///   ESC   - çıkış
+///
+/// `--screenshot=DOSYA` verilirse animasyon sabit bir anda durur, kısa süre
+/// sonra ekran görüntüsü alınıp çıkılır; `--no-aa` kenar yumuşatmayı kapalı
+/// başlatır (doküman görselleri bu şekilde üretilir).
 
 #include "sdl_painter/app/application.h"
 #include "sdl_painter/font.h"
@@ -10,10 +20,22 @@
 
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <memory>
+#include <spdlog/spdlog.h>
 #include <string>
+#include <utility>
 
+#include "benchmarks/screenshot.h"
 #include "example_font.h"
+
+// windows.h (spdlog uzerinden dolayli gelebilir) DrawText'i DrawTextA/W
+// makrosuna cevirir ve Painter::DrawText cagrisini bozar. painter.h bunu
+// kendi icinde temizler, ancak windows.h ondan SONRA dahil edilirse makro
+// geri doner; bu yuzden include sirasindan bagimsiz olarak burada da temizle.
+#ifdef DrawText
+#undef DrawText
+#endif
 
 namespace sp = sdl_painter;
 
@@ -97,9 +119,22 @@ void Caption(sp::Painter& p, const std::shared_ptr<sp::Font>& font,
         text, sp::Alignment::kCenter, kMuted);
 }
 
+/// Ekran görüntüsü modunda animasyonun durduğu an (tur oranı) ve bekleme.
+constexpr float kScreenshotPhase = 0.35F;
+constexpr float kScreenshotAfterSeconds = 1.0F;
+
 class ShapesShowcase : public sp::Application {
  public:
-  using Application::Application;
+  ShapesShowcase(sp::AppConfig config, std::string screenshot_path,
+                 bool antialias)
+      : Application(std::move(config)),
+        mScreenshotPath(std::move(screenshot_path)),
+        mAntialias(antialias) {
+    if (!mScreenshotPath.empty()) {
+      mTime = kScreenshotPhase * kPeriod;
+      mPaused = true;
+    }
+  }
 
  protected:
   bool OnInit() override {
@@ -120,11 +155,24 @@ class ShapesShowcase : public sp::Application {
     if (!mPaused) {
       mTime += dt;
     }
+    if (mScreenshotPath.empty() || mCaptured) {
+      return;
+    }
+    mElapsed += dt;
+    if (mElapsed >= kScreenshotAfterSeconds) {
+      mCaptured = true;
+      // Ön tampon: bir önceki karenin sunulmuş hâli (bkz. stats_overlay).
+      if (bench::SaveBackBufferPng(mScreenshotPath, Width(), Height(), true)) {
+        spdlog::info("Ekran goruntusu: {}", mScreenshotPath);
+      }
+      Quit();
+    }
   }
 
   void OnRender(sp::Painter& p) override {
     const float t = std::fmod(mTime / kPeriod, 1.0F);
 
+    p.SetAntialiasing(mAntialias);
     p.Clear(kBackground);
     DrawChrome(p);
 
@@ -144,6 +192,11 @@ class ShapesShowcase : public sp::Application {
       Quit();
     } else if (event.key == sp::Key::kSpace) {
       mPaused = !mPaused;
+    } else if (event.key == sp::Key::kA) {
+      mAntialias = !mAntialias;
+      SetTitle(mAntialias
+                   ? "SDLPainter: shapes_showcase (kenar yumusatma acik)"
+                   : "SDLPainter: shapes_showcase (kenar yumusatma kapali)");
     }
   }
 
@@ -307,17 +360,39 @@ class ShapesShowcase : public sp::Application {
   std::shared_ptr<sp::Font> mCaptionFont;
   float mTime{0.0F};
   bool mPaused{false};
+  std::string mScreenshotPath;
+  float mElapsed{0.0F};
+  bool mCaptured{false};
+  bool mAntialias{true};
 };
 
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
+  std::string screenshot_path;
+  bool antialias = true;
+  for (int i = 1; i < argc; ++i) {
+    if (std::strncmp(argv[i], "--screenshot=", 13) == 0) {
+      screenshot_path = argv[i] + 13;
+    } else if (std::strcmp(argv[i], "--no-aa") == 0) {
+      antialias = false;
+    }
+  }
+
   sp::AppConfig config;
-  config.title = "SDLPainter — shapes_showcase: SPACE durdur, F1 istatistik";
+  config.title =
+      "SDLPainter: shapes_showcase (A kenar yumusatma, SPACE durdur, F1 "
+      "istatistik)";
   config.width = 900;
   config.height = 512;
-  config.stats_overlay = sp::StatsOverlayMode::kDetailed;
+  // Kenar yumuşatma tessellator'dan; MSAA kapalı ki A ile görülen fark
+  // yalnızca ondan gelsin.
+  config.msaa_samples = 0;
+  // Ekran görüntüsünde gösterge olmasın: görsel şekilleri anlatsın.
+  config.stats_overlay = screenshot_path.empty()
+                             ? sp::StatsOverlayMode::kDetailed
+                             : sp::StatsOverlayMode::kNone;
 
-  ShapesShowcase app(config);
+  ShapesShowcase app(std::move(config), std::move(screenshot_path), antialias);
   return app.Run();
 }

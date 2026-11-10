@@ -171,7 +171,7 @@ void DrawScene(Painter& painter, const Image& image) {
 /// @param out_pixels Başarıda RGBA8 içerik buraya yazılır.
 /// @param out_skip Ortam uygun değilse sebep buraya yazılır ve `false` döner.
 bool RenderScene(RendererBackend backend, std::vector<uint8_t>& out_pixels,
-                 std::string& out_skip) {
+                 std::string& out_skip, bool antialias = false) {
   const sdl_painter::testing::HiddenWindow window(backend, 192, 144);
   if (window.Get() == nullptr) {
     out_skip = std::string("Pencere olusturulamadi: ") + window.Error();
@@ -204,6 +204,7 @@ bool RenderScene(RendererBackend backend, std::vector<uint8_t>& out_pixels,
       out_skip = "Hedefe gecilemedi.";
       return false;
     }
+    painter.SetAntialiasing(antialias);
     DrawScene(painter, image);
     painter.ResetRenderTarget();
     painter.End();
@@ -327,17 +328,20 @@ std::string Neighbourhood(const std::vector<uint8_t>& a,
 
 #ifdef SDLPAINTER_HAS_VULKAN
 
-TEST(BackendParity, OpenGLAndVulkanProduceTheSameImage) {
+namespace {
+
+/// @brief Sahneyi iki backend'de çizip karşılaştır.
+void ExpectBackendsMatch(bool antialias) {
   const sdl_painter::testing::ValidationGuard guard;
 
   std::vector<uint8_t> gl_pixels;
   std::string skip;
-  if (!RenderScene(RendererBackend::kOpenGL, gl_pixels, skip)) {
+  if (!RenderScene(RendererBackend::kOpenGL, gl_pixels, skip, antialias)) {
     SDLPAINTER_BACKEND_UNAVAILABLE("OpenGL: " + skip);
   }
 
   std::vector<uint8_t> vk_pixels;
-  if (!RenderScene(RendererBackend::kVulkan, vk_pixels, skip)) {
+  if (!RenderScene(RendererBackend::kVulkan, vk_pixels, skip, antialias)) {
     SDLPAINTER_BACKEND_UNAVAILABLE("Vulkan: " + skip);
   }
 
@@ -359,6 +363,18 @@ TEST(BackendParity, OpenGLAndVulkanProduceTheSameImage) {
       << "OpenGL ve Vulkan ciktilari beklenenden fazla ayrisiyor."
       << Neighbourhood(gl_pixels, vk_pixels, report.worst_x, report.worst_y)
       << RenderMap(report);
+}
+
+}  // namespace
+
+TEST(BackendParity, OpenGLAndVulkanProduceTheSameImage) {
+  ExpectBackendsMatch(/*antialias=*/false);
+}
+
+/// Kenar yumuşatma tessellator'da üretildiği için iki backend aynı şeridi
+/// rasterleştirir; ara tonlar da aynı çıkmalı.
+TEST(BackendParity, OpenGLAndVulkanMatchWithAntialiasing) {
+  ExpectBackendsMatch(/*antialias=*/true);
 }
 
 /// Aynı backend iki kez çalıştırıldığında birebir aynı çıktıyı vermeli.

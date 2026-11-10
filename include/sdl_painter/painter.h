@@ -43,6 +43,7 @@ struct RenderState {
   BlendMode blend_mode{BlendMode::kAlpha};
   Rect clip_rect;
   bool has_clip{false};
+  bool antialiasing{false};  ///< Bkz. @ref Painter::SetAntialiasing.
 };
 
 /// @brief Ana çizim sınıfı
@@ -261,6 +262,31 @@ class SDLPAINTER_API Painter {
   /// @brief Yürürlükteki karıştırma modu.
   [[nodiscard]] BlendMode GetBlendMode() const noexcept {
     return mCurrentState.blend_mode;
+  }
+
+  /// @brief Dolgu ve çizgilerde kenar yumuşatmayı aç veya kapat.
+  ///
+  /// Açıkken her şeklin kenarına 1 ekran pikseli genişliğinde bir alfa şeridi
+  /// eklenir (tessellator'da; backend'den bağımsız, OpenGL ve Vulkan aynı
+  /// sonucu verir). Şerit eski kenarı ortalar: şeklin boyutu değişmez ve tam
+  /// sayı koordinatlı dikdörtgenler keskin kalır. Genişlik dönüşümün
+  /// ölçeğinden hesaplanır, `Scale` ile büyütülen şekil bulanıklaşmaz.
+  /// 1 pikselden ince kalem 1 piksel genişlikte çizilir, alfası genişlikle
+  /// orantılı azalır.
+  ///
+  /// Metin (glyph'ler zaten yumuşak) ve görsellerin kenarları kapsam dışıdır.
+  /// @ref Save / @ref Restore kapsamındadır. Varsayılan kapalı.
+  ///
+  /// @note OpenGL'de `AppConfig::msaa_samples` da kenarları yumuşatır; bu
+  ///       seçenek açıkken MSAA gerekmez. Vulkan'da kenar yumuşatma yalnızca
+  ///       bununla mümkündür.
+  void SetAntialiasing(bool enabled) noexcept {
+    mCurrentState.antialiasing = enabled;
+  }
+
+  /// @brief Kenar yumuşatma açık mı?
+  [[nodiscard]] bool IsAntialiasing() const noexcept {
+    return mCurrentState.antialiasing;
   }
 
   /// @brief İki nokta arasına çizgi çiz.
@@ -570,13 +596,36 @@ class SDLPAINTER_API Painter {
 
   /// @brief Çizgi geometrisini tek renkle batcher'a ver (karıştırma senkronu
   ///        dahil).
-  void PushStroke(const std::vector<Vertex>& verts, const Color& color);
+  /// @param coverage Kenar yumuşatmada ince kalemin alfa çarpanı (bkz.
+  ///        @ref AdjustStrokeWidth); aksi halde 1.
+  void PushStroke(const std::vector<Vertex>& verts, const Color& color,
+                  float coverage = 1.0F);
 
   /// @brief Dolgu geometrisini fırçaya göre renklendirip batcher'a ver.
   ///
   /// Düz fırçada renk batcher'da tek seferde yazılır; gradient'te vertex
   /// başına hesaplanır. Vertex'ler bu yüzden `const` değildir.
   void PushFilled(std::vector<Vertex>& verts);
+
+  /// @brief Yürürlükteki dönüşümün piksel ölçeği (`sqrt(|det|)`).
+  ///
+  /// Kenar yumuşatma şeridinin şekil koordinatlarındaki genişliği `1 / ölçek`
+  /// olur; böylece şerit her ölçekte 1 ekran pikselidir.
+  [[nodiscard]] float PixelScale() const noexcept;
+
+  /// @brief Kalem genişliği ve ince kalem için alfa çarpanı.
+  struct StrokeWidth {
+    float width;
+    float coverage;
+  };
+
+  /// @brief Kenar yumuşatma açıkken 1 pikselden ince kalemi 1 piksele çıkar.
+  ///
+  /// Şerit yarım piksel içeri çektiği için daha ince bir çizgi kendi üstüne
+  /// katlanırdı. Genişlik 1 piksele çıkarılır, alfa `istenen / 1 piksel`
+  /// ile çarpılır; toplam kapsama istenen genişliğe eşit kalır. Kapalıyken
+  /// genişlik olduğu gibi döner.
+  [[nodiscard]] StrokeWidth AdjustStrokeWidth(float requested) const noexcept;
 
   /// @brief Tek bir satırı baseline'a çiz (satır sonu içermediği varsayılır).
   ///

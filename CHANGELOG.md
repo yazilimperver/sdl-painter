@@ -20,6 +20,16 @@
   Çatının gamepad olaylarının yanında SDL'in doğrudan kullanımıyla ad, pil,
   ham eksen değerleri, ek düğmeler, touchpad, jiroskop ve tetik titreşimi
   gösteriliyor. `input` örneğine de gamepad eklendi.
+- Kenar yumuşatma: `Painter::SetAntialiasing(bool)` / `IsAntialiasing()`
+  (varsayılan kapalı, `Save`/`Restore` kapsamında). Dolgu ve çizgilerin
+  kenarına tessellator'da 1 ekran pikseli genişliğinde bir alfa şeridi
+  eklenir: OpenGL ile Vulkan aynı sonucu verir (parite testi AA açıkken de 0
+  piksel fark), render target'larda da çalışır. Şerit eski kenarı ortalar;
+  şeklin boyutu değişmez, tam sayı koordinatlı dikdörtgenler keskin kalır,
+  yarı saydam renkte çift karışım olmaz. Genişlik dönüşümün ölçeğinden
+  hesaplanır. 1 pikselden ince kalem 1 piksel genişlikte, orantılı alfayla
+  çizilir. Metin ve görsellerin kenarları kapsam dışı. `shapes_showcase`
+  örneğinde A tuşu açıp kapatır.
 - `IRenderer::LifetimeToken()`: renderer nesnesi yaşadıkça geçerli kalan bir
   `std::weak_ptr`. Sanal değil; kendi renderer'ını yazan tüketici de
   kendiliğinden alır.

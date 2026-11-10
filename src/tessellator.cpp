@@ -2,8 +2,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdint>
 #include <numeric>
 #include <spdlog/spdlog.h>
+#include <unordered_map>
 
 namespace sdl_painter {
 
@@ -102,9 +104,12 @@ void AppendArcFan(std::vector<Vertex>& out, const Point& pivot,
       next = {centre.x + radius * (c * dir_x + s * tangent_x),
               centre.y + radius * (c * dir_y + s * tangent_y)};
     }
-    out.emplace_back(pivot.x, pivot.y);
-    out.emplace_back(prev.x, prev.y);
-    out.emplace_back(next.x, next.y);
+    // Tepe yayın bir ucuysa (bkz. AppendCap) o uçtaki üçgen sıfır alanlıdır.
+    if (!SamePoint(pivot, prev) && !SamePoint(pivot, next)) {
+      out.emplace_back(pivot.x, pivot.y);
+      out.emplace_back(prev.x, prev.y);
+      out.emplace_back(next.x, next.y);
+    }
     prev = next;
   }
 }
@@ -462,8 +467,11 @@ void Tessellator::AppendCap(std::vector<Vertex>& out, const Point& tip,
                             const Point& right, float half_width, LineCap cap) {
   if (cap == LineCap::kRound) {
     // Gövdenin dışında kalan yarım disk: bir köşeden dışarı doğru dönüp
-    // diğer köşede biter.
-    AppendArcFan(out, tip, tip, left, right, outward_x, outward_y, half_width,
+    // diğer köşede biter. Fan gövdenin köşesinden açılır, uç noktasından
+    // değil: böylece disk gövdeyle `left`-`right` kenarını birebir paylaşır.
+    // Uç noktasından açılsaydı o kenar iki parçaya bölünür (T-birleşim) ve
+    // kenar yumuşatma onu sınır sanıp araya yarık açardı.
+    AppendArcFan(out, left, tip, left, right, outward_x, outward_y, half_width,
                  kTwoPi * 0.5F);
     return;
   }
@@ -764,6 +772,233 @@ std::vector<Vertex> Tessellator::TessellatePolyline(
   }
 
   return result;
+}
+
+namespace {
+
+/// @brief Konumu yakın köşeleri tek indekste birleştirir.
+///
+/// Parçalar ortak köşeleri aynı hesapla üretse de son bitte ayrışabilir;
+/// birleşmeyen bir iç kenar sınır sanılır ve iki üçgen birbirinden ayrılırdı.
+/// Izgara hücresi tolerans kadardır, komşu hücreler de aranır.
+class VertexWelder {
+ public:
+  explicit VertexWelder(float tolerance) : mTolerance(tolerance) {}
+
+  std::uint32_t Weld(const Point& p) {
+    const auto kCx = static_cast<std::int64_t>(std::floor(p.x / mTolerance));
+    const auto kCy = static_cast<std::int64_t>(std::floor(p.y / mTolerance));
+    for (std::int64_t dx = -1; dx <= 1; ++dx) {
+      for (std::int64_t dy = -1; dy <= 1; ++dy) {
+        const auto it = mCells.find(Key(kCx + dx, kCy + dy));
+        if (it == mCells.end()) {
+          continue;
+        }
+        for (const std::uint32_t idx : it->second) {
+          if (std::fabs(mPoints[idx].x - p.x) <= mTolerance &&
+              std::fabs(mPoints[idx].y - p.y) <= mTolerance) {
+            return idx;
+          }
+        }
+      }
+    }
+    const auto kIndex = static_cast<std::uint32_t>(mPoints.size());
+    mPoints.push_back(p);
+    mCells[Key(kCx, kCy)].push_back(kIndex);
+    return kIndex;
+  }
+
+  [[nodiscard]] const std::vector<Point>& Points() const { return mPoints; }
+
+ private:
+  static std::uint64_t Key(std::int64_t x, std::int64_t y) {
+    return (static_cast<std::uint64_t>(static_cast<std::uint32_t>(x)) << 32U) |
+           static_cast<std::uint64_t>(static_cast<std::uint32_t>(y));
+  }
+
+  float mTolerance;
+  std::vector<Point> mPoints;
+  std::unordered_map<std::uint64_t, std::vector<std::uint32_t>> mCells;
+};
+
+std::uint64_t EdgeKey(std::uint32_t a, std::uint32_t b) {
+  const std::uint32_t lo = std::min(a, b);
+  const std::uint32_t hi = std::max(a, b);
+  return (static_cast<std::uint64_t>(lo) << 32U) | hi;
+}
+
+/// @brief Bir kenarın kaç üçgende geçtiği ve ilk geçtiği üçgendeki yönü.
+struct EdgeUse {
+  std::uint32_t count{0};
+  std::uint32_t from{0};
+  std::uint32_t to{0};
+  std::uint32_t opposite{0};  ///< Üçgenin kenara karşı köşesi.
+};
+
+Vertex WithCoverage(const Point& p, std::uint8_t coverage) {
+  Vertex v{p.x, p.y};
+  v.a = coverage;
+  return v;
+}
+
+}  // namespace
+
+std::vector<Vertex> Tessellator::AntialiasTriangles(
+    const std::vector<Vertex>& triangles, float fringe_width) {
+  if (!(fringe_width > 0.0F) || triangles.size() < 3) {
+    return triangles;
+  }
+  for (const Vertex& v : triangles) {
+    if (!std::isfinite(v.x) || !std::isfinite(v.y)) {
+      return triangles;
+    }
+  }
+
+  // 1. Köşeleri birleştir; alanı sıfır üçgenler kenar sayımını bozar, atılır.
+  VertexWelder welder(fringe_width * 1e-3F);
+  std::vector<std::uint32_t> tris;
+  tris.reserve(triangles.size());
+  const float kMinArea2 = fringe_width * fringe_width * 1e-6F;
+  for (std::size_t i = 0; i + 2 < triangles.size(); i += 3) {
+    const std::uint32_t a = welder.Weld({triangles[i].x, triangles[i].y});
+    const std::uint32_t b =
+        welder.Weld({triangles[i + 1].x, triangles[i + 1].y});
+    const std::uint32_t c =
+        welder.Weld({triangles[i + 2].x, triangles[i + 2].y});
+    if (a == b || b == c || a == c) {
+      continue;
+    }
+    const Point& pa = welder.Points()[a];
+    const Point& pb = welder.Points()[b];
+    const Point& pc = welder.Points()[c];
+    const float area2 =
+        (pb.x - pa.x) * (pc.y - pa.y) - (pc.x - pa.x) * (pb.y - pa.y);
+    if (std::fabs(area2) <= kMinArea2) {
+      continue;
+    }
+    tris.push_back(a);
+    tris.push_back(b);
+    tris.push_back(c);
+  }
+  const std::vector<Point>& pos = welder.Points();
+  if (tris.empty()) {
+    return {};
+  }
+
+  // 2. Kenarları say: tek üçgene ait olanlar sınırdır.
+  std::unordered_map<std::uint64_t, EdgeUse> edges;
+  edges.reserve(tris.size());
+  for (std::size_t t = 0; t < tris.size(); t += 3) {
+    for (std::size_t e = 0; e < 3; ++e) {
+      const std::uint32_t from = tris[t + e];
+      const std::uint32_t to = tris[t + ((e + 1) % 3)];
+      EdgeUse& use = edges[EdgeKey(from, to)];
+      if (use.count == 0) {
+        use.from = from;
+        use.to = to;
+        use.opposite = tris[t + ((e + 2) % 3)];
+      }
+      ++use.count;
+    }
+  }
+
+  // 3. Sınır köşelerinin dışa bakan normallerini topla. Kenarlar üçgen
+  //    sırasıyla dolaşılır: çıktı, map'in sırasına bağlı kalmasın.
+  std::vector<Point> normal_sum(pos.size(), Point{0.0F, 0.0F});
+  std::vector<std::uint32_t> boundary_degree(pos.size(), 0);
+  std::vector<const EdgeUse*> boundary;
+  for (std::size_t t = 0; t < tris.size(); t += 3) {
+    for (std::size_t e = 0; e < 3; ++e) {
+      const EdgeUse& use =
+          edges.at(EdgeKey(tris[t + e], tris[t + ((e + 1) % 3)]));
+      if (use.count == 1) {
+        boundary.push_back(&use);
+      }
+    }
+  }
+  for (const EdgeUse* candidate : boundary) {
+    const EdgeUse& use = *candidate;
+    const Point& p = pos[use.from];
+    const Point& q = pos[use.to];
+    const float dx = q.x - p.x;
+    const float dy = q.y - p.y;
+    const float len = std::sqrt((dx * dx) + (dy * dy));
+    if (len <= 0.0F) {
+      continue;
+    }
+    float nx = -dy / len;
+    float ny = dx / len;
+    // Normal, kenara karşı köşenin tersine bakmalı (üçgenin dışına).
+    const Point& o = pos[use.opposite];
+    if (((o.x - p.x) * nx) + ((o.y - p.y) * ny) > 0.0F) {
+      nx = -nx;
+      ny = -ny;
+    }
+    for (const std::uint32_t idx : {use.from, use.to}) {
+      normal_sum[idx].x += nx;
+      normal_sum[idx].y += ny;
+      ++boundary_degree[idx];
+    }
+  }
+
+  // 4. İçeri çekme ve dış şerit miktarları. Küçük şekil kendi üstüne
+  //    katlanmasın diye içeri çekilmez.
+  float min_x = pos[0].x;
+  float max_x = pos[0].x;
+  float min_y = pos[0].y;
+  float max_y = pos[0].y;
+  for (const Point& p : pos) {
+    min_x = std::min(min_x, p.x);
+    max_x = std::max(max_x, p.x);
+    min_y = std::min(min_y, p.y);
+    max_y = std::max(max_y, p.y);
+  }
+  const bool kTiny = std::min(max_x - min_x, max_y - min_y) < fringe_width;
+  const float kInset = kTiny ? 0.0F : fringe_width * 0.5F;
+  const float kOutset = fringe_width * 0.5F;
+
+  // Köşe yönü: normallerin ortalaması. İki kenarın miter'ı köşe açısıyla
+  // uzar; çok sivri köşede sınırlanır, yoksa şerit uzağa kaçar.
+  constexpr float kMaxMiter = 4.0F;
+  std::vector<Point> inner(pos);
+  std::vector<Point> outer(pos);
+  for (std::size_t i = 0; i < pos.size(); ++i) {
+    if (boundary_degree[i] == 0) {
+      continue;
+    }
+    const float sx = normal_sum[i].x;
+    const float sy = normal_sum[i].y;
+    const float len = std::sqrt((sx * sx) + (sy * sy));
+    if (len < 1e-6F) {
+      continue;
+    }
+    const float scale =
+        std::min(static_cast<float>(boundary_degree[i]) / len, kMaxMiter);
+    const float mx = sx / len * scale;
+    const float my = sy / len * scale;
+    inner[i] = {pos[i].x - (mx * kInset), pos[i].y - (my * kInset)};
+    outer[i] = {pos[i].x + (mx * kOutset), pos[i].y + (my * kOutset)};
+  }
+
+  // 5. Çekirdek üçgenler (tam kapsama) ve sınır şeritleri.
+  std::vector<Vertex> out;
+  out.reserve(tris.size() + (boundary.size() * 6));
+  constexpr std::uint8_t kFull = 255;
+  constexpr std::uint8_t kNone = 0;
+  for (const std::uint32_t idx : tris) {
+    out.push_back(WithCoverage(inner[idx], kFull));
+  }
+  for (const EdgeUse* use : boundary) {
+    const std::uint32_t a = use->from;
+    const std::uint32_t b = use->to;
+    out.push_back(WithCoverage(inner[a], kFull));
+    out.push_back(WithCoverage(inner[b], kFull));
+    out.push_back(WithCoverage(outer[b], kNone));
+    out.push_back(WithCoverage(inner[a], kFull));
+    out.push_back(WithCoverage(outer[b], kNone));
+    out.push_back(WithCoverage(outer[a], kNone));
+  }
+  return out;
 }
 
 std::vector<TexturedVertex> Tessellator::TessellateTexturedRect(

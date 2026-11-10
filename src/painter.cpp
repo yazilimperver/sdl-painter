@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstdint>
 #include <glm/gtc/type_ptr.hpp>
 #include <spdlog/spdlog.h>
 #include <utility>
@@ -222,6 +223,24 @@ Color ScaleRgb(const Color& c, float k) noexcept {
 /// Linear'de esit-t yerleri dogru oldugu icin bu bir yari-duzlem kirpmasidir.
 /// Sinirin uzerindeki noktalar alt parcaya verilir; boylece iki parca
 /// geometriyi tekrarlamadan bolusur.
+/// @brief Kenar yumusatma kapsamasini (alfa) tasiyan dogrusal enterpolasyon.
+///
+/// Kapsama alfa kanalinda tasinir (bkz. Tessellator::AntialiasTriangles);
+/// bolmede yeni noktalar onu da enterpole etmeli, yoksa seritteki ara nokta
+/// tam kapsama alirdi. Kapsama yokken butun alfalar 255'tir, sonuc degismez.
+std::uint8_t LerpCoverage(std::uint8_t a, std::uint8_t b, float s) {
+  const float kValue = static_cast<float>(a) +
+                       ((static_cast<float>(b) - static_cast<float>(a)) * s);
+  return static_cast<std::uint8_t>(
+      std::lround(std::clamp(kValue, 0.0F, 255.0F)));
+}
+
+Vertex LerpVertex(const Vertex& a, const Vertex& b, float s) {
+  Vertex v{a.x + ((b.x - a.x) * s), a.y + ((b.y - a.y) * s)};
+  v.a = LerpCoverage(a.a, b.a, s);
+  return v;
+}
+
 std::vector<Vertex> ClipToGradientLine(const std::vector<Vertex>& poly,
                                        const Brush& brush, float limit,
                                        bool keep_below) {
@@ -240,7 +259,7 @@ std::vector<Vertex> ClipToGradientLine(const std::vector<Vertex>& poly,
     if (in_a != in_b) {
       const float denom = da - db;
       const float s = std::fabs(denom) < 1e-12F ? 0.0F : da / denom;
-      out.emplace_back(a.x + (b.x - a.x) * s, a.y + (b.y - a.y) * s);
+      out.push_back(LerpVertex(a, b, s));
     }
   }
   return out;
@@ -332,9 +351,9 @@ void SubdivideRadial(const Vertex& a, const Vertex& b, const Vertex& c,
     out.push_back(c);
     return;
   }
-  const Vertex ab{(a.x + b.x) * 0.5F, (a.y + b.y) * 0.5F};
-  const Vertex bc{(b.x + c.x) * 0.5F, (b.y + c.y) * 0.5F};
-  const Vertex ca{(c.x + a.x) * 0.5F, (c.y + a.y) * 0.5F};
+  const Vertex ab = LerpVertex(a, b, 0.5F);
+  const Vertex bc = LerpVertex(b, c, 0.5F);
+  const Vertex ca = LerpVertex(c, a, 0.5F);
   SubdivideRadial(a, ab, ca, brush, depth - 1, out);
   SubdivideRadial(ab, b, bc, brush, depth - 1, out);
   SubdivideRadial(ca, bc, c, brush, depth - 1, out);
@@ -394,8 +413,13 @@ void SubdivideRadialAtCentre(const Vertex& a, const Vertex& b, const Vertex& c,
   wb = wb < kSnap ? 0.0F : wb;
   wc = wc < kSnap ? 0.0F : wc;
   const float sum = wa + wb + wc;
-  const Vertex p{(a.x * wa + b.x * wb + c.x * wc) / sum,
-                 (a.y * wa + b.y * wb + c.y * wc) / sum};
+  Vertex p{(a.x * wa + b.x * wb + c.x * wc) / sum,
+           (a.y * wa + b.y * wb + c.y * wc) / sum};
+  p.a = static_cast<std::uint8_t>(std::lround(std::clamp(
+      ((static_cast<float>(a.a) * wa) + (static_cast<float>(b.a) * wb) +
+       (static_cast<float>(c.a) * wc)) /
+          sum,
+      0.0F, 255.0F)));
   // Merkezden bolmek de bir bolme adimidir; parcalar bir seviye harcar.
   // Merkez bir koseye oturduysa ucgen bolunmemistir.
   const int32_t kParts =
@@ -448,23 +472,25 @@ std::vector<Vertex> SubdivideForGradient(const std::vector<Vertex>& verts,
 /// vertex konumlari hala sekil-yerel oldugu icin gradient koordinatlari da
 /// cizim koordinatlariyla ayni uzayda kalir.
 void ApplyBrushColors(std::vector<Vertex>& verts, const Brush& brush) {
+  // Girdinin alfasi kenar yumusatma kapsamasidir (yoksa 255); rengin
+  // alfasiyla carpilir.
+  const auto kPaint = [](Vertex& v, const Color& c) {
+    v.r = c.r;
+    v.g = c.g;
+    v.b = c.b;
+    v.a = static_cast<std::uint8_t>(
+        ((static_cast<std::uint32_t>(c.a) * v.a) + 127U) / 255U);
+  };
   if (!brush.IsGradient()) {
     const Color c = brush.GetColor();
     for (auto& v : verts) {
-      v.r = c.r;
-      v.g = c.g;
-      v.b = c.b;
-      v.a = c.a;
+      kPaint(v, c);
     }
     return;
   }
   for (auto& v : verts) {
-    const Color c = LerpColor(brush.GetColor(), brush.GetColor2(),
-                              GradientT(brush, v.x, v.y));
-    v.r = c.r;
-    v.g = c.g;
-    v.b = c.b;
-    v.a = c.a;
+    kPaint(v, LerpColor(brush.GetColor(), brush.GetColor2(),
+                        GradientT(brush, v.x, v.y)));
   }
 }
 
@@ -796,13 +822,15 @@ void Painter::DrawLine(float x1, float y1, float x2, float y2) {
   }
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
+    const StrokeWidth kOutline =
+        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
     auto outline_verts =
-        StrokeOpenPath({{x1, y1}, {x2, y2}},
-                       pen.GetWidth() + 2.0F * pen.GetOutlineWidth(), pen);
-    PushStroke(outline_verts, pen.GetOutlineColor());
+        StrokeOpenPath({{x1, y1}, {x2, y2}}, kOutline.width, pen);
+    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
   }
-  auto verts = StrokeOpenPath({{x1, y1}, {x2, y2}}, pen.GetWidth(), pen);
-  PushStroke(verts, pen.GetColor());
+  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
+  auto verts = StrokeOpenPath({{x1, y1}, {x2, y2}}, kStroke.width, pen);
+  PushStroke(verts, pen.GetColor(), kStroke.coverage);
 }
 
 void Painter::DrawLine(const Point& from, const Point& to) {
@@ -815,15 +843,18 @@ void Painter::DrawRect(float x, float y, float w, float h) {
   }
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
+    const StrokeWidth kOutline =
+        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
     auto outline_verts = Tessellator::TessellateStrokedRect(
-        x, y, w, h, pen.GetWidth() + 2.0F * pen.GetOutlineWidth(),
-        pen.GetJoinStyle(), DashOf(pen), pen.GetDashCount(), pen.GetCapStyle());
-    PushStroke(outline_verts, pen.GetOutlineColor());
+        x, y, w, h, kOutline.width, pen.GetJoinStyle(), DashOf(pen),
+        pen.GetDashCount(), pen.GetCapStyle());
+    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
   }
+  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
   auto verts = Tessellator::TessellateStrokedRect(
-      x, y, w, h, pen.GetWidth(), pen.GetJoinStyle(), DashOf(pen),
+      x, y, w, h, kStroke.width, pen.GetJoinStyle(), DashOf(pen),
       pen.GetDashCount(), pen.GetCapStyle());
-  PushStroke(verts, pen.GetColor());
+  PushStroke(verts, pen.GetColor(), kStroke.coverage);
 }
 
 void Painter::DrawRect(const Rect& rect) {
@@ -854,12 +885,14 @@ void Painter::DrawRoundedRect(float x, float y, float w, float h,
   }
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
-    auto outline_verts = StrokeClosedPath(
-        pts, pen.GetWidth() + 2.0F * pen.GetOutlineWidth(), pen);
-    PushStroke(outline_verts, pen.GetOutlineColor());
+    const StrokeWidth kOutline =
+        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
+    auto outline_verts = StrokeClosedPath(pts, kOutline.width, pen);
+    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
   }
-  auto verts = StrokeClosedPath(pts, pen.GetWidth(), pen);
-  PushStroke(verts, pen.GetColor());
+  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
+  auto verts = StrokeClosedPath(pts, kStroke.width, pen);
+  PushStroke(verts, pen.GetColor(), kStroke.coverage);
 }
 
 void Painter::DrawRoundedRect(const Rect& rect, float radius) {
@@ -888,15 +921,18 @@ void Painter::DrawCircle(float cx, float cy, float radius) {
   }
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
+    const StrokeWidth kOutline =
+        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
     auto outline_verts = Tessellator::TessellateStrokedCircle(
-        cx, cy, radius, pen.GetWidth() + 2.0F * pen.GetOutlineWidth(),
-        pen.GetJoinStyle(), DashOf(pen), pen.GetDashCount(), pen.GetCapStyle());
-    PushStroke(outline_verts, pen.GetOutlineColor());
+        cx, cy, radius, kOutline.width, pen.GetJoinStyle(), DashOf(pen),
+        pen.GetDashCount(), pen.GetCapStyle());
+    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
   }
+  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
   auto verts = Tessellator::TessellateStrokedCircle(
-      cx, cy, radius, pen.GetWidth(), pen.GetJoinStyle(), DashOf(pen),
+      cx, cy, radius, kStroke.width, pen.GetJoinStyle(), DashOf(pen),
       pen.GetDashCount(), pen.GetCapStyle());
-  PushStroke(verts, pen.GetColor());
+  PushStroke(verts, pen.GetColor(), kStroke.coverage);
 }
 
 void Painter::DrawCircle(const Point& center, float radius) {
@@ -921,15 +957,18 @@ void Painter::DrawEllipse(float cx, float cy, float rx, float ry) {
   }
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
+    const StrokeWidth kOutline =
+        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
     auto outline_verts = Tessellator::TessellateStrokedEllipse(
-        cx, cy, rx, ry, pen.GetWidth() + 2.0F * pen.GetOutlineWidth(),
-        pen.GetJoinStyle(), DashOf(pen), pen.GetDashCount(), pen.GetCapStyle());
-    PushStroke(outline_verts, pen.GetOutlineColor());
+        cx, cy, rx, ry, kOutline.width, pen.GetJoinStyle(), DashOf(pen),
+        pen.GetDashCount(), pen.GetCapStyle());
+    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
   }
+  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
   auto verts = Tessellator::TessellateStrokedEllipse(
-      cx, cy, rx, ry, pen.GetWidth(), pen.GetJoinStyle(), DashOf(pen),
+      cx, cy, rx, ry, kStroke.width, pen.GetJoinStyle(), DashOf(pen),
       pen.GetDashCount(), pen.GetCapStyle());
-  PushStroke(verts, pen.GetColor());
+  PushStroke(verts, pen.GetColor(), kStroke.coverage);
 }
 
 void Painter::FillEllipse(float cx, float cy, float rx, float ry) {
@@ -946,12 +985,14 @@ void Painter::DrawPolygon(const std::vector<Point>& points) {
   }
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
-    auto outline_verts = StrokeClosedPath(
-        points, pen.GetWidth() + 2.0F * pen.GetOutlineWidth(), pen);
-    PushStroke(outline_verts, pen.GetOutlineColor());
+    const StrokeWidth kOutline =
+        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
+    auto outline_verts = StrokeClosedPath(points, kOutline.width, pen);
+    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
   }
-  auto verts = StrokeClosedPath(points, pen.GetWidth(), pen);
-  PushStroke(verts, pen.GetColor());
+  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
+  auto verts = StrokeClosedPath(points, kStroke.width, pen);
+  PushStroke(verts, pen.GetColor(), kStroke.coverage);
 }
 
 void Painter::FillPolygon(const std::vector<Point>& points) {
@@ -974,12 +1015,14 @@ void Painter::DrawArc(float cx, float cy, float rx, float ry,
   }
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
-    auto outline_verts =
-        StrokeOpenPath(arc, pen.GetWidth() + 2.0F * pen.GetOutlineWidth(), pen);
-    PushStroke(outline_verts, pen.GetOutlineColor());
+    const StrokeWidth kOutline =
+        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
+    auto outline_verts = StrokeOpenPath(arc, kOutline.width, pen);
+    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
   }
-  auto verts = StrokeOpenPath(arc, pen.GetWidth(), pen);
-  PushStroke(verts, pen.GetColor());
+  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
+  auto verts = StrokeOpenPath(arc, kStroke.width, pen);
+  PushStroke(verts, pen.GetColor(), kStroke.coverage);
 }
 
 void Painter::DrawPie(float cx, float cy, float rx, float ry,
@@ -998,12 +1041,14 @@ void Painter::DrawPie(float cx, float cy, float rx, float ry,
 
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
-    auto outline_verts = StrokeClosedPath(
-        outline, pen.GetWidth() + 2.0F * pen.GetOutlineWidth(), pen);
-    PushStroke(outline_verts, pen.GetOutlineColor());
+    const StrokeWidth kOutline =
+        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
+    auto outline_verts = StrokeClosedPath(outline, kOutline.width, pen);
+    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
   }
-  auto verts = StrokeClosedPath(outline, pen.GetWidth(), pen);
-  PushStroke(verts, pen.GetColor());
+  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
+  auto verts = StrokeClosedPath(outline, kStroke.width, pen);
+  PushStroke(verts, pen.GetColor(), kStroke.coverage);
 }
 
 void Painter::FillPie(float cx, float cy, float rx, float ry,
@@ -1030,12 +1075,14 @@ void Painter::DrawChord(float cx, float cy, float rx, float ry,
   // uc noktayi birlestirir.
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
-    auto outline_verts = StrokeClosedPath(
-        arc, pen.GetWidth() + 2.0F * pen.GetOutlineWidth(), pen);
-    PushStroke(outline_verts, pen.GetOutlineColor());
+    const StrokeWidth kOutline =
+        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
+    auto outline_verts = StrokeClosedPath(arc, kOutline.width, pen);
+    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
   }
-  auto verts = StrokeClosedPath(arc, pen.GetWidth(), pen);
-  PushStroke(verts, pen.GetColor());
+  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
+  auto verts = StrokeClosedPath(arc, kStroke.width, pen);
+  PushStroke(verts, pen.GetColor(), kStroke.coverage);
 }
 
 void Painter::FillChord(float cx, float cy, float rx, float ry,
@@ -1054,12 +1101,14 @@ void Painter::DrawPolyline(const std::vector<Point>& points) {
   }
   const Pen& pen = mCurrentState.pen;
   if (pen.HasOutline()) {
-    auto outline_verts = StrokeOpenPath(
-        points, pen.GetWidth() + 2.0F * pen.GetOutlineWidth(), pen);
-    PushStroke(outline_verts, pen.GetOutlineColor());
+    const StrokeWidth kOutline =
+        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
+    auto outline_verts = StrokeOpenPath(points, kOutline.width, pen);
+    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
   }
-  auto verts = StrokeOpenPath(points, pen.GetWidth(), pen);
-  PushStroke(verts, pen.GetColor());
+  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
+  auto verts = StrokeOpenPath(points, kStroke.width, pen);
+  PushStroke(verts, pen.GetColor(), kStroke.coverage);
 }
 
 void Painter::DrawPath(const Path& path) {
@@ -1072,22 +1121,24 @@ void Painter::DrawPath(const Path& path) {
   // gecisle yapilsaydi ikinci alt yolun konturu birincinin govdesinin uzerine
   // biner ve cok parcali yollarda kontur ici kenarlarda gorunurdu.
   if (pen.HasOutline()) {
-    const float outline_width = pen.GetWidth() + (2.0F * pen.GetOutlineWidth());
+    const StrokeWidth kOutline =
+        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
     for (const SubPath& sub : path.SubPaths()) {
       if (sub.points.size() < 2) {
         continue;
       }
-      auto outline_verts = StrokeSubPath(sub, outline_width, pen);
-      PushStroke(outline_verts, pen.GetOutlineColor());
+      auto outline_verts = StrokeSubPath(sub, kOutline.width, pen);
+      PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
     }
   }
 
+  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
   for (const SubPath& sub : path.SubPaths()) {
     if (sub.points.size() < 2) {
       continue;
     }
-    auto verts = StrokeSubPath(sub, pen.GetWidth(), pen);
-    PushStroke(verts, pen.GetColor());
+    auto verts = StrokeSubPath(sub, kStroke.width, pen);
+    PushStroke(verts, pen.GetColor(), kStroke.coverage);
   }
 }
 
@@ -1551,13 +1602,55 @@ void Painter::QueryDrawableSize(int32_t& out_width, int32_t& out_height) const {
   out_height = h;
 }
 
-void Painter::PushStroke(const std::vector<Vertex>& verts, const Color& color) {
+float Painter::PixelScale() const noexcept {
+  const glm::mat3& m = mCurrentState.transform;
+  const float kDet = (m[0][0] * m[1][1]) - (m[1][0] * m[0][1]);
+  return std::sqrt(std::fabs(kDet));
+}
+
+Painter::StrokeWidth Painter::AdjustStrokeWidth(
+    float requested) const noexcept {
+  if (!mCurrentState.antialiasing) {
+    return {requested, 1.0F};
+  }
+  const float kScale = PixelScale();
+  if (!(kScale > 0.0F) || !(requested > 0.0F)) {
+    return {requested, 1.0F};
+  }
+  const float kOnePixel = 1.0F / kScale;
+  if (requested >= kOnePixel) {
+    return {requested, 1.0F};
+  }
+  return {kOnePixel, requested * kScale};
+}
+
+void Painter::PushStroke(const std::vector<Vertex>& verts, const Color& color,
+                         float coverage) {
   if (verts.empty()) {
     return;
   }
   mBatcher->SetBlendMode(mCurrentState.blend_mode);
-  mBatcher->PushTriangles(verts, mCurrentState.transform, color,
-                          mCurrentState.opacity);
+  const float kScale = PixelScale();
+  if (!mCurrentState.antialiasing || !(kScale > 0.0F)) {
+    mBatcher->PushTriangles(verts, mCurrentState.transform, color,
+                            mCurrentState.opacity);
+    return;
+  }
+  // Kenar yumusatma: kapsama alfada gelir, kalemin alfasi ve ince kalem
+  // carpaniyla birlikte yazilir.
+  std::vector<Vertex> aa =
+      Tessellator::AntialiasTriangles(verts, 1.0F / kScale);
+  const float kAlpha =
+      static_cast<float>(color.a) * std::clamp(coverage, 0.0F, 1.0F);
+  for (Vertex& v : aa) {
+    v.r = color.r;
+    v.g = color.g;
+    v.b = color.b;
+    v.a = static_cast<std::uint8_t>(
+        std::lround(kAlpha * static_cast<float>(v.a) / 255.0F));
+  }
+  mBatcher->PushTrianglesPreColored(aa, mCurrentState.transform,
+                                    mCurrentState.opacity);
 }
 
 void Painter::PushFilled(std::vector<Vertex>& verts) {
@@ -1566,6 +1659,20 @@ void Painter::PushFilled(std::vector<Vertex>& verts) {
   }
   mBatcher->SetBlendMode(mCurrentState.blend_mode);
   const Brush& brush = mCurrentState.brush;
+  const float kScale = PixelScale();
+  if (mCurrentState.antialiasing && kScale > 0.0F) {
+    // Kenar yumusatma: once serit (kapsama alfada), sonra gradient bolmesi
+    // (kapsamayi enterpole eder), en son renk (alfayla carpar).
+    std::vector<Vertex> aa =
+        Tessellator::AntialiasTriangles(verts, 1.0F / kScale);
+    if (brush.IsGradient()) {
+      aa = SubdivideForGradient(aa, brush);
+    }
+    ApplyBrushColors(aa, brush);
+    mBatcher->PushTrianglesPreColored(aa, mCurrentState.transform,
+                                      mCurrentState.opacity);
+    return;
+  }
   if (!brush.IsGradient()) {
     // Duz dolgu: renk batcher'da tek seferde yazilir, burada dolasmaya gerek
     // yok.

@@ -74,6 +74,9 @@ struct AppConfig {
   /// @brief MSAA örnek sayısı; 0 = kapalı.
   /// @note Yalnızca OpenGL backend'de geçerlidir ve pencere oluşturulmadan
   ///       önce GL attribute olarak uygulanır. Vulkan'da yoksayılır.
+  ///       Backend'den bağımsız kenar yumuşatma için
+  ///       @ref Painter::SetAntialiasing kullanılabilir; o açıkken MSAA
+  ///       gerekmez.
   int32_t msaa_samples{4};
 
   /// @brief Kullanılacak render backend'i.

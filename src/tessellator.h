@@ -173,6 +173,29 @@ class Tessellator {
       const std::vector<Point>& points, float line_width,
       LineJoin join = LineJoin::kRound);
 
+  /// @brief Üçgen listesine kenar yumuşatma şeridi (fringe) ekle.
+  ///
+  /// Dolgu ve çizgi için aynı yöntem: köşeler konumlarına göre birleştirilir,
+  /// yalnızca bir üçgene ait kenarlar sınır sayılır. Sınır köşeleri
+  /// `fringe_width / 2` içeri çekilir ve her sınır kenarına içte alfa 255,
+  /// dışta alfa 0 olan `fringe_width` genişliğinde bir şerit eklenir. Şerit
+  /// eski kenarı ortaladığı için şeklin boyutu değişmez; dolgu ile şerit üst
+  /// üste binmez, yarı saydam renkte çift karışım olmaz.
+  ///
+  /// Kapsama (coverage) vertex'in alfa kanalındadır; renk yazılırken fırçanın
+  /// alfasıyla çarpılmalıdır. Girdinin alfası yok sayılır.
+  ///
+  /// Çok küçük şekillerde (sınır kutusunun kısa kenarı şerit genişliğinden
+  /// azsa) içeri çekme yapılmaz, şerit yalnızca dışa yarım genişlikte uzanır;
+  /// aksi halde şekil kendi üstüne katlanırdı.
+  ///
+  /// @param triangles Üçgen listesi (vertex sayısı 3'ün katı).
+  /// @param fringe_width Şerit genişliği, girdi koordinatlarında (genellikle
+  ///        1 ekran pikseli). Pozitif değilse girdi olduğu gibi döner.
+  /// @return Yeni üçgen listesi; konum sonlu değilse girdi olduğu gibi döner.
+  static std::vector<Vertex> AntialiasTriangles(
+      const std::vector<Vertex>& triangles, float fringe_width);
+
   /// @brief Texture'lı dikdörtgen için TexturedVertex üret.
   static std::vector<TexturedVertex> TessellateTexturedRect(float x, float y,
                                                             float w, float h,

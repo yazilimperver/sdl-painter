@@ -21,6 +21,7 @@ set(TEST_SOURCES
     test_render_batcher.cpp
     test_texture_image_upload.cpp
     test_resource_lifetime.cpp
+    test_antialiasing.cpp
     test_event_translator.cpp
     test_app_config.cpp
     test_application.cpp

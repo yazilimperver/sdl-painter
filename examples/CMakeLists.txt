@@ -63,7 +63,9 @@ sdlpainter_add_example(hero hero.cpp)
 # hero.cpp'nin dört perdesi, tek tek incelenebilsin diye ayrı ayrı. Her biri
 # kendi kendine yeter: GIF koreografisi (perde geçişi, kare dökümü) yok,
 # uygulama çatısı üzerinden tek perdeyi döngüde oynatır.
-sdlpainter_add_example(shapes_showcase    showcase/shapes_showcase.cpp    APP)
+sdlpainter_add_example(shapes_showcase
+    showcase/shapes_showcase.cpp benchmarks/screenshot.cpp
+    APP LIBS stb::stb)
 sdlpainter_add_example(color_showcase     showcase/color_showcase.cpp     APP)
 sdlpainter_add_example(transform_showcase showcase/transform_showcase.cpp APP)
 sdlpainter_add_example(images_showcase    showcase/images_showcase.cpp    APP)
