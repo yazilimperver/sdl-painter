@@ -594,6 +594,13 @@ class SDLPAINTER_API Painter {
                         float v1, const Rect& dest_rect, const Color& tint,
                         ImageFlip flip);
 
+  /// @brief Nokta dizisini kalemle çiz: varsa önce dış kontur, sonra çizgi.
+  ///
+  /// Çizgi çizen şekillerin ortak gövdesi; şekiller yalnızca noktaları
+  /// üretir. Kalemin görünürlüğünü çağıran denetler.
+  /// @param closed `true` ise son nokta ilkine bağlanır.
+  void StrokePoints(const std::vector<Point>& points, bool closed);
+
   /// @brief Çizgi geometrisini tek renkle batcher'a ver (karıştırma senkronu
   ///        dahil).
   /// @param coverage Kenar yumuşatmada ince kalemin alfa çarpanı (bkz.

@@ -536,10 +536,8 @@ TEST(LineCap, AppliedOnlyToPolylineEndsNotInteriorVertices) {
 TEST(LineCap, IgnoredOnClosedGeometry) {
   const std::vector<Point> pts = {{0, 0}, {100, 0}, {100, 100}};
   auto a = Tessellator::TessellateStrokedPolygon(pts, 8.0f);
-  auto b = Tessellator::TessellateStrokedRect(0, 0, 50, 50, 8.0f);
   // Kapali geometride uc yoktur; sadece derlenip makul cikti uretmeli.
   EXPECT_FALSE(a.empty());
-  EXPECT_FALSE(b.empty());
 }
 
 TEST(LineCap, ThinLineSkipsCapsBecauseTheyWouldBeInvisible) {
@@ -739,15 +737,6 @@ TEST(DashedPolyline, ClosedShapeIsDashedAsOpenPieces) {
   EXPECT_EQ(QuadCount(v), 10u);
 }
 
-TEST(DashedPolyline, StrokedRectHonoursDash) {
-  const float kPattern[] = {20.0f, 20.0f};
-  auto solid = Tessellator::TessellateStrokedRect(0, 0, 100, 100, 4.0f);
-  auto dashed = Tessellator::TessellateStrokedRect(
-      0, 0, 100, 100, 4.0f, sdl_painter::LineJoin::kRound, kPattern, 2);
-  EXPECT_NE(dashed.size(), solid.size());
-  EXPECT_FALSE(dashed.empty());
-}
-
 TEST(DashedPolyline, CapAppliesToEachDashPiece) {
   const std::vector<Point> pts = {{0, 0}, {100, 0}};
   const float kPattern[] = {10.0f, 10.0f};
@@ -764,49 +753,104 @@ TEST(TessellateThickPolyline, SinglePointReturnsEmpty) {
   EXPECT_TRUE(v.empty());
 }
 
-// ─── TessellateStrokedRect ──────────────────────────────────────────────────
+// ─── Dikdörtgen çerçevesi (TessellateStrokedPolygon) ────────────────────────
 
-TEST(TessellateStrokedRect, ProducesNonEmptyResult) {
-  auto v = Tessellator::TessellateStrokedRect(0, 0, 100, 50, 2.0f);
+namespace {
+// Painter::DrawRect'in kaleme verdiği nokta sırası.
+const std::vector<Point> kRect100x50 = {{0, 0}, {100, 0}, {100, 50}, {0, 50}};
+}  // namespace
+
+TEST(StrokedRect, ProducesNonEmptyResult) {
+  auto v = Tessellator::TessellateStrokedPolygon(kRect100x50, 2.0f);
   EXPECT_FALSE(v.empty());
 }
 
-TEST(TessellateStrokedRect, ThinStrokeIsFourQuads) {
+TEST(StrokedRect, ThinStrokeIsFourQuads) {
   // Kalinlik 1.5'in altinda -> birlesim yok: 4 kenar * 6 vertex = 24.
-  auto v = Tessellator::TessellateStrokedRect(0, 0, 100, 50, 1.0f);
+  auto v = Tessellator::TessellateStrokedPolygon(kRect100x50, 1.0f);
   EXPECT_EQ(v.size(), 24u);
 }
 
-TEST(TessellateStrokedRect, ThickStrokeJoinsAllFourCorners) {
-  auto thin = Tessellator::TessellateStrokedRect(0, 0, 100, 50, 1.0f);
-  auto thick = Tessellator::TessellateStrokedRect(0, 0, 100, 50, 10.0f);
+TEST(StrokedRect, ThickStrokeJoinsAllFourCorners) {
+  auto thin = Tessellator::TessellateStrokedPolygon(kRect100x50, 1.0f);
+  auto thick = Tessellator::TessellateStrokedPolygon(kRect100x50, 10.0f);
   // Kapali poligon: 4 kosenin HEPSINE birlesim uygulanir.
   EXPECT_GT(thick.size(), thin.size());
   EXPECT_EQ((thick.size() - thin.size()) % 3, 0u);
 }
 
-TEST(TessellateStrokedRect, VertexCountIsMultipleOfThree) {
-  auto v = Tessellator::TessellateStrokedRect(0, 0, 100, 50, 2.0f);
+TEST(StrokedRect, VertexCountIsMultipleOfThree) {
+  auto v = Tessellator::TessellateStrokedPolygon(kRect100x50, 2.0f);
   EXPECT_EQ(v.size() % 3, 0u) << "Ucgen listesi 3'un kati olmali.";
 }
 
-// ─── TessellateStrokedCircle ─────────────────────────────────────────────────
+// ─── BuildEllipsePoints ─────────────────────────────────────────────────────
 
-TEST(TessellateStrokedCircle, ProducesNonEmptyResult) {
-  auto v = Tessellator::TessellateStrokedCircle(0, 0, 50.0f, 2.0f);
-  EXPECT_FALSE(v.empty());
+TEST(BuildEllipsePoints, PointCountFollowsLargerRadius) {
+  // max(16, r * 0.5): r=10 -> 16, r=100 -> 50; elipste buyuk yaricap.
+  EXPECT_EQ(Tessellator::BuildEllipsePoints(0, 0, 10.0f, 10.0f).size(), 16u);
+  EXPECT_EQ(Tessellator::BuildEllipsePoints(0, 0, 100.0f, 100.0f).size(), 50u);
+  EXPECT_EQ(Tessellator::BuildEllipsePoints(0, 0, 80.0f, 40.0f).size(), 40u);
+  EXPECT_EQ(Tessellator::BuildEllipsePoints(0, 0, 40.0f, 80.0f).size(), 40u);
 }
 
-TEST(TessellateStrokedCircle, VertexCountIsMultipleOfThree) {
-  auto v = Tessellator::TessellateStrokedCircle(0, 0, 50.0f, 2.0f);
-  EXPECT_EQ(v.size() % 3, 0u);
+TEST(BuildEllipsePoints, PointsLieOnEllipseStartingAtZeroDegrees) {
+  const float cx = 30.0f;
+  const float cy = -20.0f;
+  const float rx = 80.0f;
+  const float ry = 40.0f;
+  const auto pts = Tessellator::BuildEllipsePoints(cx, cy, rx, ry);
+  ASSERT_FALSE(pts.empty());
+  EXPECT_NEAR(pts[0].x, cx + rx, 1e-4f);
+  EXPECT_NEAR(pts[0].y, cy, 1e-4f);
+  for (const Point& p : pts) {
+    const float nx = (p.x - cx) / rx;
+    const float ny = (p.y - cy) / ry;
+    EXPECT_NEAR((nx * nx) + (ny * ny), 1.0f, 1e-4f);
+  }
 }
 
-// ─── TessellateStrokedEllipse ────────────────────────────────────────────────
+TEST(BuildEllipsePoints, ClosedPathDoesNotRepeatFirstPoint) {
+  const auto pts = Tessellator::BuildEllipsePoints(0, 0, 50.0f, 50.0f);
+  ASSERT_GE(pts.size(), 2u);
+  const float dx = pts.back().x - pts.front().x;
+  const float dy = pts.back().y - pts.front().y;
+  EXPECT_GT((dx * dx) + (dy * dy), 1.0f);
+}
 
-TEST(TessellateStrokedEllipse, ProducesNonEmptyResult) {
-  auto v = Tessellator::TessellateStrokedEllipse(0, 0, 80.0f, 40.0f, 2.0f);
-  EXPECT_FALSE(v.empty());
+TEST(BuildEllipsePoints, NonPositiveRadiusUsesMinimumSegments) {
+  EXPECT_EQ(Tessellator::BuildEllipsePoints(5, 5, 0.0f, 0.0f).size(), 16u);
+  EXPECT_EQ(Tessellator::BuildEllipsePoints(5, 5, -10.0f, -3.0f).size(), 16u);
+}
+
+TEST(BuildEllipsePoints, FillSharesPerimeterWithStroke) {
+  // Dolgu fani ve cizgi ayni noktalari kullanir; fan son noktadan ilkine
+  // kapanir, araya ayri hesaplanmis bir 2*pi noktasi girmez.
+  const float cx = 10.0f;
+  const float cy = 20.0f;
+  const auto pts = Tessellator::BuildEllipsePoints(cx, cy, 60.0f, 30.0f);
+  const auto fill = Tessellator::TessellateFilledEllipse(cx, cy, 60.0f, 30.0f);
+  ASSERT_EQ(fill.size(), pts.size() * 3);
+  for (std::size_t i = 0; i < pts.size(); ++i) {
+    const Point& b = pts[(i + 1) % pts.size()];
+    EXPECT_EQ(fill[(3 * i)].x, cx);
+    EXPECT_EQ(fill[(3 * i)].y, cy);
+    EXPECT_EQ(fill[(3 * i) + 1].x, pts[i].x);
+    EXPECT_EQ(fill[(3 * i) + 1].y, pts[i].y);
+    EXPECT_EQ(fill[(3 * i) + 2].x, b.x);
+    EXPECT_EQ(fill[(3 * i) + 2].y, b.y);
+  }
+}
+
+TEST(BuildEllipsePoints, CircleFillIsEllipseWithEqualRadii) {
+  const auto circle = Tessellator::TessellateFilledCircle(3.0f, 4.0f, 70.0f);
+  const auto ellipse =
+      Tessellator::TessellateFilledEllipse(3.0f, 4.0f, 70.0f, 70.0f);
+  ASSERT_EQ(circle.size(), ellipse.size());
+  for (std::size_t i = 0; i < circle.size(); ++i) {
+    EXPECT_EQ(circle[i].x, ellipse[i].x);
+    EXPECT_EQ(circle[i].y, ellipse[i].y);
+  }
 }
 
 // ─── TessellateFilledPolygon / EarClipping ───────────────────────────────────
@@ -964,11 +1008,11 @@ TEST(TessellateFilledCircle, SegmentCountIsCapped) {
   EXPECT_GT(v.size(), 0u);
 }
 
-TEST(TessellateStrokedCircle, SegmentCountIsCapped) {
-  auto v = Tessellator::TessellateStrokedCircle(0.0f, 0.0f, 100000.0f, 2.0f);
-  // 512 segment * 6 vertex (quad) + 512 birlesim diski * en fazla 24 * 3.
-  EXPECT_LE(v.size(), 512u * 6u + 512u * 24u * 3u);
-  EXPECT_GT(v.size(), 0u);
+TEST(BuildEllipsePoints, SegmentCountIsCapped) {
+  // Daire ve elips cizgisi de bu noktalardan uretilir.
+  const auto pts =
+      Tessellator::BuildEllipsePoints(0.0f, 0.0f, 100000.0f, 100000.0f);
+  EXPECT_EQ(pts.size(), 512u);
 }
 
 // Aday kulağın iç diyagonali üzerinde duran reflex köşe kulağı geçersiz

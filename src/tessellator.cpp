@@ -211,36 +211,35 @@ std::vector<Vertex> Tessellator::TessellateFilledRect(float x, float y, float w,
 
 std::vector<Vertex> Tessellator::TessellateFilledCircle(float cx, float cy,
                                                         float radius) {
-  int32_t segments = AdaptiveSegments(radius);
-  std::vector<Vertex> result;
-  result.reserve(static_cast<std::size_t>(segments) * 3);
-
-  for (int32_t i = 0; i < segments; ++i) {
-    float a0 = kTwoPi * static_cast<float>(i) / static_cast<float>(segments);
-    float a1 =
-        kTwoPi * static_cast<float>(i + 1) / static_cast<float>(segments);
-    result.emplace_back(cx, cy);
-    result.emplace_back(cx + std::cos(a0) * radius, cy + std::sin(a0) * radius);
-    result.emplace_back(cx + std::cos(a1) * radius, cy + std::sin(a1) * radius);
-  }
-  return result;
+  return TessellateFilledEllipse(cx, cy, radius, radius);
 }
 
 std::vector<Vertex> Tessellator::TessellateFilledEllipse(float cx, float cy,
                                                          float rx, float ry) {
-  int32_t segments = AdaptiveSegments(std::max(rx, ry));
+  const std::vector<Point> pts = BuildEllipsePoints(cx, cy, rx, ry);
   std::vector<Vertex> result;
-  result.reserve(static_cast<std::size_t>(segments) * 3);
-
-  for (int32_t i = 0; i < segments; ++i) {
-    float a0 = kTwoPi * static_cast<float>(i) / static_cast<float>(segments);
-    float a1 =
-        kTwoPi * static_cast<float>(i + 1) / static_cast<float>(segments);
+  result.reserve(pts.size() * 3);
+  for (std::size_t i = 0; i < pts.size(); ++i) {
+    const Point& a = pts[i];
+    const Point& b = pts[(i + 1) % pts.size()];
     result.emplace_back(cx, cy);
-    result.emplace_back(cx + std::cos(a0) * rx, cy + std::sin(a0) * ry);
-    result.emplace_back(cx + std::cos(a1) * rx, cy + std::sin(a1) * ry);
+    result.emplace_back(a.x, a.y);
+    result.emplace_back(b.x, b.y);
   }
   return result;
+}
+
+std::vector<Point> Tessellator::BuildEllipsePoints(float cx, float cy, float rx,
+                                                   float ry) {
+  const int32_t kSegments = AdaptiveSegments(std::max(rx, ry));
+  std::vector<Point> pts;
+  pts.reserve(static_cast<std::size_t>(kSegments));
+  for (int32_t i = 0; i < kSegments; ++i) {
+    const float a =
+        kTwoPi * static_cast<float>(i) / static_cast<float>(kSegments);
+    pts.emplace_back(cx + std::cos(a) * rx, cy + std::sin(a) * ry);
+  }
+  return pts;
 }
 
 std::vector<Vertex> Tessellator::TessellateFilledPolygon(
@@ -391,54 +390,6 @@ std::vector<Vertex> Tessellator::TessellateFilledChord(float cx, float cy,
     result.emplace_back(arc[i + 1].x, arc[i + 1].y);
   }
   return result;
-}
-
-std::vector<Vertex> Tessellator::TessellateStrokedRect(
-    float x, float y, float w, float h, float line_width, LineJoin join,
-    const float* dash, std::size_t dash_count, LineCap cap) {
-  const std::vector<Point> pts = {
-      {x, y}, {x + w, y}, {x + w, y + h}, {x, y + h}};
-  if (dash != nullptr && dash_count > 0) {
-    return TessellateDashedPolyline(pts, line_width, dash, dash_count,
-                                    /*closed=*/true, cap, join);
-  }
-  return TessellateStrokedPolygon(pts, line_width, join);
-}
-
-std::vector<Vertex> Tessellator::TessellateStrokedCircle(
-    float cx, float cy, float radius, float line_width, LineJoin join,
-    const float* dash, std::size_t dash_count, LineCap cap) {
-  int32_t segments = AdaptiveSegments(radius);
-  std::vector<Point> pts;
-  pts.reserve(static_cast<std::size_t>(segments));
-
-  for (int32_t i = 0; i < segments; ++i) {
-    float a = kTwoPi * static_cast<float>(i) / static_cast<float>(segments);
-    pts.emplace_back(cx + std::cos(a) * radius, cy + std::sin(a) * radius);
-  }
-  if (dash != nullptr && dash_count > 0) {
-    return TessellateDashedPolyline(pts, line_width, dash, dash_count,
-                                    /*closed=*/true, cap, join);
-  }
-  return TessellateStrokedPolygon(pts, line_width, join);
-}
-
-std::vector<Vertex> Tessellator::TessellateStrokedEllipse(
-    float cx, float cy, float rx, float ry, float line_width, LineJoin join,
-    const float* dash, std::size_t dash_count, LineCap cap) {
-  int32_t segments = AdaptiveSegments(std::max(rx, ry));
-  std::vector<Point> pts;
-  pts.reserve(static_cast<std::size_t>(segments));
-
-  for (int32_t i = 0; i < segments; ++i) {
-    float a = kTwoPi * static_cast<float>(i) / static_cast<float>(segments);
-    pts.emplace_back(cx + std::cos(a) * rx, cy + std::sin(a) * ry);
-  }
-  if (dash != nullptr && dash_count > 0) {
-    return TessellateDashedPolyline(pts, line_width, dash, dash_count,
-                                    /*closed=*/true, cap, join);
-  }
-  return TessellateStrokedPolygon(pts, line_width, join);
 }
 
 std::vector<Vertex> Tessellator::TessellateThickLine(float x1, float y1,

@@ -82,7 +82,7 @@ sequenceDiagram
     else pen visible
         P->>P: FlushTransform()
         Note right of P: SetModelMatrix is called only<br/>if the transform changed
-        P->>T: TessellateStrokedRect(x,y,w,h, line_width)
+        P->>T: TessellateStrokedPolygon(4 corners, line_width)
         T-->>P: vector~Vertex~ (4 quads / 8 triangles)
         P->>B: PushTriangles(verts, pen.color, opacity)
         B->>B: mode == kBasic ? same opacity? size+verts ≤ 8192?

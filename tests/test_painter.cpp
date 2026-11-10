@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <gtest/gtest.h>
 #include <memory>
@@ -1890,6 +1891,112 @@ TEST(PainterDash, DashAppliesToClosedShapesToo) {
 
   EXPECT_NE(h.mock->last_vertices.size(), solid)
       << "DrawRect kalemin kesik desenini yok sayiyor.";
+}
+
+// ─── Dış kontur (outline) ───────────────────────────────────────────────────
+
+// Kalemin dış konturu, çizgi çizen her şekilde aynı ortak gövdeden geçer:
+// önce kontur rengiyle daha geniş bir çizgi, sonra kalemin kendisi.
+TEST(PainterOutline, EveryStrokedShapeDrawsWiderOutlineFirst) {
+  struct Case {
+    const char* name;
+    void (*draw)(Painter&);
+  };
+  const Case kCases[] = {
+      {"DrawLine", [](Painter& p) { p.DrawLine(10.0F, 10.0F, 90.0F, 60.0F); }},
+      {"DrawRect", [](Painter& p) { p.DrawRect(20.0F, 20.0F, 80.0F, 50.0F); }},
+      {"DrawRoundedRect",
+       [](Painter& p) {
+         p.DrawRoundedRect(20.0F, 20.0F, 80.0F, 50.0F, 10.0F);
+       }},
+      {"DrawCircle", [](Painter& p) { p.DrawCircle(60.0F, 60.0F, 30.0F); }},
+      {"DrawEllipse",
+       [](Painter& p) { p.DrawEllipse(60.0F, 60.0F, 40.0F, 20.0F); }},
+      {"DrawPolygon",
+       [](Painter& p) { p.DrawPolygon({{10, 10}, {90, 20}, {50, 80}}); }},
+      {"DrawPolyline",
+       [](Painter& p) { p.DrawPolyline({{10, 10}, {90, 20}, {50, 80}}); }},
+      {"DrawArc",
+       [](Painter& p) {
+         p.DrawArc(60.0F, 60.0F, 40.0F, 30.0F, 20.0F, 200.0F);
+       }},
+      {"DrawPie",
+       [](Painter& p) {
+         p.DrawPie(60.0F, 60.0F, 40.0F, 30.0F, 20.0F, 100.0F);
+       }},
+      {"DrawChord",
+       [](Painter& p) {
+         p.DrawChord(60.0F, 60.0F, 40.0F, 30.0F, 20.0F, 200.0F);
+       }},
+      {"DrawPath",
+       [](Painter& p) {
+         // Iki alt yol: tum konturlar tum govdelerden once gelmeli.
+         sdl_painter::Path path;
+         path.MoveTo(10.0F, 10.0F);
+         path.LineTo(90.0F, 30.0F);
+         path.LineTo(40.0F, 70.0F);
+         path.Close();
+         path.MoveTo(100.0F, 100.0F);
+         path.LineTo(150.0F, 120.0F);
+         p.DrawPath(path);
+       }},
+  };
+
+  Pen pen(Color{255, 0, 0, 255}, 4.0F);
+  pen.SetOutlineColor(Color{0, 0, 255, 255});
+  pen.SetOutlineWidth(2.0F);
+
+  for (const bool antialias : {false, true}) {
+    for (const Case& c : kCases) {
+      SCOPED_TRACE(std::string(c.name) + (antialias ? " (AA)" : ""));
+      Harness h;
+      h.painter.Begin();
+      h.painter.SetPen(pen);
+      h.painter.SetAntialiasing(antialias);
+      c.draw(h.painter);
+      h.painter.End();
+
+      // Tek batch: last_vertices karenin tamamidir.
+      ASSERT_EQ(std::count_if(h.mock->calls.begin(), h.mock->calls.end(),
+                              [](const MockRenderer::Call& call) {
+                                return call.name == "DrawTriangles";
+                              }),
+                1);
+      const auto& v = h.mock->last_vertices;
+      std::size_t split = 0;
+      while (split < v.size() && v[split].b == 255 && v[split].r == 0) {
+        ++split;
+      }
+      ASSERT_GT(split, 0u) << "Kontur cizilmedi.";
+      ASSERT_LT(split, v.size()) << "Kalem cizgisi cizilmedi.";
+      const auto kPenColored = std::count_if(
+          v.begin() + static_cast<std::ptrdiff_t>(split), v.end(),
+          [](const sdl_painter::Vertex& x) { return x.r == 255 && x.b == 0; });
+      EXPECT_EQ(static_cast<std::size_t>(kPenColored), v.size() - split)
+          << "Kontur ve kalem vertex'leri karisik.";
+
+      const Bounds outer = BoundsOf(v, 0, split);
+      const Bounds inner = BoundsOf(v, split);
+      EXPECT_LT(outer.min_x, inner.min_x);
+      EXPECT_LT(outer.min_y, inner.min_y);
+      EXPECT_GT(outer.max_x, inner.max_x);
+      EXPECT_GT(outer.max_y, inner.max_y);
+    }
+  }
+}
+
+TEST(PainterOutline, NoOutlineMeansOnlyPenColor) {
+  Harness h;
+  h.painter.Begin();
+  h.painter.SetPen(Pen(Color{255, 0, 0, 255}, 4.0F));
+  h.painter.DrawCircle(60.0F, 60.0F, 30.0F);
+  h.painter.End();
+  const auto& v = h.mock->last_vertices;
+  ASSERT_FALSE(v.empty());
+  for (const auto& x : v) {
+    ASSERT_EQ(x.r, 255);
+    ASSERT_EQ(x.b, 0);
+  }
 }
 
 // ─── Görüntü çizimi ─────────────────────────────────────────────────────────

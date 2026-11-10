@@ -31,8 +31,17 @@ class Tessellator {
                                                     float radius);
 
   /// @brief Dolu elips için vertex üret (triangle fan).
+  /// Çevre noktaları @ref BuildEllipsePoints'ten gelir; çizgisiyle aynıdır.
   static std::vector<Vertex> TessellateFilledEllipse(float cx, float cy,
                                                      float rx, float ry);
+
+  /// @brief Elipsin çevre noktalarını üret (çizgi/dolgu için ortak kaynak).
+  ///
+  /// Nokta sayısı büyük yarıçaptan @ref AdaptiveSegments ile belirlenir;
+  /// daire, iki yarıçapı eşit elipstir. İlk nokta 0°'dedir (+x ekseni). Yol
+  /// kapalıdır: ilk nokta sonda tekrarlanmaz.
+  static std::vector<Point> BuildEllipsePoints(float cx, float cy, float rx,
+                                               float ry);
 
   /// @brief Dolu poligon için vertex üret (ear clipping triangulation).
   /// Konkav poligonları destekler.
@@ -94,33 +103,6 @@ class Tessellator {
                                                    float ry,
                                                    float start_degrees,
                                                    float sweep_degrees);
-
-  /// @brief Dikdörtgen çerçevesi için vertex üret (4 kenar quad).
-  ///
-  /// @param dash Kesik deseni (bkz. @ref TessellateDashedPolyline). `nullptr`
-  ///        veya `dash_count == 0` ise kesintisiz.
-  /// @param cap Yalnızca kesikliyken anlamlı: her kesik parçasının uçlarına
-  ///        uygulanır. Kesintisiz kapalı şeklin ucu yoktur.
-  static std::vector<Vertex> TessellateStrokedRect(
-      float x, float y, float w, float h, float line_width,
-      LineJoin join = LineJoin::kRound, const float* dash = nullptr,
-      std::size_t dash_count = 0, LineCap cap = LineCap::kButt);
-
-  /// @brief Daire çerçevesi için vertex üret (çevre boyunca quad'lar).
-  ///
-  /// @note Segment sayısı yüksek olduğundan köşeler neredeyse düzdür; birleşim
-  ///       stilinin görünür etkisi yok denecek kadar azdır. Parametre yalnızca
-  ///       kalemin tek bir stil kaynağı olması için taşınır.
-  static std::vector<Vertex> TessellateStrokedCircle(
-      float cx, float cy, float radius, float line_width,
-      LineJoin join = LineJoin::kRound, const float* dash = nullptr,
-      std::size_t dash_count = 0, LineCap cap = LineCap::kButt);
-
-  /// @brief Elips çerçevesi için vertex üret.
-  static std::vector<Vertex> TessellateStrokedEllipse(
-      float cx, float cy, float rx, float ry, float line_width,
-      LineJoin join = LineJoin::kRound, const float* dash = nullptr,
-      std::size_t dash_count = 0, LineCap cap = LineCap::kButt);
 
   /// @brief Çizgi segmenti için kalın quad vertex üret.
   /// @param cap Her iki uca uygulanacak uç stili.

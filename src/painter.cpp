@@ -494,43 +494,24 @@ void ApplyBrushColors(std::vector<Vertex>& verts, const Brush& brush) {
   }
 }
 
-/// @brief Kalemin kesik deseni varsa desen isaretcisi, yoksa nullptr.
+/// @brief Bir yolu kalemin stiline gore tessellate et.
 ///
-/// Tessellator "kesik yok"u nullptr ile anliyor; her cagri yerinde ayni
-/// dallanmayi tekrarlamamak icin burada bir kez yazilir.
-const float* DashOf(const Pen& pen) noexcept {
-  return pen.HasDash() ? pen.GetDashPattern().data() : nullptr;
-}
-
-/// @brief Acik bir yolu kalemin stiline gore tessellate et.
-std::vector<Vertex> StrokeOpenPath(const std::vector<Point>& points,
-                                   float width, const Pen& pen) {
+/// Kesikli yolun her parcasi acik bir polyline'dir, uc stili orada da
+/// uygulanir. Kesintisiz kapali yolun ucu yoktur.
+/// @param closed `true` ise son nokta ilkine baglanir.
+std::vector<Vertex> TessellateStroke(const std::vector<Point>& points,
+                                     float width, const Pen& pen, bool closed) {
   if (pen.HasDash()) {
     return Tessellator::TessellateDashedPolyline(
-        points, width, DashOf(pen), pen.GetDashCount(), /*closed=*/false,
+        points, width, pen.GetDashPattern().data(), pen.GetDashCount(), closed,
         pen.GetCapStyle(), pen.GetJoinStyle());
+  }
+  if (closed) {
+    return Tessellator::TessellateStrokedPolygon(points, width,
+                                                 pen.GetJoinStyle());
   }
   return Tessellator::TessellateThickPolyline(points, width, pen.GetCapStyle(),
                                               pen.GetJoinStyle());
-}
-
-/// @brief Kapali bir yolu kalemin stiline gore tessellate et.
-std::vector<Vertex> StrokeClosedPath(const std::vector<Point>& points,
-                                     float width, const Pen& pen) {
-  if (pen.HasDash()) {
-    return Tessellator::TessellateDashedPolyline(
-        points, width, DashOf(pen), pen.GetDashCount(), /*closed=*/true,
-        pen.GetCapStyle(), pen.GetJoinStyle());
-  }
-  return Tessellator::TessellateStrokedPolygon(points, width,
-                                               pen.GetJoinStyle());
-}
-
-/// @brief Bir alt yolu kapali/acik olusuna gore tessellate et.
-std::vector<Vertex> StrokeSubPath(const SubPath& sub, float width,
-                                  const Pen& pen) {
-  return sub.closed ? StrokeClosedPath(sub.points, width, pen)
-                    : StrokeOpenPath(sub.points, width, pen);
 }
 
 }  // namespace
@@ -820,17 +801,7 @@ void Painter::DrawLine(float x1, float y1, float x2, float y2) {
   if (!CanDrawPen()) {
     return;
   }
-  const Pen& pen = mCurrentState.pen;
-  if (pen.HasOutline()) {
-    const StrokeWidth kOutline =
-        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
-    auto outline_verts =
-        StrokeOpenPath({{x1, y1}, {x2, y2}}, kOutline.width, pen);
-    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
-  }
-  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
-  auto verts = StrokeOpenPath({{x1, y1}, {x2, y2}}, kStroke.width, pen);
-  PushStroke(verts, pen.GetColor(), kStroke.coverage);
+  StrokePoints({{x1, y1}, {x2, y2}}, /*closed=*/false);
 }
 
 void Painter::DrawLine(const Point& from, const Point& to) {
@@ -841,20 +812,8 @@ void Painter::DrawRect(float x, float y, float w, float h) {
   if (!CanDrawPen()) {
     return;
   }
-  const Pen& pen = mCurrentState.pen;
-  if (pen.HasOutline()) {
-    const StrokeWidth kOutline =
-        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
-    auto outline_verts = Tessellator::TessellateStrokedRect(
-        x, y, w, h, kOutline.width, pen.GetJoinStyle(), DashOf(pen),
-        pen.GetDashCount(), pen.GetCapStyle());
-    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
-  }
-  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
-  auto verts = Tessellator::TessellateStrokedRect(
-      x, y, w, h, kStroke.width, pen.GetJoinStyle(), DashOf(pen),
-      pen.GetDashCount(), pen.GetCapStyle());
-  PushStroke(verts, pen.GetColor(), kStroke.coverage);
+  StrokePoints({{x, y}, {x + w, y}, {x + w, y + h}, {x, y + h}},
+               /*closed=*/true);
 }
 
 void Painter::DrawRect(const Rect& rect) {
@@ -883,16 +842,7 @@ void Painter::DrawRoundedRect(float x, float y, float w, float h,
   if (pts.size() < 3) {
     return;
   }
-  const Pen& pen = mCurrentState.pen;
-  if (pen.HasOutline()) {
-    const StrokeWidth kOutline =
-        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
-    auto outline_verts = StrokeClosedPath(pts, kOutline.width, pen);
-    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
-  }
-  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
-  auto verts = StrokeClosedPath(pts, kStroke.width, pen);
-  PushStroke(verts, pen.GetColor(), kStroke.coverage);
+  StrokePoints(pts, /*closed=*/true);
 }
 
 void Painter::DrawRoundedRect(const Rect& rect, float radius) {
@@ -905,9 +855,6 @@ void Painter::FillRoundedRect(float x, float y, float w, float h,
     return;
   }
   auto verts = Tessellator::TessellateFilledRoundedRect(x, y, w, h, radius);
-  if (verts.empty()) {
-    return;
-  }
   PushFilled(verts);
 }
 
@@ -919,20 +866,8 @@ void Painter::DrawCircle(float cx, float cy, float radius) {
   if (!CanDrawPen()) {
     return;
   }
-  const Pen& pen = mCurrentState.pen;
-  if (pen.HasOutline()) {
-    const StrokeWidth kOutline =
-        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
-    auto outline_verts = Tessellator::TessellateStrokedCircle(
-        cx, cy, radius, kOutline.width, pen.GetJoinStyle(), DashOf(pen),
-        pen.GetDashCount(), pen.GetCapStyle());
-    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
-  }
-  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
-  auto verts = Tessellator::TessellateStrokedCircle(
-      cx, cy, radius, kStroke.width, pen.GetJoinStyle(), DashOf(pen),
-      pen.GetDashCount(), pen.GetCapStyle());
-  PushStroke(verts, pen.GetColor(), kStroke.coverage);
+  StrokePoints(Tessellator::BuildEllipsePoints(cx, cy, radius, radius),
+               /*closed=*/true);
 }
 
 void Painter::DrawCircle(const Point& center, float radius) {
@@ -955,20 +890,8 @@ void Painter::DrawEllipse(float cx, float cy, float rx, float ry) {
   if (!CanDrawPen()) {
     return;
   }
-  const Pen& pen = mCurrentState.pen;
-  if (pen.HasOutline()) {
-    const StrokeWidth kOutline =
-        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
-    auto outline_verts = Tessellator::TessellateStrokedEllipse(
-        cx, cy, rx, ry, kOutline.width, pen.GetJoinStyle(), DashOf(pen),
-        pen.GetDashCount(), pen.GetCapStyle());
-    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
-  }
-  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
-  auto verts = Tessellator::TessellateStrokedEllipse(
-      cx, cy, rx, ry, kStroke.width, pen.GetJoinStyle(), DashOf(pen),
-      pen.GetDashCount(), pen.GetCapStyle());
-  PushStroke(verts, pen.GetColor(), kStroke.coverage);
+  StrokePoints(Tessellator::BuildEllipsePoints(cx, cy, rx, ry),
+               /*closed=*/true);
 }
 
 void Painter::FillEllipse(float cx, float cy, float rx, float ry) {
@@ -983,16 +906,7 @@ void Painter::DrawPolygon(const std::vector<Point>& points) {
   if (!CanDrawPen()) {
     return;
   }
-  const Pen& pen = mCurrentState.pen;
-  if (pen.HasOutline()) {
-    const StrokeWidth kOutline =
-        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
-    auto outline_verts = StrokeClosedPath(points, kOutline.width, pen);
-    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
-  }
-  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
-  auto verts = StrokeClosedPath(points, kStroke.width, pen);
-  PushStroke(verts, pen.GetColor(), kStroke.coverage);
+  StrokePoints(points, /*closed=*/true);
 }
 
 void Painter::FillPolygon(const std::vector<Point>& points) {
@@ -1013,16 +927,7 @@ void Painter::DrawArc(float cx, float cy, float rx, float ry,
   if (arc.size() < 2) {
     return;
   }
-  const Pen& pen = mCurrentState.pen;
-  if (pen.HasOutline()) {
-    const StrokeWidth kOutline =
-        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
-    auto outline_verts = StrokeOpenPath(arc, kOutline.width, pen);
-    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
-  }
-  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
-  auto verts = StrokeOpenPath(arc, kStroke.width, pen);
-  PushStroke(verts, pen.GetColor(), kStroke.coverage);
+  StrokePoints(arc, /*closed=*/false);
 }
 
 void Painter::DrawPie(float cx, float cy, float rx, float ry,
@@ -1038,17 +943,7 @@ void Painter::DrawPie(float cx, float cy, float rx, float ry,
   // Dilimin cercevesi: yay + merkez. Kapali bir yol olarak cizilir ki iki
   // yaricap ile yay arasindaki koseler birlesim alsin.
   outline.emplace_back(cx, cy);
-
-  const Pen& pen = mCurrentState.pen;
-  if (pen.HasOutline()) {
-    const StrokeWidth kOutline =
-        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
-    auto outline_verts = StrokeClosedPath(outline, kOutline.width, pen);
-    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
-  }
-  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
-  auto verts = StrokeClosedPath(outline, kStroke.width, pen);
-  PushStroke(verts, pen.GetColor(), kStroke.coverage);
+  StrokePoints(outline, /*closed=*/true);
 }
 
 void Painter::FillPie(float cx, float cy, float rx, float ry,
@@ -1073,16 +968,7 @@ void Painter::DrawChord(float cx, float cy, float rx, float ry,
   }
   // Kiris: yayin kendisi kapali bir yol olarak cizilir; kapanis dogrusu iki
   // uc noktayi birlestirir.
-  const Pen& pen = mCurrentState.pen;
-  if (pen.HasOutline()) {
-    const StrokeWidth kOutline =
-        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
-    auto outline_verts = StrokeClosedPath(arc, kOutline.width, pen);
-    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
-  }
-  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
-  auto verts = StrokeClosedPath(arc, kStroke.width, pen);
-  PushStroke(verts, pen.GetColor(), kStroke.coverage);
+  StrokePoints(arc, /*closed=*/true);
 }
 
 void Painter::FillChord(float cx, float cy, float rx, float ry,
@@ -1099,16 +985,7 @@ void Painter::DrawPolyline(const std::vector<Point>& points) {
   if (!CanDrawPen()) {
     return;
   }
-  const Pen& pen = mCurrentState.pen;
-  if (pen.HasOutline()) {
-    const StrokeWidth kOutline =
-        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
-    auto outline_verts = StrokeOpenPath(points, kOutline.width, pen);
-    PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
-  }
-  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
-  auto verts = StrokeOpenPath(points, kStroke.width, pen);
-  PushStroke(verts, pen.GetColor(), kStroke.coverage);
+  StrokePoints(points, /*closed=*/false);
 }
 
 void Painter::DrawPath(const Path& path) {
@@ -1127,8 +1004,8 @@ void Painter::DrawPath(const Path& path) {
       if (sub.points.size() < 2) {
         continue;
       }
-      auto outline_verts = StrokeSubPath(sub, kOutline.width, pen);
-      PushStroke(outline_verts, pen.GetOutlineColor(), kOutline.coverage);
+      PushStroke(TessellateStroke(sub.points, kOutline.width, pen, sub.closed),
+                 pen.GetOutlineColor(), kOutline.coverage);
     }
   }
 
@@ -1137,8 +1014,8 @@ void Painter::DrawPath(const Path& path) {
     if (sub.points.size() < 2) {
       continue;
     }
-    auto verts = StrokeSubPath(sub, kStroke.width, pen);
-    PushStroke(verts, pen.GetColor(), kStroke.coverage);
+    PushStroke(TessellateStroke(sub.points, kStroke.width, pen, sub.closed),
+               pen.GetColor(), kStroke.coverage);
   }
 }
 
@@ -1622,6 +1499,19 @@ Painter::StrokeWidth Painter::AdjustStrokeWidth(
     return {requested, 1.0F};
   }
   return {kOnePixel, requested * kScale};
+}
+
+void Painter::StrokePoints(const std::vector<Point>& points, bool closed) {
+  const Pen& pen = mCurrentState.pen;
+  if (pen.HasOutline()) {
+    const StrokeWidth kOutline =
+        AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
+    PushStroke(TessellateStroke(points, kOutline.width, pen, closed),
+               pen.GetOutlineColor(), kOutline.coverage);
+  }
+  const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
+  PushStroke(TessellateStroke(points, kStroke.width, pen, closed),
+             pen.GetColor(), kStroke.coverage);
 }
 
 void Painter::PushStroke(const std::vector<Vertex>& verts, const Color& color,

@@ -151,7 +151,7 @@ The path `painter.DrawRect(x, y, w, h)` takes inside the library:
 flowchart LR
     A["User:<br/>painter.DrawRect(...)"]
     B["Read RenderState<br/>(pen, opacity, transform)"]
-    C["Tessellator::<br/>TessellateStrokedRect"]
+    C["Tessellator::<br/>TessellateStrokedPolygon"]
     D["std::vector&lt;Vertex&gt;<br/>(4 quads / 8 triangles)"]
     E["RenderBatcher::<br/>PushTriangles"]
     F{"Mode/opacity<br/>changed?<br/>OR buffer<br/>full?"}

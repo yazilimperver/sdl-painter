@@ -152,7 +152,7 @@ graph LR
 flowchart LR
     A["Kullanıcı:<br/>painter.DrawRect(...)"]
     B["RenderState'i oku<br/>(pen, opacity, transform)"]
-    C["Tessellator::<br/>TessellateStrokedRect"]
+    C["Tessellator::<br/>TessellateStrokedPolygon"]
     D["std::vector&lt;Vertex&gt;<br/>(4 quad / 8 üçgen)"]
     E["RenderBatcher::<br/>PushTriangles"]
     F{"Mode/opacity<br/>değişti mi?<br/>VEYA buffer<br/>doldu mu?"}

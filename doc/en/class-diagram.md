@@ -125,7 +125,7 @@ classDiagram
         +TessellateFilledCircle(...) vector~Vertex~$
         +TessellateFilledEllipse(...) vector~Vertex~$
         +TessellateFilledPolygon(...) vector~Vertex~$
-        +TessellateStrokedRect/Circle/Ellipse(...) vector~Vertex~$
+        +BuildEllipsePoints/ArcPoints/RoundedRectPoints(...) vector~Point~$
         +TessellateThickLine(...) vector~Vertex~$
         +TessellateThickPolyline(...) vector~Vertex~$
         +TessellateStrokedPolygon(...) vector~Vertex~$
