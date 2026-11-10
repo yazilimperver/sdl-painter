@@ -33,25 +33,17 @@ viewer.
 
 ## 2. Setup (first time)
 
-### Add the doxygen-awesome-css submodule
+### The doxygen-awesome-css theme
 
-```bash
-git submodule add \
-  https://github.com/jothepro/doxygen-awesome-css.git \
-  third_party/doxygen-awesome-css
-git commit -m "chore: add doxygen-awesome-css submodule"
-```
+The theme lives in the repository under `third_party/doxygen-awesome-css/`
+(not a submodule, version 2.4.2). It comes with the clone; no extra step is
+needed. If the file is missing, `cmake/Docs.cmake` falls back to the default
+Doxygen theme.
 
-To pull the submodule while cloning:
-
-```bash
-git clone --recurse-submodules <repo-url>
-# Or in an existing clone:
-git submodule update --init
-```
-
-`GIT_SUBMODULE_STRATEGY: recursive` is already set in GitLab CI; no extra
-configuration is needed.
+To update the theme, replace the folder's contents with the desired release
+of [jothepro/doxygen-awesome-css](https://github.com/jothepro/doxygen-awesome-css).
+Its demo files (`docs/`, `img/`, `include/`, `.github/`) are excluded from the
+source archive by `.gitattributes`.
 
 ---
 
@@ -289,4 +281,4 @@ The two kinds of document do not replace each other:
 | `cmake/Docs.cmake` | Defines the `sdlpainter_docs` CMake target |
 | `CMakeLists.txt` | `SDLPAINTER_BUILD_DOCS` option |
 | `.gitlab-ci.yml` | `pages` job — publishes to GitLab Pages on the main branch |
-| `third_party/doxygen-awesome-css/` | Theme submodule (added with git submodule add) |
+| `third_party/doxygen-awesome-css/` | Theme (in the repository, version 2.4.2) |

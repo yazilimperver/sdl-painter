@@ -7,14 +7,14 @@ endif()
 
 set(DOXYGEN_OUTPUT_DIR "${PROJECT_BINARY_DIR}/docs/public")
 
-# doxygen-awesome-css submodule'ü varsa kullan, yoksa tema olmadan devam et.
+# doxygen-awesome-css repoda (third_party/, submodule degil). Dosyasi yoksa
+# tema olmadan devam et.
 set(DOXYGEN_AWESOME_CSS "")
 set(_AWESOME "${PROJECT_SOURCE_DIR}/third_party/doxygen-awesome-css/doxygen-awesome.css")
 if(EXISTS "${_AWESOME}")
     set(DOXYGEN_AWESOME_CSS "${_AWESOME}")
 else()
-    message(STATUS "doxygen-awesome-css submodule bulunamadi — varsayilan Doxygen temasi kullanilacak")
-    message(STATUS "  Eklemek icin: git submodule add https://github.com/jothepro/doxygen-awesome-css.git third_party/doxygen-awesome-css")
+    message(STATUS "doxygen-awesome-css bulunamadi (${_AWESOME}); varsayilan Doxygen temasi kullanilacak")
 endif()
 
 if(DOXYGEN_DOT_FOUND)

@@ -34,25 +34,16 @@ GitLab/GitHub markdown viewer'ında okunabilir kalır.
 
 ## 2. Kurulum (ilk seferinde)
 
-### doxygen-awesome-css submodule'ü ekle
+### doxygen-awesome-css teması
 
-```bash
-git submodule add \
-  https://github.com/jothepro/doxygen-awesome-css.git \
-  third_party/doxygen-awesome-css
-git commit -m "chore: doxygen-awesome-css submodule eklendi"
-```
+Tema `third_party/doxygen-awesome-css/` altında doğrudan repoda (submodule
+değil, sürüm 2.4.2). Klonla birlikte gelir; ek bir adım gerekmez. Dosya
+bulunamazsa `cmake/Docs.cmake` varsayılan Doxygen temasıyla devam eder.
 
-Klonlama sırasında submodule'ü de çekmek için:
-
-```bash
-git clone --recurse-submodules <repo-url>
-# Veya mevcut klonda:
-git submodule update --init
-```
-
-GitLab CI'da `GIT_SUBMODULE_STRATEGY: recursive` zaten tanımlı; ek
-yapılandırma gerekmez.
+Temayı güncellemek için klasörün içeriğini
+[jothepro/doxygen-awesome-css](https://github.com/jothepro/doxygen-awesome-css)
+deposunun istenen sürümüyle değiştirin. Demo dosyaları (`docs/`, `img/`,
+`include/`, `.github/`) `.gitattributes` ile kaynak arşivinden dışlanıyor.
 
 ---
 
@@ -285,4 +276,4 @@ adr/                      ← Karar gerekçeleri (ADR)     Kim: karar veren
 | `cmake/Docs.cmake` | `sdlpainter_docs` CMake hedefini tanımlar |
 | `CMakeLists.txt` | `SDLPAINTER_BUILD_DOCS` option |
 | `.gitlab-ci.yml` | `pages` job — main branch'te GitLab Pages'e yayınlar |
-| `third_party/doxygen-awesome-css/` | Tema submodule'ü (git submodule add ile eklenir) |
+| `third_party/doxygen-awesome-css/` | Tema (repoda, sürüm 2.4.2) |
