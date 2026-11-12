@@ -33,6 +33,10 @@
   dairelerde artar, büyüklerde azalır; kapalıyken eski kural geçerli). Metin
   ve görsellerin kenarları kapsam dışı. `shapes_showcase` örneğinde A tuşu
   açıp kapatır.
+- `renderer_comparison` ölçüm aracı (`examples/benchmarks`): aynı sahneyi
+  SDL_Renderer ile karşılaştırır (dikdörtgen, daire, sprite; sunum dahil kare
+  süresi, SDLPainter için kare başına tahsis sayısı). Sonuçlar ve koşullar
+  `examples/benchmarks/README.md`'de.
 - `IRenderer::LifetimeToken()`: renderer nesnesi yaşadıkça geçerli kalan bir
   `std::weak_ptr`. Sanal değil; kendi renderer'ını yazan tüketici de
   kendiliğinden alır.

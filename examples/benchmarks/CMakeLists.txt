@@ -14,3 +14,12 @@ add_executable(batching_benchmark
 target_link_libraries(batching_benchmark
     PRIVATE sdl_painter stb::stb spdlog::spdlog_header_only)
 sdlpainter_copy_runtime_dlls(batching_benchmark)
+
+# Ayni sahneyi SDL_Renderer ile karsilastirir. SDL_Renderer SDL3'un parcasi;
+# yeni bagimlilik yok. Kendi global operator new'unu tanimlar (tahsis sayimi).
+add_executable(renderer_comparison
+    renderer_comparison.cpp
+    screenshot.cpp)
+target_link_libraries(renderer_comparison
+    PRIVATE sdl_painter stb::stb spdlog::spdlog_header_only)
+sdlpainter_copy_runtime_dlls(renderer_comparison)

@@ -1,0 +1,46 @@
+pass,impl,driver,scenario,shapes,frames,ms_avg,ms_median,ms_min,draw_calls_per_frame,allocations_per_frame,device
+1,painter-gl,opengl,fill_rects,2000,300,0.6094,0.5086,0.3480,2.0,2000,NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+1,painter-gl,opengl,fill_circles,2000,300,1.6155,1.5546,1.4634,12.0,4000,NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+1,painter-gl,opengl,sprites,2000,300,0.5290,0.5105,0.4053,2.0,2000,NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+1,painter-vk,vulkan,fill_rects,2000,300,0.4082,0.4075,0.3097,2.0,2000,
+1,painter-vk,vulkan,fill_circles,2000,300,1.5074,1.4429,1.3438,12.0,4000,
+1,painter-vk,vulkan,sprites,2000,300,0.4462,0.4538,0.3617,2.0,2000,
+1,sdl,opengl,fill_rects,2000,300,0.5587,0.5198,0.3310,,,NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+1,sdl,opengl,fill_circles,2000,300,2.2570,2.0499,1.7913,,,NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+1,sdl,opengl,sprites,2000,300,0.3609,0.3288,0.2816,,,NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+1,sdl,direct3d11,fill_rects,2000,300,0.5707,0.4309,0.3321,,,
+1,sdl,direct3d11,fill_circles,2000,300,2.0603,1.9077,1.7010,,,
+1,sdl,direct3d11,sprites,2000,300,0.4057,0.3559,0.2556,,,
+1,sdl,vulkan,fill_rects,2000,300,0.5488,0.5227,0.4222,,,
+1,sdl,vulkan,fill_circles,2000,300,2.2820,2.1494,1.9170,,,
+1,sdl,vulkan,sprites,2000,300,0.4314,0.4065,0.3510,,,
+2,painter-gl,opengl,fill_rects,2000,300,0.4308,0.3863,0.3445,2.0,2000,NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+2,painter-gl,opengl,fill_circles,2000,300,1.5694,1.5276,1.4612,12.0,4000,NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+2,painter-gl,opengl,sprites,2000,300,0.4839,0.4388,0.4082,2.0,2000,NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+2,painter-vk,vulkan,fill_rects,2000,300,0.3677,0.3227,0.3076,2.0,2000,
+2,painter-vk,vulkan,fill_circles,2000,300,1.4657,1.3895,1.3475,12.0,4000,
+2,painter-vk,vulkan,sprites,2000,300,0.4230,0.3834,0.3595,2.0,2000,
+2,sdl,opengl,fill_rects,2000,300,0.4575,0.4159,0.3271,,,NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+2,sdl,opengl,fill_circles,2000,300,1.9785,1.8447,1.7872,,,NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+2,sdl,opengl,sprites,2000,300,0.3397,0.3209,0.2794,,,NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+2,sdl,direct3d11,fill_rects,2000,300,0.5291,0.4210,0.3317,,,
+2,sdl,direct3d11,fill_circles,2000,300,1.9466,1.7990,1.6845,,,
+2,sdl,direct3d11,sprites,2000,300,0.3419,0.3291,0.2579,,,
+2,sdl,vulkan,fill_rects,2000,300,0.4725,0.4343,0.4151,,,
+2,sdl,vulkan,fill_circles,2000,300,2.0073,1.9283,1.8624,,,
+2,sdl,vulkan,sprites,2000,300,0.4027,0.3651,0.3490,,,
+3,painter-gl,opengl,fill_rects,2000,300,0.4433,0.4294,0.3410,2.0,2000,NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+3,painter-gl,opengl,fill_circles,2000,300,1.5694,1.5123,1.4603,12.0,4000,NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+3,painter-gl,opengl,sprites,2000,300,0.5031,0.4862,0.4095,2.0,2000,NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+3,painter-vk,vulkan,fill_rects,2000,300,0.3676,0.3487,0.3087,2.0,2000,
+3,painter-vk,vulkan,fill_circles,2000,300,1.4029,1.3649,1.3384,12.0,4000,
+3,painter-vk,vulkan,sprites,2000,300,0.4222,0.3781,0.3578,2.0,2000,
+3,sdl,opengl,fill_rects,2000,300,0.4159,0.3855,0.3311,,,NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+3,sdl,opengl,fill_circles,2000,300,2.0719,1.8803,1.7829,,,NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+3,sdl,opengl,sprites,2000,300,0.3461,0.3211,0.2818,,,NVIDIA GeForce RTX 5060 Ti/PCIe/SSE2
+3,sdl,direct3d11,fill_rects,2000,300,0.4552,0.3593,0.3310,,,
+3,sdl,direct3d11,fill_circles,2000,300,1.8546,1.7838,1.6812,,,
+3,sdl,direct3d11,sprites,2000,300,0.3519,0.3322,0.2558,,,
+3,sdl,vulkan,fill_rects,2000,300,0.4521,0.4292,0.4131,,,
+3,sdl,vulkan,fill_circles,2000,300,2.0630,1.9957,1.8593,,,
+3,sdl,vulkan,sprites,2000,300,0.4086,0.3790,0.3486,,,
