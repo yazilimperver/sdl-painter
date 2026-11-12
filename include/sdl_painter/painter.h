@@ -622,9 +622,12 @@ class SDLPAINTER_API Painter {
   /// olur; böylece şerit her ölçekte 1 ekran pikselidir.
   [[nodiscard]] float PixelScale() const noexcept;
 
-  /// @brief Eğri segment sayısı için ölçek: kenar yumuşatma açıkken
-  ///        @ref PixelScale, kapalıyken 0 (yarıçapa göre klasik kural).
-  [[nodiscard]] float SegmentScale() const noexcept;
+  /// @brief Kenar yumuşatma açıkken @ref PixelScale, kapalıyken 0.
+  ///
+  /// Şerit genişliği ve eğri segment sayısı (0 ise yarıçapa göre klasik
+  /// kural) bunu kullanır. Kapalıyken `sqrt` hiç hesaplanmaz; şekil başına
+  /// çağrıldığı için önemli.
+  [[nodiscard]] float AntialiasScale() const noexcept;
 
   /// @brief Kalem genişliği ve ince kalem için alfa çarpanı.
   struct StrokeWidth {
