@@ -5,7 +5,6 @@
 #include <cstdint>
 #include <numeric>
 #include <spdlog/spdlog.h>
-#include <unordered_map>
 
 namespace sdl_painter {
 
@@ -20,19 +19,7 @@ bool SamePoint(const Point& a, const Point& b) {
   return (dx * dx + dy * dy) <= kEpsSq;
 }
 
-/// @brief Kalın çizginin tek segmenti: birim yön ve gövdenin dört köşesi.
-///
-/// Sol, yönün +90° döndürülmüş hâlidir. Köşeler birleşimde kırpılabilsin diye
-/// gövde yazılmadan önce burada tutulur.
-struct StrokeSegment {
-  float ux{0.0F};
-  float uy{0.0F};
-  float length{0.0F};
-  Point start_left;
-  Point start_right;
-  Point end_left;
-  Point end_right;
-};
+using StrokeSegment = Tessellator::StrokeSegment;
 
 /// @brief a'dan b'ye segmentin yönünü ve kırpılmamış köşelerini hesapla.
 StrokeSegment MakeSegment(const Point& a, const Point& b, float half_width) {
@@ -197,15 +184,22 @@ bool AppendTrimmedJoin(std::vector<Vertex>& out, const Point& corner,
 
 std::vector<Vertex> Tessellator::TessellateFilledRect(float x, float y, float w,
                                                       float h) {
+  std::vector<Vertex> out;
+  TessellateFilledRect(x, y, w, h, out);
+  return out;
+}
+
+void Tessellator::TessellateFilledRect(float x, float y, float w, float h,
+                                       std::vector<Vertex>& out) {
   // clang-format off
-  return {
+  out.assign({
       {x,     y    },
       {x + w, y    },
       {x + w, y + h},
       {x,     y    },
       {x + w, y + h},
       {x,     y + h},
-  };
+  });
   // clang-format on
 }
 
@@ -250,48 +244,83 @@ std::vector<Vertex> Tessellator::TessellateFilledCircle(float cx, float cy,
 std::vector<Vertex> Tessellator::TessellateFilledEllipse(float cx, float cy,
                                                          float rx, float ry,
                                                          float pixel_scale) {
-  const std::vector<Point> pts =
-      BuildEllipsePoints(cx, cy, rx, ry, pixel_scale);
-  std::vector<Vertex> result;
-  result.reserve(pts.size() * 3);
+  Scratch scratch;
+  std::vector<Vertex> out;
+  TessellateFilledEllipse(cx, cy, rx, ry, pixel_scale, scratch, out);
+  return out;
+}
+
+void Tessellator::TessellateFilledEllipse(float cx, float cy, float rx,
+                                          float ry, float pixel_scale,
+                                          Scratch& scratch,
+                                          std::vector<Vertex>& out) {
+  std::vector<Point>& pts = scratch.points;
+  BuildEllipsePoints(cx, cy, rx, ry, pixel_scale, pts);
+  out.clear();
+  out.reserve(pts.size() * 3);
   for (std::size_t i = 0; i < pts.size(); ++i) {
     const Point& a = pts[i];
     const Point& b = pts[(i + 1) % pts.size()];
-    result.emplace_back(cx, cy);
-    result.emplace_back(a.x, a.y);
-    result.emplace_back(b.x, b.y);
+    out.emplace_back(cx, cy);
+    out.emplace_back(a.x, a.y);
+    out.emplace_back(b.x, b.y);
   }
-  return result;
 }
 
 std::vector<Point> Tessellator::BuildEllipsePoints(float cx, float cy, float rx,
                                                    float ry,
                                                    float pixel_scale) {
-  const int32_t kSegments = AdaptiveSegments(std::max(rx, ry), pixel_scale);
   std::vector<Point> pts;
-  pts.reserve(static_cast<std::size_t>(kSegments));
+  BuildEllipsePoints(cx, cy, rx, ry, pixel_scale, pts);
+  return pts;
+}
+
+void Tessellator::BuildEllipsePoints(float cx, float cy, float rx, float ry,
+                                     float pixel_scale,
+                                     std::vector<Point>& out) {
+  const int32_t kSegments = AdaptiveSegments(std::max(rx, ry), pixel_scale);
+  out.clear();
+  out.reserve(static_cast<std::size_t>(kSegments));
   for (int32_t i = 0; i < kSegments; ++i) {
     const float a =
         kTwoPi * static_cast<float>(i) / static_cast<float>(kSegments);
-    pts.emplace_back(cx + std::cos(a) * rx, cy + std::sin(a) * ry);
+    out.emplace_back(cx + std::cos(a) * rx, cy + std::sin(a) * ry);
   }
-  return pts;
 }
 
 std::vector<Vertex> Tessellator::TessellateFilledPolygon(
     const std::vector<Point>& points) {
+  Scratch scratch;
+  std::vector<Vertex> out;
+  TessellateFilledPolygon(points, scratch, out);
+  return out;
+}
+
+void Tessellator::TessellateFilledPolygon(const std::vector<Point>& points,
+                                          Scratch& scratch,
+                                          std::vector<Vertex>& out) {
+  out.clear();
   if (points.size() < 3) {
-    return {};
+    return;
   }
-  return EarClipping(points);
+  EarClipping(points, scratch, out);
 }
 
 std::vector<Point> Tessellator::BuildRoundedRectPoints(float x, float y,
                                                        float w, float h,
                                                        float radius,
                                                        float pixel_scale) {
+  std::vector<Point> pts;
+  BuildRoundedRectPoints(x, y, w, h, radius, pixel_scale, pts);
+  return pts;
+}
+
+void Tessellator::BuildRoundedRectPoints(float x, float y, float w, float h,
+                                         float radius, float pixel_scale,
+                                         std::vector<Point>& out) {
+  out.clear();
   if (!(w > 0.0F) || !(h > 0.0F)) {
-    return {};
+    return;
   }
 
   // Yarıçap yarım genişliği/yüksekliği aşarsa şekil kendi üzerine kıvrılırdı;
@@ -299,7 +328,8 @@ std::vector<Point> Tessellator::BuildRoundedRectPoints(float x, float y,
   const float r = std::fmin(radius, std::fmin(w, h) * 0.5F);
   if (!(r > 0.0F)) {
     // Yarıçapsız hâl düz dikdörtgendir; DrawRect ile aynı geometri.
-    return {{x, y}, {x + w, y}, {x + w, y + h}, {x, y + h}};
+    out.assign({{x, y}, {x + w, y}, {x + w, y + h}, {x, y + h}});
+    return;
   }
 
   // Köşe başına segment sayısı: çeyrek daire olduğu için tam çemberin 1/4'ü.
@@ -322,54 +352,72 @@ std::vector<Point> Tessellator::BuildRoundedRectPoints(float x, float y,
       {x + r, y + r, 2.0F * kHalfPi},  // sol-üst
   };
 
-  std::vector<Point> pts;
-  pts.reserve(static_cast<std::size_t>(kQuarter + 1) * 4);
+  out.reserve(static_cast<std::size_t>(kQuarter + 1) * 4);
   for (const auto& corner : kCorners) {
     for (int32_t i = 0; i <= kQuarter; ++i) {
       const float t = static_cast<float>(i) / static_cast<float>(kQuarter);
       const float a = corner.start + kHalfPi * t;
-      pts.emplace_back(corner.cx + std::cos(a) * r,
+      out.emplace_back(corner.cx + std::cos(a) * r,
                        corner.cy + std::sin(a) * r);
     }
   }
-  return pts;
 }
 
 std::vector<Vertex> Tessellator::TessellateFilledRoundedRect(
     float x, float y, float w, float h, float radius, float pixel_scale) {
-  const std::vector<Point> outline =
-      BuildRoundedRectPoints(x, y, w, h, radius, pixel_scale);
+  Scratch scratch;
+  std::vector<Vertex> out;
+  TessellateFilledRoundedRect(x, y, w, h, radius, pixel_scale, scratch, out);
+  return out;
+}
+
+void Tessellator::TessellateFilledRoundedRect(float x, float y, float w,
+                                              float h, float radius,
+                                              float pixel_scale,
+                                              Scratch& scratch,
+                                              std::vector<Vertex>& out) {
+  std::vector<Point>& outline = scratch.points;
+  BuildRoundedRectPoints(x, y, w, h, radius, pixel_scale, outline);
+  out.clear();
   if (outline.size() < 3) {
-    return {};
+    return;
   }
   // Merkezden üçgen fanı. Çakışık komşu noktalar sıfır alanlı üçgen üretir;
   // zararsızdır, ear clipping'deki gibi şeklin geri kalanını düşürmez.
   const float cx = x + (w * 0.5F);
   const float cy = y + (h * 0.5F);
-  std::vector<Vertex> result;
-  result.reserve(outline.size() * 3);
+  out.reserve(outline.size() * 3);
   for (std::size_t i = 0; i < outline.size(); ++i) {
     const Point& a = outline[i];
     const Point& b = outline[(i + 1) % outline.size()];
-    result.emplace_back(cx, cy);
-    result.emplace_back(a.x, a.y);
-    result.emplace_back(b.x, b.y);
+    out.emplace_back(cx, cy);
+    out.emplace_back(a.x, a.y);
+    out.emplace_back(b.x, b.y);
   }
-  return result;
 }
 
 std::vector<Point> Tessellator::BuildArcPoints(float cx, float cy, float rx,
                                                float ry, float start_degrees,
                                                float sweep_degrees,
                                                float pixel_scale) {
+  std::vector<Point> pts;
+  BuildArcPoints(cx, cy, rx, ry, start_degrees, sweep_degrees, pixel_scale,
+                 pts);
+  return pts;
+}
+
+void Tessellator::BuildArcPoints(float cx, float cy, float rx, float ry,
+                                 float start_degrees, float sweep_degrees,
+                                 float pixel_scale, std::vector<Point>& out) {
+  out.clear();
   if (!(rx > 0.0F) || !(ry > 0.0F)) {
-    return {};
+    return;
   }
   // Tam turdan fazlası görsel olarak tam turdan farksızdır; kırpmak, çok
   // büyük açı değerlerinde segment sayısının patlamasını da engeller.
   float sweep = std::clamp(sweep_degrees, -360.0F, 360.0F);
   if (std::fabs(sweep) < 1e-4F) {
-    return {};
+    return;
   }
 
   constexpr float kDegToRad = 3.14159265358979323846F / 180.0F;
@@ -383,14 +431,12 @@ std::vector<Point> Tessellator::BuildArcPoints(float cx, float cy, float rx,
   const auto kSegments = std::max(
       2, static_cast<int32_t>(pixel_scale > 0.0F ? std::ceil(kExact) : kExact));
 
-  std::vector<Point> pts;
-  pts.reserve(static_cast<std::size_t>(kSegments) + 1);
+  out.reserve(static_cast<std::size_t>(kSegments) + 1);
   for (int32_t i = 0; i <= kSegments; ++i) {
     const float t = static_cast<float>(i) / static_cast<float>(kSegments);
     const float a = (start_degrees + sweep * t) * kDegToRad;
-    pts.emplace_back(cx + std::cos(a) * rx, cy + std::sin(a) * ry);
+    out.emplace_back(cx + std::cos(a) * rx, cy + std::sin(a) * ry);
   }
-  return pts;
 }
 
 std::vector<Vertex> Tessellator::TessellateFilledPie(float cx, float cy,
@@ -398,21 +444,32 @@ std::vector<Vertex> Tessellator::TessellateFilledPie(float cx, float cy,
                                                      float start_degrees,
                                                      float sweep_degrees,
                                                      float pixel_scale) {
-  const std::vector<Point> arc =
-      BuildArcPoints(cx, cy, rx, ry, start_degrees, sweep_degrees, pixel_scale);
+  Scratch scratch;
+  std::vector<Vertex> out;
+  TessellateFilledPie(cx, cy, rx, ry, start_degrees, sweep_degrees, pixel_scale,
+                      scratch, out);
+  return out;
+}
+
+void Tessellator::TessellateFilledPie(float cx, float cy, float rx, float ry,
+                                      float start_degrees, float sweep_degrees,
+                                      float pixel_scale, Scratch& scratch,
+                                      std::vector<Vertex>& out) {
+  std::vector<Point>& arc = scratch.points;
+  BuildArcPoints(cx, cy, rx, ry, start_degrees, sweep_degrees, pixel_scale,
+                 arc);
+  out.clear();
   if (arc.size() < 2) {
-    return {};
+    return;
   }
   // Merkezden üçgen fanı: dilim daima yıldız-konveks olduğu için ear
   // clipping'e gerek yok.
-  std::vector<Vertex> result;
-  result.reserve((arc.size() - 1) * 3);
+  out.reserve((arc.size() - 1) * 3);
   for (std::size_t i = 0; i + 1 < arc.size(); ++i) {
-    result.emplace_back(cx, cy);
-    result.emplace_back(arc[i].x, arc[i].y);
-    result.emplace_back(arc[i + 1].x, arc[i + 1].y);
+    out.emplace_back(cx, cy);
+    out.emplace_back(arc[i].x, arc[i].y);
+    out.emplace_back(arc[i + 1].x, arc[i + 1].y);
   }
-  return result;
 }
 
 std::vector<Vertex> Tessellator::TessellateFilledChord(float cx, float cy,
@@ -420,21 +477,33 @@ std::vector<Vertex> Tessellator::TessellateFilledChord(float cx, float cy,
                                                        float start_degrees,
                                                        float sweep_degrees,
                                                        float pixel_scale) {
-  const std::vector<Point> arc =
-      BuildArcPoints(cx, cy, rx, ry, start_degrees, sweep_degrees, pixel_scale);
+  Scratch scratch;
+  std::vector<Vertex> out;
+  TessellateFilledChord(cx, cy, rx, ry, start_degrees, sweep_degrees,
+                        pixel_scale, scratch, out);
+  return out;
+}
+
+void Tessellator::TessellateFilledChord(float cx, float cy, float rx, float ry,
+                                        float start_degrees,
+                                        float sweep_degrees, float pixel_scale,
+                                        Scratch& scratch,
+                                        std::vector<Vertex>& out) {
+  std::vector<Point>& arc = scratch.points;
+  BuildArcPoints(cx, cy, rx, ry, start_degrees, sweep_degrees, pixel_scale,
+                 arc);
+  out.clear();
   if (arc.size() < 3) {
-    return {};
+    return;
   }
   // Kiriş bölgesi konvekstir (yay + onu kapatan doğru parçası), bu yüzden
   // ilk noktadan üçgen fanı yeterli; ear clipping'in O(n²) maliyeti gereksiz.
-  std::vector<Vertex> result;
-  result.reserve((arc.size() - 2) * 3);
+  out.reserve((arc.size() - 2) * 3);
   for (std::size_t i = 1; i + 1 < arc.size(); ++i) {
-    result.emplace_back(arc[0].x, arc[0].y);
-    result.emplace_back(arc[i].x, arc[i].y);
-    result.emplace_back(arc[i + 1].x, arc[i + 1].y);
+    out.emplace_back(arc[0].x, arc[0].y);
+    out.emplace_back(arc[i].x, arc[i].y);
+    out.emplace_back(arc[i + 1].x, arc[i + 1].y);
   }
-  return result;
 }
 
 std::vector<Vertex> Tessellator::TessellateThickLine(float x1, float y1,
@@ -578,15 +647,29 @@ void Tessellator::AppendRoundJoin(std::vector<Vertex>& out, const Point& center,
 std::vector<Vertex> Tessellator::TessellateThickPolyline(
     const std::vector<Point>& points, float line_width, LineCap cap,
     LineJoin join) {
-  return TessellatePolyline(points, line_width, /*closed=*/false, cap, join);
+  Scratch scratch;
+  std::vector<Vertex> out;
+  TessellateThickPolyline(points, line_width, cap, join, scratch, out);
+  return out;
 }
 
-std::vector<std::vector<Point>> Tessellator::BuildDashRuns(
-    const std::vector<Point>& points, const float* dash, std::size_t dash_count,
-    bool closed) {
-  std::vector<std::vector<Point>> runs;
+void Tessellator::TessellateThickPolyline(const std::vector<Point>& points,
+                                          float line_width, LineCap cap,
+                                          LineJoin join, Scratch& scratch,
+                                          std::vector<Vertex>& out) {
+  out.clear();
+  TessellatePolyline(points, line_width, /*closed=*/false, cap, join, scratch,
+                     out);
+}
+
+void Tessellator::BuildDashRuns(const std::vector<Point>& points,
+                                const float* dash, std::size_t dash_count,
+                                bool closed, std::vector<Point>& run_points,
+                                std::vector<std::size_t>& run_ends) {
+  run_points.clear();
+  run_ends.clear();
   if (points.size() < 2 || dash == nullptr || dash_count == 0) {
-    return runs;
+    return;
   }
 
   // Desen indeksi monoton artar; "çizili mi?" sorusu indeksin çift olup
@@ -597,9 +680,21 @@ std::vector<std::vector<Point>> Tessellator::BuildDashRuns(
   bool drawing = true;
   float remaining = dash[0];
 
-  std::vector<Point> current;
+  // Yapım hâlindeki parça run_points'in [run_start, son) aralığıdır.
+  // Tamamlanan parça yerinde kalır ve bitişi run_ends'e yazılır; iki noktaya
+  // ulaşmayan parça silinir.
+  std::size_t run_start = 0;
+  const auto finish_run = [&] {
+    if (run_points.size() - run_start >= 2) {
+      run_ends.push_back(run_points.size());
+      run_start = run_points.size();
+    } else {
+      run_points.resize(run_start);
+    }
+  };
+
   if (drawing) {
-    current.push_back(points.front());
+    run_points.push_back(points.front());
   }
 
   const std::size_t kSegmentCount = closed ? points.size() : points.size() - 1;
@@ -621,14 +716,11 @@ std::vector<std::vector<Point>> Tessellator::BuildDashRuns(
       const Point split{a.x + ux * travelled, a.y + uy * travelled};
 
       if (drawing) {
-        current.push_back(split);
-        if (current.size() >= 2) {
-          runs.push_back(current);
-        }
-        current.clear();
+        run_points.push_back(split);
+        finish_run();
       } else {
-        current.clear();
-        current.push_back(split);
+        run_points.resize(run_start);
+        run_points.push_back(split);
       }
 
       drawing = !drawing;
@@ -640,22 +732,38 @@ std::vector<std::vector<Point>> Tessellator::BuildDashRuns(
     // Köşe noktası: çizili bir parçanın ortasına denk geliyorsa parçaya
     // eklenir; böylece kesik köşenin üzerinden geçtiğinde birleşim alır.
     if (drawing) {
-      current.push_back(b);
+      run_points.push_back(b);
     }
   }
 
-  if (drawing && current.size() >= 2) {
-    runs.push_back(current);
+  if (drawing) {
+    finish_run();
+  } else {
+    run_points.resize(run_start);
   }
-  return runs;
 }
 
 std::vector<Vertex> Tessellator::TessellateDashedPolyline(
     const std::vector<Point>& points, float line_width, const float* dash,
     std::size_t dash_count, bool closed, LineCap cap, LineJoin join) {
-  const std::vector<Point> cleaned = RemoveDuplicatePoints(points, closed);
+  Scratch scratch;
+  std::vector<Vertex> out;
+  TessellateDashedPolyline(points, line_width, dash, dash_count, closed, cap,
+                           join, scratch, out);
+  return out;
+}
+
+void Tessellator::TessellateDashedPolyline(const std::vector<Point>& points,
+                                           float line_width, const float* dash,
+                                           std::size_t dash_count, bool closed,
+                                           LineCap cap, LineJoin join,
+                                           Scratch& scratch,
+                                           std::vector<Vertex>& out) {
+  out.clear();
+  std::vector<Point>& cleaned = scratch.cleaned;
+  RemoveDuplicatePoints(points, closed, cleaned);
   if (cleaned.size() < 2 || !(line_width > 0.0F)) {
-    return {};
+    return;
   }
 
   // Desen geçersizse kesintisiz çiz. "Geçersiz" yalnızca boş desen değil:
@@ -667,44 +775,62 @@ std::vector<Vertex> Tessellator::TessellateDashedPolyline(
     valid = dash[i] > 0.0F;
   }
   if (!valid) {
-    return TessellatePolyline(cleaned, line_width, closed, cap, join);
+    TessellatePolyline(cleaned, line_width, closed, cap, join, scratch, out);
+    return;
   }
 
-  std::vector<Vertex> result;
-  for (const auto& run : BuildDashRuns(cleaned, dash, dash_count, closed)) {
+  BuildDashRuns(cleaned, dash, dash_count, closed, scratch.dash_points,
+                scratch.dash_ends);
+  std::size_t begin = 0;
+  for (const std::size_t end : scratch.dash_ends) {
     // Her çizili parça kendi içinde AÇIK bir polyline'dır — kapalı şeklin
     // kesiği de açık parçalardan oluşur.
-    auto piece =
-        TessellatePolyline(run, line_width, /*closed=*/false, cap, join);
-    result.insert(result.end(), piece.begin(), piece.end());
+    scratch.dash_run.assign(
+        scratch.dash_points.begin() + static_cast<std::ptrdiff_t>(begin),
+        scratch.dash_points.begin() + static_cast<std::ptrdiff_t>(end));
+    TessellatePolyline(scratch.dash_run, line_width, /*closed=*/false, cap,
+                       join, scratch, out);
+    begin = end;
   }
-  return result;
 }
 
 std::vector<Vertex> Tessellator::TessellateStrokedPolygon(
     const std::vector<Point>& points, float line_width, LineJoin join) {
-  // Kapalı geometride uç yoktur; cap değeri kullanılmaz.
-  return TessellatePolyline(points, line_width, /*closed=*/true, LineCap::kButt,
-                            join);
+  Scratch scratch;
+  std::vector<Vertex> out;
+  TessellateStrokedPolygon(points, line_width, join, scratch, out);
+  return out;
 }
 
-std::vector<Vertex> Tessellator::TessellatePolyline(
-    const std::vector<Point>& raw, float line_width, bool closed, LineCap cap,
-    LineJoin join) {
+void Tessellator::TessellateStrokedPolygon(const std::vector<Point>& points,
+                                           float line_width, LineJoin join,
+                                           Scratch& scratch,
+                                           std::vector<Vertex>& out) {
+  // Kapalı geometride uç yoktur; cap değeri kullanılmaz.
+  out.clear();
+  TessellatePolyline(points, line_width, /*closed=*/true, LineCap::kButt, join,
+                     scratch, out);
+}
+
+void Tessellator::TessellatePolyline(const std::vector<Point>& raw,
+                                     float line_width, bool closed, LineCap cap,
+                                     LineJoin join, Scratch& scratch,
+                                     std::vector<Vertex>& out) {
   // Çakışan ardışık noktalar sıfır uzunluklu segment üretir; hem quad hem de
   // birleşim hesabını bozar.
-  const std::vector<Point> points = RemoveDuplicatePoints(raw, closed);
+  std::vector<Point>& points = scratch.points;
+  RemoveDuplicatePoints(raw, closed, points);
   if (points.size() < 2) {
-    return {};
+    return;
   }
   if (!(line_width > 0.0F)) {
-    return {};
+    return;
   }
 
   const float kRadius = line_width * 0.5F;
   const std::size_t kSegmentCount = closed ? points.size() : points.size() - 1;
-  std::vector<StrokeSegment> segments;
-  segments.reserve(kSegmentCount);
+  std::vector<StrokeSegment>& segments = scratch.segments;
+  segments.clear();
   for (std::size_t i = 0; i < kSegmentCount; ++i) {
     segments.push_back(
         MakeSegment(points[i], points[(i + 1) % points.size()], kRadius));
@@ -716,7 +842,8 @@ std::vector<Vertex> Tessellator::TessellatePolyline(
   // geçerli: yarım pikselden kısa bir uzatma görünmez.
   constexpr float kMinJoinWidth = 1.5F;
   const bool kWithJoins = line_width >= kMinJoinWidth;
-  std::vector<Vertex> joins;
+  std::vector<Vertex>& joins = scratch.joins;
+  joins.clear();
   if (kWithJoins) {
     // Açık polyline'da yalnızca iç köşeler; kapalı poligonda tüm köşeler
     // (ilk köşe de son segmentin bitişidir).
@@ -743,14 +870,12 @@ std::vector<Vertex> Tessellator::TessellatePolyline(
     }
   }
 
-  std::vector<Vertex> result;
-  result.reserve(kSegmentCount * 6 + joins.size());
   for (const StrokeSegment& s : segments) {
     if (s.length >= 1e-6F) {
-      EmitSegment(s, result);
+      EmitSegment(s, out);
     }
   }
-  result.insert(result.end(), joins.begin(), joins.end());
+  out.insert(out.end(), joins.begin(), joins.end());
 
   // Uçlar yalnızca açık geometride ve yalnızca iki uç noktada. Açık yolda
   // birleşim ilk segmentin başına ve son segmentin sonuna dokunmaz.
@@ -758,39 +883,131 @@ std::vector<Vertex> Tessellator::TessellatePolyline(
     const StrokeSegment& head = segments.front();
     const StrokeSegment& tail = segments.back();
     if (head.length >= 1e-6F) {
-      AppendCap(result, points.front(), -head.ux, -head.uy, head.start_left,
+      AppendCap(out, points.front(), -head.ux, -head.uy, head.start_left,
                 head.start_right, kRadius, cap);
     }
     if (tail.length >= 1e-6F) {
-      AppendCap(result, points.back(), tail.ux, tail.uy, tail.end_left,
+      AppendCap(out, points.back(), tail.ux, tail.uy, tail.end_left,
                 tail.end_right, kRadius, cap);
     }
   }
-
-  return result;
 }
 
 namespace {
+
+/// @brief 64 bit anahtardan 32 bit değere açık adreslemeli tablo.
+///
+/// `std::unordered_map` her yeni anahtar için düğüm tahsis ediyor ve her
+/// aramada düğüm zinciri dolaşıyordu; kenar yumuşatma şekil başına yüzlerce
+/// arama yaptığı için süreyi bu belirliyordu. Burada anahtarlar ve değerler
+/// iki düz dizide durur, çakışmada sonraki yuvaya bakılır (doğrusal yoklama).
+/// Silme yoktur; kapasite, eklenecek anahtar sayısının üst sınırının en az iki
+/// katıdır, tablo hiç dolmaz. Diziler çağıranındır (bkz.
+/// @ref Tessellator::Scratch); kapasiteleri çağrılar arasında korunur.
+class FlatIndexMap {
+ public:
+  /// @param max_keys Eklenecek anahtar sayısının üst sınırı.
+  FlatIndexMap(std::vector<std::uint64_t>& keys,
+               std::vector<std::uint32_t>& values, std::size_t max_keys)
+      : mKeys(keys), mValues(values) {
+    std::size_t capacity = 16;
+    while (capacity < max_keys * 2) {
+      capacity *= 2;
+    }
+    mMask = capacity - 1;
+    mKeys.resize(capacity);
+    mValues.assign(capacity, kEmpty);
+  }
+
+  /// @return Anahtarın değeri; anahtar yoksa nullptr.
+  [[nodiscard]] const std::uint32_t* Find(std::uint64_t key) const {
+    for (std::size_t i = Slot(key);; i = (i + 1) & mMask) {
+      if (mValues[i] == kEmpty) {
+        return nullptr;
+      }
+      if (mKeys[i] == key) {
+        return &mValues[i];
+      }
+    }
+  }
+
+  /// @brief Anahtar yoksa `value` ile ekle.
+  /// @param inserted Eklendiyse true; anahtar zaten varsa false.
+  /// @return Anahtarın tablodaki değeri.
+  std::uint32_t Insert(std::uint64_t key, std::uint32_t value, bool& inserted) {
+    for (std::size_t i = Slot(key);; i = (i + 1) & mMask) {
+      if (mValues[i] == kEmpty) {
+        mKeys[i] = key;
+        mValues[i] = value;
+        inserted = true;
+        return value;
+      }
+      if (mKeys[i] == key) {
+        inserted = false;
+        return mValues[i];
+      }
+    }
+  }
+
+ private:
+  static constexpr std::uint32_t kEmpty = 0xFFFFFFFFU;
+
+  /// @brief splitmix64 karıştırıcısı: komşu ızgara hücreleri ve ardışık
+  ///        indeksler tabloya dağılsın.
+  [[nodiscard]] std::size_t Slot(std::uint64_t key) const {
+    key ^= key >> 30U;
+    key *= 0xBF58476D1CE4E5B9ULL;
+    key ^= key >> 27U;
+    key *= 0x94D049BB133111EBULL;
+    key ^= key >> 31U;
+    return static_cast<std::size_t>(key) & mMask;
+  }
+
+  std::size_t mMask{0};
+  std::vector<std::uint64_t>& mKeys;
+  std::vector<std::uint32_t>& mValues;
+};
 
 /// @brief Konumu yakın köşeleri tek indekste birleştirir.
 ///
 /// Parçalar ortak köşeleri aynı hesapla üretse de son bitte ayrışabilir;
 /// birleşmeyen bir iç kenar sınır sanılır ve iki üçgen birbirinden ayrılırdı.
-/// Izgara hücresi tolerans kadardır, komşu hücreler de aranır.
+/// Izgara hücresi tolerans kadardır, komşu hücreler de aranır. Bir hücrenin
+/// köşeleri eklenme sırasıyla bağlı bir indeks listesinde durur; arama sırası
+/// (komşu hücre sırası, hücre içinde eklenme sırası) bu yüzden sabittir.
+/// Diziler `scratch`'tedir; kurulurken boşaltılır.
 class VertexWelder {
  public:
-  explicit VertexWelder(float tolerance) : mTolerance(tolerance) {}
+  /// @param max_points Kaynaştırılacak köşe sayısının üst sınırı.
+  VertexWelder(float tolerance, std::size_t max_points,
+               Tessellator::Scratch::Antialias& scratch)
+      : mTolerance(tolerance),
+        mCells(scratch.cell_keys, scratch.cell_values, max_points),
+        mPoints(scratch.points),
+        mNext(scratch.next),
+        mCellHead(scratch.cell_head),
+        mCellTail(scratch.cell_tail) {
+    mPoints.clear();
+    mNext.clear();
+    mCellHead.clear();
+    mCellTail.clear();
+    mPoints.reserve(max_points);
+    mNext.reserve(max_points);
+    mCellHead.reserve(max_points);
+    mCellTail.reserve(max_points);
+  }
 
   std::uint32_t Weld(const Point& p) {
     const auto kCx = static_cast<std::int64_t>(std::floor(p.x / mTolerance));
     const auto kCy = static_cast<std::int64_t>(std::floor(p.y / mTolerance));
     for (std::int64_t dx = -1; dx <= 1; ++dx) {
       for (std::int64_t dy = -1; dy <= 1; ++dy) {
-        const auto it = mCells.find(Key(kCx + dx, kCy + dy));
-        if (it == mCells.end()) {
+        const std::uint32_t* cell = mCells.Find(Key(kCx + dx, kCy + dy));
+        if (cell == nullptr) {
           continue;
         }
-        for (const std::uint32_t idx : it->second) {
+        for (std::uint32_t idx = mCellHead[*cell]; idx != kNone;
+             idx = mNext[idx]) {
           if (std::fabs(mPoints[idx].x - p.x) <= mTolerance &&
               std::fabs(mPoints[idx].y - p.y) <= mTolerance) {
             return idx;
@@ -800,21 +1017,36 @@ class VertexWelder {
     }
     const auto kIndex = static_cast<std::uint32_t>(mPoints.size());
     mPoints.push_back(p);
-    mCells[Key(kCx, kCy)].push_back(kIndex);
+    mNext.push_back(kNone);
+    bool inserted = false;
+    const std::uint32_t kCell = mCells.Insert(
+        Key(kCx, kCy), static_cast<std::uint32_t>(mCellHead.size()), inserted);
+    if (inserted) {
+      mCellHead.push_back(kIndex);
+      mCellTail.push_back(kIndex);
+    } else {
+      mNext[mCellTail[kCell]] = kIndex;
+      mCellTail[kCell] = kIndex;
+    }
     return kIndex;
   }
 
   [[nodiscard]] const std::vector<Point>& Points() const { return mPoints; }
 
  private:
+  static constexpr std::uint32_t kNone = 0xFFFFFFFFU;
+
   static std::uint64_t Key(std::int64_t x, std::int64_t y) {
     return (static_cast<std::uint64_t>(static_cast<std::uint32_t>(x)) << 32U) |
            static_cast<std::uint64_t>(static_cast<std::uint32_t>(y));
   }
 
   float mTolerance;
-  std::vector<Point> mPoints;
-  std::unordered_map<std::uint64_t, std::vector<std::uint32_t>> mCells;
+  FlatIndexMap mCells;                ///< Hücre anahtarı -> hücre numarası.
+  std::vector<Point>& mPoints;        ///< Kaynaşmış köşeler.
+  std::vector<std::uint32_t>& mNext;  ///< Aynı hücredeki sonraki köşe.
+  std::vector<std::uint32_t>& mCellHead;
+  std::vector<std::uint32_t>& mCellTail;
 };
 
 std::uint64_t EdgeKey(std::uint32_t a, std::uint32_t b) {
@@ -823,13 +1055,7 @@ std::uint64_t EdgeKey(std::uint32_t a, std::uint32_t b) {
   return (static_cast<std::uint64_t>(lo) << 32U) | hi;
 }
 
-/// @brief Bir kenarın kaç üçgende geçtiği ve ilk geçtiği üçgendeki yönü.
-struct EdgeUse {
-  std::uint32_t count{0};
-  std::uint32_t from{0};
-  std::uint32_t to{0};
-  std::uint32_t opposite{0};  ///< Üçgenin kenara karşı köşesi.
-};
+using EdgeUse = Tessellator::Scratch::AntialiasEdge;
 
 Vertex WithCoverage(const Point& p, std::uint8_t coverage) {
   Vertex v{p.x, p.y};
@@ -841,18 +1067,31 @@ Vertex WithCoverage(const Point& p, std::uint8_t coverage) {
 
 std::vector<Vertex> Tessellator::AntialiasTriangles(
     const std::vector<Vertex>& triangles, float fringe_width) {
+  Scratch scratch;
+  std::vector<Vertex> out;
+  AntialiasTriangles(triangles, fringe_width, scratch, out);
+  return out;
+}
+
+void Tessellator::AntialiasTriangles(const std::vector<Vertex>& triangles,
+                                     float fringe_width, Scratch& scratch,
+                                     std::vector<Vertex>& out) {
   if (!(fringe_width > 0.0F) || triangles.size() < 3) {
-    return triangles;
+    out = triangles;
+    return;
   }
   for (const Vertex& v : triangles) {
     if (!std::isfinite(v.x) || !std::isfinite(v.y)) {
-      return triangles;
+      out = triangles;
+      return;
     }
   }
+  Scratch::Antialias& s = scratch.aa;
 
   // 1. Köşeleri birleştir; alanı sıfır üçgenler kenar sayımını bozar, atılır.
-  VertexWelder welder(fringe_width * 1e-3F);
-  std::vector<std::uint32_t> tris;
+  VertexWelder welder(fringe_width * 1e-3F, triangles.size(), s);
+  std::vector<std::uint32_t>& tris = s.tris;
+  tris.clear();
   tris.reserve(triangles.size());
   const float kMinArea2 = fringe_width * fringe_width * 1e-6F;
   for (std::size_t i = 0; i + 2 < triangles.size(); i += 3) {
@@ -878,42 +1117,50 @@ std::vector<Vertex> Tessellator::AntialiasTriangles(
   }
   const std::vector<Point>& pos = welder.Points();
   if (tris.empty()) {
-    return {};
+    out.clear();
+    return;
   }
 
-  // 2. Kenarları say: tek üçgene ait olanlar sınırdır.
-  std::unordered_map<std::uint64_t, EdgeUse> edges;
+  // 2. Kenarları say: tek üçgene ait olanlar sınırdır. Bir kenarın yönü ve
+  //    karşı köşesi, kenarın geçtiği ilk üçgenden alınır.
+  FlatIndexMap edge_index(s.edge_keys, s.edge_values, tris.size());
+  std::vector<EdgeUse>& edges = s.edges;
+  edges.clear();
   edges.reserve(tris.size());
   for (std::size_t t = 0; t < tris.size(); t += 3) {
     for (std::size_t e = 0; e < 3; ++e) {
       const std::uint32_t from = tris[t + e];
       const std::uint32_t to = tris[t + ((e + 1) % 3)];
-      EdgeUse& use = edges[EdgeKey(from, to)];
-      if (use.count == 0) {
-        use.from = from;
-        use.to = to;
-        use.opposite = tris[t + ((e + 2) % 3)];
+      bool inserted = false;
+      const std::uint32_t kEdge =
+          edge_index.Insert(EdgeKey(from, to),
+                            static_cast<std::uint32_t>(edges.size()), inserted);
+      if (inserted) {
+        edges.push_back(EdgeUse{0, from, to, tris[t + ((e + 2) % 3)]});
       }
-      ++use.count;
+      ++edges[kEdge].count;
     }
   }
 
   // 3. Sınır köşelerinin dışa bakan normallerini topla. Kenarlar üçgen
-  //    sırasıyla dolaşılır: çıktı, map'in sırasına bağlı kalmasın.
-  std::vector<Point> normal_sum(pos.size(), Point{0.0F, 0.0F});
-  std::vector<std::uint32_t> boundary_degree(pos.size(), 0);
-  std::vector<const EdgeUse*> boundary;
+  //    sırasıyla dolaşılır: çıktı, tablonun sırasına bağlı kalmasın.
+  std::vector<Point>& normal_sum = s.normal_sum;
+  normal_sum.assign(pos.size(), Point{0.0F, 0.0F});
+  std::vector<std::uint32_t>& boundary_degree = s.boundary_degree;
+  boundary_degree.assign(pos.size(), 0);
+  std::vector<std::uint32_t>& boundary = s.boundary;
+  boundary.clear();
   for (std::size_t t = 0; t < tris.size(); t += 3) {
     for (std::size_t e = 0; e < 3; ++e) {
-      const EdgeUse& use =
-          edges.at(EdgeKey(tris[t + e], tris[t + ((e + 1) % 3)]));
-      if (use.count == 1) {
-        boundary.push_back(&use);
+      const std::uint32_t kEdge =
+          *edge_index.Find(EdgeKey(tris[t + e], tris[t + ((e + 1) % 3)]));
+      if (edges[kEdge].count == 1) {
+        boundary.push_back(kEdge);
       }
     }
   }
-  for (const EdgeUse* candidate : boundary) {
-    const EdgeUse& use = *candidate;
+  for (const std::uint32_t edge : boundary) {
+    const EdgeUse& use = edges[edge];
     const Point& p = pos[use.from];
     const Point& q = pos[use.to];
     const float dx = q.x - p.x;
@@ -956,8 +1203,10 @@ std::vector<Vertex> Tessellator::AntialiasTriangles(
   // Köşe yönü: normallerin ortalaması. İki kenarın miter'ı köşe açısıyla
   // uzar; çok sivri köşede sınırlanır, yoksa şerit uzağa kaçar.
   constexpr float kMaxMiter = 4.0F;
-  std::vector<Point> inner(pos);
-  std::vector<Point> outer(pos);
+  std::vector<Point>& inner = s.inner;
+  std::vector<Point>& outer = s.outer;
+  inner.assign(pos.begin(), pos.end());
+  outer.assign(pos.begin(), pos.end());
   for (std::size_t i = 0; i < pos.size(); ++i) {
     if (boundary_degree[i] == 0) {
       continue;
@@ -977,16 +1226,16 @@ std::vector<Vertex> Tessellator::AntialiasTriangles(
   }
 
   // 5. Çekirdek üçgenler (tam kapsama) ve sınır şeritleri.
-  std::vector<Vertex> out;
+  out.clear();
   out.reserve(tris.size() + (boundary.size() * 6));
   constexpr std::uint8_t kFull = 255;
   constexpr std::uint8_t kNone = 0;
   for (const std::uint32_t idx : tris) {
     out.push_back(WithCoverage(inner[idx], kFull));
   }
-  for (const EdgeUse* use : boundary) {
-    const std::uint32_t a = use->from;
-    const std::uint32_t b = use->to;
+  for (const std::uint32_t edge : boundary) {
+    const std::uint32_t a = edges[edge].from;
+    const std::uint32_t b = edges[edge].to;
     out.push_back(WithCoverage(inner[a], kFull));
     out.push_back(WithCoverage(inner[b], kFull));
     out.push_back(WithCoverage(outer[b], kNone));
@@ -994,21 +1243,28 @@ std::vector<Vertex> Tessellator::AntialiasTriangles(
     out.push_back(WithCoverage(outer[b], kNone));
     out.push_back(WithCoverage(outer[a], kNone));
   }
-  return out;
 }
 
 std::vector<TexturedVertex> Tessellator::TessellateTexturedRect(
     float x, float y, float w, float h, float u0, float v0, float u1,
     float v1) {
+  std::vector<TexturedVertex> out;
+  TessellateTexturedRect(x, y, w, h, u0, v0, u1, v1, out);
+  return out;
+}
+
+void Tessellator::TessellateTexturedRect(float x, float y, float w, float h,
+                                         float u0, float v0, float u1, float v1,
+                                         std::vector<TexturedVertex>& out) {
   // clang-format off
-  return {
+  out.assign({
       {x,     y,     u0, v0},
       {x + w, y,     u1, v0},
       {x,     y + h, u0, v1},
       {x,     y + h, u0, v1},
       {x + w, y,     u1, v0},
       {x + w, y + h, u1, v1},
-  };
+  });
   // clang-format on
 }
 
@@ -1038,35 +1294,43 @@ bool Tessellator::PointInTriangle(const Point& p, const Point& a,
 std::vector<Point> Tessellator::RemoveDuplicatePoints(
     const std::vector<Point>& points, bool closed) {
   std::vector<Point> result;
-  result.reserve(points.size());
+  RemoveDuplicatePoints(points, closed, result);
+  return result;
+}
+
+void Tessellator::RemoveDuplicatePoints(const std::vector<Point>& points,
+                                        bool closed, std::vector<Point>& out) {
+  out.clear();
+  out.reserve(points.size());
   for (const Point& p : points) {
-    if (result.empty() || !SamePoint(result.back(), p)) {
-      result.push_back(p);
+    if (out.empty() || !SamePoint(out.back(), p)) {
+      out.push_back(p);
     }
   }
   // Kapalı konturda ilk noktayla çakışan son nokta tekrardır. Açık yolda ise
   // başlangıca dönen geçerli bir son segmenttir.
-  while (closed && result.size() > 1 &&
-         SamePoint(result.front(), result.back())) {
-    result.pop_back();
+  while (closed && out.size() > 1 && SamePoint(out.front(), out.back())) {
+    out.pop_back();
   }
-  return result;
 }
 
 // NOLINTNEXTLINE(readability-function-cognitive-complexity)
-std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& raw) {
+void Tessellator::EarClipping(const std::vector<Point>& raw, Scratch& scratch,
+                              std::vector<Vertex>& out) {
   // Tekrarlı (çakışan) köşeleri ele: sıfır uzunluklu kenarlar kulak testini
   // bozup triangulation'ın sessizce yarıda kesilmesine yol açıyordu (K4).
-  const std::vector<Point> points = RemoveDuplicatePoints(raw, /*closed=*/true);
+  std::vector<Point>& points = scratch.points;
+  RemoveDuplicatePoints(raw, /*closed=*/true, points);
 
   if (points.size() < 3) {
-    return {};
+    return;
   }
 
   if (points.size() == 3) {
-    return {{points[0].x, points[0].y},
-            {points[1].x, points[1].y},
-            {points[2].x, points[2].y}};
+    out.emplace_back(points[0].x, points[0].y);
+    out.emplace_back(points[1].x, points[1].y);
+    out.emplace_back(points[2].x, points[2].y);
+    return;
   }
 
   // İmzalı alan ile sarma yönünü belirle (shoelace formülü)
@@ -1078,14 +1342,14 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& raw) {
   // area > 0 → CCW; area < 0 → CW
 
   // CW ise indeks sırasını ters çevir → her zaman CCW olarak işle
-  std::vector<int32_t> indices(points.size());
+  std::vector<int32_t>& indices = scratch.ear_indices;
+  indices.resize(points.size());
   std::iota(indices.begin(), indices.end(), 0);
   if (area < 0.0F) {
     std::reverse(indices.begin(), indices.end());
   }
 
-  std::vector<Vertex> result;
-  result.reserve((points.size() - 2) * 3);
+  out.reserve(out.size() + ((points.size() - 2) * 3));
 
   while (indices.size() > 3) {
     bool found_ear = false;
@@ -1118,9 +1382,9 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& raw) {
       }
 
       if (is_ear) {
-        result.emplace_back(a.x, a.y);
-        result.emplace_back(b.x, b.y);
-        result.emplace_back(c.x, c.y);
+        out.emplace_back(a.x, a.y);
+        out.emplace_back(b.x, b.y);
+        out.emplace_back(c.x, c.y);
         indices.erase(indices.begin() + static_cast<std::ptrdiff_t>(i));
         found_ear = true;
         break;
@@ -1141,15 +1405,13 @@ std::vector<Vertex> Tessellator::EarClipping(const std::vector<Point>& raw) {
   }
 
   if (indices.size() == 3) {
-    result.emplace_back(points[static_cast<std::size_t>(indices[0])].x,
-                        points[static_cast<std::size_t>(indices[0])].y);
-    result.emplace_back(points[static_cast<std::size_t>(indices[1])].x,
-                        points[static_cast<std::size_t>(indices[1])].y);
-    result.emplace_back(points[static_cast<std::size_t>(indices[2])].x,
-                        points[static_cast<std::size_t>(indices[2])].y);
+    out.emplace_back(points[static_cast<std::size_t>(indices[0])].x,
+                     points[static_cast<std::size_t>(indices[0])].y);
+    out.emplace_back(points[static_cast<std::size_t>(indices[1])].x,
+                     points[static_cast<std::size_t>(indices[1])].y);
+    out.emplace_back(points[static_cast<std::size_t>(indices[2])].x,
+                     points[static_cast<std::size_t>(indices[2])].y);
   }
-
-  return result;
 }
 
 }  // namespace sdl_painter

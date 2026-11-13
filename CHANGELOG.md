@@ -57,6 +57,11 @@
   `sdl_painterConfig.cmake` onu aramıyor.
 - Vulkan başlıkları `vulkan-headers::vulkan-headers` yerine `Vulkan::Headers`
   hedefiyle bağlanıyor; bu ad Conan'da ve vcpkg'de aynı.
+- Çizim yolunda şekil başına heap tahsisi yok: Painter ara dizileri bir kez
+  oluşturup yeniden kullanıyor, kenar yumuşatmadaki hash tabloları düz
+  dizilere taşındı. GPU'suz ölçümde (`examples/benchmarks`) çizim çağrıları
+  kenar yumuşatma kapalıyken 2.5 kat, açıkken 3 kat hızlandı. Çizilen
+  geometri değişmedi.
 
 ### Düzeltildi
 
@@ -85,8 +90,9 @@
 
 - **Shared derlemede binary uyumluluk değişti:** `Application` (yeni sanal
   metotlar ve üye), `IRenderer`, `Texture`, `Image` ve `Font` (yaşam
-  belirteci için yeni üyeler). 1.4.0'a karşı derlenmiş uygulamayı yeniden
-  derleyin; kaynak düzeyinde değişiklik gerekmez.
+  belirteci için yeni üyeler), `Painter` ve `RenderState` (kenar yumuşatma
+  alanı, çizim tamponları için yeni üye). 1.4.0'a karşı derlenmiş uygulamayı
+  yeniden derleyin; kaynak düzeyinde değişiklik gerekmez.
 
 ## [1.4.0] - 2026-10-22
 

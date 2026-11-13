@@ -28,6 +28,27 @@
 
 namespace sdl_painter {
 
+namespace detail {
+
+/// @brief Painter'ın çizim yolunda yeniden kullandığı ara diziler.
+///
+/// Painter başına bir tane; çizim çağrıları aynı dizileri doldurup boşaltır,
+/// kapasite korunduğu için kararlı durumda tahsis olmaz.
+struct DrawScratch {
+  std::vector<Point> shape;       ///< Çizilen şeklin noktaları.
+  std::vector<Vertex> stroke;     ///< Çizgi geometrisi.
+  std::vector<Vertex> aa;         ///< Kenar yumuşatılmış geometri.
+  std::vector<Vertex> fill;       ///< Dolgu geometrisi.
+  std::vector<Vertex> shaded;     ///< Gradient için bölünmüş geometri.
+  std::vector<Vertex> grad_tri;   ///< Gradient: bölünen üçgen.
+  std::vector<Vertex> grad_rest;  ///< Gradient: t >= 0 tarafı.
+  std::vector<Vertex> grad_clip;  ///< Gradient: kırpılmış parça.
+  std::vector<TexturedVertex> textured;  ///< Dokulu dörtgen.
+  Tessellator::Scratch tess;             ///< Tessellator'ın ara dizileri.
+};
+
+}  // namespace detail
+
 namespace {
 
 /// @brief Iki durumun kirpma (clip) ayari ayni mi?
@@ -241,10 +262,11 @@ Vertex LerpVertex(const Vertex& a, const Vertex& b, float s) {
   return v;
 }
 
-std::vector<Vertex> ClipToGradientLine(const std::vector<Vertex>& poly,
-                                       const Brush& brush, float limit,
-                                       bool keep_below) {
-  std::vector<Vertex> out;
+/// @param out Sonuç (önce temizlenir); `poly` olmamalı.
+void ClipToGradientLine(const std::vector<Vertex>& poly, const Brush& brush,
+                        float limit, bool keep_below,
+                        std::vector<Vertex>& out) {
+  out.clear();
   const std::size_t n = poly.size();
   for (std::size_t i = 0; i < n; ++i) {
     const Vertex& a = poly[i];
@@ -262,7 +284,6 @@ std::vector<Vertex> ClipToGradientLine(const std::vector<Vertex>& poly,
       out.push_back(LerpVertex(a, b, s));
     }
   }
-  return out;
 }
 
 /// @brief Konveks bir cokgeni ucgen yelpazesi olarak yaz.
@@ -442,9 +463,12 @@ void SubdivideRadialAtCentre(const Vertex& a, const Vertex& b, const Vertex& c,
 /// yapar. Sekil, gradient sinirlarini gormeyecek kadar az vertex'ten
 /// olusuyorsa (dikdortgen: iki ucgen) sekil icindeki gecis kose renklerinin
 /// karisimina indirgenir; bu bolme onu duzeltir.
-std::vector<Vertex> SubdivideForGradient(const std::vector<Vertex>& verts,
-                                         const Brush& brush) {
-  std::vector<Vertex> out;
+/// @param scratch Geçici çokgenler (`grad_*`).
+/// @param out Sonuç (önce temizlenir); `verts` olmamalı.
+void SubdivideForGradient(const std::vector<Vertex>& verts, const Brush& brush,
+                          detail::DrawScratch& scratch,
+                          std::vector<Vertex>& out) {
+  out.clear();
   out.reserve(verts.size());
   for (std::size_t i = 0; i + 2 < verts.size(); i += 3) {
     if (brush.GetType() == BrushType::kRadial) {
@@ -456,14 +480,18 @@ std::vector<Vertex> SubdivideForGradient(const std::vector<Vertex>& verts,
     }
     // Linear: renk yalnizca t'nin kirpildigi t=0 ve t=1 dogrularinda
     // dogrusalligini yitirir. O iki dogruda bolmek sonucu tam dogru yapar.
-    const std::vector<Vertex> tri = {verts[i], verts[i + 1], verts[i + 2]};
-    const std::vector<Vertex> rest =
-        ClipToGradientLine(tri, brush, 0.0F, false);
-    EmitFan(ClipToGradientLine(tri, brush, 0.0F, true), out);
-    EmitFan(ClipToGradientLine(rest, brush, 1.0F, true), out);
-    EmitFan(ClipToGradientLine(rest, brush, 1.0F, false), out);
+    std::vector<Vertex>& tri = scratch.grad_tri;
+    std::vector<Vertex>& rest = scratch.grad_rest;
+    std::vector<Vertex>& clip = scratch.grad_clip;
+    tri.assign({verts[i], verts[i + 1], verts[i + 2]});
+    ClipToGradientLine(tri, brush, 0.0F, false, rest);
+    ClipToGradientLine(tri, brush, 0.0F, true, clip);
+    EmitFan(clip, out);
+    ClipToGradientLine(rest, brush, 1.0F, true, clip);
+    EmitFan(clip, out);
+    ClipToGradientLine(rest, brush, 1.0F, false, clip);
+    EmitFan(clip, out);
   }
-  return out;
 }
 
 /// @brief Vertex renklerini fircaya gore yaz.
@@ -499,19 +527,24 @@ void ApplyBrushColors(std::vector<Vertex>& verts, const Brush& brush) {
 /// Kesikli yolun her parcasi acik bir polyline'dir, uc stili orada da
 /// uygulanir. Kesintisiz kapali yolun ucu yoktur.
 /// @param closed `true` ise son nokta ilkine baglanir.
-std::vector<Vertex> TessellateStroke(const std::vector<Point>& points,
-                                     float width, const Pen& pen, bool closed) {
+/// @param scratch Tessellator'ın ara dizileri; `points` bunlardan biri olmamalı.
+/// @param out Sonuç (önce temizlenir).
+void TessellateStroke(const std::vector<Point>& points, float width,
+                      const Pen& pen, bool closed,
+                      Tessellator::Scratch& scratch, std::vector<Vertex>& out) {
   if (pen.HasDash()) {
-    return Tessellator::TessellateDashedPolyline(
+    Tessellator::TessellateDashedPolyline(
         points, width, pen.GetDashPattern().data(), pen.GetDashCount(), closed,
-        pen.GetCapStyle(), pen.GetJoinStyle());
+        pen.GetCapStyle(), pen.GetJoinStyle(), scratch, out);
+    return;
   }
   if (closed) {
-    return Tessellator::TessellateStrokedPolygon(points, width,
-                                                 pen.GetJoinStyle());
+    Tessellator::TessellateStrokedPolygon(points, width, pen.GetJoinStyle(),
+                                          scratch, out);
+    return;
   }
-  return Tessellator::TessellateThickPolyline(points, width, pen.GetCapStyle(),
-                                              pen.GetJoinStyle());
+  Tessellator::TessellateThickPolyline(points, width, pen.GetCapStyle(),
+                                       pen.GetJoinStyle(), scratch, out);
 }
 
 }  // namespace
@@ -519,7 +552,8 @@ std::vector<Vertex> TessellateStroke(const std::vector<Point>& points,
 Painter::Painter(SDL_Window* window, RendererBackend backend)
     : mWindow(window),
       mRenderer(CreateRenderer(backend)),
-      mSelf(std::make_shared<Painter*>(this)) {
+      mSelf(std::make_shared<Painter*>(this)),
+      mScratch(std::make_unique<detail::DrawScratch>()) {
   if (window == nullptr) {
     spdlog::error("Painter: window pointer null, Painter gecersiz durumda.");
     mRenderer.reset();
@@ -550,7 +584,8 @@ Painter::Painter(std::unique_ptr<IRenderer> renderer, int32_t viewport_width,
       mDrawableHeight(viewport_height),
       mViewportWidth(viewport_width),
       mViewportHeight(viewport_height),
-      mSelf(std::make_shared<Painter*>(this)) {
+      mSelf(std::make_shared<Painter*>(this)),
+      mScratch(std::make_unique<detail::DrawScratch>()) {
   if (mRenderer == nullptr) {
     spdlog::error("Painter: renderer null, Painter gecersiz durumda.");
     return;
@@ -597,7 +632,8 @@ Painter::Painter(Painter&& other) noexcept
       mSavedViewportHeight(other.mSavedViewportHeight),
       mSavedCustomViewport(other.mSavedCustomViewport),
       mAutoDrawableSize(other.mAutoDrawableSize),
-      mSelf(std::move(other.mSelf)) {
+      mSelf(std::move(other.mSelf)),
+      mScratch(std::move(other.mScratch)) {
   // Kutu yeni adresi gostersin; hedefler eski adrese bakiyordu.
   if (mSelf != nullptr) {
     *mSelf = this;
@@ -648,6 +684,7 @@ Painter& Painter::operator=(Painter&& other) noexcept {
     mSavedCustomViewport = other.mSavedCustomViewport;
     mAutoDrawableSize = other.mAutoDrawableSize;
     mSelf = std::move(other.mSelf);
+    mScratch = std::move(other.mScratch);
     if (mSelf != nullptr) {
       *mSelf = this;
     }
@@ -801,7 +838,9 @@ void Painter::DrawLine(float x1, float y1, float x2, float y2) {
   if (!CanDrawPen()) {
     return;
   }
-  StrokePoints({{x1, y1}, {x2, y2}}, /*closed=*/false);
+  std::vector<Point>& pts = mScratch->shape;
+  pts.assign({{x1, y1}, {x2, y2}});
+  StrokePoints(pts, /*closed=*/false);
 }
 
 void Painter::DrawLine(const Point& from, const Point& to) {
@@ -812,8 +851,9 @@ void Painter::DrawRect(float x, float y, float w, float h) {
   if (!CanDrawPen()) {
     return;
   }
-  StrokePoints({{x, y}, {x + w, y}, {x + w, y + h}, {x, y + h}},
-               /*closed=*/true);
+  std::vector<Point>& pts = mScratch->shape;
+  pts.assign({{x, y}, {x + w, y}, {x + w, y + h}, {x, y + h}});
+  StrokePoints(pts, /*closed=*/true);
 }
 
 void Painter::DrawRect(const Rect& rect) {
@@ -824,7 +864,8 @@ void Painter::FillRect(float x, float y, float w, float h) {
   if (!CanDrawBrush()) {
     return;
   }
-  auto verts = Tessellator::TessellateFilledRect(x, y, w, h);
+  std::vector<Vertex>& verts = mScratch->fill;
+  Tessellator::TessellateFilledRect(x, y, w, h, verts);
   PushFilled(verts);
 }
 
@@ -837,8 +878,9 @@ void Painter::DrawRoundedRect(float x, float y, float w, float h,
   if (!CanDrawPen()) {
     return;
   }
-  const std::vector<Point> pts =
-      Tessellator::BuildRoundedRectPoints(x, y, w, h, radius, AntialiasScale());
+  std::vector<Point>& pts = mScratch->shape;
+  Tessellator::BuildRoundedRectPoints(x, y, w, h, radius, AntialiasScale(),
+                                      pts);
   if (pts.size() < 3) {
     return;
   }
@@ -854,8 +896,9 @@ void Painter::FillRoundedRect(float x, float y, float w, float h,
   if (!CanDrawBrush()) {
     return;
   }
-  auto verts = Tessellator::TessellateFilledRoundedRect(x, y, w, h, radius,
-                                                        AntialiasScale());
+  std::vector<Vertex>& verts = mScratch->fill;
+  Tessellator::TessellateFilledRoundedRect(x, y, w, h, radius, AntialiasScale(),
+                                           mScratch->tess, verts);
   PushFilled(verts);
 }
 
@@ -867,9 +910,10 @@ void Painter::DrawCircle(float cx, float cy, float radius) {
   if (!CanDrawPen()) {
     return;
   }
-  StrokePoints(
-      Tessellator::BuildEllipsePoints(cx, cy, radius, radius, AntialiasScale()),
-      /*closed=*/true);
+  std::vector<Point>& pts = mScratch->shape;
+  Tessellator::BuildEllipsePoints(cx, cy, radius, radius, AntialiasScale(),
+                                  pts);
+  StrokePoints(pts, /*closed=*/true);
 }
 
 void Painter::DrawCircle(const Point& center, float radius) {
@@ -880,8 +924,9 @@ void Painter::FillCircle(float cx, float cy, float radius) {
   if (!CanDrawBrush()) {
     return;
   }
-  auto verts =
-      Tessellator::TessellateFilledCircle(cx, cy, radius, AntialiasScale());
+  std::vector<Vertex>& verts = mScratch->fill;
+  Tessellator::TessellateFilledEllipse(cx, cy, radius, radius, AntialiasScale(),
+                                       mScratch->tess, verts);
   PushFilled(verts);
 }
 
@@ -893,17 +938,18 @@ void Painter::DrawEllipse(float cx, float cy, float rx, float ry) {
   if (!CanDrawPen()) {
     return;
   }
-  StrokePoints(
-      Tessellator::BuildEllipsePoints(cx, cy, rx, ry, AntialiasScale()),
-      /*closed=*/true);
+  std::vector<Point>& pts = mScratch->shape;
+  Tessellator::BuildEllipsePoints(cx, cy, rx, ry, AntialiasScale(), pts);
+  StrokePoints(pts, /*closed=*/true);
 }
 
 void Painter::FillEllipse(float cx, float cy, float rx, float ry) {
   if (!CanDrawBrush()) {
     return;
   }
-  auto verts =
-      Tessellator::TessellateFilledEllipse(cx, cy, rx, ry, AntialiasScale());
+  std::vector<Vertex>& verts = mScratch->fill;
+  Tessellator::TessellateFilledEllipse(cx, cy, rx, ry, AntialiasScale(),
+                                       mScratch->tess, verts);
   PushFilled(verts);
 }
 
@@ -918,7 +964,8 @@ void Painter::FillPolygon(const std::vector<Point>& points) {
   if (!CanDrawBrush()) {
     return;
   }
-  auto verts = Tessellator::TessellateFilledPolygon(points);
+  std::vector<Vertex>& verts = mScratch->fill;
+  Tessellator::TessellateFilledPolygon(points, mScratch->tess, verts);
   PushFilled(verts);
 }
 
@@ -927,8 +974,9 @@ void Painter::DrawArc(float cx, float cy, float rx, float ry,
   if (!CanDrawPen()) {
     return;
   }
-  const std::vector<Point> arc = Tessellator::BuildArcPoints(
-      cx, cy, rx, ry, start_degrees, sweep_degrees, AntialiasScale());
+  std::vector<Point>& arc = mScratch->shape;
+  Tessellator::BuildArcPoints(cx, cy, rx, ry, start_degrees, sweep_degrees,
+                              AntialiasScale(), arc);
   if (arc.size() < 2) {
     return;
   }
@@ -940,8 +988,9 @@ void Painter::DrawPie(float cx, float cy, float rx, float ry,
   if (!CanDrawPen()) {
     return;
   }
-  std::vector<Point> outline = Tessellator::BuildArcPoints(
-      cx, cy, rx, ry, start_degrees, sweep_degrees, AntialiasScale());
+  std::vector<Point>& outline = mScratch->shape;
+  Tessellator::BuildArcPoints(cx, cy, rx, ry, start_degrees, sweep_degrees,
+                              AntialiasScale(), outline);
   if (outline.size() < 2) {
     return;
   }
@@ -956,8 +1005,9 @@ void Painter::FillPie(float cx, float cy, float rx, float ry,
   if (!CanDrawBrush()) {
     return;
   }
-  auto verts = Tessellator::TessellateFilledPie(
-      cx, cy, rx, ry, start_degrees, sweep_degrees, AntialiasScale());
+  std::vector<Vertex>& verts = mScratch->fill;
+  Tessellator::TessellateFilledPie(cx, cy, rx, ry, start_degrees, sweep_degrees,
+                                   AntialiasScale(), mScratch->tess, verts);
   PushFilled(verts);
 }
 
@@ -966,8 +1016,9 @@ void Painter::DrawChord(float cx, float cy, float rx, float ry,
   if (!CanDrawPen()) {
     return;
   }
-  const std::vector<Point> arc = Tessellator::BuildArcPoints(
-      cx, cy, rx, ry, start_degrees, sweep_degrees, AntialiasScale());
+  std::vector<Point>& arc = mScratch->shape;
+  Tessellator::BuildArcPoints(cx, cy, rx, ry, start_degrees, sweep_degrees,
+                              AntialiasScale(), arc);
   if (arc.size() < 2) {
     return;
   }
@@ -981,8 +1032,10 @@ void Painter::FillChord(float cx, float cy, float rx, float ry,
   if (!CanDrawBrush()) {
     return;
   }
-  auto verts = Tessellator::TessellateFilledChord(
-      cx, cy, rx, ry, start_degrees, sweep_degrees, AntialiasScale());
+  std::vector<Vertex>& verts = mScratch->fill;
+  Tessellator::TessellateFilledChord(cx, cy, rx, ry, start_degrees,
+                                     sweep_degrees, AntialiasScale(),
+                                     mScratch->tess, verts);
   PushFilled(verts);
 }
 
@@ -1009,8 +1062,9 @@ void Painter::DrawPath(const Path& path) {
       if (sub.points.size() < 2) {
         continue;
       }
-      PushStroke(TessellateStroke(sub.points, kOutline.width, pen, sub.closed),
-                 pen.GetOutlineColor(), kOutline.coverage);
+      TessellateStroke(sub.points, kOutline.width, pen, sub.closed,
+                       mScratch->tess, mScratch->stroke);
+      PushStroke(mScratch->stroke, pen.GetOutlineColor(), kOutline.coverage);
     }
   }
 
@@ -1019,8 +1073,9 @@ void Painter::DrawPath(const Path& path) {
     if (sub.points.size() < 2) {
       continue;
     }
-    PushStroke(TessellateStroke(sub.points, kStroke.width, pen, sub.closed),
-               pen.GetColor(), kStroke.coverage);
+    TessellateStroke(sub.points, kStroke.width, pen, sub.closed, mScratch->tess,
+                     mScratch->stroke);
+    PushStroke(mScratch->stroke, pen.GetColor(), kStroke.coverage);
   }
 }
 
@@ -1035,7 +1090,8 @@ void Painter::FillPath(const Path& path) {
     }
     // Acik alt yol dolgu icin ortuk kapatilir: TessellateFilledPolygon nokta
     // dizisini zaten kapali kabul eder, ek bir nokta gerekmez.
-    auto verts = Tessellator::TessellateFilledPolygon(sub.points);
+    std::vector<Vertex>& verts = mScratch->fill;
+    Tessellator::TessellateFilledPolygon(sub.points, mScratch->tess, verts);
     PushFilled(verts);
   }
 }
@@ -1177,13 +1233,13 @@ void Painter::PushTexturedQuad(TextureHandle texture, float u0, float v0,
     std::swap(v0, v1);
   }
 
-  const std::vector<TexturedVertex> kVerts =
-      Tessellator::TessellateTexturedRect(dest_rect.x, dest_rect.y, dest_rect.w,
-                                          dest_rect.h, u0, v0, u1, v1);
+  std::vector<TexturedVertex>& verts = mScratch->textured;
+  Tessellator::TessellateTexturedRect(dest_rect.x, dest_rect.y, dest_rect.w,
+                                      dest_rect.h, u0, v0, u1, v1, verts);
 
   mBatcher->SetBlendMode(mCurrentState.blend_mode);
-  mBatcher->PushTexturedTriangles(kVerts, mCurrentState.transform, texture,
-                                  tint, mCurrentState.opacity);
+  mBatcher->PushTexturedTriangles(verts, mCurrentState.transform, texture, tint,
+                                  mCurrentState.opacity);
 }
 
 void Painter::DrawText(float x, float y, const std::string& text) {
@@ -1261,13 +1317,18 @@ void Painter::DrawTextLine(float x, float y, const std::string& text) {
     const float kU1 = glyph->u1;
     const float kV1 = glyph->v1;
 
-    const std::vector<TexturedVertex> kVerts = {
-        {kGx0, kGy0, kU0, kV0}, {kGx1, kGy0, kU1, kV0}, {kGx1, kGy1, kU1, kV1},
-        {kGx0, kGy0, kU0, kV0}, {kGx1, kGy1, kU1, kV1}, {kGx0, kGy1, kU0, kV1},
-    };
+    std::vector<TexturedVertex>& verts = mScratch->textured;
+    verts.assign({
+        {kGx0, kGy0, kU0, kV0},
+        {kGx1, kGy0, kU1, kV0},
+        {kGx1, kGy1, kU1, kV1},
+        {kGx0, kGy0, kU0, kV0},
+        {kGx1, kGy1, kU1, kV1},
+        {kGx0, kGy1, kU0, kV1},
+    });
 
     mBatcher->SetBlendMode(mCurrentState.blend_mode);
-    mBatcher->PushTexturedTriangles(kVerts, mCurrentState.transform,
+    mBatcher->PushTexturedTriangles(verts, mCurrentState.transform,
                                     glyph->texture, tint,
                                     mCurrentState.opacity);
 
@@ -1512,15 +1573,18 @@ Painter::StrokeWidth Painter::AdjustStrokeWidth(
 
 void Painter::StrokePoints(const std::vector<Point>& points, bool closed) {
   const Pen& pen = mCurrentState.pen;
+  detail::DrawScratch& scratch = *mScratch;
   if (pen.HasOutline()) {
     const StrokeWidth kOutline =
         AdjustStrokeWidth(pen.GetWidth() + (2.0F * pen.GetOutlineWidth()));
-    PushStroke(TessellateStroke(points, kOutline.width, pen, closed),
-               pen.GetOutlineColor(), kOutline.coverage);
+    TessellateStroke(points, kOutline.width, pen, closed, scratch.tess,
+                     scratch.stroke);
+    PushStroke(scratch.stroke, pen.GetOutlineColor(), kOutline.coverage);
   }
   const StrokeWidth kStroke = AdjustStrokeWidth(pen.GetWidth());
-  PushStroke(TessellateStroke(points, kStroke.width, pen, closed),
-             pen.GetColor(), kStroke.coverage);
+  TessellateStroke(points, kStroke.width, pen, closed, scratch.tess,
+                   scratch.stroke);
+  PushStroke(scratch.stroke, pen.GetColor(), kStroke.coverage);
 }
 
 void Painter::PushStroke(const std::vector<Vertex>& verts, const Color& color,
@@ -1537,8 +1601,8 @@ void Painter::PushStroke(const std::vector<Vertex>& verts, const Color& color,
   }
   // Kenar yumusatma: kapsama alfada gelir, kalemin alfasi ve ince kalem
   // carpaniyla birlikte yazilir.
-  std::vector<Vertex> aa =
-      Tessellator::AntialiasTriangles(verts, 1.0F / kScale);
+  std::vector<Vertex>& aa = mScratch->aa;
+  Tessellator::AntialiasTriangles(verts, 1.0F / kScale, mScratch->tess, aa);
   const float kAlpha =
       static_cast<float>(color.a) * std::clamp(coverage, 0.0F, 1.0F);
   for (Vertex& v : aa) {
@@ -1562,13 +1626,15 @@ void Painter::PushFilled(std::vector<Vertex>& verts) {
   if (kScale > 0.0F) {
     // Kenar yumusatma: once serit (kapsama alfada), sonra gradient bolmesi
     // (kapsamayi enterpole eder), en son renk (alfayla carpar).
-    std::vector<Vertex> aa =
-        Tessellator::AntialiasTriangles(verts, 1.0F / kScale);
+    std::vector<Vertex>& aa = mScratch->aa;
+    Tessellator::AntialiasTriangles(verts, 1.0F / kScale, mScratch->tess, aa);
+    std::vector<Vertex>* colored = &aa;
     if (brush.IsGradient()) {
-      aa = SubdivideForGradient(aa, brush);
+      SubdivideForGradient(aa, brush, *mScratch, mScratch->shaded);
+      colored = &mScratch->shaded;
     }
-    ApplyBrushColors(aa, brush);
-    mBatcher->PushTrianglesPreColored(aa, mCurrentState.transform,
+    ApplyBrushColors(*colored, brush);
+    mBatcher->PushTrianglesPreColored(*colored, mCurrentState.transform,
                                       mCurrentState.opacity);
     return;
   }
@@ -1579,7 +1645,8 @@ void Painter::PushFilled(std::vector<Vertex>& verts) {
                             mCurrentState.opacity);
     return;
   }
-  std::vector<Vertex> shaded = SubdivideForGradient(verts, brush);
+  std::vector<Vertex>& shaded = mScratch->shaded;
+  SubdivideForGradient(verts, brush, *mScratch, shaded);
   ApplyBrushColors(shaded, brush);
   mBatcher->PushTrianglesPreColored(shaded, mCurrentState.transform,
                                     mCurrentState.opacity);

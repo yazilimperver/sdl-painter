@@ -34,6 +34,10 @@ namespace sdl_painter {
 class IRenderer;
 class RenderBatcher;
 
+namespace detail {
+struct DrawScratch;
+}  // namespace detail
+
 /// @brief Aktif render durumu — transform stack elemanı.
 struct RenderState {
   glm::mat3 transform{1.0F};  ///< 3x3 affine dönüşüm (column-major, birim).
@@ -720,6 +724,14 @@ class SDLPAINTER_API Painter {
   /// değişebilir. Kutu taşımada yeni adrese güncellenir, yıkımda `nullptr`
   /// olur; böylece hem taşıma hem de Painter'ın önce ölmesi güvenlidir.
   std::shared_ptr<Painter*> mSelf;
+
+  /// @brief Çizim yolunda yeniden kullanılan ara diziler (tanımı
+  ///        painter.cpp'de).
+  ///
+  /// Kapasiteleri korunduğu için kararlı durumda şekil başına heap tahsisi
+  /// olmaz. Taşınmış Painter'da nullptr'dır; o Painter zaten çizmez
+  /// (renderer'ı yoktur).
+  std::unique_ptr<detail::DrawScratch> mScratch;
 };
 
 }  // namespace sdl_painter

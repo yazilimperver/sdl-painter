@@ -20,9 +20,72 @@ namespace sdl_painter {
 ///       ve testlerin tamamını değiştirmemek için böyle bırakıldı.
 class Tessellator {
  public:
+  /// @brief Kalın çizginin tek segmenti: birim yön ve gövdenin dört köşesi.
+  ///
+  /// Sol, yönün +90° döndürülmüş hâlidir. Köşeler birleşimde kırpılabilsin diye
+  /// gövde yazılmadan önce burada tutulur.
+  struct StrokeSegment {
+    float ux{0.0F};
+    float uy{0.0F};
+    float length{0.0F};
+    Point start_left;
+    Point start_right;
+    Point end_left;
+    Point end_right;
+  };
+
+  /// @brief Çağrılar arasında yeniden kullanılan ara diziler.
+  ///
+  /// Çağıran (Painter) bir kez oluşturur ve her çizimde aynı nesneyi verir;
+  /// dizilerin kapasitesi korunduğu için kararlı durumda heap tahsisi olmaz.
+  /// İçerik bir çağrıdan diğerine anlamsızdır.
+  struct Scratch {
+    std::vector<Point> points;            ///< Tekrarsız nokta kopyası.
+    std::vector<StrokeSegment> segments;  ///< Çizginin segmentleri.
+    std::vector<Vertex> joins;            ///< Birleşim üçgenleri.
+    std::vector<Point> cleaned;          ///< Kesikli yolun tekrarsız kopyası.
+    std::vector<Point> dash_points;      ///< Kesik parçaları, art arda.
+    std::vector<std::size_t> dash_ends;  ///< Her parçanın bitiş indeksi.
+    std::vector<Point> dash_run;         ///< Tessellate edilen tek parça.
+    std::vector<std::int32_t> ear_indices;  ///< Ear clipping'te kalan köşeler.
+
+    /// @brief Kenar yumuşatmada bir kenarın kaç üçgende geçtiği ve ilk
+    ///        geçtiği üçgendeki yönü.
+    struct AntialiasEdge {
+      std::uint32_t count{0};
+      std::uint32_t from{0};
+      std::uint32_t to{0};
+      std::uint32_t opposite{0};  ///< Üçgenin kenara karşı köşesi.
+    };
+
+    /// @brief @ref AntialiasTriangles'ın ara dizileri.
+    struct Antialias {
+      std::vector<std::uint64_t> cell_keys;    ///< Izgara tablosu: anahtar.
+      std::vector<std::uint32_t> cell_values;  ///< Izgara tablosu: hücre.
+      std::vector<Point> points;               ///< Kaynaşmış köşeler.
+      std::vector<std::uint32_t> next;       ///< Aynı hücrede sonraki köşe.
+      std::vector<std::uint32_t> cell_head;  ///< Hücrenin ilk köşesi.
+      std::vector<std::uint32_t> cell_tail;  ///< Hücrenin son köşesi.
+      std::vector<std::uint32_t> tris;       ///< Kaynaşmış üçgenler.
+      std::vector<std::uint64_t> edge_keys;  ///< Kenar tablosu: anahtar.
+      std::vector<std::uint32_t> edge_values;  ///< Kenar tablosu: indeks.
+      std::vector<AntialiasEdge> edges;        ///< Kenarlar.
+      std::vector<std::uint32_t> boundary;  ///< Sınır kenarlarının indeksi.
+      std::vector<Point> normal_sum;  ///< Köşe başına normal toplamı.
+      std::vector<std::uint32_t> boundary_degree;
+      std::vector<Point> inner;  ///< İçeri çekilmiş köşeler.
+      std::vector<Point> outer;  ///< Şeridin dış köşeleri.
+    } aa;
+  };
+
   /// @brief Dolu dikdörtgen için vertex üret (2 üçgen, 6 vertex).
   static std::vector<Vertex> TessellateFilledRect(float x, float y, float w,
                                                   float h);
+
+  /// @brief @ref TessellateFilledRect; sonuç `out`'a yazılır (önce
+  ///        temizlenir).
+  static void TessellateFilledRect(float x, float y, float w, float h,
+                                   std::vector<Vertex>& out);
 
   /// @brief Dolu daire için vertex üret (triangle fan).
   /// Segment sayısı yarıçapa göre adaptif (bkz. @ref AdaptiveSegments).
@@ -38,6 +101,12 @@ class Tessellator {
                                                      float rx, float ry,
                                                      float pixel_scale = 0.0F);
 
+  /// @brief @ref TessellateFilledEllipse; çevre noktaları `scratch.points`'te,
+  ///        sonuç `out`'ta (önce temizlenir).
+  static void TessellateFilledEllipse(float cx, float cy, float rx, float ry,
+                                      float pixel_scale, Scratch& scratch,
+                                      std::vector<Vertex>& out);
+
   /// @brief Elipsin çevre noktalarını üret (çizgi/dolgu için ortak kaynak).
   ///
   /// Nokta sayısı büyük yarıçaptan @ref AdaptiveSegments ile belirlenir;
@@ -48,10 +117,21 @@ class Tessellator {
                                                float ry,
                                                float pixel_scale = 0.0F);
 
+  /// @brief @ref BuildEllipsePoints; sonuç `out`'a yazılır (önce temizlenir).
+  static void BuildEllipsePoints(float cx, float cy, float rx, float ry,
+                                 float pixel_scale, std::vector<Point>& out);
+
   /// @brief Dolu poligon için vertex üret (ear clipping triangulation).
   /// Konkav poligonları destekler.
   static std::vector<Vertex> TessellateFilledPolygon(
       const std::vector<Point>& points);
+
+  /// @brief @ref TessellateFilledPolygon; ara diziler `scratch`'te, sonuç
+  ///        `out`'ta (önce temizlenir). `points`, `scratch`'in bir dizisi
+  ///        olmamalı.
+  static void TessellateFilledPolygon(const std::vector<Point>& points,
+                                      Scratch& scratch,
+                                      std::vector<Vertex>& out);
 
   /// @brief Yuvarlatılmış dikdörtgenin dış hat noktalarını üret.
   ///
@@ -70,6 +150,12 @@ class Tessellator {
                                                    float h, float radius,
                                                    float pixel_scale = 0.0F);
 
+  /// @brief @ref BuildRoundedRectPoints; sonuç `out`'a yazılır (önce
+  ///        temizlenir).
+  static void BuildRoundedRectPoints(float x, float y, float w, float h,
+                                     float radius, float pixel_scale,
+                                     std::vector<Point>& out);
+
   /// @brief Dolu yuvarlatılmış dikdörtgen: merkezden üçgen fanı.
   ///
   /// Dış hat konveks ve merkez daima içeride olduğu için fan her boyutta
@@ -83,6 +169,13 @@ class Tessellator {
   static std::vector<Vertex> TessellateFilledRoundedRect(
       float x, float y, float w, float h, float radius,
       float pixel_scale = 0.0F);
+
+  /// @brief @ref TessellateFilledRoundedRect; dış hat `scratch.points`'te,
+  ///        sonuç `out`'ta (önce temizlenir).
+  static void TessellateFilledRoundedRect(float x, float y, float w, float h,
+                                          float radius, float pixel_scale,
+                                          Scratch& scratch,
+                                          std::vector<Vertex>& out);
 
   // Açı birimi derece. 0° = +x ekseni; açı, @ref Painter::Rotate ile aynı
   // yönde artar (dolayısıyla dolu daire tessellation'ıyla da aynı yönde).
@@ -103,12 +196,24 @@ class Tessellator {
                                            float sweep_degrees,
                                            float pixel_scale = 0.0F);
 
+  /// @brief @ref BuildArcPoints; sonuç `out`'a yazılır (önce temizlenir).
+  static void BuildArcPoints(float cx, float cy, float rx, float ry,
+                             float start_degrees, float sweep_degrees,
+                             float pixel_scale, std::vector<Point>& out);
+
   /// @brief Dolu dilim (pie): merkez + yay. Üçgen fanı.
   /// @param pixel_scale Bkz. @ref AdaptiveSegments.
   static std::vector<Vertex> TessellateFilledPie(float cx, float cy, float rx,
                                                  float ry, float start_degrees,
                                                  float sweep_degrees,
                                                  float pixel_scale = 0.0F);
+
+  /// @brief @ref TessellateFilledPie; yay `scratch.points`'te, sonuç `out`'ta
+  ///        (önce temizlenir).
+  static void TessellateFilledPie(float cx, float cy, float rx, float ry,
+                                  float start_degrees, float sweep_degrees,
+                                  float pixel_scale, Scratch& scratch,
+                                  std::vector<Vertex>& out);
 
   /// @brief Dolu kiriş (chord): yay uçları düz bir kirişle kapatılır.
   /// @param pixel_scale Bkz. @ref AdaptiveSegments.
@@ -117,6 +222,13 @@ class Tessellator {
                                                    float start_degrees,
                                                    float sweep_degrees,
                                                    float pixel_scale = 0.0F);
+
+  /// @brief @ref TessellateFilledChord; yay `scratch.points`'te, sonuç
+  ///        `out`'ta (önce temizlenir).
+  static void TessellateFilledChord(float cx, float cy, float rx, float ry,
+                                    float start_degrees, float sweep_degrees,
+                                    float pixel_scale, Scratch& scratch,
+                                    std::vector<Vertex>& out);
 
   /// @brief Çizgi segmenti için kalın quad vertex üret.
   /// @param cap Her iki uca uygulanacak uç stili.
@@ -140,6 +252,14 @@ class Tessellator {
       const std::vector<Point>& points, float line_width,
       LineCap cap = LineCap::kButt, LineJoin join = LineJoin::kRound);
 
+  /// @brief @ref TessellateThickPolyline; ara diziler `scratch`'te, sonuç
+  ///        `out`'ta (önce temizlenir). `points`, `scratch`'in bir dizisi
+  ///        olmamalı.
+  static void TessellateThickPolyline(const std::vector<Point>& points,
+                                      float line_width, LineCap cap,
+                                      LineJoin join, Scratch& scratch,
+                                      std::vector<Vertex>& out);
+
   /// @brief Kesikli (dashed) polyline için kalın quad vertex üret.
   ///
   /// Desen yol boyunca sürekli ilerler: bir köşede yarım kalan çizili
@@ -161,6 +281,16 @@ class Tessellator {
       std::size_t dash_count, bool closed, LineCap cap = LineCap::kButt,
       LineJoin join = LineJoin::kRound);
 
+  /// @brief @ref TessellateDashedPolyline; ara diziler `scratch`'te, sonuç
+  ///        `out`'ta (önce temizlenir). `points`, `scratch`'in bir dizisi
+  ///        olmamalı.
+  static void TessellateDashedPolyline(const std::vector<Point>& points,
+                                       float line_width, const float* dash,
+                                       std::size_t dash_count, bool closed,
+                                       LineCap cap, LineJoin join,
+                                       Scratch& scratch,
+                                       std::vector<Vertex>& out);
+
   /// @brief Poligon çerçevesi için kalın quad vertex üret (kapalı polyline).
   ///
   /// @ref TessellateThickPolyline ile aynı birleşim davranışı; kapalı olduğu
@@ -168,6 +298,14 @@ class Tessellator {
   static std::vector<Vertex> TessellateStrokedPolygon(
       const std::vector<Point>& points, float line_width,
       LineJoin join = LineJoin::kRound);
+
+  /// @brief @ref TessellateStrokedPolygon; ara diziler `scratch`'te, sonuç
+  ///        `out`'ta (önce temizlenir). `points`, `scratch`'in bir dizisi
+  ///        olmamalı.
+  static void TessellateStrokedPolygon(const std::vector<Point>& points,
+                                       float line_width, LineJoin join,
+                                       Scratch& scratch,
+                                       std::vector<Vertex>& out);
 
   /// @brief Üçgen listesine kenar yumuşatma şeridi (fringe) ekle.
   ///
@@ -192,11 +330,23 @@ class Tessellator {
   static std::vector<Vertex> AntialiasTriangles(
       const std::vector<Vertex>& triangles, float fringe_width);
 
+  /// @brief @ref AntialiasTriangles; ara diziler `scratch.aa`'da, sonuç
+  ///        `out`'ta (önce temizlenir). `out`, `triangles` olmamalı.
+  static void AntialiasTriangles(const std::vector<Vertex>& triangles,
+                                 float fringe_width, Scratch& scratch,
+                                 std::vector<Vertex>& out);
+
   /// @brief Texture'lı dikdörtgen için TexturedVertex üret.
   static std::vector<TexturedVertex> TessellateTexturedRect(float x, float y,
                                                             float w, float h,
                                                             float u0, float v0,
                                                             float u1, float v1);
+
+  /// @brief @ref TessellateTexturedRect; sonuç `out`'a yazılır (önce
+  ///        temizlenir).
+  static void TessellateTexturedRect(float x, float y, float w, float h,
+                                     float u0, float v0, float u1, float v1,
+                                     std::vector<TexturedVertex>& out);
 
  private:
   /// @brief Tam çember için adaptif segment sayısı hesapla.
@@ -223,12 +373,22 @@ class Tessellator {
   static std::vector<Point> RemoveDuplicatePoints(
       const std::vector<Point>& points, bool closed);
 
+  /// @brief @ref RemoveDuplicatePoints; sonuç `out`'a yazılır (önce
+  ///        temizlenir). `out`, `points` olmamalı.
+  static void RemoveDuplicatePoints(const std::vector<Point>& points,
+                                    bool closed, std::vector<Point>& out);
+
   /// @brief Açık/kapalı polyline için ortak kalın çizgi + birleşim üretimi.
+  ///
+  /// Sonuç `out`'un sonuna eklenir (kesikli yol parçaları art arda yazar).
+  /// Ara diziler `scratch.points`, `scratch.segments` ve `scratch.joins`;
+  /// `raw` bunlardan biri olmamalı.
   /// @param closed `true` ise son nokta ilkine bağlanır ve tüm köşelere
   ///        birleşim uygulanır.
-  static std::vector<Vertex> TessellatePolyline(const std::vector<Point>& raw,
-                                                float line_width, bool closed,
-                                                LineCap cap, LineJoin join);
+  static void TessellatePolyline(const std::vector<Point>& raw,
+                                 float line_width, bool closed, LineCap cap,
+                                 LineJoin join, Scratch& scratch,
+                                 std::vector<Vertex>& out);
 
   /// @brief Köşeye yuvarlak birleşim diski ekle (merkez + çevre üçgen fanı).
   ///
@@ -253,12 +413,16 @@ class Tessellator {
                                      const Point& next, float half_width,
                                      bool miter);
 
-  /// @brief Kesik desenini yol boyunca yürütüp "çizili" parçaları döndür.
+  /// @brief Kesik desenini yol boyunca yürütüp "çizili" parçaları üret.
   ///
-  /// Her parça en az iki noktalı bir açık polyline'dır.
-  static std::vector<std::vector<Point>> BuildDashRuns(
-      const std::vector<Point>& points, const float* dash,
-      std::size_t dash_count, bool closed);
+  /// Her parça en az iki noktalı bir açık polyline'dır. Parçalar
+  /// `run_points`'e art arda yazılır; `run_ends[i]`, i. parçanın bittiği
+  /// indekstir (parça bir önceki bitişten başlar). İki dizi de önce
+  /// temizlenir.
+  static void BuildDashRuns(const std::vector<Point>& points, const float* dash,
+                            std::size_t dash_count, bool closed,
+                            std::vector<Point>& run_points,
+                            std::vector<std::size_t>& run_ends);
 
   /// @brief Açık uca `cap` stiline göre geometri ekle.
   ///
@@ -275,7 +439,11 @@ class Tessellator {
                         const Point& right, float half_width, LineCap cap);
 
   /// @brief Ear clipping iç implementasyonu.
-  static std::vector<Vertex> EarClipping(const std::vector<Point>& raw);
+  ///
+  /// Ara diziler `scratch.points` ve `scratch.ear_indices`; sonuç `out`'un
+  /// sonuna eklenir. `raw`, `scratch.points` olmamalı.
+  static void EarClipping(const std::vector<Point>& raw, Scratch& scratch,
+                          std::vector<Vertex>& out);
 
   /// @brief Nokta üçgenin içinde veya kenarında mı?
   ///
