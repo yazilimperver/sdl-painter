@@ -1152,8 +1152,12 @@ void Tessellator::AntialiasTriangles(const std::vector<Vertex>& triangles,
   boundary.clear();
   for (std::size_t t = 0; t < tris.size(); t += 3) {
     for (std::size_t e = 0; e < 3; ++e) {
-      const std::uint32_t kEdge =
-          *edge_index.Find(EdgeKey(tris[t + e], tris[t + ((e + 1) % 3)]));
+      const std::uint32_t* found =
+          edge_index.Find(EdgeKey(tris[t + e], tris[t + ((e + 1) % 3)]));
+      if (found == nullptr) {
+        continue;
+      }
+      const std::uint32_t kEdge = *found;
       if (edges[kEdge].count == 1) {
         boundary.push_back(kEdge);
       }
