@@ -90,7 +90,7 @@ batching_benchmark --shapes=400 --frames=60 --screenshot=doc/images/benchmarks
 ## Sonuçlar
 
 Ölçüm ortamı: Windows 11, MSVC Release, 1280×720, vsync kapalı,
-2000 şekil × 300 kare. Ham çıktılar `results/` altında.
+2000 şekil × 300 kare, 14 Kasım 2026. Ham çıktılar `results/` altında.
 
 ### Güncel
 
@@ -118,20 +118,21 @@ gürültüsünden en az etkilenen değer).
 
 | Senaryo | draw/kare | vertex | ms (OpenGL) | ms (null) | fark = draw call maliyeti |
 |---------|----------:|-------:|------------:|----------:|--------------------------:|
-| `fill_same_color` | **2** | 12 000 | 0.32 | 0.19 | 0.13 |
-| `fill_many_colors` | **2** | 12 000 | 0.38 | 0.20 | 0.18 |
-| `stroke_many_colors` | 24 | 192 000 | 3.85 | 3.53 | 0.32 |
-| `circles_many_colors` | 12 | 96 000 | 1.53 | 1.43 | 0.10 |
-| `translate_per_shape` | **2** | 12 000 | 0.30 | 0.23 | 0.07 |
-| `translate_rotate_per_shape` | **2** | 12 000 | 0.37 | 0.30 | 0.07 |
-| `opacity_alternating` | **2000** | 12 000 | 8.35 | 0.20 | **8.15** |
-| `clip_per_shape` | **2000** | 12 000 | 8.86 | 0.23 | **8.63** |
-| `text_only` | 3 | 24 000 | 0.61 | 0.45 | 0.16 |
-| `shapes_and_text` | **4000** | 36 000 | 19.07 | 0.70 | **18.37** |
+| `fill_same_color` | **2** | 12 000 | 0.32 | 0.10 | 0.22 |
+| `fill_many_colors` | **2** | 12 000 | 0.30 | 0.10 | 0.20 |
+| `stroke_many_colors` | 12 | 96 000 | 1.48 | 1.15 | 0.33 |
+| `circles_many_colors` | 12 | 96 000 | 0.90 | 0.63 | 0.28 |
+| `translate_per_shape` | **2** | 12 000 | 0.38 | 0.16 | 0.21 |
+| `translate_rotate_per_shape` | **2** | 12 000 | 0.41 | 0.22 | 0.19 |
+| `opacity_alternating` | **2000** | 12 000 | 7.73 | 0.12 | **7.62** |
+| `clip_per_shape` | **2000** | 12 000 | 8.60 | 0.13 | **8.47** |
+| `text_only` | 3 | 24 000 | 0.77 | 0.53 | 0.24 |
+| `shapes_and_text` | **4000** | 36 000 | 18.56 | 0.67 | **17.89** |
 
 ### Transform CPU'ya taşınmadan önce
 
-Karşılaştırma verisi: `results/windows-release-opengl-before-cpu-transform.csv`
+Karşılaştırma verisi (23 Ağustos 2026 ölçümü):
+`results/windows-release-opengl-before-cpu-transform.csv`
 (model matrisinin hâlâ bir shader uniform'u olduğu hâl).
 
 Sütunlar yukarıdakiyle aynı, yalnızca iki ölçüm yan yana yazılmıştır; `kazanç`
@@ -170,21 +171,21 @@ gerçek GPU durumu:
 | `SetClipRect` | scissor box, GPU durumu | Hayır (shader tabanlı clip olmadan) |
 | şekil ↔ metin | ayrı shader + VAO | Evet — tek shader + 1×1 beyaz texture |
 
-**4. Draw call başına maliyet ~4.1 µs, ölçekle doğrusal**
+**4. Draw call başına maliyet ~3.9 µs, ölçekle doğrusal**
 (`opacity_alternating` üzerinden, tek batch kırıcısı o):
 
 | şekil | draw/kare | ms |
 |------:|----------:|---:|
-| 500 | 500 | 2.09 |
-| 2 000 | 2 000 | 8.35 |
-| 8 000 | 8 000 | 32.27 |
+| 500 | 500 | 2.02 |
+| 2 000 | 2 000 | 7.73 |
+| 8 000 | 8 000 | 29.68 |
 
 **5. Şekil ↔ metin geçişi şu an en pahalı desen.** 2000 şekil + 2000 metin
-= 4000 draw call → 19 ms. Metin tek başına (`text_only`) 3 draw call ile
-0.61 ms; yani glyph atlası kendi işini yapıyor, sorun **karışım**.
+= 4000 draw call → 18.6 ms. Metin tek başına (`text_only`) 3 draw call ile
+0.77 ms; yani glyph atlası kendi işini yapıyor, sorun **karışım**.
 
 **6. `stroke_many_colors` ve `circles_many_colors` farklı bir problem.**
-Draw call sayıları düşük (24 / 12) ama süreleri yüksek — ve `--null`
+Draw call sayıları düşük (12 / 12) ama süreleri yüksek — ve `--null`
 modunda da yüksek. Burada darboğaz batch değil, **CPU tessellation**.
 Batch'leme iyileştirmesi bu iki senaryoya dokunmaz.
 
@@ -229,7 +230,7 @@ yapar, SDL tarafında karşılığı `SDL_RenderPresent`. Vsync kapalıdır. Tab
 her hücre, 300 karenin medyanının üç ayrı geçişteki medyanıdır; ham değerler
 `results/windows-release-comparison-*.csv` içinde (`pass` sütunu).
 
-Ortam: Windows 11 Pro, AMD Ryzen 5 3600, NVIDIA GeForce RTX 5060 Ti (sürücü
+Ortam (14 Kasım 2026): Windows 11 Pro, AMD Ryzen 5 3600, NVIDIA GeForce RTX 5060 Ti (sürücü
 32.0.16.1088), MSVC 19.44 Release, SDL 3.4.16, 1280×720. İki OpenGL koşusunun
 da bu kartta çizdiği `GL_RENDERER` ile kayıtlı.
 
@@ -239,25 +240,28 @@ da bu kartta çizdiği `GL_RENDERER` ile kayıtlı.
 
 | Senaryo | painter-gl | SDL opengl | painter-vk | SDL vulkan | SDL direct3d11 |
 |---------|-----------:|-----------:|-----------:|-----------:|---------------:|
-| `fill_rects` | 0.43 | 0.42 | 0.35 | 0.43 | 0.42 |
-| `fill_circles` | **1.53** | 1.88 | **1.39** | 2.00 | 1.80 |
-| `sprites` | 0.49 | **0.32** | 0.38 | 0.38 | **0.33** |
+| `fill_rects` | 0.31 | 0.38 | **0.27** | 0.52 | 0.39 |
+| `fill_circles` | **1.00** | 1.87 | **0.79** | 1.97 | 1.83 |
+| `sprites` | 0.43 | 0.32 | 0.30 | 0.39 | 0.33 |
 
 50 000 şekil:
 
 | Senaryo | painter-gl | SDL opengl | painter-vk | SDL vulkan | SDL direct3d11 |
 |---------|-----------:|-----------:|-----------:|-----------:|---------------:|
-| `fill_rects` | **5.6** | 9.4 | **5.3** | 9.6 | 9.5 |
-| `fill_circles` | **34.4** | 46.4 | **31.5** | 46.6 | 46.3 |
-| `sprites` | 7.6 | 8.9 | 6.7 | 7.3 | 7.1 |
+| `fill_rects` | **3.4** | 9.3 | **2.9** | 9.5 | 9.4 |
+| `fill_circles` | **20.5** | 47.8 | **16.8** | 67.9 | 48.0 |
+| `sprites` | **5.6** | 8.5 | **4.8** | 10.9 | 7.9 |
+
+Kalın: aynı grafik API'sindeki karşılığından üç geçişin aralıkları üst üste
+binmeyecek kadar hızlı olan.
 
 ### SDLPainter'ın draw call ve tahsis sayısı
 
 | Senaryo | draw/kare (2000 / 50 000) | tahsis/kare (2000 / 50 000) | tahsis/şekil |
 |---------|--------------------------:|----------------------------:|-------------:|
-| `fill_rects` | 2 / 37 | 2 000 / 50 000 | 1 |
-| `fill_circles` | 12 / 295 | 4 000 / 100 000 | 2 |
-| `sprites` | 2 / 37 | 2 000 / 50 000 | 1 |
+| `fill_rects` | 2 / 37 | 0 / 0 | 0 |
+| `fill_circles` | 12 / 295 | 0 / 0 | 0 |
+| `sprites` | 2 / 37 | 0 / 0 | 0 |
 
 Tahsis sayısı programın global `operator new`'undan, ayrı bir 10 karelik
 geçişte sayılır; süre geçişine atomik sayaç maliyeti girmez. Kütüphane
@@ -267,32 +271,32 @@ kullandığı için SDL_Renderer için bu sütun yok.
 
 ### Çıkarımlar
 
-**1. 2000 şekilde fark küçük ve senaryoya göre yön değiştiriyor.**
-Dikdörtgende üç geçişin aralıkları üst üste biniyor (painter-gl 0.39–0.51 ms,
-SDL opengl 0.39–0.52 ms); bu ölçekte ayırt edilebilir bir fark yok. Dairede
-SDLPainter önde (1.53'e 1.88 ms). Sprite'ta SDL_Renderer önde (0.32'ye 0.49
-ms); bu farkın nedeni ayrıca profillenmedi.
+**1. 2000 şekilde dikdörtgen ve sprite'ta fark yok, dairede SDLPainter önde.**
+Dikdörtgende üç geçişin aralıkları üst üste biniyor (painter-gl 0.31-0.53 ms,
+SDL opengl 0.34-0.41 ms). Sprite'ta medyan SDL_Renderer'dan yana (0.32'ye 0.43
+ms) ama aralıklar burada da üst üste biniyor (0.30-0.49'a 0.34-0.53 ms).
+Dairede SDLPainter önde (1.00'e 1.87 ms).
 
-**2. 50 000 şekilde SDLPainter üç senaryoda da önde.** Dikdörtgende 5.6'ya 9.4
-ms (aynı API'de yaklaşık 1,7 kat), dairede 34'e 46 ms, sprite'ta 7.6'ya 8.9 ms.
-Sprite'ta SDL direct3d11 (7.1 ms) painter-gl'den biraz önde, painter-vk'nin
-(6.7 ms) biraz gerisinde.
+**2. 50 000 şekilde SDLPainter üç senaryoda da önde.** Dikdörtgende 3.4'e 9.3
+ms (aynı API'de yaklaşık 2,7 kat), dairede 20.5'e 47.8 ms, sprite'ta 5.6'ya
+8.5 ms. SDL'in Windows varsayılanı direct3d11 de üç senaryoda painter-gl'in
+gerisinde.
 
-**3. Şekil başına heap tahsisi CPU maliyetinin yaklaşık yarısı.** Her
+**3. Şekil başına heap tahsisi kaldırıldı (1.5.0).** 13 Kasım ölçümünde her
 `FillRect` ve `DrawImage` bir, her `FillCircle` iki `std::vector` tahsisi
-yapıyor (`Tessellator`'ın döndürdüğü vertex ve nokta dizileri); 50 000 şekilde
-kare başına 50 000-100 000 tahsis. Payını görmek için bir deneyde (kodda değil)
-`FillRect` her çağrıda yeni dizi almak yerine yeniden kullanılan bir tampona
-yazdırıldı, üç geçişin medyanı:
+yapıyordu; 50 000 şekilde kare başına 50 000-100 000 tahsis, CPU süresinin
+yaklaşık yarısı. Artık Painter ara dizilerini yeniden kullanıyor, daire ve
+elips noktalarının cos/sin değerleri de segment sayısı başına bir kez
+hesaplanıyor. painter-gl'de üç geçişin medyanı, önce ve sonra:
 
-| Ölçüm | 2000 şekil | 50 000 şekil |
-|-------|-----------:|-------------:|
-| CPU yolu, GPU yok (`batching_benchmark --null`, `fill_many_colors`) | 0.200 → 0.102 ms | 5.14 → 2.54 ms |
-| Tam kare (`renderer_comparison`, painter-gl `fill_rects`) | 0.46 → 0.34 ms | 5.8 → 3.2 ms |
+| Senaryo | 2000 şekil | 50 000 şekil |
+|---------|-----------:|-------------:|
+| `fill_rects` | 0.43 → 0.31 ms | 5.6 → 3.4 ms |
+| `fill_circles` | 1.53 → 1.00 ms | 34.4 → 20.5 ms |
+| `sprites` | 0.49 → 0.43 ms | 7.6 → 5.6 ms |
 
-Yani 50 000 şekilde SDLPainter CPU'ya bağlı ve sürenin yaklaşık yarısı
-tahsis. Yukarıdaki tablolar bu iyileştirme olmadan ölçüldü; tahsisleri
-kaldırmak SDLPainter'ın en büyük CPU iyileştirme fırsatı.
+GPU'suz CPU yolu (`batching_benchmark --null`, `fill_many_colors`, 2000
+şekil) 0.20'den 0.10 ms'ye indi.
 
 **4. Karşılaştırmanın sınırları.**
 - SDL tarafındaki daire, kullanıcının yazacağı en doğal kod: daire başına bir
@@ -300,6 +304,9 @@ kaldırmak SDLPainter'ın en büyük CPU iyileştirme fırsatı.
   olabilir; ölçülmedi.
 - Ölçüm tek makinede ve yalnızca Windows'ta yapıldı. Başka GPU'da ve sürücüde
   oranlar değişebilir.
+- SDL vulkan bu makinede kararsız: 50 000 dairede en hızlı kare 46.9 ms, medyan
+  67.9 ms. 13 Kasım ölçümünde medyan 46.6 ms'ydi; arada SDL tarafında kod ve
+  sürücü değişmedi. Nedeni incelenmedi.
 - SDLPainter'ın kalın çizgi, dönüşüm, gradient ve kenar yumuşatma gibi
   SDL_Renderer'da olmayan işleri burada yok; bu tablo yalnızca ortak alt
   kümenin maliyetini gösterir.
@@ -321,8 +328,8 @@ kendisinin yazacağı çizim kabiliyetleri:
 | Kenar yumuşatma | Yok | Backend'den bağımsız, `SetAntialiasing` (1.5.0 ile) |
 
 Ortak alt kümede, yani SDL_Renderer'ın da doğrudan çizebildiği dikdörtgen ve
-sprite'ta, 2000 şekilde dikdörtgende fark yok, sprite'ta SDL_Renderer önde;
-50 000 şekilde SDLPainter önde (sprite'ta SDL direct3d11 ile başa baş). Daire gibi SDL'de kullanıcının kendisinin
+sprite'ta, 2000 şekilde belirgin bir fark yok; 50 000 şekilde SDLPainter
+önde. Daire gibi SDL'de kullanıcının kendisinin
 kurması gereken şekillerde ise SDLPainter hem kodu hem süreyi kısaltıyor.
 SDLPainter SDL'i gizlemiyor; pencere, olay ve ses gibi işlerde SDL'in
 doğrudan kullanımı sürer.
