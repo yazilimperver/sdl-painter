@@ -842,6 +842,40 @@ TEST(BuildEllipsePoints, FillSharesPerimeterWithStroke) {
   }
 }
 
+TEST(BuildEllipsePoints, SharedScratchMatchesFreshScratch) {
+  // Birim cember tablosu segment sayisina gore scratch'te saklanir. Ayni
+  // scratch farkli boyutlar arasinda gidip gelse de sonuc, her seferinde yeni
+  // scratch ile uretilenle birebir ayni olmali.
+  struct Shape {
+    float cx;
+    float cy;
+    float rx;
+    float ry;
+    float scale;
+  };
+  const Shape kShapes[] = {
+      {0.0f, 0.0f, 10.0f, 10.0f, 0.0f},     // 16 segment
+      {5.0f, -3.0f, 100.0f, 100.0f, 0.0f},  // 50
+      {7.0f, 2.0f, 12.0f, 6.0f, 0.0f},      // 16: elips, baska merkez
+      {0.0f, 0.0f, 40.0f, 40.0f, 1.5f},     // kenar yumusatma toleransi
+      {1.0f, 1.0f, 900.0f, 900.0f, 0.0f},   // 450
+      {0.0f, 0.0f, 10.0f, 10.0f, 0.0f},     // 16'ya geri donus
+  };
+  Tessellator::Scratch shared;
+  std::vector<Point> pts;
+  for (const Shape& s : kShapes) {
+    Tessellator::BuildEllipsePoints(s.cx, s.cy, s.rx, s.ry, s.scale, shared,
+                                    pts);
+    const auto fresh =
+        Tessellator::BuildEllipsePoints(s.cx, s.cy, s.rx, s.ry, s.scale);
+    ASSERT_EQ(pts.size(), fresh.size());
+    for (std::size_t i = 0; i < pts.size(); ++i) {
+      EXPECT_EQ(pts[i].x, fresh[i].x);
+      EXPECT_EQ(pts[i].y, fresh[i].y);
+    }
+  }
+}
+
 TEST(BuildEllipsePoints, CircleFillIsEllipseWithEqualRadii) {
   const auto circle = Tessellator::TessellateFilledCircle(3.0f, 4.0f, 70.0f);
   const auto ellipse =

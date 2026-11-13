@@ -48,6 +48,10 @@ class Tessellator {
     std::vector<std::size_t> dash_ends;  ///< Her parçanın bitiş indeksi.
     std::vector<Point> dash_run;         ///< Tessellate edilen tek parça.
     std::vector<std::int32_t> ear_indices;  ///< Ear clipping'te kalan köşeler.
+    /// Birim çember tabloları: `unit_circle[n]`, n segmentli çemberin
+    /// (cos, sin) değerleri; ilk kullanımda doldurulur (bkz.
+    /// @ref BuildEllipsePoints).
+    std::vector<std::vector<Point>> unit_circle;
 
     /// @brief Kenar yumuşatmada bir kenarın kaç üçgende geçtiği ve ilk
     ///        geçtiği üçgendeki yönü.
@@ -118,8 +122,13 @@ class Tessellator {
                                                float pixel_scale = 0.0F);
 
   /// @brief @ref BuildEllipsePoints; sonuç `out`'a yazılır (önce temizlenir).
+  ///
+  /// cos/sin değerleri `scratch`'teki birim çember tablosundan okunur; her
+  /// segment sayısı için bir kez hesaplanır. Değerler tablosuz hesapla
+  /// aynıdır, çıktı değişmez.
   static void BuildEllipsePoints(float cx, float cy, float rx, float ry,
-                                 float pixel_scale, std::vector<Point>& out);
+                                 float pixel_scale, Scratch& scratch,
+                                 std::vector<Point>& out);
 
   /// @brief Dolu poligon için vertex üret (ear clipping triangulation).
   /// Konkav poligonları destekler.

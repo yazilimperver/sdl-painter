@@ -912,7 +912,7 @@ void Painter::DrawCircle(float cx, float cy, float radius) {
   }
   std::vector<Point>& pts = mScratch->shape;
   Tessellator::BuildEllipsePoints(cx, cy, radius, radius, AntialiasScale(),
-                                  pts);
+                                  mScratch->tess, pts);
   StrokePoints(pts, /*closed=*/true);
 }
 
@@ -939,7 +939,8 @@ void Painter::DrawEllipse(float cx, float cy, float rx, float ry) {
     return;
   }
   std::vector<Point>& pts = mScratch->shape;
-  Tessellator::BuildEllipsePoints(cx, cy, rx, ry, AntialiasScale(), pts);
+  Tessellator::BuildEllipsePoints(cx, cy, rx, ry, AntialiasScale(),
+                                  mScratch->tess, pts);
   StrokePoints(pts, /*closed=*/true);
 }
 

@@ -64,6 +64,28 @@ int32_t RoundSegments(float radius) {
                     kMaxSegments);
 }
 
+/// @brief `segments` segmentli birim çemberin (cos, sin) değerleri.
+///
+/// İlk istekte hesaplanır ve `tables`'ta saklanır. Açı ve trigonometri
+/// tablosuz hesapla aynı ifadedir; değerler birebir aynı çıkar.
+const std::vector<Point>& UnitCircle(int32_t segments,
+                                     std::vector<std::vector<Point>>& tables) {
+  const auto kIndex = static_cast<std::size_t>(segments);
+  if (tables.size() <= kIndex) {
+    tables.resize(kIndex + 1);
+  }
+  std::vector<Point>& table = tables[kIndex];
+  if (table.empty()) {
+    table.reserve(kIndex);
+    for (int32_t i = 0; i < segments; ++i) {
+      const float a =
+          kTwoPi * static_cast<float>(i) / static_cast<float>(segments);
+      table.emplace_back(std::cos(a), std::sin(a));
+    }
+  }
+  return table;
+}
+
 /// @brief `pivot`'tan bir yaya üçgen fanı ekle.
 ///
 /// Yay `centre` merkezli ve `radius` yarıçaplıdır; `first`'ten başlar,
@@ -255,7 +277,7 @@ void Tessellator::TessellateFilledEllipse(float cx, float cy, float rx,
                                           Scratch& scratch,
                                           std::vector<Vertex>& out) {
   std::vector<Point>& pts = scratch.points;
-  BuildEllipsePoints(cx, cy, rx, ry, pixel_scale, pts);
+  BuildEllipsePoints(cx, cy, rx, ry, pixel_scale, scratch, pts);
   out.clear();
   out.reserve(pts.size() * 3);
   for (std::size_t i = 0; i < pts.size(); ++i) {
@@ -270,21 +292,21 @@ void Tessellator::TessellateFilledEllipse(float cx, float cy, float rx,
 std::vector<Point> Tessellator::BuildEllipsePoints(float cx, float cy, float rx,
                                                    float ry,
                                                    float pixel_scale) {
+  Scratch scratch;
   std::vector<Point> pts;
-  BuildEllipsePoints(cx, cy, rx, ry, pixel_scale, pts);
+  BuildEllipsePoints(cx, cy, rx, ry, pixel_scale, scratch, pts);
   return pts;
 }
 
 void Tessellator::BuildEllipsePoints(float cx, float cy, float rx, float ry,
-                                     float pixel_scale,
+                                     float pixel_scale, Scratch& scratch,
                                      std::vector<Point>& out) {
   const int32_t kSegments = AdaptiveSegments(std::max(rx, ry), pixel_scale);
+  const std::vector<Point>& unit = UnitCircle(kSegments, scratch.unit_circle);
   out.clear();
-  out.reserve(static_cast<std::size_t>(kSegments));
-  for (int32_t i = 0; i < kSegments; ++i) {
-    const float a =
-        kTwoPi * static_cast<float>(i) / static_cast<float>(kSegments);
-    out.emplace_back(cx + std::cos(a) * rx, cy + std::sin(a) * ry);
+  out.reserve(unit.size());
+  for (const Point& u : unit) {
+    out.emplace_back(cx + u.x * rx, cy + u.y * ry);
   }
 }
 

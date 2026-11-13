@@ -62,6 +62,9 @@
   dizilere taşındı. GPU'suz ölçümde (`examples/benchmarks`) çizim çağrıları
   kenar yumuşatma kapalıyken 2.5 kat, açıkken 3 kat hızlandı. Çizilen
   geometri değişmedi.
+- Daire ve elips çevre noktalarının cos/sin değerleri segment sayısı başına
+  bir kez hesaplanıp saklanıyor; `FillCircle` ve `FillEllipse` yaklaşık %40,
+  `DrawCircle` yaklaşık %13 hızlandı. Çizilen geometri değişmedi.
 
 ### Düzeltildi
 
