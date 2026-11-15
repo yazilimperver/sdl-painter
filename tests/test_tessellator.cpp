@@ -1390,3 +1390,45 @@ TEST(StrokeCoverage, UntrimmedCornerNextToTrimmedCornerLeavesNoGap) {
     }
   }
 }
+
+// Kapalı kesikli yolda desen başlangıç noktasında çizili bitiyorsa son kesik
+// ilk kesiğe bağlanır: orada iki uç değil birleşim olmalı. İlk kesik bütün
+// yolu kaplıyorsa sonuç kesintisiz kapalı çizgiyle aynı olmalı.
+TEST(StrokeCoverage, ClosedDashJoinsLastPieceToFirst) {
+  using sdl_painter::LineCap;
+  using sdl_painter::LineJoin;
+  constexpr float kWidth = 16.0f;
+  // Çevre 480, desen dönemi 65: yol 25 birim çizili biter. Diğer üç köşe
+  // boşluğa denk gelir; komşu kesiklerin uçları birbirine değmez.
+  const std::vector<Point> kSquare = {
+      {20.0f, 20.0f}, {140.0f, 20.0f}, {140.0f, 140.0f}, {20.0f, 140.0f}};
+  constexpr float kDash[] = {30.0f, 35.0f};
+  constexpr float kLongDash[] = {1000.0f, 10.0f};
+
+  for (const LineJoin join :
+       {LineJoin::kMiter, LineJoin::kBevel, LineJoin::kRound}) {
+    for (const LineCap cap :
+         {LineCap::kButt, LineCap::kSquare, LineCap::kRound}) {
+      const std::string name =
+          "join=" + std::to_string(static_cast<int>(join)) +
+          " cap=" + std::to_string(static_cast<int>(cap));
+
+      const StrokeScan scan =
+          ScanStroke(Tessellator::TessellateDashedPolyline(
+                         kSquare, kWidth, kDash, 2, true, cap, join),
+                     kSquare, kWidth, true, cap, join);
+      EXPECT_EQ(scan.overlaps, 0) << name;
+      EXPECT_EQ(scan.strays, 0) << name;
+
+      const auto whole = Tessellator::TessellateDashedPolyline(
+          kSquare, kWidth, kLongDash, 2, true, cap, join);
+      const auto solid =
+          Tessellator::TessellateStrokedPolygon(kSquare, kWidth, join);
+      bool same = whole.size() == solid.size();
+      for (std::size_t i = 0; same && i < whole.size(); ++i) {
+        same = whole[i].x == solid[i].x && whole[i].y == solid[i].y;
+      }
+      EXPECT_TRUE(same) << "tek kesik, " << name;
+    }
+  }
+}

@@ -91,6 +91,12 @@
 - Vulkan'da yeni çizim hedefi oluşturulurken temizlenmiyordu; hiç
   bağlanmadan okunan ya da çizilen hedefin içeriği sürücüye göre tanımsızdı.
   Artık OpenGL'de olduğu gibi oluşturulurken `(0,0,0,0)` ile temizleniyor.
+- Kesikli kalemle çizilen kapalı şekillerde (dikdörtgen, elips, dilim vb.)
+  desen başlangıç noktasında çizili bitiyorsa son kesik ile ilk kesik orada
+  iki ayrı uçla buluşuyordu: yarı saydam çizgide köşe çift karışıyor, düz uçta
+  dış köşede çentik kalıyordu. İki kesik artık tek parça çiziliyor ve
+  başlangıç noktası kalemin birleşim stilini alıyor. İlk kesik şeklin bütün
+  çevresinden uzunsa çizgi kesintisiz kalemle aynı çiziliyor.
 
 ### Yükseltmeden önce
 

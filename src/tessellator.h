@@ -278,7 +278,9 @@ class Tessellator {
   ///
   /// Her çizili parça açık bir polyline'dır; uç stili her parçanın iki
   /// ucuna ayrı ayrı uygulanır (kesikli bir çizginin yuvarlak uçlu olması
-  /// budur).
+  /// budur). Kapalı yolda başlangıç noktasının üzerinden geçen kesik tek
+  /// parçadır, orada uç değil birleşim alır. İlk kesik bütün kapalı yolu
+  /// kaplıyorsa çizgi kesintisiz kapalı çizgi olarak çizilir.
   ///
   /// @param dash Uzunluklar: çizili / boş sırayla. Tek sayıda verilirse desen
   ///        iki tur boyunca kendini tersine çevirerek tamamlanır (SVG davranışı).
@@ -428,7 +430,14 @@ class Tessellator {
   /// `run_points`'e art arda yazılır; `run_ends[i]`, i. parçanın bittiği
   /// indekstir (parça bir önceki bitişten başlar). İki dizi de önce
   /// temizlenir.
-  static void BuildDashRuns(const std::vector<Point>& points, const float* dash,
+  ///
+  /// Kapalı yolda desen başlangıç noktasında çizili bitiyorsa son parça ilk
+  /// parçayla birleştirilir; başlangıç noktasının üzerinden geçen kesik tek
+  /// parçadır.
+  ///
+  /// @return Desen hiç boşluğa girmediyse, yani tek parça bütün yolu
+  ///         kaplıyorsa `true`.
+  static bool BuildDashRuns(const std::vector<Point>& points, const float* dash,
                             std::size_t dash_count, bool closed,
                             std::vector<Point>& run_points,
                             std::vector<std::size_t>& run_ends);

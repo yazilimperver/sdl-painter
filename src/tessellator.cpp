@@ -684,14 +684,14 @@ void Tessellator::TessellateThickPolyline(const std::vector<Point>& points,
                      out);
 }
 
-void Tessellator::BuildDashRuns(const std::vector<Point>& points,
+bool Tessellator::BuildDashRuns(const std::vector<Point>& points,
                                 const float* dash, std::size_t dash_count,
                                 bool closed, std::vector<Point>& run_points,
                                 std::vector<std::size_t>& run_ends) {
   run_points.clear();
   run_ends.clear();
   if (points.size() < 2 || dash == nullptr || dash_count == 0) {
-    return;
+    return false;
   }
 
   // Desen indeksi monoton artar; "çizili mi?" sorusu indeksin çift olup
@@ -758,11 +758,32 @@ void Tessellator::BuildDashRuns(const std::vector<Point>& points,
     }
   }
 
-  if (drawing) {
-    finish_run();
-  } else {
+  if (!drawing) {
     run_points.resize(run_start);
+    return false;
   }
+  if (run_ends.empty()) {
+    // Desen hiç boşluğa girmedi: tek parça bütün yolu kaplıyor.
+    finish_run();
+    return true;
+  }
+  if (closed) {
+    // Son parça başlangıç noktasında bitiyor, ilk parça oradan başlıyor.
+    // Son parça ilk parçanın önüne alınıp ikisi tek parça yapılır; böylece
+    // başlangıç noktası iki uç yerine birleşim alır. İlk parçanın başındaki
+    // nokta son parçanın bitişiyle aynı olduğundan silinir.
+    const std::size_t last_count = run_points.size() - run_start;
+    run_points.erase(run_points.begin());
+    std::rotate(run_points.begin(),
+                run_points.end() - static_cast<std::ptrdiff_t>(last_count),
+                run_points.end());
+    for (std::size_t& end : run_ends) {
+      end += last_count - 1;
+    }
+    return false;
+  }
+  finish_run();
+  return false;
 }
 
 std::vector<Vertex> Tessellator::TessellateDashedPolyline(
@@ -801,8 +822,15 @@ void Tessellator::TessellateDashedPolyline(const std::vector<Point>& points,
     return;
   }
 
-  BuildDashRuns(cleaned, dash, dash_count, closed, scratch.dash_points,
-                scratch.dash_ends);
+  const bool whole = BuildDashRuns(cleaned, dash, dash_count, closed,
+                                   scratch.dash_points, scratch.dash_ends);
+  if (whole && closed) {
+    // İlk kesik bütün yolu kaplıyor; parçanın iki ucu başlangıç noktasında
+    // buluşur. Kesintisiz kapalı çizgi olarak çizilir.
+    TessellatePolyline(cleaned, line_width, /*closed=*/true, cap, join, scratch,
+                       out);
+    return;
+  }
   std::size_t begin = 0;
   for (const std::size_t end : scratch.dash_ends) {
     // Her çizili parça kendi içinde AÇIK bir polyline'dır — kapalı şeklin
