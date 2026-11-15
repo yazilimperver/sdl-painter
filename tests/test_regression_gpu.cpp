@@ -246,6 +246,42 @@ TEST_P(RegressionGpu, FreshTargetStartsTransparent) {
       ColorNear(PixelAt(px, kW, 40, 20), Color::Transparent(), kTolerance));
 }
 
+// Hic baglanmamis bir hedef de saydam siyah okunmali.
+//
+// Vulkan hedefi olusturulurken yalnizca layout gecisi yapiyor, temizlemeyi
+// ilk SetRenderTarget'a birakiyordu; baglanmadan okunan ya da cizilen hedefin
+// icerigi tanimsizdi. Once ayni boyutta bir hedef kirmiziya boyanip yikilir:
+// surucu bellegi yeniden kullanirsa temizlenmemis hedefte kirmizi gorunur.
+TEST_P(RegressionGpu, NeverBoundTargetReadsTransparent) {
+  REQUIRE_BACKEND(be, GetParam());
+  Painter& p = *be.painter;
+
+  {
+    RenderTarget old = p.CreateRenderTarget(kW, kH);
+    ASSERT_TRUE(old.IsValid());
+    p.Begin();
+    ASSERT_TRUE(p.SetRenderTarget(old));
+    p.Clear(kRed);
+    p.ResetRenderTarget();
+    p.End();
+  }
+
+  RenderTarget t = p.CreateRenderTarget(kW, kH);
+  ASSERT_TRUE(t.IsValid());
+
+  std::vector<uint8_t> px;
+  ASSERT_NO_FATAL_FAILURE(ReadAndDump(p, t, "never_bound_", px));
+  int32_t not_transparent = 0;
+  for (int32_t y = 0; y < kH; ++y) {
+    for (int32_t x = 0; x < kW; ++x) {
+      if (!ColorNear(PixelAt(px, kW, x, y), Color::Transparent(), 0)) {
+        ++not_transparent;
+      }
+    }
+  }
+  EXPECT_EQ(not_transparent, 0);
+}
+
 // Bir karede uretilen geometri hicbir backend'de sessizce dusurulmemeli.
 //
 // Vulkan vertex ring'i kare slotu basina 4 MB ile sinirliydi; dolunca

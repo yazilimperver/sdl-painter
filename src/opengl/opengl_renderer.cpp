@@ -503,9 +503,9 @@ RenderTargetHandle OpenGLRenderer::CreateRenderTarget(int32_t width,
   if (kStatus == GL_FRAMEBUFFER_COMPLETE) {
     // Yeni hedefin baslangic icerigi (0,0,0,0)'dır. glTexImage2D'ye nullptr
     // verilince icerik tanimsiz kalir; surucu pratikte sifirlasa da bu
-    // garanti degil. Vulkan tarafi da ayni degeri kullaniyor
-    // (bkz. VulkanRenderer::BeginCurrentRenderPass), sozlesme iki backend'de
-    // ayni: render_target.h.
+    // garanti degil. Vulkan tarafi da olustururken ayni degerle temizliyor
+    // (bkz. VulkanRenderTarget::Create), sozlesme iki backend'de ayni:
+    // render_target.h.
     //
     // Scissor gecici kapatilir: glClear kirpma testine tabidir ve hedef kare
     // ortasinda, bir kirpma kutusu yururlukteyken olusturulabilir.

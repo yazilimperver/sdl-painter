@@ -88,6 +88,9 @@
   hedefle çağrılıyordu. `sdlpainter_copy_runtime_dlls()`,
   `doc/en/building.md`'deki tarif ve `packaging/consumer` artık boş listede
   komutu atlıyor.
+- Vulkan'da yeni çizim hedefi oluşturulurken temizlenmiyordu; hiç
+  bağlanmadan okunan ya da çizilen hedefin içeriği sürücüye göre tanımsızdı.
+  Artık OpenGL'de olduğu gibi oluşturulurken `(0,0,0,0)` ile temizleniyor.
 
 ### Yükseltmeden önce
 

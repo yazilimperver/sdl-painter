@@ -1040,9 +1040,10 @@ void VulkanRenderer::BeginCurrentRenderPass(VkCommandBuffer cmd) {
 
   const auto it = mRenderTargets.find(handle);
   if (it != mRenderTargets.end()) {
-    // Ilk baglanmada icerik tanimsiz; temizleyip tanimli hale getiriyoruz.
-    // Sonraki baglanmalar koruyan ikizi kullanir, yoksa hedefe iki asamada
-    // cizmek imkansiz olurdu.
+    // Ilk baglanma (0,0,0,0) ile temizler; hedef olusturulurken zaten
+    // temizlendigi icin (VulkanRenderTarget::Create) ayni degeri yeniden
+    // yazar. Sonraki baglanmalar koruyan ikizi kullanir, yoksa hedefe iki
+    // asamada cizmek imkansiz olurdu.
     const bool kFirst = !it->second.initialized;
     it->second.initialized = true;
     rp.renderPass = kFirst ? mOffscreenRenderPass : mOffscreenResumeRenderPass;

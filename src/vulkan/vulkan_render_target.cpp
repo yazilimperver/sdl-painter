@@ -47,16 +47,23 @@ bool VulkanRenderTarget::Create(VkContext* context, VkRenderPass render_pass,
   fb.layers = 1;
   VK_CHECK(vkCreateFramebuffer(device, &fb, nullptr, &mFramebuffer));
 
-  // FIXME: Layout gecisi icerigi sifirlamiyor; ilk SetRenderTarget'tan
-  // once orneklenen veya okunan hedef belgelenen (0,0,0,0) garantisini
-  // saglamiyor. OpenGL olustururken temizliyor.
-  // Hicbir sey cizilmeden orneklenmesi gecerli bir kullanim; UNDEFINED
-  // layout'undan ornekleme tanimsiz olurdu.
+  // Yeni hedef (0,0,0,0) ile ilklenir (sozlesme: render_target.h; OpenGL de
+  // olustururken temizliyor). Hic baglanmadan orneklenmesi veya okunmasi
+  // gecerli bir kullanim; temizlenmemis bellek surucuye gore cop olabilirdi.
   VkCommandBuffer cmd = BeginOneShot(device, cmd_pool);
   if (cmd == VK_NULL_HANDLE) {
     return false;
   }
   Transition(cmd, mImage, VK_IMAGE_LAYOUT_UNDEFINED,
+             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+  const VkClearColorValue kTransparent{{0.0F, 0.0F, 0.0F, 0.0F}};
+  VkImageSubresourceRange range{};
+  range.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+  range.levelCount = 1;
+  range.layerCount = 1;
+  vkCmdClearColorImage(cmd, mImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                       &kTransparent, 1, &range);
+  Transition(cmd, mImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
              VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   if (!EndOneShot(device, context->GetGraphicsQueue(), cmd_pool, cmd)) {
     return false;
@@ -78,10 +85,11 @@ bool VulkanRenderTarget::CreateImage(VkDevice device,
   ci.arrayLayers = 1;
   ci.samples = VK_SAMPLE_COUNT_1_BIT;
   ci.tiling = VK_IMAGE_TILING_OPTIMAL;
-  // Uc kullanim da gerekli: hedefe cizmek (COLOR_ATTACHMENT), sonucu ekrana
-  // basmak (SAMPLED), icerigini geri okumak (TRANSFER_SRC).
+  // Dort kullanim da gerekli: hedefe cizmek (COLOR_ATTACHMENT), sonucu ekrana
+  // basmak (SAMPLED), icerigini geri okumak (TRANSFER_SRC), olustururken
+  // temizlemek (TRANSFER_DST, vkCmdClearColorImage).
   ci.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT |
-             VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
+             VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
   ci.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
   ci.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
   VK_CHECK(vkCreateImage(device, &ci, nullptr, &mImage));
@@ -356,10 +364,16 @@ void VulkanRenderTarget::Transition(VkCommandBuffer cmd, VkImage image,
   VkPipelineStageFlags dst_stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
   if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED &&
-      new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+      new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
     barrier.srcAccessMask = 0;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     src_stage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+    dst_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
+  } else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+             new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    src_stage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     dst_stage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
   } else if (old_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL &&
              new_layout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL) {

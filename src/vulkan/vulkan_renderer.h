@@ -255,8 +255,9 @@ class VulkanRenderer final : public IRenderer {
     /// Hedefin içeriğini örneklemek için kullanılan handle; @ref mTextures
     /// ile aynı sayaçtan gelir, dolayısıyla çakışmaz.
     TextureHandle texture{kInvalidTexture};
-    /// Hedefe en az bir kez bağlanıldı mı? İlk bağlanma içeriği tanımlı hale
-    /// getirmek için temizler, sonrakiler korur.
+    /// Hedefe en az bir kez bağlanıldı mı? İlk bağlanma (0,0,0,0) ile
+    /// temizler (hedef oluşturulurken de aynı değerle temizlenir), sonrakiler
+    /// korur.
     bool initialized{false};
   };
 
