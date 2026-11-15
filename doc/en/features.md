@@ -31,6 +31,11 @@ This page lists the most notable features of the SDLPainter library.
 - **Blend mode:** `kAlpha` / `kAdditive` / `kMultiply` / `kNone`.
   Being GPU state, it breaks the batch; on Vulkan a pipeline variant per mode is
   created at startup
+- **Edge anti-aliasing:** `SetAntialiasing(true)` makes the tessellator add a
+  1-screen-pixel alpha fringe to the edges of fills and strokes. It is
+  backend-independent: OpenGL and Vulkan give the same result, and it works in
+  render targets too. Text and image edges are not affected. OpenGL can also
+  use MSAA through `AppConfig::msaa_samples`
 
 ## Path
 
@@ -85,7 +90,8 @@ This page lists the most notable features of the SDLPainter library.
 - `DrawRenderTarget` draws the target like an image (tint and mirroring included)
 - `ReadRenderTarget` reads the pixels back as linear RGBA8 — screenshots and the
   backend parity tests use it
-- Targets are single-sampled (no MSAA)
+- Targets are single-sampled (no MSAA); edge anti-aliasing with
+  `SetAntialiasing` works in targets too
 
 ## Text
 
@@ -100,7 +106,9 @@ This page lists the most notable features of the SDLPainter library.
 ## Tessellator
 
 - Backend-independent vertex generation
-- Adaptive segment count for circles/ellipses: `max(16, int(radius * 0.5f))`
+- Adaptive segment count for circles/ellipses: `max(16, int(radius * 0.5f))`;
+  with edge anti-aliasing on, enough segments that a chord deviates from the
+  curve by at most 0.25 screen pixels
 - Ear clipping triangulation for concave polygons
 
 ## Render Batcher

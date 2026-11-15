@@ -30,6 +30,11 @@ Bu sayfa içerisinde SDLPainter kütüphanesine yönelik önce çıkan özellikl
 - **Karıştırma modu:** `kAlpha` / `kAdditive` / `kMultiply` / `kNone`.
   GPU durumu olduğu için batch'i kırar; Vulkan'da mod başına pipeline varyantı
   başlangıçta üretilir
+- **Kenar yumuşatma:** `SetAntialiasing(true)` ile dolgu ve çizgilerin
+  kenarına tessellator'da 1 ekran pikseli genişliğinde bir alfa şeridi
+  eklenir. Backend'den bağımsızdır: OpenGL ve Vulkan aynı sonucu verir, çizim
+  hedeflerinde de çalışır. Metin ve görsellerin kenarları kapsam dışı.
+  OpenGL'de ayrıca `AppConfig::msaa_samples` ile MSAA
 
 ## Yol (Path)
 
@@ -83,7 +88,8 @@ Bu sayfa içerisinde SDLPainter kütüphanesine yönelik önce çıkan özellikl
 - `DrawRenderTarget` ile hedefi bir görüntü gibi (tint ve aynalama dahil) bas
 - `ReadRenderTarget` ile pikselleri doğrusal RGBA8 olarak geri oku — ekran
   görüntüsü ve backend parite testleri bunu kullanır
-- Hedefler tek örneklemlidir (MSAA yok)
+- Hedefler tek örneklemlidir (MSAA yok); `SetAntialiasing` ile kenar
+  yumuşatma hedeflerde de çalışır
 
 ## Metin
 
@@ -98,7 +104,9 @@ Bu sayfa içerisinde SDLPainter kütüphanesine yönelik önce çıkan özellikl
 ## Tessellator
 
 - Backend'den bağımsız vertex üretimi
-- Daire/elips için adaptif segment sayısı: `max(16, int(radius * 0.5f))`
+- Daire/elips için adaptif segment sayısı: `max(16, int(radius * 0.5f))`;
+  kenar yumuşatma açıkken kirişin eğriden ekranda en fazla 0,25 piksel
+  sapacağı kadar segment
 - Konkav çokgenler için ear clipping triangulation
 
 ## Render Batcher

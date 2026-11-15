@@ -394,12 +394,14 @@ dokularının sRGB formatında olması, karıştırma modlarının alfa faktörl
 uyuşmaması ve OpenGL'de başlangıç blend durumunun `SetBlendMode`'u atlaması.
 Üçü de ekranda görünmüyordu.
 
-**Bilinen tek fark anti-aliasing.** MSAA bir GL pencere özniteliğidir
+**Bilinen tek fark MSAA.** MSAA bir GL pencere özniteliğidir
 (`SDL_GL_MULTISAMPLESAMPLES`, `AppConfig::msaa_samples` üzerinden) ve yalnızca
 OpenGL'in **ekran** framebuffer'ında etkilidir. Vulkan pipeline'ları
 `VK_SAMPLE_COUNT_1_BIT` sabitler; çizim hedefleri de her iki backend'de tek
 örneklemlidir. Parite testi bu yüzden hedefe çizer: karşılaştırma MSAA farkına
-takılmaz.
+takılmaz. `SetAntialiasing` ile açılan kenar yumuşatma ise tessellator'da
+üretildiği için iki backend'de aynıdır; parite testi sahneyi kenar yumuşatma
+açıkken de karşılaştırır.
 
 ---
 

@@ -165,7 +165,7 @@ gradient dolgu bu sürümde eklendi (`Path` + `DrawPath`/`FillPath`,
 | Delikli dolgu (even-odd / nonzero) | Kapsam dışı | Ear clipping hole desteklemez; Delaunay CDT gerektirirdi. `FillPath` her alt yolu bağımsız doldurur |
 | Çok duraklı ve conical gradient | Kapsam dışı | İki duraklı geçiş vertex renginden bedavaya geliyor; fazlası shader ve batch maliyeti demek |
 | Yol tabanlı kırpma | Kapsam dışı | Kırpma scissor ile yapılıyor; path clip stencil buffer gerektirirdi |
-| Tam anti-aliasing | Kısmi (MSAA) | Analitik AA, path tabanlı bir rasterleştirici ister |
+| Tam anti-aliasing | Kısmi (kenar şeridi, OpenGL'de MSAA) | Analitik AA, path tabanlı bir rasterleştirici ister |
 | Print / PDF çıktısı | Kapsam dışı | Kütüphane ekran çizimi için tasarlandı |
 
 ---

@@ -43,7 +43,8 @@ böylece vertex yerine **şekil** düşünebilirsiniz.
 - **Tek API, iki backend**, Aynı çizim kodu OpenGL 3.3 ve Vulkan 1.1'de
   çalışır; backend değiştirmek tek satır. Bir parite testi aynı sahneyi iki
   backend'de çizim hedefine çizip pikselleri karşılaştırır; gerçek sürücülerde
-  sonuç bayt bayt aynıdır. Tek özellik farkı: 4× MSAA yalnızca OpenGL'de.
+  sonuç bayt bayt aynıdır, kenar yumuşatma açıkken de. Tek özellik farkı: 4×
+  MSAA yalnızca OpenGL'de.
 - **Doğru geometri**, Kalın çizgiler `glLineWidth` yerine quad tabanlı
   (platformlar arası tutarlı), konkav çokgenler "ear clipping" ile doğru
   dolduruluyor, daire segment sayısı yarıçapa göre uyarlanabiliyor.
@@ -64,11 +65,19 @@ böylece vertex yerine **şekil** düşünebilirsiniz.
 | **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` |
 | **Clipping** | Scissor tabanlı dikdörtgen kırpma |
 | **Çizim hedefi** | Ekran yerine dokuya çizim, mini harita, son işlem efektleri, iz efekti, ve pikselleri geri okuma |
-| **Kenar yumuşatma** | 4× MSAA, **yalnızca OpenGL** ve yalnızca `Application` üzerinden (bir GL pencere özniteliği). Vulkan backend'i ve tüm çizim hedefleri tek örneklemli |
+| **Kenar yumuşatma** | `SetAntialiasing(true)` ile: tessellator dolgu ve çizgilerin kenarına 1 piksellik bir alfa şeridi ekler; OpenGL ve Vulkan aynı sonucu verir, çizim hedeflerinde de çalışır. Metin ve görsellerin kenarları kapsam dışı. OpenGL'de `Application` üzerinden 4× MSAA da var (bir GL pencere özniteliği) |
 | **Viewport** | Alt dikdörtgene yerel koordinatlarla çizim, bölünmüş ekran, mini harita |
 | **Image** | PNG / JPG yükleme (stb_image), kaynak→hedef ölçekleme, atlas dilimleme, tint, aynalama, nearest/linear filtre, yerinde doku güncelleme, serbest dokulu ızgara |
 | **Metin** | SDL_ttf 3.x, glyph cache, left/center/right hizalama, çok satırlı ve sözcük kaydırmalı, fontun `kern` tablosundan kerning. Yalnızca soldan sağa: ligatür, çift yönlü metin ve karmaşık yazım biçimlendirmesi yok |
 | **Backend** | OpenGL 3.3 Core ve Vulkan 1.1, `IRenderer` ile değiştirilebilir. Süreç başına aynı anda tek `Painter`; çoklu GL context desteklenmiyor |
+
+<p align="center"><img src="doc/images/antialiasing.png" alt="Kenar yumuşatma kapalı ve açıkken çizilmiş birleşimler" width="760"></p>
+<div align="center">
+  <sub>
+    Kenar yumuşatma kapalı (sol) ve açık (sağ), 3 kat büyütülmüş. Kaynak:
+    <a href="examples/showcase/shapes_showcase.cpp"><code>examples/showcase/shapes_showcase.cpp</code></a>
+  </sub>
+</div>
 
 ## Blog Yazıları
 
@@ -264,13 +273,19 @@ SDLPainter'da backend'i siz seçersiniz (OpenGL 3.3 ya da Vulkan 1.1) ve
 `IRenderer`'ı uygulayarak yenisini ekleyebilirsiniz. Bunun bir bedeli de var elbet:
 `SDL_Renderer` Direct3D ve Metal'i de destekler, SDLPainter desteklemez.
 
+Hız ise bir bedel değil.
+[`examples/benchmarks`](examples/benchmarks/README.md) ölçümünde (Windows, RTX
+5060 Ti, vsync kapalı, sunum dahil) kare başına 2000 şekilde SDLPainter'ın
+OpenGL backend'i ile SDL_Renderer'ın OpenGL sürücüsü dikdörtgen ve sprite'ta
+başa baş, dairede SDLPainter önde. 50 000 şekilde üçünde de SDLPainter önde:
+dikdörtgen 3,4'e 9,3 ms, daire 20,5'e 47,8 ms, sprite 5,6'ya 8,5 ms.
+
 ### SDL_GPU ve NanoVG
 
 - **SDL_GPU**, SDL3'ün daha alt seviyedeki GPU API'si, şu an kullanılmıyor;
   SDLPainter'ın backend'leri OpenGL 3.3 ve Vulkan 1.1.
-- **NanoVG** en yakın alternatif ve vektör tarafında önde: delikli yollar,
-  yerleşik kenar yumuşatma (anti-aliasing), çok küçük bir kod tabanı ve daha
-  uzun bir geçmiş. Bunlara ihtiyacınız varsa NanoVG'yi seçin; SDL3
+- **NanoVG** en yakın alternatif ve vektör tarafında önde: delikli yollar, çok
+  küçük bir kod tabanı ve daha uzun bir geçmiş. Bunlara ihtiyacınız varsa NanoVG'yi seçin; SDL3
   uygulamanızda tip güvenli bir C++17 çizim katmanı, Vulkan seçeneği ve
   CMake/Conan paketi istiyorsanız SDLPainter'ı.
 

@@ -392,12 +392,14 @@ written it found three real divergences — Vulkan textures being in sRGB format
 the blend modes' alpha factors not matching, and the initial blend state on
 OpenGL skipping `SetBlendMode`. None of the three was visible on screen.
 
-**The only known difference is anti-aliasing.** MSAA is a GL window attribute
+**The only known difference is MSAA.** MSAA is a GL window attribute
 (`SDL_GL_MULTISAMPLESAMPLES`, via `AppConfig::msaa_samples`) and only affects
 OpenGL's **screen** framebuffer. The Vulkan pipelines hard-code
 `VK_SAMPLE_COUNT_1_BIT`; render targets are single-sampled on both backends too.
 That is why the parity test draws into a target: the comparison does not trip
-over the MSAA difference.
+over the MSAA difference. Edge anti-aliasing turned on with `SetAntialiasing`
+is produced by the tessellator, so it is the same on both backends; the parity
+test also compares the scene with it on.
 
 ---
 

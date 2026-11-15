@@ -164,7 +164,7 @@ here, were added in this release (`Path` + `DrawPath`/`FillPath`,
 | Fills with holes (even-odd / nonzero) | Out of scope | Ear clipping does not support holes; it would require Delaunay CDT. `FillPath` fills every subpath independently |
 | Multi-stop and conical gradients | Out of scope | A two-stop transition comes for free from vertex colors; anything more means shader and batch cost |
 | Path-based clipping | Out of scope | Clipping is done with scissor; a path clip would require a stencil buffer |
-| Full anti-aliasing | Partial (MSAA) | Analytic AA requires a path-based rasterizer |
+| Full anti-aliasing | Partial (edge fringe, MSAA on OpenGL) | Analytic AA requires a path-based rasterizer |
 | Print / PDF output | Out of scope | The library is designed for drawing to the screen |
 
 ---

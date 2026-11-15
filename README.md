@@ -43,7 +43,8 @@ can think in **shapes** instead of vertices.
 - **One API, two backends**, the same drawing code runs on OpenGL 3.3 and
   Vulkan 1.1, and switching is a one-line change. A parity test draws the same
   scene into a render target on both and compares the pixels; on real drivers
-  they match byte for byte. The one feature gap: 4× MSAA is OpenGL-only.
+  they match byte for byte, with edge anti-aliasing on or off. The one feature
+  gap: 4× MSAA is OpenGL-only.
 - **Correct geometry**, thick lines are quad-based rather than `glLineWidth`, concave polygons are filled via ear clipping,
   and circle segment counts adapt to the radius.
 - **Batches draw calls**, `RenderBatcher` merges draws sharing
@@ -63,11 +64,19 @@ can think in **shapes** instead of vertices.
 | **Transform** | `Translate` / `Rotate` / `Scale`, `Save`/`Restore` stack |
 | **Clipping** | Scissor-based rectangular clipping |
 | **Render target** | Draw into a texture instead of the screen, minimaps, post-processing, trails, plus pixel read-back |
-| **Anti-aliasing** | 4× MSAA, **OpenGL only**, and only through `Application` (it is a GL window attribute). The Vulkan backend and every render target are single-sample. |
+| **Anti-aliasing** | Edge anti-aliasing with `SetAntialiasing(true)`: the tessellator adds a 1-pixel alpha fringe to fills and strokes, so OpenGL and Vulkan give the same result and it works in render targets too. Text and image edges are not affected. 4× MSAA is also available on OpenGL through `Application` (a GL window attribute). |
 | **Viewport** | Draw into a sub-rectangle with local coordinates, split screen, minimaps |
 | **Image** | PNG / JPG loading (stb_image), source→destination scaling, atlas slicing, tint, mirroring, nearest/linear filtering, in-place texture update, free-form textured meshes |
 | **Text** | SDL_ttf 3.x, glyph cache, left/center/right alignment, multi-line and word wrap, kerning from the font's `kern` table. Left-to-right only: no ligatures, bidirectional text or complex shaping |
 | **Backend** | OpenGL 3.3 Core and Vulkan 1.1, interchangeable through `IRenderer`. One `Painter` per process at a time; multiple GL contexts are not supported |
+
+<p align="center"><img src="doc/images/antialiasing.png" alt="Pen joins drawn with edge anti-aliasing off and on" width="760"></p>
+<div align="center">
+  <sub>
+    Edge anti-aliasing off (left) and on (right), 3× zoom. Source:
+    <a href="examples/showcase/shapes_showcase.cpp"><code>examples/showcase/shapes_showcase.cpp</code></a>
+  </sub>
+</div>
 
 ## Blog Posts
 
@@ -261,13 +270,20 @@ SDLPainter also lets you choose the backend (OpenGL 3.3 or Vulkan 1.1) and add
 your own by implementing `IRenderer`. The trade-off is real: `SDL_Renderer`
 also covers Direct3D and Metal, SDLPainter does not.
 
+Speed is not the price either. Measured in
+[`examples/benchmarks`](examples/benchmarks/README.md) (Windows, RTX 5060 Ti,
+vsync off, presentation included), SDLPainter's OpenGL backend and
+SDL_Renderer's OpenGL driver are level on rectangles and sprites at 2,000
+shapes per frame, and SDLPainter is ahead on circles. At 50,000 shapes
+SDLPainter is ahead in all three: rectangles 3.4 ms vs 9.3 ms, circles 20.5 vs
+47.8 ms, sprites 5.6 vs 8.5 ms.
+
 ### SDL_GPU and NanoVG
 
 - **SDL_GPU**, SDL3's lower-level GPU API, is not used today; SDLPainter's
   backends are OpenGL 3.3 and Vulkan 1.1.
 - **NanoVG** is the closest alternative and is ahead on vector features: paths
-  with holes, built-in edge anti-aliasing, a very small code base and a longer
-  track record. Pick it if you need those; pick SDLPainter for a type-safe C++17
+  with holes, a very small code base and a longer track record. Pick it if you need those; pick SDLPainter for a type-safe C++17
   drawing layer in an SDL3 application, a Vulkan option and CMake/Conan
   packaging.
 
