@@ -79,6 +79,11 @@ class Tessellator {
       std::vector<std::uint32_t> boundary_degree;
       std::vector<Point> inner;  ///< İçeri çekilmiş köşeler.
       std::vector<Point> outer;  ///< Şeridin dış köşeleri.
+      /// Aynı köşe tablosu: konumun bitleri ve köşe.
+      std::vector<std::uint64_t> exact_keys;
+      std::vector<std::uint32_t> exact_values;
+      /// Üçgen kenarı başına kenar indeksi, `tris` sırasıyla.
+      std::vector<std::uint32_t> tri_edges;
     } aa;
   };
 

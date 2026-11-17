@@ -1606,12 +1606,19 @@ void Painter::PushStroke(const std::vector<Vertex>& verts, const Color& color,
   Tessellator::AntialiasTriangles(verts, 1.0F / kScale, mScratch->tess, aa);
   const float kAlpha =
       static_cast<float>(color.a) * std::clamp(coverage, 0.0F, 1.0F);
+  const auto kScaleAlpha = [kAlpha](std::uint8_t a) {
+    return static_cast<std::uint8_t>(
+        std::lround(kAlpha * static_cast<float>(a) / 255.0F));
+  };
+  // AntialiasTriangles kapsamayi 0 ya da 255 olarak yazar; ikisinin karsiligi
+  // bir kez hesaplanir (lround her vertex'te pahaliydi).
+  const std::uint8_t kFullAlpha = kScaleAlpha(255);
+  const std::uint8_t kNoAlpha = kScaleAlpha(0);
   for (Vertex& v : aa) {
     v.r = color.r;
     v.g = color.g;
     v.b = color.b;
-    v.a = static_cast<std::uint8_t>(
-        std::lround(kAlpha * static_cast<float>(v.a) / 255.0F));
+    v.a = v.a == 255 ? kFullAlpha : v.a == 0 ? kNoAlpha : kScaleAlpha(v.a);
   }
   mBatcher->PushTrianglesPreColored(aa, mCurrentState.transform,
                                     mCurrentState.opacity);

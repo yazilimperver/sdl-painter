@@ -187,6 +187,11 @@ TEST(AntialiasTriangles, InvalidInputIsReturnedUnchanged) {
   auto bad = rect;
   bad[1].x = std::numeric_limits<float>::quiet_NaN();
   EXPECT_EQ(Tessellator::AntialiasTriangles(bad, 1.0F).size(), rect.size());
+  bad = rect;
+  bad[2].y = std::numeric_limits<float>::infinity();
+  EXPECT_EQ(Tessellator::AntialiasTriangles(bad, 1.0F).size(), rect.size());
+  bad[2].y = -std::numeric_limits<float>::infinity();
+  EXPECT_EQ(Tessellator::AntialiasTriangles(bad, 1.0F).size(), rect.size());
   EXPECT_TRUE(Tessellator::AntialiasTriangles({}, 1.0F).empty());
 }
 
@@ -225,6 +230,38 @@ TEST(AntialiasTriangles, TrimmedJoinsKeepTheFringeOutside) {
             << "birlesim " << static_cast<int>(join) << ": (" << v.x << ", "
             << v.y << ")";
       }
+    }
+  }
+}
+
+// Ara diziler (köşe, ızgara ve kenar tabloları) bir çağrıdan diğerine bilgi
+// taşımamalı. Aynı köşeleri ters sırayla veren girdi, önceki çağrının
+// tablosunda kalan bir eşleşmeyi yakalar.
+TEST(AntialiasTriangles, SharedScratchMatchesFreshScratch) {
+  const auto rect = Tessellator::TessellateFilledRect(0.0F, 0.0F, 10.0F, 10.0F);
+  const std::vector<Vertex> reversed(rect.rbegin(), rect.rend());
+  auto welded = rect;
+  welded[3].x += 1e-6F;  // toleransla kaynaşan köşe
+  const std::vector<std::vector<Vertex>> kInputs = {
+      Tessellator::TessellateStrokedPolygon(
+          {{10.0F, 10.0F}, {60.0F, 10.0F}, {60.0F, 50.0F}, {10.0F, 50.0F}},
+          6.0F, LineJoin::kRound),
+      rect,
+      reversed,
+      welded,
+      Tessellator::TessellateFilledCircle(0.0F, 0.0F, 40.0F),
+      Tessellator::TessellateFilledRect(2.0F, 3.0F, 4.0F, 5.0F),
+  };
+  Tessellator::Scratch shared;
+  std::vector<Vertex> out;
+  for (std::size_t n = 0; n < kInputs.size(); ++n) {
+    Tessellator::AntialiasTriangles(kInputs[n], 1.0F, shared, out);
+    const auto fresh = Tessellator::AntialiasTriangles(kInputs[n], 1.0F);
+    ASSERT_EQ(out.size(), fresh.size()) << "girdi " << n;
+    for (std::size_t i = 0; i < out.size(); ++i) {
+      EXPECT_EQ(out[i].x, fresh[i].x) << "girdi " << n << ", vertex " << i;
+      EXPECT_EQ(out[i].y, fresh[i].y) << "girdi " << n << ", vertex " << i;
+      EXPECT_EQ(out[i].a, fresh[i].a) << "girdi " << n << ", vertex " << i;
     }
   }
 }

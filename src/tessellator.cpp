@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <numeric>
 #include <spdlog/spdlog.h>
 
@@ -945,6 +946,20 @@ void Tessellator::TessellatePolyline(const std::vector<Point>& raw,
 
 namespace {
 
+std::uint32_t FloatBits(float value) {
+  std::uint32_t bits = 0;
+  std::memcpy(&bits, &value, sizeof(bits));
+  return bits;
+}
+
+/// @brief `std::isfinite` ile aynı sonuç: üs bitlerinin hepsi bir değilse
+///        sayı sonludur. Kenar yumuşatma köşe başına iki kez çağırıyor;
+///        MSVC'de `std::isfinite`'ten belirgin biçimde hızlı.
+bool IsFinite(float value) {
+  constexpr std::uint32_t kExponent = 0x7F800000U;
+  return (FloatBits(value) & kExponent) != kExponent;
+}
+
 /// @brief 64 bit anahtardan 32 bit değere açık adreslemeli tablo.
 ///
 /// `std::unordered_map` her yeni anahtar için düğüm tahsis ediyor ve her
@@ -1025,7 +1040,9 @@ class FlatIndexMap {
 /// Izgara hücresi tolerans kadardır, komşu hücreler de aranır. Bir hücrenin
 /// köşeleri eklenme sırasıyla bağlı bir indeks listesinde durur; arama sırası
 /// (komşu hücre sırası, hücre içinde eklenme sırası) bu yüzden sabittir.
-/// Diziler `scratch`'tedir; kurulurken boşaltılır.
+/// Kayıtlı köşeler ayrıca konumlarının bitleriyle bir tabloda tutulur ve önce
+/// orada aranır (bkz. @ref Weld). Diziler `scratch`'tedir; kurulurken
+/// boşaltılır.
 class VertexWelder {
  public:
   /// @param max_points Kaynaştırılacak köşe sayısının üst sınırı.
@@ -1033,6 +1050,7 @@ class VertexWelder {
                Tessellator::Scratch::Antialias& scratch)
       : mTolerance(tolerance),
         mCells(scratch.cell_keys, scratch.cell_values, max_points),
+        mExact(scratch.exact_keys, scratch.exact_values, max_points),
         mPoints(scratch.points),
         mNext(scratch.next),
         mCellHead(scratch.cell_head),
@@ -1048,6 +1066,16 @@ class VertexWelder {
   }
 
   std::uint32_t Weld(const Point& p) {
+    // Bit düzeyinde aynı köşe kayıtlıysa o döner. Izgara taraması da aynı
+    // köşeyi bulurdu: tarama bir köşeyi ancak komşu hücredeyse ve tolerans
+    // içindeyse bulur; bu ilişki simetrik olduğu için kayıtlı iki köşe
+    // birbirini bulacak durumda olamaz (sonra eklenen öncekine kaynaşırdı).
+    // Ortak köşeler çoğunlukla aynı hesapla üretildiğinden aramaların çoğu
+    // burada, dokuz hücreye bakmadan biter.
+    const std::uint64_t kBits = BitsKey(p);
+    if (const std::uint32_t* same = mExact.Find(kBits); same != nullptr) {
+      return *same;
+    }
     const auto kCx = static_cast<std::int64_t>(std::floor(p.x / mTolerance));
     const auto kCy = static_cast<std::int64_t>(std::floor(p.y / mTolerance));
     for (std::int64_t dx = -1; dx <= 1; ++dx) {
@@ -1078,6 +1106,7 @@ class VertexWelder {
       mNext[mCellTail[kCell]] = kIndex;
       mCellTail[kCell] = kIndex;
     }
+    mExact.Insert(kBits, kIndex, inserted);  // Yukarıdaki arama bulamadı.
     return kIndex;
   }
 
@@ -1091,8 +1120,13 @@ class VertexWelder {
            static_cast<std::uint64_t>(static_cast<std::uint32_t>(y));
   }
 
+  static std::uint64_t BitsKey(const Point& p) {
+    return (static_cast<std::uint64_t>(FloatBits(p.x)) << 32U) | FloatBits(p.y);
+  }
+
   float mTolerance;
   FlatIndexMap mCells;                ///< Hücre anahtarı -> hücre numarası.
+  FlatIndexMap mExact;                ///< Konumun bitleri -> köşe.
   std::vector<Point>& mPoints;        ///< Kaynaşmış köşeler.
   std::vector<std::uint32_t>& mNext;  ///< Aynı hücredeki sonraki köşe.
   std::vector<std::uint32_t>& mCellHead;
@@ -1131,7 +1165,7 @@ void Tessellator::AntialiasTriangles(const std::vector<Vertex>& triangles,
     return;
   }
   for (const Vertex& v : triangles) {
-    if (!std::isfinite(v.x) || !std::isfinite(v.y)) {
+    if (!IsFinite(v.x) || !IsFinite(v.y)) {
       out = triangles;
       return;
     }
@@ -1172,11 +1206,14 @@ void Tessellator::AntialiasTriangles(const std::vector<Vertex>& triangles,
   }
 
   // 2. Kenarları say: tek üçgene ait olanlar sınırdır. Bir kenarın yönü ve
-  //    karşı köşesi, kenarın geçtiği ilk üçgenden alınır.
+  //    karşı köşesi, kenarın geçtiği ilk üçgenden alınır. Her üçgen kenarının
+  //    indeksi saklanır; 3. adım tabloyu yeniden aramaz.
   FlatIndexMap edge_index(s.edge_keys, s.edge_values, tris.size());
   std::vector<EdgeUse>& edges = s.edges;
   edges.clear();
   edges.reserve(tris.size());
+  std::vector<std::uint32_t>& tri_edges = s.tri_edges;
+  tri_edges.resize(tris.size());
   for (std::size_t t = 0; t < tris.size(); t += 3) {
     for (std::size_t e = 0; e < 3; ++e) {
       const std::uint32_t from = tris[t + e];
@@ -1189,6 +1226,7 @@ void Tessellator::AntialiasTriangles(const std::vector<Vertex>& triangles,
         edges.push_back(EdgeUse{0, from, to, tris[t + ((e + 2) % 3)]});
       }
       ++edges[kEdge].count;
+      tri_edges[t + e] = kEdge;
     }
   }
 
@@ -1200,17 +1238,9 @@ void Tessellator::AntialiasTriangles(const std::vector<Vertex>& triangles,
   boundary_degree.assign(pos.size(), 0);
   std::vector<std::uint32_t>& boundary = s.boundary;
   boundary.clear();
-  for (std::size_t t = 0; t < tris.size(); t += 3) {
-    for (std::size_t e = 0; e < 3; ++e) {
-      const std::uint32_t* found =
-          edge_index.Find(EdgeKey(tris[t + e], tris[t + ((e + 1) % 3)]));
-      if (found == nullptr) {
-        continue;
-      }
-      const std::uint32_t kEdge = *found;
-      if (edges[kEdge].count == 1) {
-        boundary.push_back(kEdge);
-      }
+  for (const std::uint32_t edge : tri_edges) {
+    if (edges[edge].count == 1) {
+      boundary.push_back(edge);
     }
   }
   for (const std::uint32_t edge : boundary) {

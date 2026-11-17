@@ -65,6 +65,9 @@
 - Daire ve elips çevre noktalarının cos/sin değerleri segment sayısı başına
   bir kez hesaplanıp saklanıyor; `FillCircle` ve `FillEllipse` yaklaşık %40,
   `DrawCircle` yaklaşık %13 hızlandı. Çizilen geometri değişmedi.
+- Kenar yumuşatma açıkken köşe kaynaştırma önce bit düzeyinde aynı köşeyi
+  arıyor ve kenarlar ikinci kez aranmıyor; `FillCircle` yaklaşık %23,
+  `DrawCircle` yaklaşık %32 hızlandı. Çizilen geometri değişmedi.
 
 ### Düzeltildi
 
