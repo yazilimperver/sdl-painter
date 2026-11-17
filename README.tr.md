@@ -148,7 +148,7 @@ include(FetchContent)
 # Aşağıdaki sürümü güncel sürüm ile değiştirebilirsiniz
 FetchContent_Declare(sdl_painter
     GIT_REPOSITORY https://github.com/yazilimperver/sdl-painter.git
-    GIT_TAG        v1.4.0)
+    GIT_TAG        v1.5.0)
 
 # Demoları ve birim testleri kendi projenizin parçası olarak derlemeyin.
 set(SDLPAINTER_BUILD_EXAMPLES OFF)
@@ -191,14 +191,14 @@ Birleşene kadar paketi sürüm etiketinden yerel Conan önbelleğinize
 oluşturabilirsiniz:
 
 ```bash
-git clone --branch v1.4.0 https://github.com/yazilimperver/sdl-painter.git
+git clone --branch v1.5.0 https://github.com/yazilimperver/sdl-painter.git
 conan create sdl-painter --build=missing -o "sdl_painter/*:build_tests=False" -o "sdl_painter/*:build_examples=False"
 ```
 
 Profiliniz daha eski bir standart kullanıyorsa `-s compiler.cppstd=17` ekleyin
 (MSVC için algılanan profil varsayılan olarak C++14 kullanır); Vulkan backend'i
 için `-o "sdl_painter/*:with_vulkan=True"`. Ardından projenizde
-`sdl_painter/1.4.0`'ı kullanabilirsiniz; CMake hedefleri yukarıdakilerle aynıdır.
+`sdl_painter/1.5.0`'ı kullanabilirsiniz; CMake hedefleri yukarıdakilerle aynıdır.
 
 ### vcpkg
 

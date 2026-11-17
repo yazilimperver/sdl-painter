@@ -144,7 +144,7 @@ include(FetchContent)
 
 FetchContent_Declare(sdl_painter
     GIT_REPOSITORY https://github.com/yazilimperver/sdl-painter.git
-    GIT_TAG        v1.4.0)
+    GIT_TAG        v1.5.0)
 
 # Don't build the demos and unit tests as part of your project.
 set(SDLPAINTER_BUILD_EXAMPLES OFF)
@@ -187,13 +187,13 @@ Until it is merged, create the package in your local Conan cache from the
 release tag:
 
 ```bash
-git clone --branch v1.4.0 https://github.com/yazilimperver/sdl-painter.git
+git clone --branch v1.5.0 https://github.com/yazilimperver/sdl-painter.git
 conan create sdl-painter --build=missing -o "sdl_painter/*:build_tests=False" -o "sdl_painter/*:build_examples=False"
 ```
 
 Add `-s compiler.cppstd=17` if your profile uses an older standard (MSVC's
 detected profile defaults to C++14), and `-o "sdl_painter/*:with_vulkan=True"`
-for the Vulkan backend. Your project can then require `sdl_painter/1.4.0`; the
+for the Vulkan backend. Your project can then require `sdl_painter/1.5.0`; the
 CMake targets are the same as above.
 
 ### vcpkg

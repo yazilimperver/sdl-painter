@@ -1,6 +1,37 @@
 # Changelog
 
-## [Yayımlanmamış]
+## [1.5.0] - 2026-11-17
+
+**SDLPainter 1.5.0** kenar yumuşatma ve performans iyileştirme sürümü. Öne çıkanlar:
+
+- **Kenar yumuşatma:** `Painter::SetAntialiasing(true)` dolgu ve çizgilere 1
+  ekran pikseli genişliğinde bir alfa şeridi ekliyor. OpenGL ile Vulkan aynı
+  sonucu veriyor, render target'larda da çalışıyor.
+- **Daha hızlı çizim yolu:** şekil başına heap tahsisi kaldırıldı, daire ve elips
+  noktaları önbellekten geliyor, kenar yumuşatmadaki köşe kaynaştırması
+  hızlandı; çizilen geometri değişmedi. 50 000 şekilde SDLPainter, SDL_Renderer'ın OpenGL
+  sürücüsünden az da olsa önde çıkmıştır: dikdörtgen 3.4 ms'ye 9.3, daire 20.5'e 47.8, sprite
+  5.6'ya 8.5 (koşullar ce detaylar `examples/benchmarks/README.md`'de).
+- **Kaynak ömrü:** `Image`, `Font` ve `Texture` onları yükleyen Painter'dan
+  uzun yaşayabiliyor; yıkılırken ölü renderer'a dokunmuyorlar.
+- **Gamepad:** `Application`'a gamepad olayları ve titreşim, yeni `gamepad`
+  örneği.
+- **API ve paketleme:** `Point`/`Rect` aşırı yüklemeleri eklendi, vcpkg overlay
+  port'u hazırlandı, paket 18,9 MB'tan yaklaşık 1 MB'a inen kaynak arşivi.
+- **Düzeltmeler:** hap şeklindeki `FillRoundedRect`, 32-bit Vulkan derlemesi,
+  statik bağımlılıkta DLL kopyalama, Vulkan'da yeni çizim hedefinin ilk
+  içeriği, kesikli kapalı şekillerin başlangıç noktası.
+- **Uyumluluk:** kaynak düzeyinde kırıcı değişiklik yok; shared derlemede
+  1.4.0'a karşı derlenmiş uygulamalar yeniden derlenmeli. 816 test.
+- **Katkılar:** ilk dış katkılar bu sürümde birleşti (#15, #16, #17).
+
+### Yükseltmeden önce
+
+- **Shared derlemede binary uyumluluk değişti:** `Application` (yeni sanal
+  metotlar ve üye), `IRenderer`, `Texture`, `Image` ve `Font` (yaşam
+  belirteci için yeni üyeler), `Painter` ve `RenderState` (kenar yumuşatma
+  alanı, çizim tamponları için yeni üye). 1.4.0'a karşı derlenmiş uygulamayı
+  yeniden derleyin; kaynak düzeyinde değişiklik gerekmez.
 
 ### Eklendi
 
@@ -100,14 +131,6 @@
   dış köşede çentik kalıyordu. İki kesik artık tek parça çiziliyor ve
   başlangıç noktası kalemin birleşim stilini alıyor. İlk kesik şeklin bütün
   çevresinden uzunsa çizgi kesintisiz kalemle aynı çiziliyor.
-
-### Yükseltmeden önce
-
-- **Shared derlemede binary uyumluluk değişti:** `Application` (yeni sanal
-  metotlar ve üye), `IRenderer`, `Texture`, `Image` ve `Font` (yaşam
-  belirteci için yeni üyeler), `Painter` ve `RenderState` (kenar yumuşatma
-  alanı, çizim tamponları için yeni üye). 1.4.0'a karşı derlenmiş uygulamayı
-  yeniden derleyin; kaynak düzeyinde değişiklik gerekmez.
 
 ## [1.4.0] - 2026-10-22
 
