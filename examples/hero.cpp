@@ -16,7 +16,8 @@
 /// karartıldığı için son kare ilk kareyle örtüşür ve GIF'te görünür bir
 /// atlama olmaz. Perde geçişi `SetOpacity` ile değil, renklerin alfasını
 /// ölçekleyerek yapılır (bkz. @ref Fade) — renk vertex'te taşındığı için
-/// batch kırılmaz; alttaki draw call sayacı bunu görünür kılıyor.
+/// batch kırılmaz; alttaki draw call sayacı bunu görünür kılıyor. Kenar
+/// yumuşatma (`Painter::SetAntialiasing`) her karede açık.
 ///
 /// İki modu var:
 ///   hero                          → pencerede oynat (ESC ile çık)
@@ -1138,6 +1139,7 @@ int main(int argc, char** argv) {
       }
 
       painter.Begin();
+      painter.SetAntialiasing(true);
       DrawScene(painter, assets, fonts, frame % kLoopFrames);
 
       if (dumping) {
