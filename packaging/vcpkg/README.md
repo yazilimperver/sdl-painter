@@ -7,9 +7,8 @@ derlemez.
 | Dosya | İşlev |
 |---|---|
 | `vcpkg.json` | Sürüm, bağımlılıklar, `vulkan` özelliği |
-| `portfile.cmake` | İndirme, yama, configure, kurulum |
+| `portfile.cmake` | İndirme, configure, kurulum |
 | `usage` | Kurulumdan sonra vcpkg'nin gösterdiği CMake tarifi |
-| `vcpkg-dependencies.patch` | Yalnızca 1.4.0 için: stb ve Vulkan başlık hedefinin vcpkg'de bulunması |
 
 ## Yerel deneme
 
@@ -77,5 +76,3 @@ güncellenince `VCPKG_COMMIT` de gözden geçirilmeli.
    ```bash
    curl -sL https://github.com/yazilimperver/sdl-painter/archive/vX.Y.Z.tar.gz | sha512sum
    ```
-3. Etiket bu düzeltmeleri içeriyorsa (1.4.0'dan sonraki her sürüm)
-   `vcpkg-dependencies.patch`'i ve `PATCHES` satırını sil.

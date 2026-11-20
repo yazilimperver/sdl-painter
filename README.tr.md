@@ -203,7 +203,7 @@ için `-o "sdl_painter/*:with_vulkan=True"`. Ardından projenizde
 ### vcpkg
 
 SDLPainter henüz vcpkg kayıt deposunda yok; repo bir overlay port içerir:
-[`packaging/vcpkg/ports`](packaging/vcpkg/ports). Port v1.4.0 sürümünü kendisi
+[`packaging/vcpkg/ports`](packaging/vcpkg/ports). Port v1.5.0 sürümünü kendisi
 indirir, klon yalnızca port dosyaları için gerekir:
 
 ```bash

@@ -200,7 +200,7 @@ CMake targets are the same as above.
 
 SDLPainter is not in the vcpkg registry yet; the repository ships an overlay
 port in [`packaging/vcpkg/ports`](packaging/vcpkg/ports). The port downloads
-the v1.4.0 release itself, the clone only provides the port files:
+the v1.5.0 release itself, the clone only provides the port files:
 
 ```bash
 git clone https://github.com/yazilimperver/sdl-painter.git
