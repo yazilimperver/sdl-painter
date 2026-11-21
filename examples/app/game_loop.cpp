@@ -22,9 +22,10 @@ constexpr float kGravity = 1400.0F;      // piksel/sn^2
 constexpr float kFloorY = 620.0F;        // zemin yüksekliği
 constexpr float kRadius = 30.0F;         // top yarıçapı
 constexpr float kRestitution = 0.80F;    // sekme kaybı
-constexpr float kLaunchSpeed = -900.0F;  // ilk yukarı hız
+constexpr float kLaunchSpeed = -300.0F;  // ilk yukarı hız
 
 /// @brief İki değer arasında doğrusal interpolasyon.
+/// @todo std::lerp C++20'de var; C++17'de yok. C++ 20'ye geçince std::lerp ile değiştirelim.
 constexpr float Lerp(float a, float b, float t) {
   return a + (b - a) * t;
 }

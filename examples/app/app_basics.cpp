@@ -17,6 +17,10 @@ class AppBasicsDemo : public sp::Application {
 
  protected:
   void OnUpdate(float dt) override {
+    if (!mIsAnimationActive) {
+      return;
+    }
+
     // Kare süresiyle çarpım: hız, kare hızından bağımsız kalıyor.
     mAngle += 90.0F * dt;
     if (mAngle >= 360.0F) {
@@ -52,16 +56,20 @@ class AppBasicsDemo : public sp::Application {
   void OnKeyDown(const sp::KeyEvent& event) override {
     if (event.key == sp::Key::kEscape) {
       Quit();
+    }    
+    else if (event.key == sp::Key::kSpace ) {
+      mIsAnimationActive = !mIsAnimationActive;
     }
   }
 
  private:
   float mAngle{0.0F};
+  bool mIsAnimationActive{true};
 };
 
 int main() {
   sp::AppConfig config;
-  config.title = "SDLPainter — app_basics: Application Framework (Phase 6)";
+  config.title = "SDLPainter — app_basics, space - animasyon durdur/devam ettir: Application Framework (Phase 6)";
   config.width = 900;
   config.height = 700;
 
