@@ -56,8 +56,7 @@ class AppBasicsDemo : public sp::Application {
   void OnKeyDown(const sp::KeyEvent& event) override {
     if (event.key == sp::Key::kEscape) {
       Quit();
-    }    
-    else if (event.key == sp::Key::kSpace ) {
+    } else if (event.key == sp::Key::kSpace) {
       mIsAnimationActive = !mIsAnimationActive;
     }
   }
@@ -69,7 +68,9 @@ class AppBasicsDemo : public sp::Application {
 
 int main() {
   sp::AppConfig config;
-  config.title = "SDLPainter — app_basics, space - animasyon durdur/devam ettir: Application Framework (Phase 6)";
+  config.title =
+      "SDLPainter — app_basics, space - animasyon durdur/devam ettir: "
+      "Application Framework (Phase 6)";
   config.width = 900;
   config.height = 700;
 
