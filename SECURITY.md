@@ -7,9 +7,9 @@ yayınlanır.
 
 | Sürüm | Destek Durumu |
 |-------|--------------|
-| 1.1.x | ✅ Aktif |
-| 1.0.x | ⚠️ Yalnızca kritik açıklar |
-| < 1.0 | ❌ Desteklenmiyor |
+| 1.5.x | ✅ Aktif |
+| 1.4.x | ⚠️ Yalnızca kritik açıklar |
+| < 1.4 | ❌ Desteklenmiyor |
 
 ## Güvenlik Açığı Bildirimi
 

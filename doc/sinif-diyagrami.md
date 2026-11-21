@@ -11,7 +11,7 @@ okunamaz hale gelir; her parça farklı bir konsepte odaklanır.
 ## 1. Çekirdek Sınıflar — Painter ve Bağlamı
 
 `Painter` etrafındaki üç temel kompozisyon: stil tipleri (`Pen`/`Brush`),
-transform yığını (`RenderState` + `Transform`), ve render hattı
+transform yığını (`RenderState` + `glm::mat3`), ve render hattı
 (`Tessellator` + `RenderBatcher` + `IRenderer`).
 
 ```mermaid
@@ -19,12 +19,13 @@ classDiagram
     direction TB
 
     class Painter {
-        -SDL_Window& mWindow
+        -SDL_Window* mWindow
         -unique_ptr~IRenderer~ mRenderer
         -unique_ptr~RenderBatcher~ mBatcher
         -vector~RenderState~ mStateStack
         -RenderState mCurrentState
         -shared_ptr~Font~ mCurrentFont
+        -FrameStats mStats
         -int32_t mViewportWidth
         -int32_t mViewportHeight
         +Painter(SDL_Window*, RendererBackend)
@@ -34,6 +35,8 @@ classDiagram
         +SetPen(Pen) void
         +SetBrush(Brush) void
         +SetOpacity(float) void
+        +SetBlendMode(BlendMode) void
+        +SetAntialiasing(bool) void
         +DrawLine/Rect/Circle/Ellipse/Polygon ...
         +FillRect/Circle/Ellipse/Polygon ...
         +DrawImage(Image, ...) void
@@ -44,45 +47,46 @@ classDiagram
         +SetClipRect(Rect) void
         +ClearClip() void
         -UpdateProjection() void
-        -FlushTransform() void
         -ApplyScissor(Rect) void
     }
 
     class RenderState {
-        +Transform transform
+        +glm::mat3 transform
         +Pen pen
         +Brush brush
         +float opacity
+        +BlendMode blend_mode
         +Rect clip_rect
         +bool has_clip
+        +bool antialiasing
     }
 
-    class Transform {
-        -float mData[3][3]
-        +SetIdentity() void
-        +IsIdentity() bool
-        +Translate(dx, dy) Transform&
-        +Rotate(degrees) Transform&
-        +Scale(sx, sy) Transform&
-        +Map(x, y, out_x, out_y) void
-        +operator*(Transform) Transform
-        +Data() const float*
-        +MakeTranslate/Rotate/Scale Transform$
+    class Mat3 {
+        <<glm::mat3>>
+        3x3 affine, column-major
+        Translate/Rotate/Scale: M = M * op
     }
 
     class Pen {
         -Color mColor
         -float mWidth
+        -LineCap mCap
+        -LineJoin mJoin
         +GetColor() Color
         +GetWidth() float
         +IsVisible() bool
+        +SetDashPattern(lengths) void
         +NoPen() Pen$
     }
 
     class Brush {
+        -BrushType mType
         -Color mColor
         +GetColor() Color
+        +GetType() BrushType
         +IsVisible() bool
+        +LinearGradient(start, end, from, to) Brush$
+        +RadialGradient(center, radius, from, to) Brush$
         +NoBrush() Brush$
     }
 
@@ -94,7 +98,7 @@ classDiagram
 
     Painter "1" *-- "1" RenderState : current
     Painter "1" *-- "0..*" RenderState : stack
-    RenderState *-- Transform
+    RenderState *-- Mat3 : transform
     RenderState *-- Pen
     RenderState *-- Brush
     Pen --> Color
@@ -105,7 +109,11 @@ classDiagram
 
 - `Painter *-- RenderState`: Kompozisyon. `mCurrentState` aktif durum,
   `mStateStack` ise `Save()`/`Restore()` ile büyüyüp küçülen yığın.
-- `static` factory metodları (`NoPen`, `Black`, `MakeTranslate`) `$` ile işaretli.
+- `RenderState *-- Mat3`: Ayrı bir `Transform` sınıfı yok; ADR-007 ile
+  `glm::mat3` (column-major) kullanılıyor. `Translate`/`Rotate`/`Scale`
+  post-multiply uygular (`M = M * op`). Matris GPU'ya gönderilmez; vertex'ler
+  `RenderBatcher` içinde CPU'da dönüştürülür.
+- `static` factory metodları (`NoPen`, `Black`, `LinearGradient`) `$` ile işaretli.
 
 ---
 
@@ -143,8 +151,8 @@ classDiagram
         -vector~Vertex~ mVertexBuffer
         -vector~TexturedVertex~ mTexturedBuffer
         -kMaxVertices: 8192$
-        +PushTriangles(verts, color, opacity) void
-        +PushTexturedTriangles(verts, tex, tint, opacity) void
+        +PushTriangles(verts, transform, color, opacity) void
+        +PushTexturedTriangles(verts, transform, tex, tint, opacity) void
         +Flush() void
     }
 
@@ -426,8 +434,8 @@ classDiagram
     }
 
     class PushConstants {
-        +float projection[16]
-        +float model[9]
+        +float transform[16]
+        +float tint_color[4]
         +float opacity
     }
 

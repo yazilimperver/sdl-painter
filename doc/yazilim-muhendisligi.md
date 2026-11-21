@@ -80,14 +80,15 @@ değerleri doğrulanır.
 |-------|--------|-------|
 | Image yükleme | stb_image | Header-only, sıfır transitive bağımlılık; SDL_image ekstra kurulum ister |
 | OpenGL yükleme | GLAD | Sadece 3.3 Core fonksiyonları dahil; tam GLEW yüklemesi gerekmez |
-| Font | SDL_ttf | Opsiyonel; Phase 4'e kadar derlemeye dahil edilmez |
+| Font | SDL_ttf | Zorunlu (`sdl_ttf/3.x`); 1.0.0'da `with_text` opsiyonu kaldırıldı, metin desteği her derlemede var |
 | Vulkan | Opsiyonel Conan paketi | `with_vulkan=False` ile Vulkan loader hiç indirilmez |
 
 ### Zorunlu ve Opsiyonel Bağımlılıklar
 
 `conanfile.py`'de bağımlılıklar zorunlu ve opsiyonel olarak ikiye ayrılmıştır.
-Vulkan loader, SDL_ttf ve GTest yalnızca ilgili seçenek etkinleştirildiğinde
-çekilir. Bu ayrım CI süresini ve image boyutunu küçük tutar.
+Vulkan loader (`with_vulkan`) ve GTest (`build_tests`) yalnızca ilgili seçenek
+etkinleştirildiğinde çekilir; SDL_ttf dahil diğerleri her zaman gelir. Bu
+ayrım CI süresini ve image boyutunu küçük tutar.
 
 ---
 

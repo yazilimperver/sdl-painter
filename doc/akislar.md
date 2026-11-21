@@ -31,14 +31,14 @@ sequenceDiagram
     end
     P->>R: BeginFrame()
     R-->>GPU: (Vulkan: AcquireNextImage)
-    P->>P: FlushTransform()
-    P->>R: SetModelMatrix(transform)
+    P->>R: SetModelMatrix(birim) — karede bir kez
 
     Note over App,GPU: Çizim çağrıları (DrawRect, FillCircle, ...)
     loop her çizim çağrısı
         App->>P: DrawXxx(...) / FillXxx(...)
         P->>P: Tessellator → vertex listesi
-        P->>B: PushTriangles(verts, color, opacity)
+        P->>B: PushTriangles(verts, transform, color, opacity)
+        Note right of B: transform ve renk CPU'da<br/>vertex'lere yazılır
         opt mode/opacity/texture değişti veya buffer doldu
             B->>R: DrawTriangles(buffer)
             R-->>GPU: vertex upload + draw
@@ -80,14 +80,12 @@ sequenceDiagram
     alt pen görünmez (alpha=0 veya width=0)
         P-->>App: erken return
     else pen görünür
-        P->>P: FlushTransform()
-        Note right of P: Sadece transform değiştiyse<br/>SetModelMatrix çağrılır
         P->>T: TessellateStrokedPolygon(4 köşe, line_width)
         T-->>P: vector~Vertex~ (4 quad / 8 üçgen)
-        P->>B: PushTriangles(verts, pen.color, opacity)
+        P->>B: PushTriangles(verts, transform, pen.color, opacity)
         B->>B: mode == kBasic ? opacity aynı? size+verts ≤ 8192?
         alt evet (batch'e ekle)
-            B->>B: mVertexBuffer'a renkleri yazıp ekle
+            B->>B: vertex'leri transform ile dönüştür,<br/>rengi yaz, mVertexBuffer'a ekle
         else hayır (state değişti / buffer dolu)
             B->>R: SetOpacity(prev_opacity)
             B->>R: DrawTriangles(önceki buffer)
@@ -185,37 +183,35 @@ sequenceDiagram
     participant App
     participant P as Painter
     participant S as mStateStack
-    participant T as Transform (current)
-    participant R as IRenderer
+    participant M as mCurrentState.transform (glm::mat3)
+    participant B as RenderBatcher
 
     App->>P: Save()
     P->>S: push_back(mCurrentState)
 
     App->>P: Translate(100, 50)
-    P->>T: Translate(100, 50) — matris çarpımı
-    Note over P: SetModelMatrix henüz<br/>çağrılmadı (lazy flush)
+    P->>M: M = M * T(100, 50)
+    Note over P: GPU'ya hiçbir şey gitmez,<br/>yalnızca CPU'daki matris değişir
 
     App->>P: Rotate(45°)
-    P->>T: Rotate(45)
+    P->>M: M = M * R(45)
 
     App->>P: DrawRect(...)
-    P->>P: FlushTransform()
-    P->>R: SetModelMatrix(transform.Data())
-    Note right of R: Matris GPU'ya bir kez gönderildi
-    P->>R: (Tessellator + Batcher)
+    P->>B: PushTriangles(verts, M, color, opacity)
+    Note right of B: Vertex'ler M ile CPU'da<br/>dönüştürülüp tampona yazılır
 
     App->>P: DrawCircle(...)
-    P->>P: FlushTransform() — fakat değişmediyse skip
-    P->>R: (Batcher push)
+    P->>B: PushTriangles(verts, M, color, opacity)
+    Note right of B: Aynı batch: transform<br/>değişimi flush tetiklemez
 
     App->>P: Restore()
     P->>S: back() → mCurrentState
     P->>S: pop_back()
-    Note over P: Sonraki çizimde<br/>FlushTransform tekrar tetikler
+    Note over P: Clip gerçekten değiştiyse flush +<br/>scissor, aksi halde batch sürer
 ```
 
-**RenderState ne taşır?** → `transform`, `pen`, `brush`, `opacity`,
-`clip_rect`, `has_clip`. `Save()` bunların **tamamının kopyasını** alır;
+**RenderState ne taşır?** → `transform` (`glm::mat3`), `pen`, `brush`, `opacity`,
+`blend_mode`, `clip_rect`, `has_clip`, `antialiasing`. `Save()` bunların **tamamının kopyasını** alır;
 `Restore()` hepsini geri yükler.
 
 ### İç İçe Save/Restore

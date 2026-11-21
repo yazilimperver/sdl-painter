@@ -31,14 +31,14 @@ sequenceDiagram
     end
     P->>R: BeginFrame()
     R-->>GPU: (Vulkan: AcquireNextImage)
-    P->>P: FlushTransform()
-    P->>R: SetModelMatrix(transform)
+    P->>R: SetModelMatrix(identity) — once per frame
 
     Note over App,GPU: Draw calls (DrawRect, FillCircle, ...)
     loop every draw call
         App->>P: DrawXxx(...) / FillXxx(...)
         P->>P: Tessellator → vertex list
-        P->>B: PushTriangles(verts, color, opacity)
+        P->>B: PushTriangles(verts, transform, color, opacity)
+        Note right of B: transform and color are written<br/>into the vertices on the CPU
         opt mode/opacity/texture changed or buffer full
             B->>R: DrawTriangles(buffer)
             R-->>GPU: vertex upload + draw
@@ -80,14 +80,12 @@ sequenceDiagram
     alt pen invisible (alpha=0 or width=0)
         P-->>App: early return
     else pen visible
-        P->>P: FlushTransform()
-        Note right of P: SetModelMatrix is called only<br/>if the transform changed
         P->>T: TessellateStrokedPolygon(4 corners, line_width)
         T-->>P: vector~Vertex~ (4 quads / 8 triangles)
-        P->>B: PushTriangles(verts, pen.color, opacity)
+        P->>B: PushTriangles(verts, transform, pen.color, opacity)
         B->>B: mode == kBasic ? same opacity? size+verts ≤ 8192?
         alt yes (append to batch)
-            B->>B: write colors and append to mVertexBuffer
+            B->>B: transform vertices, write colors,<br/>append to mVertexBuffer
         else no (state changed / buffer full)
             B->>R: SetOpacity(prev_opacity)
             B->>R: DrawTriangles(previous buffer)
@@ -186,37 +184,35 @@ sequenceDiagram
     participant App
     participant P as Painter
     participant S as mStateStack
-    participant T as Transform (current)
-    participant R as IRenderer
+    participant M as mCurrentState.transform (glm::mat3)
+    participant B as RenderBatcher
 
     App->>P: Save()
     P->>S: push_back(mCurrentState)
 
     App->>P: Translate(100, 50)
-    P->>T: Translate(100, 50) — matrix multiplication
-    Note over P: SetModelMatrix not<br/>called yet (lazy flush)
+    P->>M: M = M * T(100, 50)
+    Note over P: Nothing goes to the GPU,<br/>only the CPU-side matrix changes
 
     App->>P: Rotate(45°)
-    P->>T: Rotate(45)
+    P->>M: M = M * R(45)
 
     App->>P: DrawRect(...)
-    P->>P: FlushTransform()
-    P->>R: SetModelMatrix(transform.Data())
-    Note right of R: Matrix sent to the GPU once
-    P->>R: (Tessellator + Batcher)
+    P->>B: PushTriangles(verts, M, color, opacity)
+    Note right of B: Vertices are transformed by M<br/>on the CPU and buffered
 
     App->>P: DrawCircle(...)
-    P->>P: FlushTransform() — skipped if unchanged
-    P->>R: (Batcher push)
+    P->>B: PushTriangles(verts, M, color, opacity)
+    Note right of B: Same batch: a transform<br/>change does not flush
 
     App->>P: Restore()
     P->>S: back() → mCurrentState
     P->>S: pop_back()
-    Note over P: The next draw triggers<br/>FlushTransform again
+    Note over P: Flush + scissor only if the clip<br/>actually changed, otherwise the batch continues
 ```
 
-**What does RenderState carry?** → `transform`, `pen`, `brush`, `opacity`,
-`clip_rect`, `has_clip`. `Save()` takes a **copy of all of them**;
+**What does RenderState carry?** → `transform` (`glm::mat3`), `pen`, `brush`, `opacity`,
+`blend_mode`, `clip_rect`, `has_clip`, `antialiasing`. `Save()` takes a **copy of all of them**;
 `Restore()` restores them all.
 
 ### Nested Save/Restore

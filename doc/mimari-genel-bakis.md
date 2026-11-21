@@ -242,11 +242,12 @@ graph TB
     Painter["sdl_painter"]
 
     subgraph zorunlu["Zorunlu — her zaman çekilir"]
-        SDL3["SDL3 (sdl/3.2.x)"]
+        SDL3["SDL3 (sdl/3.4.x)"]
         GLAD["GLAD (glad/0.1.x)"]
         STB["stb_image (stb/cci.*)"]
         GLM["GLM (transform matrisi)"]
         TTF["SDL_ttf (sdl_ttf/3.2.x)"]
+        LOG["spdlog (loglama, header-only)"]
     end
 
     subgraph ops["Opsiyonel — option ile etkinleştirilir"]
@@ -259,6 +260,7 @@ graph TB
     Painter --> STB
     Painter --> GLM
     Painter --> TTF
+    Painter --> LOG
     Painter -.opt.-> VK
     Painter -.opt.-> GTEST
 

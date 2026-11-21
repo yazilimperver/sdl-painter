@@ -248,11 +248,12 @@ graph TB
     Painter["sdl_painter"]
 
     subgraph required["Required — always fetched"]
-        SDL3["SDL3 (sdl/3.2.x)"]
+        SDL3["SDL3 (sdl/3.4.x)"]
         GLAD["GLAD (glad/0.1.x)"]
         STB["stb_image (stb/cci.*)"]
         GLM["GLM (transform matrix)"]
         TTF["SDL_ttf (sdl_ttf/3.2.x)"]
+        LOG["spdlog (logging, header-only)"]
     end
 
     subgraph opt["Optional — enabled by an option"]
@@ -265,6 +266,7 @@ graph TB
     Painter --> STB
     Painter --> GLM
     Painter --> TTF
+    Painter --> LOG
     Painter -.opt.-> VK
     Painter -.opt.-> GTEST
 

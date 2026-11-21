@@ -80,14 +80,15 @@ coordinates → the expected vertex count and values are verified.
 |-------|--------|-------|
 | Image loading | stb_image | Header-only, zero transitive dependencies; SDL_image needs extra installation |
 | OpenGL loading | GLAD | Only the 3.3 Core functions are included; no full GLEW load needed |
-| Font | SDL_ttf | Optional; not part of the build until Phase 4 |
+| Font | SDL_ttf | Required (`sdl_ttf/3.x`); the `with_text` option was removed in 1.0.0, text support is always built |
 | Vulkan | Optional Conan package | With `with_vulkan=False` the Vulkan loader is never downloaded |
 
 ### Required and Optional Dependencies
 
 In `conanfile.py` the dependencies are split into required and optional ones.
-The Vulkan loader, SDL_ttf and GTest are pulled in only when the relevant option
-is enabled. This split keeps CI time and image size small.
+The Vulkan loader (`with_vulkan`) and GTest (`build_tests`) are pulled in only
+when the relevant option is enabled; everything else, SDL_ttf included, is
+always fetched. This split keeps CI time and image size small.
 
 ---
 

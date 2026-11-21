@@ -14,7 +14,7 @@
   </p>
   <p>
     <img src="https://img.shields.io/badge/C%2B%2B-17-blue" alt="C++17">
-    <img src="https://img.shields.io/badge/SDL-3.2-green" alt="SDL3">
+    <img src="https://img.shields.io/badge/SDL-3.4-green" alt="SDL3">
     <img src="https://img.shields.io/badge/OpenGL-3.3%20Core-orange" alt="OpenGL 3.3">
     <img src="https://img.shields.io/badge/Vulkan-1.1-red" alt="Vulkan 1.1">
   </p>
