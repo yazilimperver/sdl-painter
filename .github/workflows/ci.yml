@@ -650,15 +650,24 @@ jobs:
         with:
           submodules: recursive
       - name: Install doxygen (resmi binary — Mermaid native desteği için)
+        env:
+          # Kimliksiz API istegi runner IP'si basina sinirli. 24 Kasim 2026'da
+          # adim iki denemede jq'nun 5 cikis koduyla dustu: cevapta `assets`
+          # yoktu, buyuk olasilikla bu sinira takilan istegin hata mesaji
+          # geldi. Token ile sinir cok daha yuksek; cevapta asset yoksa da
+          # API'nin mesaji log'a yazilir.
+          GH_TOKEN: ${{ github.token }}
         run: |
           sudo apt-get update -qq && sudo apt-get install -y graphviz jq
-          asset_url=$(curl -sL https://api.github.com/repos/doxygen/doxygen/releases/latest \
-            | jq -r '.assets[] | select(.name | endswith("linux.bin.tar.gz")) | .browser_download_url')
+          release_json=$(curl -sSL --retry 3 -H "Authorization: Bearer $GH_TOKEN" \
+            https://api.github.com/repos/doxygen/doxygen/releases/latest)
+          asset_url=$(jq -r '.assets[]? | select(.name | endswith("linux.bin.tar.gz")) | .browser_download_url' \
+            <<<"$release_json" || true)
           if [ -z "$asset_url" ]; then
-            echo "Doxygen linux.bin.tar.gz asset'i bulunamadi" >&2
+            echo "Doxygen linux.bin.tar.gz asset'i bulunamadi. API cevabi: $(jq -r '.message // "(mesaj yok)"' <<<"$release_json" 2>/dev/null || echo "(JSON degil)")" >&2
             exit 1
           fi
-          curl -sL "$asset_url" -o /tmp/doxygen.tar.gz
+          curl -fsSL --retry 3 "$asset_url" -o /tmp/doxygen.tar.gz
           mkdir -p /tmp/doxygen-install
           tar -xzf /tmp/doxygen.tar.gz -C /tmp/doxygen-install --strip-components=1
           echo "/tmp/doxygen-install/bin" >> "$GITHUB_PATH"
