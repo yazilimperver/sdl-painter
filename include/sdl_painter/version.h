@@ -28,12 +28,12 @@ inline constexpr int32_t kVersionMajor = 1;
 inline constexpr int32_t kVersionMinor = 5;
 
 /// @brief Yama sürüm numarası. Yalnızca hata düzeltmelerinde artar.
-inline constexpr int32_t kVersionPatch = 0;
+inline constexpr int32_t kVersionPatch = 1;
 
 /// @brief "MAJOR.MINOR.PATCH" biçiminde sürüm metni.
 ///
 /// Sayısal bileşenlerle tutarlılığı CMake configure aşamasında ve
 /// `tests/test_version.cpp` içinde doğrulanır.
-inline constexpr std::string_view kVersionString = "1.5.0";
+inline constexpr std::string_view kVersionString = "1.5.1";
 
 }  // namespace sdl_painter

@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.5.1] - 2026-11-24
+
+**SDLPainter 1.5.1** bir yama sürümü: statik kütüphanenin stb_image
+sembollerini tüketiciye açması düzeltildi. Public API ve ABI değişmedi;
+1.5.0'a karşı derlenmiş uygulamalar yeniden derlenmeden çalışır. 817 test.
+
+### Düzeltildi
+
+- Kütüphane `stbi_load`, `stbi_image_free` gibi stb_image fonksiyonlarını
+  dışarı açık sembol olarak taşıyordu. Kendi stb_image implementasyonunu
+  (`STB_IMAGE_IMPLEMENTATION`) derleyen bir uygulama statik kütüphaneyle
+  `multiple definition` (GCC) ya da `LNK2005` (MSVC) hatasıyla
+  bağlanamıyordu. stb artık `STB_IMAGE_STATIC` ile derleniyor, fonksiyonları
+  `src/image.cpp`'ye özel. Linux shared derlemede de `.so` bu sembolleri
+  artık dışarı vermiyor; hiçbiri SDLPainter API'sinin parçası değildi.
+  `tests/test_stb_coexistence.cpp` sorunun geri gelmesini bağlama adımında
+  yakalıyor. microsoft/vcpkg#55237 incelemesinde bildirildi.
+
 ## [1.5.0] - 2026-11-17
 
 **SDLPainter 1.5.0** kenar yumuşatma ve performans iyileştirme sürümü. Öne çıkanlar:
