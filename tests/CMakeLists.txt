@@ -30,6 +30,7 @@ set(TEST_SOURCES
     test_collision_logic.cpp
     test_regression_findings.cpp
     test_regression_gpu.cpp
+    test_stb_coexistence.cpp
 )
 
 include(GoogleTest)
@@ -89,6 +90,9 @@ else()
         PRIVATE sdl_painter_app
         PRIVATE GTest::gtest
         PRIVATE GTest::gtest_main
+        # test_stb_coexistence.cpp tuketici gibi kendi stb_image
+        # implementasyonunu derler; stb sdl_painter'a PRIVATE bagli.
+        PRIVATE stb::stb
     )
 
     # test_vk_check.cpp dahili vk_check.h'yi test ediyor; o baslik
