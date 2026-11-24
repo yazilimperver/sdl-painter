@@ -27,16 +27,16 @@ paketlerde kullanılabilir (cmake, zlib, OpenSSL…); `sdl` bu listede değil.
 cd packaging/conan-center/all
 
 # Temel (MSVC'de profil cppstd'si 14 ise 17 verilmeli)
-conan create . --version=1.5.0 --build=missing -s compiler.cppstd=17
+conan create . --version=1.5.1 --build=missing -s compiler.cppstd=17
 
 # Diğer konfigürasyonlar
-conan create . --version=1.5.0 --build=missing -s compiler.cppstd=17 -o "&:shared=True"
-conan create . --version=1.5.0 --build=missing -s compiler.cppstd=17 -o "&:with_vulkan=True"
-conan create . --version=1.5.0 --build=missing -s compiler.cppstd=17 -s build_type=Debug
-conan create . --version=1.5.0 --build=missing -s compiler.cppstd=17 -o "spdlog/*:header_only=True"
+conan create . --version=1.5.1 --build=missing -s compiler.cppstd=17 -o "&:shared=True"
+conan create . --version=1.5.1 --build=missing -s compiler.cppstd=17 -o "&:with_vulkan=True"
+conan create . --version=1.5.1 --build=missing -s compiler.cppstd=17 -s build_type=Debug
+conan create . --version=1.5.1 --build=missing -s compiler.cppstd=17 -o "spdlog/*:header_only=True"
 
 # macOS açık bir hatayla reddedilmeli (ConanInvalidConfiguration)
-conan graph info . --version=1.5.0 -s os=Macos -s compiler=apple-clang -s compiler.version=15 -s compiler.libcxx=libc++
+conan graph info . --version=1.5.1 -s os=Macos -s compiler=apple-clang -s compiler.version=15 -s compiler.libcxx=libc++
 ```
 
 ## Etiketlenmemiş HEAD'i sınamak
