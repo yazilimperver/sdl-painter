@@ -9,6 +9,7 @@
     <a href="https://gitlab.com/yazilimperver/sdl-painter/-/pipelines"><img src="https://img.shields.io/gitlab/pipeline-status/yazilimperver%2Fsdl-painter?branch=main&logo=gitlab&label=GitLab%20CI" alt="GitLab CI"></a>
     <a href="https://yazilimperver.github.io/sdl-painter/coverage/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fyazilimperver.github.io%2Fsdl-painter%2Fcoverage%2Fbadge.json" alt="Kod kapsama"></a>
     <a href="https://github.com/yazilimperver/sdl-painter/releases/latest"><img src="https://img.shields.io/github/v/release/yazilimperver/sdl-painter?logo=github" alt="Son sürüm"></a>
+    <a href="https://github.com/microsoft/vcpkg/tree/master/ports/sdl-painter"><img src="https://img.shields.io/vcpkg/v/sdl-painter" alt="vcpkg"></a>
     <a href="https://yazilimperver.github.io/sdl-painter"><img src="https://img.shields.io/badge/dok%C3%BCman-Doxygen-informational" alt="Dokümantasyon"></a>
     <a href="LICENSE"><img src="https://img.shields.io/github/license/yazilimperver/sdl-painter" alt="MIT lisansı"></a>
   </p>
