@@ -198,19 +198,17 @@ CMake targets are the same as above.
 
 ### vcpkg
 
-SDLPainter is not in the vcpkg registry yet; the repository ships an overlay
-port in [`packaging/vcpkg/ports`](packaging/vcpkg/ports). The port downloads
-the v1.5.1 release itself, the clone only provides the port files:
+SDLPainter is in the vcpkg registry as `sdl-painter` since 25 November 2026.
+If your vcpkg clone (or, in manifest mode, your `builtin-baseline`) is older,
+update it first:
 
 ```bash
-git clone https://github.com/yazilimperver/sdl-painter.git
-vcpkg install sdl-painter --overlay-ports=sdl-painter/packaging/vcpkg/ports
+vcpkg install sdl-painter
 ```
 
 Use `sdl-painter[vulkan]` for the Vulkan backend. In manifest mode, add
-`"sdl-painter"` to your `vcpkg.json` dependencies and the same directory to
-`"overlay-ports"` in `vcpkg-configuration.json`. The CMake targets are the same
-as above.
+`"sdl-painter"` to your `vcpkg.json` dependencies. The CMake targets are the
+same as above.
 
 On **Linux**, the default features of `sdl3` need extra system packages,
 including autotools. To avoid them, add

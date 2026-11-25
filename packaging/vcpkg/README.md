@@ -1,8 +1,10 @@
-# vcpkg overlay port'u
+# vcpkg port'u
 
-`ports/sdl-painter/`, SDLPainter'ı vcpkg ile kurmak için bir overlay port'tur.
-Kaynağı GitHub etiket arşivinden (`vcpkg_from_github`) indirir; test ve örnek
-derlemez.
+`ports/sdl-painter/`, vcpkg kayıt deposundaki `sdl-painter` port'unun
+(microsoft/vcpkg#55237, 25 Kasım 2026) kaynak kopyasıdır. Burada overlay
+olarak kullanılır: CI'daki `package:vcpkg` job'u ve yeni bir sürümü kayıt
+deposuna göndermeden önce yerel deneme için. Kaynağı GitHub etiket
+arşivinden (`vcpkg_from_github`) indirir; test ve örnek derlemez.
 
 | Dosya | İşlev |
 |---|---|
@@ -76,3 +78,9 @@ güncellenince `VCPKG_COMMIT` de gözden geçirilmeli.
    ```bash
    curl -sL https://github.com/yazilimperver/sdl-painter/archive/vX.Y.Z.tar.gz | sha512sum
    ```
+3. Yukarıdaki "Yerel deneme" adımlarıyla dene.
+4. Kayıt deposunu güncelle: microsoft/vcpkg fork'unda port dosyalarını
+   `ports/sdl-painter/`'a kopyala, `./vcpkg format-manifest
+   ports/sdl-painter/vcpkg.json` ve `./vcpkg x-add-version sdl-painter`
+   çalıştır, sonucu commit'leyip `[sdl-painter] Update to X.Y.Z` başlıklı
+   bir PR aç.

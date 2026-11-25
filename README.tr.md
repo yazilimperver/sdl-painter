@@ -202,19 +202,17 @@ için `-o "sdl_painter/*:with_vulkan=True"`. Ardından projenizde
 
 ### vcpkg
 
-SDLPainter henüz vcpkg kayıt deposunda yok; repo bir overlay port içerir:
-[`packaging/vcpkg/ports`](packaging/vcpkg/ports). Port v1.5.1 sürümünü kendisi
-indirir, klon yalnızca port dosyaları için gerekir:
+SDLPainter 25 Kasım 2026'dan beri vcpkg kayıt deposunda `sdl-painter` adıyla
+bulunur. vcpkg klonunuz (manifest modunda `builtin-baseline`'ınız) daha eskiyse
+önce onu güncelleyin:
 
 ```bash
-git clone https://github.com/yazilimperver/sdl-painter.git
-vcpkg install sdl-painter --overlay-ports=sdl-painter/packaging/vcpkg/ports
+vcpkg install sdl-painter
 ```
 
 Vulkan backend'i için `sdl-painter[vulkan]` kullanın. Manifest modunda
-`vcpkg.json`'daki bağımlılıklara `"sdl-painter"`, `vcpkg-configuration.json`'daki
-`"overlay-ports"` listesine aynı dizini ekleyin. CMake hedefleri yukarıdakilerle
-aynıdır.
+`vcpkg.json`'daki bağımlılıklara `"sdl-painter"` ekleyin. CMake hedefleri
+yukarıdakilerle aynıdır.
 
 **Linux'ta** `sdl3`'ün varsayılan özellikleri autotools dahil ek sistem paketleri
 ister. Bunlardan kaçınmak için manifest'inize
