@@ -9,7 +9,6 @@
     <a href="https://gitlab.com/yazilimperver/sdl-painter/-/pipelines"><img src="https://img.shields.io/gitlab/pipeline-status/yazilimperver%2Fsdl-painter?branch=main&logo=gitlab&label=GitLab%20CI" alt="GitLab CI"></a>
     <a href="https://yazilimperver.github.io/sdl-painter/coverage/"><img src="https://img.shields.io/endpoint?url=https%3A%2F%2Fyazilimperver.github.io%2Fsdl-painter%2Fcoverage%2Fbadge.json" alt="Coverage"></a>
     <a href="https://github.com/yazilimperver/sdl-painter/releases/latest"><img src="https://img.shields.io/github/v/release/yazilimperver/sdl-painter?logo=github" alt="Latest release"></a>
-    <a href="https://github.com/microsoft/vcpkg/tree/master/ports/sdl-painter"><img src="https://img.shields.io/vcpkg/v/sdl-painter" alt="vcpkg"></a>
     <a href="https://yazilimperver.github.io/sdl-painter"><img src="https://img.shields.io/badge/docs-Doxygen-informational" alt="Documentation"></a>
     <a href="LICENSE"><img src="https://img.shields.io/github/license/yazilimperver/sdl-painter" alt="MIT license"></a>
   </p>
@@ -18,6 +17,9 @@
     <img src="https://img.shields.io/badge/SDL-3.4-green" alt="SDL3">
     <img src="https://img.shields.io/badge/OpenGL-3.3%20Core-orange" alt="OpenGL 3.3">
     <img src="https://img.shields.io/badge/Vulkan-1.1-red" alt="Vulkan 1.1">
+  </p>
+  <p>
+    <a href="https://github.com/microsoft/vcpkg/tree/master/ports/sdl-painter"><img src="https://img.shields.io/vcpkg/v/sdl-painter" alt="vcpkg"></a>
   </p>
 </div>
 
